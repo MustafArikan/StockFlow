@@ -161,6 +161,7 @@ Sistemin ölçeklenebilirliğini artırmak, live/production ortamlarında güven
 ### 1. 🏷️ Gelişmiş QR & Barkod Modülü [AKTİF PLANLAMA / ONAYLANDI]
 * **Tekil Ürün (Seri Numarası) Takibi:** Genel stok miktar takibinin ötesinde, her fiziksel cihaza özel tekil seri numarası (QR) atanarak cihaz zimmet geçmişi, garanti bitiş süresi ve servis geçmişi detaylı takip edilecektir.
 * **Dinamik Bilgi Kartları (QR Kapsamı):** Cihazların üzerine yapıştırılan QR kodlar herhangi bir kamera ile taratıldığında; cihazın zimmet durumu, teknik özellikleri ve PDF kullanım kılavuzu dinamik olarak görüntülenebilecektir.
+* **Hibrit QR & Zaman Çizelgesi (Timeline):** QR kodlar çevrimdışı (offline) ortamlarda temel künye bilgilerini (Model, Seri No) doğrudan çözerken; internet bağlıyken (online) sistemden anlık konum, bakım durumu ve cihazın geçmiş tüm sahiplerinin kullanım sürelerini gösteren detaylı bir Zaman Çizelgesi (Timeline) sunacaktır.
 
 ### 2. 🌐 DevOps ve Canlı Ortam Hazırlığı (Production Infrastructure) [KISMEN ERTELENDİ / AKTİF HAZIRLIK]
 * **İzleme Hazırlığı (Aktif):** Canlıya (live) geçiş yapıldığında izleme sisteminin doğrudan hazır olması için Prometheus ve Grafana altyapısı kurulacaktır.
