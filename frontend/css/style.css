@@ -1,0 +1,54 @@
+/* Custom Dark Styling for Bootstrap 5 Envanter Takip App */
+
+body {
+    background-color: #0f172a; /* Tailwind Slate-900 equivalent */
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+}
+
+.card {
+    background-color: #1e293b; /* Tailwind Slate-800 equivalent */
+    border: 1px solid #334155;
+}
+
+.text-light-50 {
+    color: #94a3b8 !important; /* Slate-400 */
+}
+
+.form-control:focus {
+    background-color: #0f172a;
+    border-color: #3b82f6;
+    color: #ffffff;
+    box-shadow: 0 0 0 0.25rem rgba(59, 130, 246, 0.25);
+}
+
+.btn-primary {
+    background-color: #2563eb;
+    border-color: #2563eb;
+}
+
+.btn-primary:hover {
+    background-color: #1d4ed8;
+    border-color: #1d4ed8;
+}
+
+/* Kanban Board Column Styling */
+.kanban-col {
+    background-color: #1e293b;
+    border-radius: 12px;
+    padding: 1rem;
+    min-height: 500px;
+    border: 1px solid #334155;
+}
+
+.kanban-card {
+    background-color: #0f172a;
+    border: 1px solid #334155;
+    border-radius: 8px;
+    margin-bottom: 0.75rem;
+    padding: 0.75rem;
+    cursor: grab;
+}
+
+.kanban-card:active {
+    cursor: grabbing;
+}
