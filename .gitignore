@@ -1,0 +1,39 @@
+## Ignore Visual Studio & .NET temporary / build files
+bin/
+obj/
+[Dd]ebug/
+[Rr]elease/
+*.user
+*.userosscache
+*.sln.docstates
+
+## Ignore VS Code settings
+.vscode/
+
+## Ignore Visual Studio Cache / Options files
+.vs/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+## Ignore OS generated files
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+## Ignore packages
+*.nupkg
+**/packages/*
+!**/packages/build/
+project.lock.json
+project.fragment.lock.json
+
+## Ignore Node.js files (if any)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+## Ignore Docker Compose state
+.dockerignore
