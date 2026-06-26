@@ -33,17 +33,17 @@ stok_takip/
 
 ---
 
-## 📊 İş Paketi Dağılımı ve Tamamlanma Durumu (Genel İlerleme: %2.5 - 1/40 Görev)
+## 📊 İş Paketi Dağılımı ve Tamamlanma Durumu (Genel İlerleme: %12.5 - 5/40 Görev)
 
 | İş Paketi | Sorumluluk | Toplam Görev | Tamamlanan | Ertelenen | Kalan | Tamamlanma Yüzdesi |
 | :--- | :--- | :---: | :---: | :---: | :---: | :---: |
 | **K1** | Backend & Veritabanı | 10 | 0 | 0 | 10 | **%0.0** |
 | **K2** | Frontend Arayüz | 10 | 0 | 0 | 10 | **%0.0** |
 | **K3** | Raporlama & Analitik | 9 | 0 | 0 | 9 | **%0.0** |
-| **K4** | Altyapı, Entegrasyon & Test | 11 | 1 | 2 | 8 | **%9.0** |
-| **GENEL**| **Tüm Proje İlerlemesi** | **40** | **1** | **2** | **37** | **%2.5** |
+| **K4** | Altyapı, Entegrasyon & Test | 11 | 5 | 2 | 4 | **%45.5** |
+| **GENEL**| **Tüm Proje İlerlemesi** | **40** | **5** | **2** | **33** | **%12.5** |
 
-*Not: Ertelenen görevler (canlı ortam planlarındaki değişiklikler nedeniyle ertelenen Nginx SSL ve otomatik yedekleme altyapısı) genel yüzde hesaplamasına dahil edilmiştir. Ertelenenler düşüldüğünde aktif görev tamamlama oranı **%2.6** (1/38) seviyesindedir. Prometheus & Grafana izleme sistemi canlı/production öncesi hazırlık amacıyla aktif geliştirme kapsamına alınmıştır.*
+*Not: Ertelenen görevler (canlı ortam planlarındaki değişiklikler nedeniyle ertelenen Nginx SSL ve otomatik yedekleme altyapısı) genel yüzde hesaplamasına dahil edilmiştir. Ertelenenler düşüldüğünde aktif görev tamamlama oranı **%13.2** (5/38) seviyesindedir. Prometheus & Grafana izleme sistemi canlı/production öncesi hazırlık amacıyla aktif geliştirme kapsamına alınmıştır.*
 
 ### K1 — Backend & Veritabanı (Tamamlanma: %0.0 - 0/10)
 - [ ] MSSQL şema tasarımı (EF Core Code-First DbContext ve Migration tanımları)
@@ -80,14 +80,14 @@ stok_takip/
 - [ ] Backend rapor endpoint'leri (K1 ile koordineli)
 - [ ] Kritik seviyeye düşen ürünler için otomatik Satın Alma Formu (PO) ve tedarikçi e-posta onay taslağı (Auto-Procurement) (Yol Haritası)
 
-### K4 — Altyapı, Entegrasyon & Test (Tamamlanma: %9.0 - 1/11)
-- [ ] Docker Compose kurulumu (db/mssql + backend + frontend)
-- [ ] Barkod/QR okuma: kamera entegrasyonu (`QuaggaJS`)
+### K4 — Altyapı, Entegrasyon & Test (Tamamlanma: %45.5 - 5/11)
+- [x] Docker Compose kurulumu (db/mssql + backend + frontend)
+- [x] Barkod/QR okuma: kamera entegrasyonu (html5-qrcode)
 - [ ] Depo içi lokasyon yönetimi modülü (konum bazlı stok yapısı ve DB entegrasyonu)
 - [ ] Birim testler: auth, product CRUD, stok işlemleri (`xUnit + FluentAssertions`)
-- [ ] Swagger/OpenAPI dokümantasyonu (Swashbuckle/NSwag entegrasyonu)
+- [x] Swagger/OpenAPI ve Scalar UI dokümantasyonu
 - [x] README ve kurulum kılavuzu (Güncellenmiş .NET sürümü)
-- [ ] Production ortamı `.env` yönetimi (Docker Compose environment parametreleri ile entegre edildi)
+- [x] Production ortamı `.env` yönetimi (Docker Compose environment parametreleri ile entegre edildi)
 - [ ] Tekil cihazlar için seri numarası bazlı QR kod etiket oluşturma servisi (Yol Haritası)
 - [ Ertelendi ] Canlı ortam Nginx tersine vekil (Reverse Proxy) ve SSL sertifikası yapılandırması
 - [ Ertelendi ] Canlı ortam otomatik veritabanı yedekleme ve arşivleme altyapısı
