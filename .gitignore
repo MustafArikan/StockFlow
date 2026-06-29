@@ -43,6 +43,3 @@ yarn-error.log*
 
 # JetBrains IDE settings (Rider, WebStorm, etc.)
 .idea/
-
-# AI Agent Local Memory & Rules
-.agents/
