@@ -37,3 +37,9 @@ yarn-error.log*
 
 ## Ignore Docker Compose state
 .dockerignore
+
+# Local Environment Variables
+.env
+
+# JetBrains IDE settings (Rider, WebStorm, etc.)
+.idea/
