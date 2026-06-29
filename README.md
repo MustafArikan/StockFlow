@@ -93,16 +93,6 @@ stok_takip/
 - [ Ertelendi ] Canlı ortam otomatik veritabanı yedekleme ve arşivleme altyapısı
 - [ ] Prometheus & Grafana ile canlı/production öncesi izleme (monitoring) hazırlığı
 
-### 🔮 Modül 8: Gelişmiş Özellikler (Yol Haritası)
-- [ ] **Arayüz:** Zimmet & Cihaz Teknik Detay Kartı Sayfası (Mobil kameradan cihaz QR kodu okutulduğunda açılan ekran)
-- [ ] **Arayüz:** Admin Kanban İş Takip Board Sayfası (`kanban.html` - Ekibin sprint durum paneli)
-- [ ] **API:** `POST /api/assets` (Seri no/QR bazlı tekil fiziksel cihaz ekleme endpoint'i)
-- [ ] **API:** `GET /api/assets/{serialNumber}` (Seri no/QR ile tekil cihaz bilgilerini getirme endpoint'i)
-- [ ] **API:** `POST /api/assets/{id}/assign` (Cihazı kullanıcıya zimmetleme endpoint'i)
-- [ ] **API:** `GET /api/assets/{id}/history` (Cihazın geçmiş tüm sahiplerini gösteren Zaman Çizelgesi / Timeline endpoint'i)
-- [ ] **API:** `GET /api/security/audit-logs` (Detaylı Güvenlik Denetim Günlüğü listeleme endpoint'i)
-- [ ] **API:** `GET /api/kanban/tasks` (Sprint iş durumlarını çeken/güncelleyen Kanban API'si)
-
 ---
 
 ## 📈 Planlanan İzleme Altyapısı (Prometheus & Grafana) [AKTİF HAZIRLIK]
