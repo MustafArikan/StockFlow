@@ -40,3 +40,6 @@ yarn-error.log*
 
 # Local Environment Variables
 .env
+
+# JetBrains IDE settings (Rider, WebStorm, etc.)
+.idea/
