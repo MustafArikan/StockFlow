@@ -76,7 +76,7 @@ Bu proje, geleneksel kişi bazlı rol atamaları yerine tamamen **görev (task) 
 - [ ] **API:** `POST /api/locations` (Depo içerisine raf/lokasyon ekleme endpoint'i)
 
 ### 🔄 Modül 4: Stok Hareketleri & Okuyucu Entegrasyonu
-- [ ] **Arayüz:** Stok Hareketleri Sayfası (`movements.html` - Giriş/Çıkış işlem geçmişi listesi ve yeni hareket formu)
+- [x] **Arayüz:** Stok Hareketleri Sayfası (`movements.html` - Giriş/Çıkış işlem geçmişi listesi ve yeni hareket formu)
 - [x] **Arayüz Yardımcısı:** Hibrit Kamera Tarayıcı Modülü (`scanner.js` ve `test-scanner.html` - html5-qrcode entegrasyonu)
 - [ ] **Arayüz Entegrasyonu:** Barkod/QR tarayıcı modülünün Stok Hareket formuna entegre edilmesi (Kamera ile ürün okutma)
 - [ ] **API:** `GET /api/stock/movements` (Tüm stok hareket geçmişini filtreli listeleme endpoint'i)
