@@ -33,65 +33,90 @@ stok_takip/
 
 ---
 
-## 📊 İş Paketi Dağılımı ve Tamamlanma Durumu (Genel İlerleme: %2.5 - 1/40 Görev)
+## 📊 Görev (Task) Bazlı Backlog ve İlerleme Durumu (Genel İlerleme: %9.1 - 5/55 Görev)
 
-| İş Paketi | Sorumluluk | Toplam Görev | Tamamlanan | Ertelenen | Kalan | Tamamlanma Yüzdesi |
-| :--- | :--- | :---: | :---: | :---: | :---: | :---: |
-| **K1** | Backend & Veritabanı | 10 | 0 | 0 | 10 | **%0.0** |
-| **K2** | Frontend Arayüz | 10 | 0 | 0 | 10 | **%0.0** |
-| **K3** | Raporlama & Analitik | 9 | 0 | 0 | 9 | **%0.0** |
-| **K4** | Altyapı, Entegrasyon & Test | 11 | 4 | 2 | 5 | **%36.0** |
-| **GENEL**| **Tüm Proje İlerlemesi** | **40** | **4** | **2** | **34** | **%10** |
+Bu proje, geleneksel kişi bazlı rol atamaları yerine tamamen **görev (task) bazlı** yönetilmektedir. 
+* **Çalışma Prensibi:** Geliştiriciler (K1, K2, K3, K4 fark etmeksizin) backlog'dan istedikleri herhangi bir görevi (ön yüz ekranını, entegrasyonu veya API endpoint'ini) üzerine alıp geliştirebilir ve bitirdiğinde işaretleyebilir. Belirli bir alan kısıtlaması veya alan paylaşımı yoktur.
 
-*Not: Ertelenen görevler (canlı ortam planlarındaki değişiklikler nedeniyle ertelenen Nginx SSL ve otomatik yedekleme altyapısı) genel yüzde hesaplamasına dahil edilmiştir. Ertelenenler düşüldüğünde aktif görev tamamlama oranı **%2.6** (1/38) seviyesindedir. Prometheus & Grafana izleme sistemi canlı/production öncesi hazırlık amacıyla aktif geliştirme kapsamına alınmıştır.*
+| Durum | Toplam Görev | Tamamlanan | Ertelenen | Kalan | Aktif İlerleme Yüzdesi |
+| :--- | :---: | :---: | :---: | :---: | :---: |
+| **Genel Proje Durumu** | **55** | **5** | **2** | **48** | **%9.4** |
 
-### K1 — Backend & Veritabanı (Tamamlanma: %0.0 - 0/10)
-- [ ] MSSQL şema tasarımı (EF Core Code-First DbContext ve Migration tanımları)
-- [ ] Kullanıcı auth: kayıt, giriş, JWT(JSON web token), rol bazlı yetkilendirme (ASP.NET Core Identity altyapısı)
-- [ ] Ürün CRUD API (`/api/products` - arama ve filtreleme parametreleri dahil)
-- [ ] Kategori, depo, lokasyon API'leri (DbContext üzerinden MSSQL bağlantıları)
-- [ ] Stok giriş/çıkış/transfer işlemleri + audit log (ACID uyumlu transaction işlemleri EF Core TransactionScope ile)
-- [ ] Kritik stok uyarı sistemi (stok seviyesi düştüğünde otomatik DB bildirimi oluşturan DB trigger/service motoru)
-- [ ] Rapor endpoint'leri (Dashboard özet, trend, kategori dağılımı, en aktif ürünler, kritik stok listesi)
-- [ ] Dinamik QR/Seri no bazlı Zimmet DB veri yapısı ve API'leri (Yol Haritası)
-- [ ] Detaylı Güvenlik Denetim Günlüğü (IP, User Agent ve işlem detaylı Audit Logs Interceptor) (Yol Haritası)
-- [ ] Çoklu şube/depo yetkilendirme altyapısı (Multi-Tenant depo izinleri filtreleri) (Yol Haritası)
+*Not: Canlı ortam planlarındaki değişiklikler nedeniyle ertelenen 2 görev (Nginx SSL ve otomatik veri tabanı yedekleme) genel yüzdenin dışındaki "Ertelenen" kısmında tutulmaktadır. Ertelenenler düşüldüğünde aktif görev ilerleme oranı **%9.4** (5/53) seviyesindedir.*
 
-### K2 — Frontend Arayüz (Tamamlanma: %0.0 - 0/10)
-- [ ] Proje kurulumu, Bootstrap 5, HTML Sayfaları (Bootstrap entegre edildi, Nginx ile sunum yapısı kuruldu)
-- [ ] Giriş/kayıt sayfaları + auth token yönetimi (token HttpOnly Cookie üzerinde saklanır ve otomatik yenilenir)
-- [ ] Sidebar layout, navbar, mobil uyumluluk (Bootstrap duyarlı mobil alt menü tasarımı)
-- [ ] Ürün listeleme, arama/filtre (arama ve kategori filtrelemesi arayüzü)
-- [ ] Ürün ekleme/düzenleme formları (Admin yetkisine özel modal form pencereleri)
-- [ ] Stok giriş/çıkış ekranları (barkod desteğiyle — K4 kamera entegrasyonu aşamasında)
-- [ ] Bildirim paneli ve kritik stok uyarıları (sol menüde canlı sayaç ve bildirim listesinde okundu işaretleme)
-- [ ] Mobil kamera / QR kodu okutulduğunda ürün zimmet & teknik detay kartı gösteren sayfa (Yol Haritası)
-- [ ] Admin panelinde ekibin sprint ve iş durumunu takip etmek için Kanban Task Board (Yol Haritası)
-- [ ] Depo krokisi (2D/3D) ve ürün toplama rota çizimi arayüzü (Yol Haritası)
+---
 
-### K3 — Raporlama & Analitik (Tamamlanma: %0.0 - 0/9)
-- [ ] Dashboard: özet kartlar (toplam ürün, stok değeri, kritik ürünler)
-- [ ] Stok hareket trendi grafiği (C# Backend beslemeli Chart.js/Recharts entegrasyonu - son 30 gün veritabanına bağlandı)
-- [ ] Kategori dağılımı pasta/bar grafiği (Bootstrap destekli grafik görselleştirilmesi)
-- [ ] En aktif ürünler listesi (İşlem hacmi ve işlem adedine göre sıralı liste)
-- [ ] Tarih aralığı filteri ile raporlama sayfası
-- [ ] PDF export (`jsPDF` + `html2canvas`)
-- [ ] Excel/CSV export (`ClosedXML` veya `EPPlus`)
-- [ ] Backend rapor endpoint'leri (K1 ile koordineli)
-- [ ] Kritik seviyeye düşen ürünler için otomatik Satın Alma Formu (PO) ve tedarikçi e-posta onay taslağı (Auto-Procurement) (Yol Haritası)
+### 🔐 Modül 1: Kullanıcı Yönetimi & Yetkilendirme (Auth)
+- [ ] **Arayüz:** Kullanıcı Giriş Sayfası (`login.html` - Giriş formu ve JWT token saklama entegrasyonu)
+- [ ] **Arayüz:** Kullanıcı Kayıt Sayfası (`register.html` - Kayıt formu)
+- [ ] **API:** `POST /api/auth/register` (Kullanıcı kayıt ve parola hashleme endpoint'i)
+- [ ] **API:** `POST /api/auth/login` (Kullanıcı girişi, kimlik doğrulama ve JWT token üretim endpoint'i)
+- [ ] **API:** `POST /api/auth/logout` (Oturumu sonlandırma endpoint'i)
+- [ ] **API:** `GET /api/auth/me` (Aktif oturum açmış kullanıcının profil detayları endpoint'i)
 
-### K4 — Altyapı, Entegrasyon & Test (Tamamlanma: %36.0 - 4/11)
-- [x] Docker Compose kurulumu (db/mssql + backend + frontend)
-- [x] Barkod/QR okuma: kamera entegrasyonu (`QuaggaJS`)
-- [ ] Depo içi lokasyon yönetimi modülü (konum bazlı stok yapısı ve DB entegrasyonu)
-- [ ] Birim testler: auth, product CRUD, stok işlemleri (`xUnit + FluentAssertions`)
-- [ ] Swagger/OpenAPI dokümantasyonu (Swashbuckle/NSwag entegrasyonu)
-- [x] README ve kurulum kılavuzu (Güncellenmiş .NET sürümü)
-- [x] Production ortamı `.env` yönetimi (Docker Compose environment parametreleri ile entegre edildi)
-- [ ] Tekil cihazlar için seri numarası bazlı QR kod etiket oluşturma servisi (Yol Haritası)
-- [ Ertelendi ] Canlı ortam Nginx tersine vekil (Reverse Proxy) ve SSL sertifikası yapılandırması
+### 📦 Modül 2: Ürün Kataloğu & Kategori Yönetimi
+- [ ] **Arayüz:** Ürün Listesi Sayfası (`products.html` - Arama, kategori filtreleme ve modal tetikleyicileri)
+- [ ] **Arayüz:** Ürün Ekleme/Düzenleme Form Modalı (Admin yetkisine özel ürün bilgileri formu)
+- [ ] **Arayüz:** Kategori Yönetim Modalı (Ürünler ekranından açılan hiyerarşik kategori ekleme/silme arayüzü)
+- [ ] **API:** `GET /api/products` (Ürünleri arama, kategoriye göre filtreleme, sayfalama ve listeleme endpoint'i)
+- [ ] **API:** `GET /api/products/{id}` (Belirli bir ürünün detaylarını getirme endpoint'i)
+- [ ] **API:** `POST /api/products` (Yeni ürün ekleme endpoint'i - Sadece Admin yetkili)
+- [ ] **API:** `PUT /api/products/{id}` (Mevcut ürünü güncelleme endpoint'i - Sadece Admin yetkili)
+- [ ] **API:** `DELETE /api/products/{id}` (Ürün silme endpoint'i - Sadece Admin yetkili)
+- [ ] **API:** `GET /api/categories` (Hiyerarşik kategori ağacını listeleme endpoint'i)
+- [ ] **API:** `POST /api/categories` (Yeni kategori oluşturma endpoint'i)
+
+### 🏢 Modül 3: Depo & Lokasyon (Raf) Yönetimi
+- [ ] **Arayüz:** Depo Yönetim Sayfası (`warehouses.html` - Depoları ve ilişkili konumları listeleme ekranı)
+- [ ] **Arayüz:** Lokasyon/Raf Ekleme Modalı (Deponun içine raf, bölge veya kutu ekleme arayüzü)
+- [ ] **API:** `GET /api/warehouses` (Sistemdeki tüm depoları listeleme endpoint'i)
+- [ ] **API:** `POST /api/warehouses` (Yeni depo oluşturma endpoint'i)
+- [ ] **API:** `PUT /api/warehouses/{id}` (Depo bilgilerini güncelleme endpoint'i)
+- [ ] **API:** `DELETE /api/warehouses/{id}` (Depoyu silme endpoint'i)
+- [ ] **API:** `POST /api/locations` (Depo içerisine raf/lokasyon ekleme endpoint'i)
+
+### 🔄 Modül 4: Stok Hareketleri & Okuyucu Entegrasyonu
+- [ ] **Arayüz:** Stok Hareketleri Sayfası (`movements.html` - Giriş/Çıkış işlem geçmişi listesi ve yeni hareket formu)
+- [x] **Arayüz Yardımcısı:** Hibrit Kamera Tarayıcı Modülü (`scanner.js` ve `test-scanner.html` - html5-qrcode entegrasyonu)
+- [ ] **Arayüz Entegrasyonu:** Barkod/QR tarayıcı modülünün Stok Hareket formuna entegre edilmesi (Kamera ile ürün okutma)
+- [ ] **API:** `GET /api/stock/movements` (Tüm stok hareket geçmişini filtreli listeleme endpoint'i)
+- [ ] **API:** `POST /api/stock/movements/in` (Stok Giriş işlemi endpoint'i - Stok seviyesini artırır)
+- [ ] **API:** `POST /api/stock/movements/out` (Stok Çıkış işlemi endpoint'i - Stok seviyesini azaltır)
+- [ ] **API:** `POST /api/stock/movements/transfer` (Depolar arası stok transfer endpoint'i - ACID Uyumlu transaction)
+
+### 🔔 Modül 5: Kritik Stok & Canlı Bildirimler
+- [ ] **Arayüz:** Canlı Bildirim Paneli Sayfası (`notifications.html` - Kritik stok alarmları ve okundu işaretleme)
+- [ ] **API:** `GET /api/notifications` (Kritik stok seviyesinin altına düşen aktif bildirimleri listeleme endpoint'i)
+- [ ] **API:** `PUT /api/notifications/{id}/read` (Bildirimi okundu olarak işaretleme endpoint'i)
+
+### 📊 Modül 6: Dashboard, Raporlama & Analiz
+- [ ] **Arayüz:** Ana Dashboard Sayfası (`index.html` - Özet kartları, Chart.js grafik entegrasyonları)
+- [ ] **Arayüz Entegrasyonu:** Raporları PDF formatında dışa aktarma (`jsPDF` + `html2canvas`)
+- [ ] **Arayüz Entegrasyonu:** Raporları Excel/CSV formatında dışa aktarma
+- [ ] **API:** `GET /api/reports/dashboard-summary` (Toplam ürün, toplam depo değeri, kritik ürün sayısı kart verileri endpoint'i)
+- [ ] **API:** `GET /api/reports/trend` (Son 30 günlük günlük stok giriş/çıkış trend verileri endpoint'i)
+- [ ] **API:** `GET /api/reports/by-category` (Kategori bazlı stok miktarları dağılım verileri endpoint'i)
+- [ ] **API:** `GET /api/reports/top-products` (İşlem hacmi en yüksek ilk 5 ürün verisi endpoint'i)
+
+### 🛠️ Modül 7: Altyapı, Yapılandırma & DevOps
+- [x] **Kurulum:** Docker Compose ortamının kurulması (MSSQL + Backend + Frontend servisleri)
+- [x] **Kurulum:** Production/Development ortamı `.env` değişkenleri yönetimi
+- [x] **Kurulum:** Swagger/OpenAPI ve Scalar UI API dokümantasyonu entegrasyonu
+- [x] **Kurulum:** Proje ana README ve kurulum kılavuzunun hazırlanması
+- [ ] **Kurulum:** C# Birim Testleri (Unit Tests) ortamının kurulması (`xUnit` + `FluentAssertions` altyapısı)
+- [ Ertelendi ] Canlı ortam Nginx tersine vekil (Reverse Proxy) ve SSL (HTTPS) sertifikası yapılandırması
 - [ Ertelendi ] Canlı ortam otomatik veritabanı yedekleme ve arşivleme altyapısı
 - [ ] Prometheus & Grafana ile canlı/production öncesi izleme (monitoring) hazırlığı
+
+### 🔮 Modül 8: Gelişmiş Özellikler (Yol Haritası)
+- [ ] **Arayüz:** Zimmet & Cihaz Teknik Detay Kartı Sayfası (Mobil kameradan cihaz QR kodu okutulduğunda açılan ekran)
+- [ ] **Arayüz:** Admin Kanban İş Takip Board Sayfası (`kanban.html` - Ekibin sprint durum paneli)
+- [ ] **API:** `POST /api/assets` (Seri no/QR bazlı tekil fiziksel cihaz ekleme endpoint'i)
+- [ ] **API:** `GET /api/assets/{serialNumber}` (Seri no/QR ile tekil cihaz bilgilerini getirme endpoint'i)
+- [ ] **API:** `POST /api/assets/{id}/assign` (Cihazı kullanıcıya zimmetleme endpoint'i)
+- [ ] **API:** `GET /api/assets/{id}/history` (Cihazın geçmiş tüm sahiplerini gösteren Zaman Çizelgesi / Timeline endpoint'i)
+- [ ] **API:** `GET /api/security/audit-logs` (Detaylı Güvenlik Denetim Günlüğü listeleme endpoint'i)
+- [ ] **API:** `GET /api/kanban/tasks` (Sprint iş durumlarını çeken/güncelleyen Kanban API'si)
 
 ---
 
