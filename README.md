@@ -1,6 +1,6 @@
 # Stok Envanter Takip Sistemi (.NET & MSSQL & Bootstrap)
 
-Tam kapsamlı, 4 geliştirici için tasarlanmış stok ve envanter yönetim uygulaması kılavuzu ve proje ilerleme durumu (.NET ve Bootstrap Sürümü).
+Tam kapsamlı, 5 geliştirici için tasarlanmış stok ve envanter yönetim uygulaması kılavuzu ve proje ilerleme durumu (.NET ve Bootstrap Sürümü).
 
 ---
 
@@ -8,14 +8,14 @@ Tam kapsamlı, 4 geliştirici için tasarlanmış stok ve envanter yönetim uygu
 
 ```
 stok_takip/
-├── backend/              ← K1: ASP.NET Core 9.0 Web API
+├── backend/              ← K1: ASP.NET Core 10.0 Web API
 │   ├── Controllers/      ← İş mantığı ve API endpoint tanımları
 │   ├── Models/           ← DB Entity sınıf tanımları (EF Core)
 │   ├── Data/
 │   │   ├── AppDbContext.cs ← EF Core bağlantı yönetimi (DbContext pool)
 │   │   └── DbInitializer.cs← Veritabanı şeması ve seed verileri (Code-First Migration)
-│   ├── Dockerfile        ← API Docker imaj tanımı (.NET 9.0)
-│   ├── backend.csproj    ← .NET 9.0 Proje dosyası
+│   ├── Dockerfile        ← API Docker imaj tanımı (.NET 10.0)
+│   ├── backend.csproj    ← .NET 10.0 Proje dosyası
 │   └── Program.cs        ← API giriş noktası ve servis kayıtları
 ├── frontend/             ← K2: Nginx Web Sunucusu + Bootstrap 5 (Statik İstemci)
 │   ├── css/              ← Stil dosyaları
