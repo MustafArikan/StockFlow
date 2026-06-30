@@ -33,24 +33,25 @@ stok_takip/
 
 ---
 
-## 📊 Görev (Task) Bazlı Backlog ve İlerleme Durumu (Genel İlerleme: %9.1 - 5/55 Görev)
+## 📊 Görev (Task) Bazlı Backlog ve İlerleme Durumu (Genel İlerleme: %16.0 - 9/56 Görev)
 
 Bu proje, geleneksel kişi bazlı rol atamaları yerine tamamen **görev (task) bazlı** yönetilmektedir. 
 * **Çalışma Prensibi:** Geliştiriciler (K1, K2, K3, K4 fark etmeksizin) backlog'dan istedikleri herhangi bir görevi (ön yüz ekranını, entegrasyonu veya API endpoint'ini) üzerine alıp geliştirebilir ve bitirdiğinde işaretleyebilir. Belirli bir alan kısıtlaması veya alan paylaşımı yoktur.
 
 | Durum | Toplam Görev | Tamamlanan | Ertelenen | Kalan | Aktif İlerleme Yüzdesi |
 | :--- | :---: | :---: | :---: | :---: | :---: |
-| **Genel Proje Durumu** | **55** | **5** | **2** | **48** | **%9.4** |
+| **Genel Proje Durumu** | **56** | **9** | **2** | **45** | **%16.6** |
 
-*Not: Canlı ortam planlarındaki değişiklikler nedeniyle ertelenen 2 görev (Nginx SSL ve otomatik veri tabanı yedekleme) genel yüzdenin dışındaki "Ertelenen" kısmında tutulmaktadır. Ertelenenler düşüldüğünde aktif görev ilerleme oranı **%9.4** (5/53) seviyesindedir.*
+*Not: Canlı ortam planlarındaki değişiklikler nedeniyle ertelenen 2 görev (Nginx SSL ve otomatik veri tabanı yedekleme) genel yüzdenin dışındaki "Ertelenen" kısmında tutulmaktadır. Ertelenenler düşüldüğünde aktif görev ilerleme oranı **%16.6** (9/54) seviyesindedir.*
 
 ---
 
 ### 🔐 Modül 1: Kullanıcı Yönetimi & Yetkilendirme (Auth)
 - [ ] **Arayüz:** Kullanıcı Giriş Sayfası (`login.html` - Giriş formu ve JWT token saklama entegrasyonu)
 - [ ] **Arayüz:** Kullanıcı Kayıt Sayfası (`register.html` - Kayıt formu)
-- [ ] **API:** `POST /api/auth/register` (Kullanıcı kayıt ve parola hashleme endpoint'i)
-- [ ] **API:** `POST /api/auth/login` (Kullanıcı girişi, kimlik doğrulama ve JWT token üretim endpoint'i)
+- [x] **API:** `POST /api/auth/register` (Kullanıcı kayıt ve parola hashleme endpoint'i)
+- [x] **API:** `POST /api/auth/verify-email` (Kullanıcı e-posta onay kodu doğrulama endpoint'i)
+- [x] **API:** `POST /api/auth/login` (Kullanıcı girişi, kimlik doğrulama ve JWT token üretim endpoint'i)
 - [ ] **API:** `POST /api/auth/logout` (Oturumu sonlandırma endpoint'i)
 - [ ] **API:** `GET /api/auth/me` (Aktif oturum açmış kullanıcının profil detayları endpoint'i)
 
