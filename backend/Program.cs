@@ -24,7 +24,7 @@ if (string.IsNullOrEmpty(jwtSecretKey))
     {
         throw new InvalidOperationException("JWT Secret Key is not configured in Production environment.");
     }
-    // Lokal geliştirme için bellekte rastgele geçici bir anahtar üret 
+    // Geliştirme ortamı için geçici rastgele anahtar
     jwtSecretKey = System.Convert.ToBase64String(System.Security.Cryptography.RandomNumberGenerator.GetBytes(32));
 }
 var jwtIssuer = builder.Configuration["JwtSettings:Issuer"] ?? "StockFlowBackend";
