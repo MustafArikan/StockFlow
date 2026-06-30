@@ -25,24 +25,23 @@ stok_takip/
 │   ├── products.html     ← Ürün yönetim sayfası
 │   ├── movements.html    ← Stok hareketleri sayfası
 │   ├── warehouses.html   ← Depo yönetim sayfası
-│   ├── notifications.html← Bildirim paneli sayfası
-│   └── kanban.html       ← Kanban görev yönetim sayfası
+│   └── notifications.html← Bildirim paneli sayfası
 ├── docker-compose.yml    ← K4: Altyapı (MSSQL + Backend + Frontend servisleri)
 └── .gitignore            ← Git yoksayma kuralları
 ```
 
 ---
 
-## 📊 Görev (Task) Bazlı Backlog ve İlerleme Durumu (Genel İlerleme: %16.0 - 9/56 Görev)
+## 📊 Görev (Task) Bazlı Backlog ve İlerleme Durumu (Genel İlerleme: %16.6 - 9/54 Görev)
 
 Bu proje, geleneksel kişi bazlı rol atamaları yerine tamamen **görev (task) bazlı** yönetilmektedir. 
 * **Çalışma Prensibi:** Geliştiriciler (K1, K2, K3, K4 fark etmeksizin) backlog'dan istedikleri herhangi bir görevi (ön yüz ekranını, entegrasyonu veya API endpoint'ini) üzerine alıp geliştirebilir ve bitirdiğinde işaretleyebilir. Belirli bir alan kısıtlaması veya alan paylaşımı yoktur.
 
 | Durum | Toplam Görev | Tamamlanan | Ertelenen | Kalan | Aktif İlerleme Yüzdesi |
 | :--- | :---: | :---: | :---: | :---: | :---: |
-| **Genel Proje Durumu** | **56** | **9** | **2** | **45** | **%16.6** |
+| **Genel Proje Durumu** | **54** | **9** | **2** | **43** | **%17.3** |
 
-*Not: Canlı ortam planlarındaki değişiklikler nedeniyle ertelenen 2 görev (Nginx SSL ve otomatik veri tabanı yedekleme) genel yüzdenin dışındaki "Ertelenen" kısmında tutulmaktadır. Ertelenenler düşüldüğünde aktif görev ilerleme oranı **%16.6** (9/54) seviyesindedir.*
+*Not: Canlı ortam planlarındaki değişiklikler nedeniyle ertelenen 2 görev (Nginx SSL ve otomatik veri tabanı yedekleme) genel yüzdenin dışındaki "Ertelenen" kısmında tutulmaktadır. Ertelenenler düşüldüğünde aktif görev ilerleme oranı **%17.3** (9/52) seviyesindedir.*
 
 ---
 
@@ -111,13 +110,11 @@ Bu proje, geleneksel kişi bazlı rol atamaları yerine tamamen **görev (task) 
 
 ### 🔮 Modül 8: Gelişmiş Özellikler (Yol Haritası)
 - [ ] **Arayüz:** Zimmet & Cihaz Teknik Detay Kartı Sayfası (Mobil kameradan cihaz QR kodu okutulduğunda açılan ekran)
-- [ ] **Arayüz:** Admin Kanban İş Takip Board Sayfası (`kanban.html` - Ekibin sprint durum paneli)
 - [ ] **API:** `POST /api/assets` (Seri no/QR bazlı tekil fiziksel cihaz ekleme endpoint'i)
 - [ ] **API:** `GET /api/assets/{serialNumber}` (Seri no/QR ile tekil cihaz bilgilerini getirme endpoint'i)
 - [ ] **API:** `POST /api/assets/{id}/assign` (Cihazı kullanıcıya zimmetleme endpoint'i)
 - [ ] **API:** `GET /api/assets/{id}/history` (Cihazın geçmiş tüm sahiplerini gösteren Zaman Çizelgesi / Timeline endpoint'i)
 - [ ] **API:** `GET /api/security/audit-logs` (Detaylı Güvenlik Denetim Günlüğü listeleme endpoint'i)
-- [ ] **API:** `GET /api/kanban/tasks` (Sprint iş durumlarını çeken/güncelleyen Kanban API'si)
 
 ---
 
@@ -174,7 +171,6 @@ docker-compose up -d --build
 | **Planlanan** | `asset_history` | Cihaz zimmet/bakım geçmişi | `asset_id` (FK), `user_id` (FK), `action_type` |
 | **Planlanan** | `security_audit_logs`| Güvenlik ve kritik işlem denetim günlüğü | `user_id` (FK), `action`, `ip_address`, `user_agent` |
 | **Planlanan** | `user_warehouses` | Depo bazlı çoklu şube yetkilendirmesi | `user_id` (FK), `warehouse_id` (FK) [Composite PK] |
-| **Planlanan** | `kanban_tasks` | Sprint iş ve görev takip tablosu | `title`, `status` (todo/in_progress/review/done) |
 
 *Açıklamalar: **UQ:** Unique Constraint, **FK:** Foreign Key, **PK:** Primary Key.*
 
