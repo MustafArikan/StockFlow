@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using stok_takip.Data;
 
@@ -11,9 +12,11 @@ using stok_takip.Data;
 namespace backend.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260630074627_SyncModelSnapshot")]
+    partial class SyncModelSnapshot
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -27,7 +30,7 @@ namespace backend.Migrations
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int")
-                        .HasColumnName("id");
+                        .HasColumnName("ıd");
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
@@ -37,13 +40,13 @@ namespace backend.Migrations
 
                     b.Property<int?>("ProductId")
                         .HasColumnType("int")
-                        .HasColumnName("product_id");
+                        .HasColumnName("product_ıd");
 
                     b.HasKey("Id")
                         .HasName("pk_asset");
 
                     b.HasIndex("ProductId")
-                        .HasDatabaseName("ix_asset_product_id");
+                        .HasDatabaseName("ıx_asset_product_ıd");
 
                     b.ToTable("asset");
                 });
@@ -53,7 +56,7 @@ namespace backend.Migrations
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int")
-                        .HasColumnName("id");
+                        .HasColumnName("ıd");
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
@@ -63,13 +66,13 @@ namespace backend.Migrations
 
                     b.Property<int?>("UserId")
                         .HasColumnType("int")
-                        .HasColumnName("user_id");
+                        .HasColumnName("user_ıd");
 
                     b.HasKey("Id")
                         .HasName("pk_asset_history");
 
                     b.HasIndex("UserId")
-                        .HasDatabaseName("ix_asset_history_user_id");
+                        .HasDatabaseName("ıx_asset_history_user_ıd");
 
                     b.ToTable("asset_history");
                 });
@@ -79,7 +82,7 @@ namespace backend.Migrations
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int")
-                        .HasColumnName("id");
+                        .HasColumnName("ıd");
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
@@ -94,13 +97,13 @@ namespace backend.Migrations
 
                     b.Property<int?>("ParentId")
                         .HasColumnType("int")
-                        .HasColumnName("parent_id");
+                        .HasColumnName("parent_ıd");
 
                     b.HasKey("Id")
                         .HasName("pk_categories");
 
                     b.HasIndex("ParentId")
-                        .HasDatabaseName("ix_categories_parent_id");
+                        .HasDatabaseName("ıx_categories_parent_ıd");
 
                     b.ToTable("categories");
                 });
@@ -110,7 +113,7 @@ namespace backend.Migrations
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int")
-                        .HasColumnName("id");
+                        .HasColumnName("ıd");
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
@@ -125,17 +128,17 @@ namespace backend.Migrations
 
                     b.Property<int>("WarehouseId")
                         .HasColumnType("int")
-                        .HasColumnName("warehouse_id");
+                        .HasColumnName("warehouse_ıd");
 
                     b.HasKey("Id")
                         .HasName("pk_locations");
 
                     b.HasIndex("Code")
                         .IsUnique()
-                        .HasDatabaseName("ix_locations_code");
+                        .HasDatabaseName("ıx_locations_code");
 
                     b.HasIndex("WarehouseId")
-                        .HasDatabaseName("ix_locations_warehouse_id");
+                        .HasDatabaseName("ıx_locations_warehouse_ıd");
 
                     b.ToTable("locations");
                 });
@@ -145,7 +148,7 @@ namespace backend.Migrations
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int")
-                        .HasColumnName("id");
+                        .HasColumnName("ıd");
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
@@ -155,7 +158,7 @@ namespace backend.Migrations
 
                     b.Property<bool>("IsRead")
                         .HasColumnType("bit")
-                        .HasColumnName("is_read");
+                        .HasColumnName("ıs_read");
 
                     b.Property<string>("Message")
                         .IsRequired()
@@ -178,7 +181,7 @@ namespace backend.Migrations
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int")
-                        .HasColumnName("id");
+                        .HasColumnName("ıd");
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
@@ -189,7 +192,7 @@ namespace backend.Migrations
 
                     b.Property<int>("CategoryId")
                         .HasColumnType("int")
-                        .HasColumnName("category_id");
+                        .HasColumnName("category_ıd");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2")
@@ -209,10 +212,10 @@ namespace backend.Migrations
 
                     b.HasIndex("Barcode")
                         .IsUnique()
-                        .HasDatabaseName("ix_products_barcode");
+                        .HasDatabaseName("ıx_products_barcode");
 
                     b.HasIndex("CategoryId")
-                        .HasDatabaseName("ix_products_category_id");
+                        .HasDatabaseName("ıx_products_category_ıd");
 
                     b.ToTable("products");
                 });
@@ -222,7 +225,7 @@ namespace backend.Migrations
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int")
-                        .HasColumnName("id");
+                        .HasColumnName("ıd");
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
@@ -232,13 +235,13 @@ namespace backend.Migrations
 
                     b.Property<int?>("UserId")
                         .HasColumnType("int")
-                        .HasColumnName("user_id");
+                        .HasColumnName("user_ıd");
 
                     b.HasKey("Id")
                         .HasName("pk_security_audit_log");
 
                     b.HasIndex("UserId")
-                        .HasDatabaseName("ix_security_audit_log_user_id");
+                        .HasDatabaseName("ıx_security_audit_log_user_ıd");
 
                     b.ToTable("security_audit_log");
                 });
@@ -248,7 +251,7 @@ namespace backend.Migrations
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int")
-                        .HasColumnName("id");
+                        .HasColumnName("ıd");
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
@@ -258,11 +261,11 @@ namespace backend.Migrations
 
                     b.Property<int>("LocationId")
                         .HasColumnType("int")
-                        .HasColumnName("location_id");
+                        .HasColumnName("location_ıd");
 
                     b.Property<int>("ProductId")
                         .HasColumnType("int")
-                        .HasColumnName("product_id");
+                        .HasColumnName("product_ıd");
 
                     b.Property<int>("Quantity")
                         .HasColumnType("int")
@@ -272,11 +275,11 @@ namespace backend.Migrations
                         .HasName("pk_stock_levels");
 
                     b.HasIndex("LocationId")
-                        .HasDatabaseName("ix_stock_levels_location_id");
+                        .HasDatabaseName("ıx_stock_levels_location_ıd");
 
                     b.HasIndex("ProductId", "LocationId")
                         .IsUnique()
-                        .HasDatabaseName("ix_stock_levels_product_id_location_id");
+                        .HasDatabaseName("ıx_stock_levels_product_ıd_location_ıd");
 
                     b.ToTable("stock_levels");
                 });
@@ -286,7 +289,7 @@ namespace backend.Migrations
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int")
-                        .HasColumnName("id");
+                        .HasColumnName("ıd");
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
@@ -305,7 +308,7 @@ namespace backend.Migrations
 
                     b.Property<int>("ProductId")
                         .HasColumnType("int")
-                        .HasColumnName("product_id");
+                        .HasColumnName("product_ıd");
 
                     b.Property<int>("Quantity")
                         .HasColumnType("int")
@@ -315,7 +318,7 @@ namespace backend.Migrations
                         .HasName("pk_stock_movements");
 
                     b.HasIndex("ProductId")
-                        .HasDatabaseName("ix_stock_movements_product_id");
+                        .HasDatabaseName("ıx_stock_movements_product_ıd");
 
                     b.ToTable("stock_movements");
                 });
@@ -325,7 +328,7 @@ namespace backend.Migrations
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int")
-                        .HasColumnName("id");
+                        .HasColumnName("ıd");
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
@@ -348,7 +351,7 @@ namespace backend.Migrations
 
                     b.Property<bool>("IsEmailConfirmed")
                         .HasColumnType("bit")
-                        .HasColumnName("is_email_confirmed");
+                        .HasColumnName("ıs_email_confirmed");
 
                     b.Property<string>("PasswordHash")
                         .IsRequired()
@@ -365,7 +368,7 @@ namespace backend.Migrations
 
                     b.HasIndex("Email")
                         .IsUnique()
-                        .HasDatabaseName("ix_users_email");
+                        .HasDatabaseName("ıx_users_email");
 
                     b.ToTable("users");
                 });
@@ -375,7 +378,7 @@ namespace backend.Migrations
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int")
-                        .HasColumnName("id");
+                        .HasColumnName("ıd");
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
@@ -385,20 +388,20 @@ namespace backend.Migrations
 
                     b.Property<int?>("UserId")
                         .HasColumnType("int")
-                        .HasColumnName("user_id");
+                        .HasColumnName("user_ıd");
 
                     b.Property<int?>("WarehouseId")
                         .HasColumnType("int")
-                        .HasColumnName("warehouse_id");
+                        .HasColumnName("warehouse_ıd");
 
                     b.HasKey("Id")
                         .HasName("pk_user_warehouse");
 
                     b.HasIndex("UserId")
-                        .HasDatabaseName("ix_user_warehouse_user_id");
+                        .HasDatabaseName("ıx_user_warehouse_user_ıd");
 
                     b.HasIndex("WarehouseId")
-                        .HasDatabaseName("ix_user_warehouse_warehouse_id");
+                        .HasDatabaseName("ıx_user_warehouse_warehouse_ıd");
 
                     b.ToTable("user_warehouse");
                 });
@@ -408,7 +411,7 @@ namespace backend.Migrations
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int")
-                        .HasColumnName("id");
+                        .HasColumnName("ıd");
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
@@ -437,7 +440,7 @@ namespace backend.Migrations
                     b.HasOne("stok_takip.Models.Product", null)
                         .WithMany("Assets")
                         .HasForeignKey("ProductId")
-                        .HasConstraintName("fk_asset_products_product_id");
+                        .HasConstraintName("fk_asset_products_product_ıd");
                 });
 
             modelBuilder.Entity("stok_takip.Models.AssetHistory", b =>
@@ -445,7 +448,7 @@ namespace backend.Migrations
                     b.HasOne("stok_takip.Models.User", null)
                         .WithMany("AssetHistories")
                         .HasForeignKey("UserId")
-                        .HasConstraintName("fk_asset_history_users_user_id");
+                        .HasConstraintName("fk_asset_history_users_user_ıd");
                 });
 
             modelBuilder.Entity("stok_takip.Models.Category", b =>
@@ -454,7 +457,7 @@ namespace backend.Migrations
                         .WithMany("SubCategories")
                         .HasForeignKey("ParentId")
                         .OnDelete(DeleteBehavior.Restrict)
-                        .HasConstraintName("fk_categories_categories_parent_id");
+                        .HasConstraintName("fk_categories_categories_parent_ıd");
 
                     b.Navigation("Parent");
                 });
@@ -466,7 +469,7 @@ namespace backend.Migrations
                         .HasForeignKey("WarehouseId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
-                        .HasConstraintName("fk_locations_warehouses_warehouse_id");
+                        .HasConstraintName("fk_locations_warehouses_warehouse_ıd");
 
                     b.Navigation("Warehouse");
                 });
@@ -478,7 +481,7 @@ namespace backend.Migrations
                         .HasForeignKey("CategoryId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
-                        .HasConstraintName("fk_products_categories_category_id");
+                        .HasConstraintName("fk_products_categories_category_ıd");
 
                     b.Navigation("Category");
                 });
@@ -488,7 +491,7 @@ namespace backend.Migrations
                     b.HasOne("stok_takip.Models.User", null)
                         .WithMany("SecurityAuditLogs")
                         .HasForeignKey("UserId")
-                        .HasConstraintName("fk_security_audit_log_users_user_id");
+                        .HasConstraintName("fk_security_audit_log_users_user_ıd");
                 });
 
             modelBuilder.Entity("stok_takip.Models.StockLevel", b =>
@@ -498,14 +501,14 @@ namespace backend.Migrations
                         .HasForeignKey("LocationId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
-                        .HasConstraintName("fk_stock_levels_locations_location_id");
+                        .HasConstraintName("fk_stock_levels_locations_location_ıd");
 
                     b.HasOne("stok_takip.Models.Product", "Product")
                         .WithMany("StockLevels")
                         .HasForeignKey("ProductId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
-                        .HasConstraintName("fk_stock_levels_products_product_id");
+                        .HasConstraintName("fk_stock_levels_products_product_ıd");
 
                     b.Navigation("Location");
 
@@ -519,7 +522,7 @@ namespace backend.Migrations
                         .HasForeignKey("ProductId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
-                        .HasConstraintName("fk_stock_movements_products_product_id");
+                        .HasConstraintName("fk_stock_movements_products_product_ıd");
 
                     b.Navigation("Product");
                 });
@@ -529,12 +532,12 @@ namespace backend.Migrations
                     b.HasOne("stok_takip.Models.User", null)
                         .WithMany("UserWarehouses")
                         .HasForeignKey("UserId")
-                        .HasConstraintName("fk_user_warehouse_users_user_id");
+                        .HasConstraintName("fk_user_warehouse_users_user_ıd");
 
                     b.HasOne("stok_takip.Models.Warehouse", null)
                         .WithMany("UserWarehouses")
                         .HasForeignKey("WarehouseId")
-                        .HasConstraintName("fk_user_warehouse_warehouses_warehouse_id");
+                        .HasConstraintName("fk_user_warehouse_warehouses_warehouse_ıd");
                 });
 
             modelBuilder.Entity("stok_takip.Models.Category", b =>

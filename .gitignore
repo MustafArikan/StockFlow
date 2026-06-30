@@ -13,9 +13,6 @@ obj/
 ## Ignore Visual Studio Cache / Options files
 .vs/
 *.suo
-*.user
-*.userosscache
-*.sln.docstates
 
 ## Ignore OS generated files
 Thumbs.db
@@ -35,8 +32,8 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-## Ignore Docker Compose state
-.dockerignore
+# Ignore appsettings.Development.json (prevent leak of local secrets)
+**/appsettings.Development.json
 
 # Local Environment Variables
 .env

@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using System.Text.RegularExpressions;
 using stok_takip.Models;
 
@@ -91,6 +91,6 @@ public class AppDbContext : DbContext
         if (string.IsNullOrEmpty(input)) return input;
         
         var startUnderscore = Regex.Match(input, @"^_+");
-        return startUnderscore + Regex.Replace(input, @"([a-z0-9])([A-Z])", "$1_$2").ToLower();
+        return startUnderscore + Regex.Replace(input, @"([a-z0-9])([A-Z])", "$1_$2").ToLowerInvariant();
     }
 }

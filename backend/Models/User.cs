@@ -5,7 +5,9 @@ public class User : BaseEntity
     public string Email { get; set; } = string.Empty;
     public string PasswordHash { get; set; } = string.Empty;
     public string Role { get; set; } = "viewer"; // admin, operator, viewer
-
+    public bool IsEmailConfirmed { get; set; } = false;
+    public string? EmailConfirmationCode { get; set; }
+    public DateTime? ConfirmationCodeExpiry { get; set; }
     public ICollection<UserWarehouse> UserWarehouses { get; set; } = new List<UserWarehouse>();
     public ICollection<AssetHistory> AssetHistories { get; set; } = new List<AssetHistory>();
     public ICollection<SecurityAuditLog> SecurityAuditLogs { get; set; } = new List<SecurityAuditLog>();
