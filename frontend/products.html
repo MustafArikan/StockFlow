@@ -25,7 +25,7 @@
                     <li class="nav-item"><a class="nav-link" href="index.html">Ana Sayfa</a></li>
                     <li class="nav-item"><a class="nav-link active" href="products.html">Ürünler</a></li>
                     <li class="nav-item"><a class="nav-link" href="movements.html">Stok Hareketleri</a></li>
-                    <li class="nav-item"><a class="nav-link" href="warehauses.html">Depolar</a></li>
+                    <li class="nav-item"><a class="nav-link" href="warehouses.html">Depolar</a></li>
                     <li class="nav-item"><a class="nav-link" href="test-scanner.html">Barkod Okuyucu</a></li>
                 </ul>
                 <div class="d-flex">
@@ -37,15 +37,19 @@
 
     <div class="container my-5">
 
-        <div class="d-flex justify-content-betwee align-items-center mb-4">
+        <div class="d-flex justify-content-between align-items-center mb-4">
             <div>
                 <h1 class="fw-bold text-dark">Ürünler</h1>
                 <p class="text-muted mb-0">Ürün katoloğu ve stok bilgileri</p>
             </div>
-            <button class="btn btn-primary rounded-pill px-4 shadaow-sm" data-bs-toggle="modal" data-bs-target="#urunModal">Yeni Ürün Ekle</button>
+            <button class="btn btn-primary rounded-pill px-4 shadaow-sm" data-bs-toggle="modal" data-bs-target="#urunModal">+Yeni Ürün Ekle</button>
         </div>
         <div class="card border-0 shadow-sm rounded-3">
+            <div class="mb-3">
+                <input type="text" id="aramaKutusu" class="form-control rounded-pill" placeholder="Ürün adı veya barkod ile ara...">
+            </div>
             <div class="card-body">
+
                 <table class="table table-hover align-middle mb-0">
                     <thead>
                         <tr class="text-muted small text-uppercase">
@@ -53,7 +57,7 @@
                             <th>Ürün Adı</th>
                             <th>Barkod</th>
                             <th>Min. Stok</th>
-                            <th>Kategori ID</th>
+                            <th>Kategori </th>
                             <th class="text-end">İşlemler</th>
                         </tr>
                     </thead>
@@ -74,11 +78,12 @@
         <div class="modal-dialog modal-dialog-centred">
             <div class="modal-content border-0 shadow rounded-3">
                 <div class="modal-header border-bottom-0 bg-light rounded-top-3">
-                    <h5 class="modal-title fw-bold text-dark"> Yeni Ürün Ekle </h5>
+                    <h5 class="modal-title fw-bold text-dark" id="modalBaslik"> Yeni Ürün Ekle </h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Kapat"></button>
                 </div>
                 <div class="modal-body p-4">
                     <form id="urunFormu">
+                    <input type="hidden" id="urunId">
                         <div class="mb-3">
                             <label class="form-label text-muted small fw-bold">Ürün Adı</label>
                             <input type="text" class="form-control" id="urunAdi" placeholder="Örn: M5 Vida">
@@ -92,8 +97,10 @@
                             <input type="number" class="form-control" id="urunMinStok" placeholder="Örn: 10" min="0">
                         </div>
                         <div class="mb-4">
-                            <label class="form-label text-muted small fw-bold">Kategori ID</label>
-                            <input type="number" class="form-control" id="urunKategoriId" placeholder="Örn: 1" min="1">
+                            <label class="form-label text-muted small fw-bold">Kategori</label>
+                            <select class="form-select" id="urunKategoriId">
+                                <option value="">Kategori seçin...</option>
+                            </select>
                         </div>
                         <button type="button" id="btnUrunKaydet" class="btn btn-primary w-100 rounded-pill py-2 fw-bold">Ekle ve Kaydet </button>
                     </form>

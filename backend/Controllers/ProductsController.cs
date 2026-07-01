@@ -20,7 +20,19 @@ public class ProductsController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> GetAll()
     {
-        var products = await _context.Products.ToListAsync();
+        // Kategorileri veritabanından çekerek her ürünü sadece DTO'ya çevirir
+        var products = await _context.Products
+        .Include(p=>p.Category)
+        .Select(p=> new ProductDto
+        {
+            Id = p.Id,
+            Name = p.Name,
+            Barcode = p.Barcode,
+            MinStockLevel = p.MinStockLevel,
+            CategoryId = p.CategoryId,
+            CategoryName = p.Category.Name
+        })
+        .ToListAsync();
         return Ok(products);
     }
 
@@ -54,16 +66,16 @@ public class ProductsController : ControllerBase
 
     // PUT /api/products/5 : mecvut ürünü güncelle 
     [HttpPut("{id}")]
-    public async Task<IActionResult> Update(int id, Product updated)
+    public async Task<IActionResult> Update(int id, CreateProductDto dto)
     {
         var product = await _context.Products.FindAsync(id);
         if (product == null)
             return NotFound();
 
-        product.Name = updated.Name;
-        product.Barcode = updated.Barcode;
-        product.MinStockLevel = updated.MinStockLevel;
-        product.CategoryId = updated.CategoryId;
+        product.Name = dto.Name;
+        product.Barcode = dto.Barcode;
+        product.MinStockLevel = dto.MinStockLevel;
+        product.CategoryId = dto.CategoryId;
 
         await _context.SaveChangesAsync();
         return Ok(product);
