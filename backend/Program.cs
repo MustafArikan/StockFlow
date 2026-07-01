@@ -7,6 +7,7 @@ using Microsoft.IdentityModel.Tokens;
 using stok_takip.Data;
 using stok_takip.DTOs;
 using stok_takip.Models;
+using stok_takip.Middlewares;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -77,6 +78,7 @@ builder.Services.AddCors(options =>
 });
 
 var app = builder.Build();
+app.UseMiddleware<ExceptionHandlingMiddleware>();
 
 if (app.Environment.IsDevelopment())
 {
