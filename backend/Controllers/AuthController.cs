@@ -111,7 +111,7 @@ public async Task<IActionResult> Login([FromBody] LoginDto dto)
             return BadRequest(new { message = "Email and Password cannot be empty." });
         }
 
-        var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == dto.Email);
+        var user = await _context.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Email == dto.Email);
         if (user == null)
         {
             return Unauthorized(new { message = "Invalid email or password." });
