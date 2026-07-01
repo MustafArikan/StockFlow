@@ -86,8 +86,8 @@ Bu proje, geleneksel kişi bazlı rol atamaları yerine tamamen **görev (task) 
 
 ### 🔔 Modül 5: Kritik Stok & Canlı Bildirimler
 - [ ] **Arayüz:** Canlı Bildirim Paneli Sayfası (`notifications.html` - Kritik stok alarmları ve okundu işaretleme)
-- [ ] **API:** `GET /api/notifications` (Kritik stok seviyesinin altına düşen aktif bildirimleri listeleme endpoint'i)
-- [ ] **API:** `PUT /api/notifications/{id}/read` (Bildirimi okundu olarak işaretleme endpoint'i)
+- [x] **API:** `GET /api/notifications` (Kritik stok seviyesinin altına düşen aktif bildirimleri listeleme endpoint'i)
+- [x] **API:** `PUT /api/notifications/{id}/read` (Bildirimi okundu olarak işaretleme endpoint'i)
 
 ### 📊 Modül 6: Dashboard, Raporlama & Analiz
 - [ ] **Arayüz:** Ana Dashboard Sayfası (`index.html` - Özet kartları, Chart.js grafik entegrasyonları)
