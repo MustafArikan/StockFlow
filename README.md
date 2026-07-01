@@ -51,8 +51,8 @@ Bu proje, geleneksel kişi bazlı rol atamaları yerine tamamen **görev (task) 
 - [x] **API:** `POST /api/auth/register` (Kullanıcı kayıt ve parola hashleme endpoint'i)
 - [x] **API:** `POST /api/auth/verify-email` (Kullanıcı e-posta onay kodu doğrulama endpoint'i)
 - [x] **API:** `POST /api/auth/login` (Kullanıcı girişi, kimlik doğrulama ve JWT token üretim endpoint'i)
-- [ ] **API:** `POST /api/auth/logout` (Oturumu sonlandırma endpoint'i)
-- [ ] **API:** `GET /api/auth/me` (Aktif oturum açmış kullanıcının profil detayları endpoint'i)
+- [x] **API:** `POST /api/auth/logout` (Oturumu sonlandırma endpoint'i)
+- [x] **API:** `GET /api/auth/me` (Aktif oturum açmış kullanıcının profil detayları endpoint'i)
 
 ### 📦 Modül 2: Ürün Kataloğu & Kategori Yönetimi
 - [ ] **Arayüz:** Ürün Listesi Sayfası (`products.html` - Arama, kategori filtreleme ve modal tetikleyicileri)
