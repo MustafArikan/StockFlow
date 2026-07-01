@@ -1,5 +1,5 @@
 // backend api adersi - tek yerde tanımlı değişirse buradan değiştirilir
-const API_URL = "http://localhost:5136/api/products";
+const API_URL = "http://localhost:5000/api/products";
 
 // Tablo gövdesi referansı
 const tabloGovdesi = document.getElementById("urunTablosuGovdesi");

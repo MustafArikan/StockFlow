@@ -23,3 +23,23 @@ Accept: application/json
 POST {{backend_HostAddress}}/api/auth/logout
 Authorization: Bearer {{login.response.body.token}}
 Accept: application/json
+
+### 4. Tüm Bildirimleri Listele
+GET {{backend_HostAddress}}/api/notifications
+Authorization: Bearer {{login.response.body.token}}
+Accept: application/json
+
+### 5. Sadece Okunmamış Bildirimleri Listele
+GET {{backend_HostAddress}}/api/notifications?onlyUnread=true
+Authorization: Bearer {{login.response.body.token}}
+Accept: application/json
+
+### 6. Tek Bir Bildirimi Okundu Yap (id değerini değiştirin)
+PUT {{backend_HostAddress}}/api/notifications/1/read
+Authorization: Bearer {{login.response.body.token}}
+Accept: application/json
+
+### 7. Tüm Bildirimleri Toplu Okundu Yap
+POST {{backend_HostAddress}}/api/notifications/read-all
+Authorization: Bearer {{login.response.body.token}}
+Accept: application/json
