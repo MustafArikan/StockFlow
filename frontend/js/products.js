@@ -48,7 +48,7 @@ function tabloyuCiz(urunler){
     urunler.forEach(urun => {
         const satir = `
             <tr>
-                <td class=""fw-bold>${urun.id}</td>
+                <td class="fw-bold">${urun.id}</td>
                 <td>${urun.name} </td>
                 <td>${urun.barcode} </td>
                 <td>${urun.minStockLevel} </td>
@@ -151,7 +151,7 @@ async function urunSil(id) {
 // Kategorileri API'den çekip dropdawn'a doldurur
 async function kategorileriYukle() {
     try {
-        const cevap = await fetch("http://localhost:5136/api/categories");
+        const cevap = await fetch("http://localhost:5000/api/categories");
         if(!cevap.ok) throw new Error("Kattegoriler alınadı");
 
         const kategoriler = await cevap.json();
@@ -207,7 +207,7 @@ function urunDuzenle(id){
 }
 
 // yeni ürün ekle butonuna basınca formu sıfırlama
-document.querySelector('[data-bs-target="#urunModal"]').addEventListener("clicl", ()=>{
+document.querySelector('[data-bs-target="#urunModal"]').addEventListener("click", ()=>{
     document.getElementById("urunFormu").reset();
     document.getElementById("urunId").value = "";
     document.getElementById("modalBaslik").innerText = "Yeni ürün ekle";
