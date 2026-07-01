@@ -111,7 +111,7 @@ public async Task<IActionResult> Login([FromBody] LoginDto dto)
             return BadRequest(new { message = "Email and Password cannot be empty." });
         }
 
-        var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == dto.Email);
+        var user = await _context.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Email == dto.Email);
         if (user == null)
         {
             return Unauthorized(new { message = "Invalid email or password." });
@@ -143,6 +143,40 @@ public async Task<IActionResult> Login([FromBody] LoginDto dto)
 public IActionResult TestAdmin()
     {
         return Ok(new { message = "Congratulations! You are accessed this endpoint as an admin role." });
+    }
+
+[HttpGet("me")]
+[Authorize]
+public async Task<IActionResult> GetMe()
+    {
+        var userIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int userID))
+        {
+            return Unauthorized(new { message = "Invalid token claims."});
+        }
+
+        var user = await _context.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == userID);
+        if (user == null)
+        {
+            return NotFound(new { message = "User not found." });
+        }
+
+        return Ok(new
+        {
+            id = user.Id,
+            email = user.Email,
+            role = user.Role,
+            createdAt = user.CreatedAt,
+        });
+    }
+
+[HttpPost("logout")]
+[Authorize]   // Sadece giriş yapmış (token'ı olan) kullanıcılar çıkış yapabilir
+public IActionResult Logout()
+    {
+        // Stateless da sunucu tarafında token silinmez.
+        // Frontende çıkış işleminin sunucu tarafından onaylandığını bildir ve sildir.
+        return Ok(new { message = "Logout successful. Please delete the token on the client side." });
     }
 
     private string GenerateJwtToken(User user)

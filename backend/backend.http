@@ -4,3 +4,42 @@ GET {{backend_HostAddress}}/api/products/
 Accept: application/json
 
 ###
+### 1. Kullanıcı Girişi (Login) - Token Almak İçin
+# @name login
+POST {{backend_HostAddress}}/api/auth/login
+Content-Type: application/json
+
+{
+    "email": "testuser_3127@godeva.com.tr",
+    "password": "SecurePassword123!"
+}
+
+### 2. Aktif Kullanıcı Detayları (GetMe)
+GET {{backend_HostAddress}}/api/auth/me
+Authorization: Bearer {{login.response.body.token}}
+Accept: application/json
+
+### 3. Oturumu Kapatma (Logout)
+POST {{backend_HostAddress}}/api/auth/logout
+Authorization: Bearer {{login.response.body.token}}
+Accept: application/json
+
+### 4. Tüm Bildirimleri Listele
+GET {{backend_HostAddress}}/api/notifications
+Authorization: Bearer {{login.response.body.token}}
+Accept: application/json
+
+### 5. Sadece Okunmamış Bildirimleri Listele
+GET {{backend_HostAddress}}/api/notifications?onlyUnread=true
+Authorization: Bearer {{login.response.body.token}}
+Accept: application/json
+
+### 6. Tek Bir Bildirimi Okundu Yap (id değerini değiştirin)
+PUT {{backend_HostAddress}}/api/notifications/1/read
+Authorization: Bearer {{login.response.body.token}}
+Accept: application/json
+
+### 7. Tüm Bildirimleri Toplu Okundu Yap
+POST {{backend_HostAddress}}/api/notifications/read-all
+Authorization: Bearer {{login.response.body.token}}
+Accept: application/json
