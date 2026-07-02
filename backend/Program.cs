@@ -27,6 +27,7 @@ if (string.IsNullOrEmpty(jwtSecretKey))
     }
     // Geliştirme ortamı için geçici rastgele anahtar
     jwtSecretKey = System.Convert.ToBase64String(System.Security.Cryptography.RandomNumberGenerator.GetBytes(32));
+    builder.Configuration["JwtSettings:SecretKey"] = jwtSecretKey;
 }
 var jwtIssuer = builder.Configuration["JwtSettings:Issuer"] ?? "StockFlowBackend";
 var jwtAudience = builder.Configuration["JwtSettings:Audience"] ?? "StockFlowFrontend";
@@ -100,5 +101,17 @@ using (var scope = app.Services.CreateScope())
     var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     dbContext.Database.Migrate();
 }
-
+using (var scope = app.Services.CreateScope())
+{
+    var services = scope.ServiceProvider;
+    try
+    {
+        var context = services.GetRequiredService<stok_takip.Data.AppDbContext>();
+        stok_takip.Data.DbInitializer.Initialize(context);
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Veritabanı başlatılırken bir hata oluştu: {ex.Message}");
+    }
+}
 app.Run();

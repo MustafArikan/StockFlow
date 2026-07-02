@@ -3,7 +3,17 @@
  */
 
 const MAX_ISLEM_ADEDI = 100000; // Güvenlik kuralı: Tek seferde en fazla işlem limiti
-
+// XSS koruması için html karakterlerini encode eder
+function escapeHtml(text) {
+        if (!text) return "";
+        return text
+            .toString()
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+}
 // 1. HAFIZA YÖNETİMİ
 const VARSAYILAN_VERILER = [
     { id: 4, tarih: "28.06.2026 09:20", kod: "SSD-1TB", ad: "Samsung 990 PRO 1TB M.2", tip: "CIKIS", adet: 10, personel: "hamit@godeva.com.tr", duzenlendi: false },
@@ -48,8 +58,9 @@ function veriyiGuncelle() {
     // Sonra tarih sıralamasını yap (Yeniden eskiye veya Eskiden yeniye)
     filtrelenmis.sort((a, b) => {
         const parcala = (t) => {
-            const [gun, ay, yil] = t.split(' ')[0].split('.');
-            const [saat, dakika] = t.split(' ')[1].split(':');
+            const temizTarih = t.replace(',', '');
+            const [gun, ay, yil] = temizTarih.split(' ')[0].split('.');
+            const [saat, dakika] = temizTarih.split(' ')[1].split(':');
             return new Date(yil, ay - 1, gun, saat, dakika);
         };
         const dateA = parcala(a.tarih);
@@ -72,6 +83,8 @@ function tabloyuCiz(veriListesi) {
         return;
     }
 
+    let satirlar = [];
+
     // Döngü ile her veriyi HTML satırına çevir
     veriListesi.forEach(hareket => {
         let tipEtiketi = hareket.tip === "GIRIS" ? `<span class="badge bg-success bg-opacity-10 text-success border border-success px-2 py-1 rounded-pill">STOK GİRİŞİ</span>` : `<span class="badge bg-danger bg-opacity-10 text-danger border border-danger px-2 py-1 rounded-pill">STOK ÇIKIŞI</span>`;
@@ -80,21 +93,25 @@ function tabloyuCiz(veriListesi) {
         let duzenlendiEtiketi = hareket.duzenlendi ? `<span class="badge bg-warning text-dark ms-2" style="font-size: 0.65rem;">Düzenlendi</span>` : "";
 
         // d-none d-md-table-cell sınıfları telefonda ilgili sütunları gizler
+        // XSS zafiyetini engellemek için hareket.kod, hareket.ad ve hareket.personel escapeHtml()'den geçirildi
         const satir = `
             <tr>
-                <td class="text-muted small text-center border-end align-middle">${hareket.tarih}</td>
-                <td class="fw-bold text-center border-end align-middle d-none d-md-table-cell">${hareket.kod}</td>
-                <td class="border-end align-middle">${hareket.ad} ${duzenlendiEtiketi}</td> 
+                <td class="text-muted small text-center border-end align-middle">${escapeHtml(hareket.tarih)}</td>
+                <td class="fw-bold text-center border-end align-middle d-none d-md-table-cell">${escapeHtml(hareket.kod)}</td>
+                <td class="border-end align-middle">${escapeHtml(hareket.ad)} ${duzenlendiEtiketi}</td>
                 <td class="text-center border-end align-middle">${tipEtiketi}</td>
                 <td class="fw-bold text-center border-end align-middle ${adetRengi}">${adetIsareti}${hareket.adet}</td>
-                <td class="text-center border-end align-middle d-none d-md-table-cell">${hareket.personel}</td>
+                <td class="text-center border-end align-middle d-none d-md-table-cell">${escapeHtml(hareket.personel)}</td>
                 <td class="text-center align-middle d-flex gap-2 justify-content-center flex-wrap">
                     <button class="btn btn-sm btn-outline-primary rounded-pill px-3" onclick="islemDuzenle(${hareket.id})">Düzenle</button>
                     <button class="btn btn-sm btn-outline-danger rounded-pill px-3" onclick="silIslem(${hareket.id})">Sil</button>
                 </td>
             </tr>`;
-        tabloGovdesi.innerHTML += satir;
+        satirlar.push(satir);
     });
+
+    // Tüm satırları tek seferde DOM'a basıyoruz
+    tabloGovdesi.innerHTML = satirlar.join("");
 }
 
 // 4. BUTON VE ARAMA DİNLEYİCİLERİ (Kullanıcı hareketlerini yakalar)
@@ -148,7 +165,7 @@ function islemDuzenle(id) {
     document.getElementById("modalBaslik").innerText = "İşlemi Düzenle";
     
     formuDenetle(); 
-    new bootstrap.Modal(document.getElementById('stokIslemModal')).show();
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('stokIslemModal')).show();
 }
 
 // KAYDETME İŞLEMİ (Ekle veya Güncelle)

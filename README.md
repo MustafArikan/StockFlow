@@ -32,16 +32,16 @@ stok_takip/
 
 ---
 
-## 📊 Görev (Task) Bazlı Backlog ve İlerleme Durumu (Genel İlerleme: %16.6 - 9/54 Görev)
+## 📊 Görev (Task) Bazlı Backlog ve İlerleme Durumu (Genel İlerleme: %41.8 - 23/55 Görev)
 
 Bu proje, geleneksel kişi bazlı rol atamaları yerine tamamen **görev (task) bazlı** yönetilmektedir. 
 * **Çalışma Prensibi:** Geliştiriciler (K1, K2, K3, K4 fark etmeksizin) backlog'dan istedikleri herhangi bir görevi (ön yüz ekranını, entegrasyonu veya API endpoint'ini) üzerine alıp geliştirebilir ve bitirdiğinde işaretleyebilir. Belirli bir alan kısıtlaması veya alan paylaşımı yoktur.
 
 | Durum | Toplam Görev | Tamamlanan | Ertelenen | Kalan | Aktif İlerleme Yüzdesi |
 | :--- | :---: | :---: | :---: | :---: | :---: |
-| **Genel Proje Durumu** | **54** | **9** | **2** | **43** | **%17.3** |
+| **Genel Proje Durumu** | **55** | **23** | **2** | **30** | **%43.4** |
 
-*Not: Canlı ortam planlarındaki değişiklikler nedeniyle ertelenen 2 görev (Nginx SSL ve otomatik veri tabanı yedekleme) genel yüzdenin dışındaki "Ertelenen" kısmında tutulmaktadır. Ertelenenler düşüldüğünde aktif görev ilerleme oranı **%17.3** (9/52) seviyesindedir.*
+*Not: Canlı ortam planlarındaki değişiklikler nedeniyle ertelenen 2 görev (Nginx SSL ve otomatik veritabanı yedekleme) genel yüzdenin dışındaki "Ertelenen" kısmında tutulmaktadır. Ertelenenler düşüldüğünde aktif görev ilerleme oranı **%43.4** (23/53) seviyesindedir.*
 
 ---
 
@@ -55,16 +55,16 @@ Bu proje, geleneksel kişi bazlı rol atamaları yerine tamamen **görev (task) 
 - [x] **API:** `GET /api/auth/me` (Aktif oturum açmış kullanıcının profil detayları endpoint'i)
 
 ### 📦 Modül 2: Ürün Kataloğu & Kategori Yönetimi
-- [ ] **Arayüz:** Ürün Listesi Sayfası (`products.html` - Arama, kategori filtreleme ve modal tetikleyicileri)
-- [ ] **Arayüz:** Ürün Ekleme/Düzenleme Form Modalı (Admin yetkisine özel ürün bilgileri formu)
+- [x] **Arayüz:** Ürün Listesi Sayfası (`products.html` - Arama, kategori filtreleme ve modal tetikleyicileri)
+- [x] **Arayüz:** Ürün Ekleme/Düzenleme Form Modalı (Admin yetkisine özel ürün bilgileri formu)
 - [ ] **Arayüz:** Kategori Yönetim Modalı (Ürünler ekranından açılan hiyerarşik kategori ekleme/silme arayüzü)
-- [ ] **API:** `GET /api/products` (Ürünleri arama, kategoriye göre filtreleme, sayfalama ve listeleme endpoint'i)
-- [ ] **API:** `GET /api/products/{id}` (Belirli bir ürünün detaylarını getirme endpoint'i)
-- [ ] **API:** `POST /api/products` (Yeni ürün ekleme endpoint'i - Sadece Admin yetkili)
-- [ ] **API:** `PUT /api/products/{id}` (Mevcut ürünü güncelleme endpoint'i - Sadece Admin yetkili)
-- [ ] **API:** `DELETE /api/products/{id}` (Ürün silme endpoint'i - Sadece Admin yetkili)
-- [ ] **API:** `GET /api/categories` (Hiyerarşik kategori ağacını listeleme endpoint'i)
-- [ ] **API:** `POST /api/categories` (Yeni kategori oluşturma endpoint'i)
+- [x] **API:** `GET /api/products` (Ürünleri arama, kategoriye göre filtreleme, sayfalama ve listeleme endpoint'i)
+- [x] **API:** `GET /api/products/{id}` (Belirli bir ürünün detaylarını getirme endpoint'i)
+- [x] **API:** `POST /api/products` (Yeni ürün ekleme endpoint'i - Sadece Admin yetkili)
+- [x] **API:** `PUT /api/products/{id}` (Mevcut ürünü güncelleme endpoint'i - Sadece Admin yetkili)
+- [x] **API:** `DELETE /api/products/{id}` (Ürün silme endpoint'i - Sadece Admin yetkili)
+- [x] **API:** `GET /api/categories` (Hiyerarşik kategori ağacını listeleme endpoint'i)
+- [x] **API:** `POST /api/categories` (Yeni kategori oluşturma endpoint'i)
 
 ### 🏢 Modül 3: Depo & Lokasyon (Raf) Yönetimi
 - [ ] **Arayüz:** Depo Yönetim Sayfası (`warehouses.html` - Depoları ve ilişkili konumları listeleme ekranı)
@@ -85,7 +85,7 @@ Bu proje, geleneksel kişi bazlı rol atamaları yerine tamamen **görev (task) 
 - [ ] **API:** `POST /api/stock/movements/transfer` (Depolar arası stok transfer endpoint'i - ACID Uyumlu transaction)
 
 ### 🔔 Modül 5: Kritik Stok & Canlı Bildirimler
-- [ ] **Arayüz:** Canlı Bildirim Paneli Sayfası (`notifications.html` - Kritik stok alarmları ve okundu işaretleme)
+- [x] **Arayüz:** Canlı Bildirim Paneli Sayfası (`notifications.html` - Kritik stok alarmları ve okundu işaretleme)
 - [x] **API:** `GET /api/notifications` (Kritik stok seviyesinin altına düşen aktif bildirimleri listeleme endpoint'i)
 - [x] **API:** `PUT /api/notifications/{id}/read` (Bildirimi okundu olarak işaretleme endpoint'i)
 

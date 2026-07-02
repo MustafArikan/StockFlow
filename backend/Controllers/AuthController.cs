@@ -44,8 +44,7 @@ public async Task<IActionResult> Register([FromBody] RegisterDto dto)
             return BadRequest(new { message = "Email is already registered."});
         }
 
-        var random = new Random();
-        var verificationCode = random.Next(100000, 999999).ToString();  // 6 haneli doğrulama kodu
+        var verificationCode = System.Security.Cryptography.RandomNumberGenerator.GetInt32(100000, 999999).ToString();  // 6 haneli doğrulama kodu
 
         var newUser = new User
         {
@@ -182,8 +181,11 @@ public IActionResult Logout()
     private string GenerateJwtToken(User user)
     {
         var tokenHandler = new JwtSecurityTokenHandler();
-        var secretKey = _configuration["JwtSettings:SecretKey"]
-            ?? "A_VERY_LONG_AND_SECURE_SECRET_KEY_FOR_LOCAL_DEVELOPMENT_ONLY_32_BYTES_MINIMUM!";
+        var secretKey = _configuration["JwtSettings:SecretKey"];
+        if (string.IsNullOrEmpty(secretKey))
+        {
+            throw new InvalidOperationException("JWT Secret Key is not configured.");
+        }
         
         var key = Encoding.UTF8.GetBytes(secretKey);
 
