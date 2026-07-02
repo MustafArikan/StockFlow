@@ -100,5 +100,17 @@ using (var scope = app.Services.CreateScope())
     var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     dbContext.Database.Migrate();
 }
-
+using (var scope = app.Services.CreateScope())
+{
+    var services = scope.ServiceProvider;
+    try
+    {
+        var context = services.GetRequiredService<stok_takip.Data.AppDbContext>();
+        stok_takip.Data.DbInitializer.Initialize(context);
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Veritabanı başlatılırken bir hata oluştu: {ex.Message}");
+    }
+}
 app.Run();
