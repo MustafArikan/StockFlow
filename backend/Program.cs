@@ -27,6 +27,7 @@ if (string.IsNullOrEmpty(jwtSecretKey))
     }
     // Geliştirme ortamı için geçici rastgele anahtar
     jwtSecretKey = System.Convert.ToBase64String(System.Security.Cryptography.RandomNumberGenerator.GetBytes(32));
+    builder.Configuration["JwtSettings:SecretKey"] = jwtSecretKey;
 }
 var jwtIssuer = builder.Configuration["JwtSettings:Issuer"] ?? "StockFlowBackend";
 var jwtAudience = builder.Configuration["JwtSettings:Audience"] ?? "StockFlowFrontend";
