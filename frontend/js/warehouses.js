@@ -1,6 +1,7 @@
 
 // Backend API adresi — depo işlemleri
-const API_URL = "http://localhost:5000/api/warehouses";
+
+const API_URL = `${CONFIG.API_BASE_URL}/warehouses`;
 
 // Tüm depoları arama için burada saklarız
 let tumDepolar = [];
@@ -180,7 +181,7 @@ async function raflariAc(depoId, depoAdi) {
 async function raflariYukle(depoId) {
     const tabloGovdesi = document.getElementById("rafTablosuGovdesi");
     try {
-        const cevap = await fetch("http://localhost:5000/api/locations/by-warehouse/" + depoId);
+        const cevap = await fetch(`${CONFIG.API_BASE_URL}/locations/by-warehouse/${depoId}`);
         if (!cevap.ok) throw new Error("Raflar alınamadı: " + cevap.status);
 
         const raflar = await cevap.json();
@@ -230,7 +231,7 @@ document.getElementById("btnRafEkle").addEventListener("click", async () => {
     };
 
     try{
-        const cevap = await fetch("http://localhost:5000/api/locations", {
+        const cevap = await fetch(`${CONFIG.API_BASE_URL}/locations`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(yeniRaf)
@@ -255,7 +256,7 @@ async function rafSil(id) {
     if(!onay) return;
 
     try{
-        const cevap = await fetch("http://localhost:5000/api/locations/" + id,{
+        const cevap = await fetch(`${CONFIG.API_BASE_URL}/locations/${id}`,{
             method: "DELETE"
         });
         if(!cevap.ok){
