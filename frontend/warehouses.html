@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Depolar - Stockflow</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm">
+        <div class="container">
+            <a class="navbar-brand fw-bold text-primary" href="index.html">
+                Stock<span class="text-white"> Flow </span>
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                    <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item"><a class="nav-link" href="index.html">Ana Sayfa</a></li>
+                    <li class="nav-item"><a class="nav-link active" href="products.html">Ürünler</a></li>
+                    <li class="nav-item"><a class="nav-link" href="movements.html">Stok Hareketleri</a></li>
+                    <li class="nav-item"><a class="nav-link" href="warehouses.html">Depolar</a></li>
+                    <li class="nav-item"><a class="nav-link" href="test-scanner.html">Barkod Okuyucu</a></li>
+                </ul>
+                <div class="d-flex">
+                    <a href="login.html" class="btn btn-outline-light btn-sm rounded-pill px-3">Giriş Yap</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container my-5">
+
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h1 class="fw-bold text-dark">Depolar</h1>
+                <p class="text-muted mb-0">Depo listesi ve bilgileri</p>
+            </div>
+            <button class="btn btn-primary rounded-pill px-4 shadaow-sm" data-bs-toggle="modal" data-bs-target="#depoModal">+ Yeni Depo Ekle</button>
+        </div>
+
+        <div class="card border-0 shadaow-sm rounded-3">
+            <div class="mb-3">
+                <input type="text" id="aramaKutusu" class="form-control rounded-pill" placeholder="Depo adı veya adres ile ara...">
+            </div>
+            <div class="card-body">
+                <table class="table table-hover align-middle mb-0">
+                    <thead>
+                        <tr class="text-muted small text-uppercase">
+                            <th>ID</th>
+                            <th>Depo Adı</th>
+                            <th>Adres</th>
+                            <th class="text-end">İşlemler</th>
+                        </tr>
+                    </thead>
+                    <tbody id="depoTablosuGovdesi">
+                        <tr>
+                            <td colspan="4" class="text-center text-muted py-4">Yükleniyor...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Yeni Depo Ekleme/Düzenleme Modal -->
+     <div class="modal fade" id="depoModal" tabindex="-1" aria-hidden="true"> 
+        <div class="modal-dialog modal-dialog-centred">
+            <div class="modal-content border-0 shadaow rounded-3">
+                <div class="modal-header border-bottom-0 bg-light rounded-top-3">
+                    <h5 class="modal-title fw-bold text-dark" id="modalBaslik">Yeni Depo Ekle</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Kapat"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <form id="depoFormu">
+                    <input type="hidden" id="depoId">
+                        <div class="mb-3">
+                            <label class="form-label text-muted small fw-bold">Depo Adı</label>
+                            <input type="text" class="form-control" id="depoAdi" placeholder="Örn: Merkez Depo">
+                        </div>
+                        <div class="mb-4">
+                            <label class="form-label text-muted small fw-bold">Adres</label>
+                            <input type="text" class="form-control" id="depoAdres" placeholder="Örn: Selçuklu, Konya">
+                        </div>
+                        <button type="button" id="btnDepoKaydet" class="btn btn-primary w-100 rounded-pill py-2 fw-bold">Ekle ve Kaydet</button>
+                    </form>
+                </div>
+
+            </div>
+        </div>
+     </div>
+
+     <!-- Raflar Modalı -->
+      <div class="modal fade" id="raflarModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centred modal-lg">
+            <div class=" modal-content border-0 shadaow rounded-3">
+                <div class="modal-header border-bottom-0 bg-light rounded-top-3">
+                    <h5 class="modal-title fw-bold text-dark" id="raflarModalBaslik">Raflar</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Kapat"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <!--Yeni raf ekleme-->
+                    <div class="d-flex gap-2 mb-4">
+                        <input type="text" class="form-control" id="rafKodu" placeholder="Raf Kodu (örn: RAF-A1)">
+                        <button type="button" id="btnRafEkle" class="btn btn-primary rounded-pill px-4 fw-bold text-nowrap">Raf Ekle</button>
+                    </div>
+
+                    <!--Raf Listesi-->
+                    <table class="tabel table-hover align-middle mb-0">
+                        <thead>
+                            <tr class="text-muted small text-uppercase">
+                                <th>ID</th>
+                                <th>Raf Kodu</th>
+                                <th class="text-end">İşlemler</th>
+                            </tr>
+                        </thead>
+                        <tbody id="rafTablosuGovdesi"></tbody>
+                    </table>
+                </div>
+                <div class="modal-footer border-top-0">
+                    <button type="button" class="btn btn-outline-secondary rounden-pill px4" data-bs-dismiss="modal">← Depolara Dön</button>
+                </div>
+            </div>
+        </div>
+      </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="js/warehouses.js"></script>
+
+</body>
+</html>
+
+
