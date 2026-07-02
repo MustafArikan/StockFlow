@@ -128,7 +128,28 @@ public async Task<IActionResult> Login([FromBody] LoginDto dto)
             return Unauthorized(new { message = "Invalid email or password." });
         }
 
-        var token = GenerateJwtToken(user);
+        var sessionToken = Guid.NewGuid().ToString(); // Yeni bir oturum token'ı oluştur
+        var token = GenerateJwtToken(user, sessionToken);
+
+        var userAgent = Request.Headers["User-Agent"].ToString();
+        var (os, browser) = ParseUserAgent(userAgent);
+        var ipAddress = Request.HttpContext.Connection.RemoteIpAddress?.ToString() ?? "127.0.0.1";
+
+        var session = new UserSession
+        {
+            UserId = user.Id,
+            SessionToken = sessionToken,
+            AccessToken = token,
+            DeviceOs = os,
+            DeviceBrowser = browser,
+            IpAddress = ipAddress,
+            IsActive = true,
+            ExpiresAt = DateTime.UtcNow.AddHours(1) // Token geçerlilik süresi -- 1 saat
+        };
+
+        _context.UserSessions.Add(session);
+        await _context.SaveChangesAsync();
+
         return Ok(new 
         { 
            message = "Login successful.",
@@ -171,14 +192,23 @@ public async Task<IActionResult> GetMe()
 
 [HttpPost("logout")]
 [Authorize]   // Sadece giriş yapmış (token'ı olan) kullanıcılar çıkış yapabilir
-public IActionResult Logout()
+public async Task<IActionResult> Logout()
     {
-        // Stateless da sunucu tarafında token silinmez.
-        // Frontende çıkış işleminin sunucu tarafından onaylandığını bildir ve sildir.
-        return Ok(new { message = "Logout successful. Please delete the token on the client side." });
+        var sessionToken = User.FindFirst(JwtRegisteredClaimNames.Jti)?.Value;
+
+        if (!string.IsNullOrEmpty(sessionToken))
+        {
+            var session = await _context.UserSessions.FirstOrDefaultAsync(s => s.SessionToken == sessionToken && s.IsActive);
+            if (session != null)
+            {
+                session.IsActive = false; // Oturumu devre dışı bırak
+                await _context.SaveChangesAsync();
+            }
+        }
+        return Ok(new { message = "Logout successful. Session deactivated." });
     }
 
-    private string GenerateJwtToken(User user)
+    private string GenerateJwtToken(User user, string sessionToken)
     {
         var tokenHandler = new JwtSecurityTokenHandler();
         var secretKey = _configuration["JwtSettings:SecretKey"];
@@ -195,14 +225,39 @@ public IActionResult Logout()
             {
                 new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
                 new Claim(ClaimTypes.Email, user.Email),
-                new Claim(ClaimTypes.Role, user.Role)
+                new Claim(ClaimTypes.Role, user.Role),
+                new Claim(JwtRegisteredClaimNames.Jti, sessionToken)
             }),
-            Expires = DateTime.UtcNow.AddDays(7), // Token geçerlilik süresi
+            Expires = DateTime.UtcNow.AddHours(1), // Token geçerlilik süresi -- 1 saat
             Issuer = _configuration["JwtSettings:Issuer"] ?? "StockFlowBackend",
             Audience = _configuration["JwtSettings:Audience"] ?? "StockFlowFrontend",
             SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature),
         };
             var token = tokenHandler.CreateToken(tokenDescriptor);
             return tokenHandler.WriteToken(token);
+    }
+
+    private (string Os, string Browser) ParseUserAgent(string userAgent)
+    {
+        if (string.IsNullOrEmpty(userAgent))
+        {
+            return ("Bilinmeyen OS", "Bilinmeyen Tarayıcı");
+        }
+
+        string os = "Bilinmeyen OS";
+        if (userAgent.Contains("Windows")) os = "Windows";
+        else if (userAgent.Contains("Android")) os = "Android";
+        else if (userAgent.Contains("iPhone") || userAgent.Contains("iPad")) os = "iOS";
+        else if (userAgent.Contains("Macintosh") || userAgent.Contains("Mac OS")) os = "Mac OS";
+        else if (userAgent.Contains("Linux")) os = "Linux";
+
+        string browser = "Bilinmeyen Tarayıcı";
+        if (userAgent.Contains("Edg")) browser = "Microsoft Edge";
+        else if (userAgent.Contains("Chrome") && !userAgent.Contains("Chromium")) browser = "Google Chrome";
+        else if (userAgent.Contains("Safari") && !userAgent.Contains("Chrome")) browser = "Safari";
+        else if (userAgent.Contains("Firefox")) browser = "Mozilla Firefox";
+        else if (userAgent.Contains("OPR") || userAgent.Contains("Opera")) browser = "Opera";
+
+        return (os, browser);
     }
 }

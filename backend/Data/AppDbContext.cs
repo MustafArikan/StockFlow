@@ -17,7 +17,7 @@ public class AppDbContext : DbContext
     public DbSet<StockLevel> StockLevels { get; set; } = null!;
     public DbSet<StockMovement> StockMovements { get; set; } = null!;
     public DbSet<Notification> Notifications { get; set; } = null!;
-
+    public DbSet<UserSession> UserSessions { get; set; } = null!;
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -42,6 +42,10 @@ public class AppDbContext : DbContext
 
         modelBuilder.Entity<StockLevel>()
             .HasIndex(sl => new { sl.ProductId, sl.LocationId })
+            .IsUnique();
+        
+        modelBuilder.Entity<UserSession>()
+            .HasIndex(s => s.SessionToken)
             .IsUnique();
 
         foreach (var entity in modelBuilder.Model.GetEntityTypes())
