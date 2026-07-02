@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using stok_takip.Data;
 
@@ -11,9 +12,11 @@ using stok_takip.Data;
 namespace backend.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260702075744_AddUserWarehouseAndFormat")]
+    partial class AddUserWarehouseAndFormat
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -375,69 +378,6 @@ namespace backend.Migrations
                     b.ToTable("users");
                 });
 
-            modelBuilder.Entity("stok_takip.Models.UserSession", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int")
-                        .HasColumnName("id");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("AccessToken")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)")
-                        .HasColumnName("access_token");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2")
-                        .HasColumnName("created_at");
-
-                    b.Property<string>("DeviceBrowser")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)")
-                        .HasColumnName("device_browser");
-
-                    b.Property<string>("DeviceOs")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)")
-                        .HasColumnName("device_os");
-
-                    b.Property<DateTime>("ExpiresAt")
-                        .HasColumnType("datetime2")
-                        .HasColumnName("expires_at");
-
-                    b.Property<string>("IpAddress")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)")
-                        .HasColumnName("ip_address");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("bit")
-                        .HasColumnName("is_active");
-
-                    b.Property<string>("SessionToken")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(450)")
-                        .HasColumnName("session_token");
-
-                    b.Property<int>("UserId")
-                        .HasColumnType("int")
-                        .HasColumnName("user_id");
-
-                    b.HasKey("Id")
-                        .HasName("pk_user_sessions");
-
-                    b.HasIndex("SessionToken")
-                        .IsUnique()
-                        .HasDatabaseName("ix_user_sessions_session_token");
-
-                    b.HasIndex("UserId")
-                        .HasDatabaseName("ix_user_sessions_user_id");
-
-                    b.ToTable("user_sessions");
-                });
-
             modelBuilder.Entity("stok_takip.Models.UserWarehouse", b =>
                 {
                     b.Property<int>("Id")
@@ -544,7 +484,7 @@ namespace backend.Migrations
                     b.HasOne("stok_takip.Models.Category", "Category")
                         .WithMany("Products")
                         .HasForeignKey("CategoryId")
-                        .OnDelete(DeleteBehavior.Restrict)
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
                         .HasConstraintName("fk_products_categories_category_id");
 
@@ -585,23 +525,11 @@ namespace backend.Migrations
                     b.HasOne("stok_takip.Models.Product", "Product")
                         .WithMany("StockMovements")
                         .HasForeignKey("ProductId")
-                        .OnDelete(DeleteBehavior.Restrict)
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
                         .HasConstraintName("fk_stock_movements_products_product_id");
 
                     b.Navigation("Product");
-                });
-
-            modelBuilder.Entity("stok_takip.Models.UserSession", b =>
-                {
-                    b.HasOne("stok_takip.Models.User", "User")
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("fk_user_sessions_users_user_id");
-
-                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("stok_takip.Models.UserWarehouse", b =>

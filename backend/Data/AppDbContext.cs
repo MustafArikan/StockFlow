@@ -17,7 +17,7 @@ public class AppDbContext : DbContext
     public DbSet<StockLevel> StockLevels { get; set; } = null!;
     public DbSet<StockMovement> StockMovements { get; set; } = null!;
     public DbSet<Notification> Notifications { get; set; } = null!;
-
+    public DbSet<UserSession> UserSessions { get; set; } = null!;
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -35,6 +35,12 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<Product>()
             .HasIndex(p => p.Barcode)
             .IsUnique();
+            
+        modelBuilder.Entity<Product>()
+            .HasOne(p => p.Category)
+            .WithMany(c => c.Products)
+            .HasForeignKey(p => p.CategoryId)
+            .OnDelete(DeleteBehavior.Restrict);
 
         modelBuilder.Entity<Location>()
             .HasIndex(l => l.Code)
@@ -43,6 +49,16 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<StockLevel>()
             .HasIndex(sl => new { sl.ProductId, sl.LocationId })
             .IsUnique();
+        
+        modelBuilder.Entity<UserSession>()
+            .HasIndex(s => s.SessionToken)
+            .IsUnique();
+
+        modelBuilder.Entity<StockMovement>()
+            .HasOne(sm => sm.Product)
+            .WithMany(p => p.StockMovements)
+            .HasForeignKey(sm => sm.ProductId)
+            .OnDelete(DeleteBehavior.Restrict);
 
         foreach (var entity in modelBuilder.Model.GetEntityTypes())
         {

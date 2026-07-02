@@ -1,5 +1,16 @@
 // backend api adersi - tek yerde tanımlı değişirse buradan değiştirilir
-const API_URL = "http://localhost:5000/api/products";// port değişecek
+const API_URL = `${CONFIG.API_BASE_URL}/products`;
+// XSS koruması için html karakterlerini encode eder
+function escapeHtml(text) {
+        if (!text) return "";
+        return text
+            .toString()
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+    }
 // Tüm ürünleri burada saklanıyor arama için
 let tumUrunler=[];
 
@@ -24,7 +35,7 @@ async function urunleriYukle() {
     }catch (hata){
         tabloGovdesi.innerHTML = `
             <tr>
-                <td colSpan="5" class="text-center text-danger py-4">Ürünler yüklenemedi. Backend çalışyor mu? (${hata.message})</td>
+                <td colSpan="6" class="text-center text-danger py-4">Ürünler yüklenemedi. Backend çalışyor mu? (${hata.message})</td>
             </tr>`;
         console.error("Hata:", hata);
 
@@ -36,31 +47,35 @@ async function urunleriYukle() {
 function tabloyuCiz(urunler){
     tabloGovdesi.innerHTML = "";
 
-    if (urunler.length ===0){
+    if (urunler.length === 0){
         tabloGovdesi.innerHTML= `
             <tr>
-                <td colspan= "5" class="text-center text-muted py-4"> Henüz ürün yok. "Yeni ürün ekle" ile başlayın.</td>
+                <td colspan="6" class="text-center text-muted py-4"> Henüz ürün yok. "Yeni ürün ekle" ile başlayın.</td>
             </tr>`;
-    return;
+        return;
     }
+
+    let satirlar = [];
 
     // Her ürün için bir satır oluştur
     urunler.forEach(urun => {
         const satir = `
             <tr>
                 <td class="fw-bold">${urun.id}</td>
-                <td>${urun.name} </td>
-                <td>${urun.barcode} </td>
-                <td>${urun.minStockLevel} </td>
-                <td>${urun.categoryName} </td>
+                <td>${escapeHtml(urun.name)}</td>
+                <td>${escapeHtml(urun.barcode)}</td>
+                <td>${urun.minStockLevel}</td>
+                <td>${escapeHtml(urun.categoryName)}</td>
                 <td class="text-end">
                     <button class="btn btn-sm btn-outline-primary rounded-pill" onclick="urunDuzenle(${urun.id})">Düzenle</button>
                     <button class="btn btn-sm btn-outline-danger rounded-pill" onclick="urunSil(${urun.id})">Sil</button>
                 </td>
             </tr>`;
-        tabloGovdesi.innerHTML += satir;
-        
+        satirlar.push(satir);
     });
+
+    // Tüm satırları tek seferde ekrana basarak performansı artırıyoruz
+    tabloGovdesi.innerHTML = satirlar.join("");
 }
 
 // sayfa açılınca ürünleri yükle
@@ -151,7 +166,7 @@ async function urunSil(id) {
 // Kategorileri API'den çekip dropdawn'a doldurur
 async function kategorileriYukle() {
     try {
-        const cevap = await fetch("http://localhost:5000/api/categories");
+        const cevap = await fetch(`${CONFIG.API_BASE_URL}/categories`);
         if(!cevap.ok) throw new Error("Kattegoriler alınadı");
 
         const kategoriler = await cevap.json();
@@ -202,7 +217,7 @@ function urunDuzenle(id){
     document.getElementById("btnUrunKaydet").innerText = "Güncelle";
 
     const modalElement = document.getElementById("urunModal");
-    const modalInstance = new bootstrap.Modal(modalElement);
+    const modalInstance = bootstrap.Modal.getOrCreateInstance(modalElement);
     modalInstance.show();
 }
 

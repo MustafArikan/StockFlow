@@ -27,6 +27,7 @@ if (string.IsNullOrEmpty(jwtSecretKey))
     }
     // Geliştirme ortamı için geçici rastgele anahtar
     jwtSecretKey = System.Convert.ToBase64String(System.Security.Cryptography.RandomNumberGenerator.GetBytes(32));
+    builder.Configuration["JwtSettings:SecretKey"] = jwtSecretKey;
 }
 var jwtIssuer = builder.Configuration["JwtSettings:Issuer"] ?? "StockFlowBackend";
 var jwtAudience = builder.Configuration["JwtSettings:Audience"] ?? "StockFlowFrontend";
@@ -47,7 +48,30 @@ builder.Services.AddAuthentication(options =>
         ValidIssuer = jwtIssuer,
         ValidAudience = jwtAudience,
         IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecretKey))
+    };
 
+    options.Events = new Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerEvents
+    {
+        OnTokenValidated = async context =>
+        {
+            var dbContext = context.HttpContext.RequestServices.GetRequiredService<AppDbContext>();
+            var sessionToken = context.Principal?.FindFirst(System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Jti)?.Value;
+            
+            if (string.IsNullOrEmpty(sessionToken))
+            {
+                context.Fail("Invalid session token claim.");
+                return;
+            }
+
+            var session = await dbContext.UserSessions
+                .AsNoTracking()
+                .FirstOrDefaultAsync(s => s.SessionToken == sessionToken);
+
+            if (session == null || !session.IsActive || session.ExpiresAt < DateTime.UtcNow)
+            {
+                context.Fail("Session is inactive or expired.");
+            }
+        }
     };
 });
 
@@ -100,5 +124,17 @@ using (var scope = app.Services.CreateScope())
     var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     dbContext.Database.Migrate();
 }
-
+using (var scope = app.Services.CreateScope())
+{
+    var services = scope.ServiceProvider;
+    try
+    {
+        var context = services.GetRequiredService<stok_takip.Data.AppDbContext>();
+        stok_takip.Data.DbInitializer.Initialize(context);
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Veritabanı başlatılırken bir hata oluştu: {ex.Message}");
+    }
+}
 app.Run();
