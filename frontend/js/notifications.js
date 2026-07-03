@@ -78,7 +78,7 @@ function renderNotifications(notificationsList) {
         
         if (notification.severity === "CRITICAL") {
             borderClass = "alert-border-critical";
-            iconHtml = '<i class="bi bi-exclamation-circle-fill text-orange fs-4" style="color: #fd7e14;"></i>';
+            iconHtml = '<i class="bi bi-exclamation-circle-fill text-orange fs-4 text-orange-custom"></i>';
         } else if (notification.severity === "DANGER") {
             borderClass = "alert-border-danger";
             iconHtml = '<i class="bi bi-shield-fill-x text-danger fs-4"></i>';

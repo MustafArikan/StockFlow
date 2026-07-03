@@ -127,7 +127,7 @@ function renderNavbarNotifications(notifications) {
     recentNotifications.forEach(notification => {
         let iconHtml = '<i class="bi bi-exclamation-triangle-fill text-warning me-2"></i>';
         if (notification.severity === "CRITICAL") {
-            iconHtml = '<i class="bi bi-exclamation-circle-fill text-warning me-2" style="color: #fd7e14!important;"></i>';
+            iconHtml = '<i class="bi bi-exclamation-circle-fill text-warning me-2 text-orange-custom"></i>';
         } else if (notification.severity === "DANGER") {
             iconHtml = '<i class="bi bi-shield-fill-x text-danger me-2"></i>';
         }
@@ -136,9 +136,9 @@ function renderNavbarNotifications(notifications) {
             <li class="p-2 border-bottom small rounded hover-bg">
                 <div class="d-flex align-items-start">
                     ${iconHtml}
-                    <div style="flex: 1; min-width: 0;">
-                        <p class="mb-0 text-dark text-truncate" style="font-size: 0.85rem;" title="${escapeHtml(notification.message)}">${escapeHtml(notification.message)}</p>
-                        <small class="text-muted" style="font-size: 0.75rem;">${new Date(notification.createdAt).toLocaleTimeString("tr-TR", {hour: '2-digit', minute:'2-digit'})}</small>
+                    <div class="flex-1-min-0">
+                        <p class="mb-0 text-dark text-truncate fs-085" title="${escapeHtml(notification.message)}">${escapeHtml(notification.message)}</p>
+                        <small class="text-muted fs-075">${new Date(notification.createdAt).toLocaleTimeString("tr-TR", {hour: '2-digit', minute:'2-digit'})}</small>
                     </div>
                 </div>
             </li>
