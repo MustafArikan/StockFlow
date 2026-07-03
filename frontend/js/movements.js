@@ -1,5 +1,8 @@
 /**
- * Modül: Stok Hareketleri
+ * Modül: Stok Hareketleri Yönetimi (Movements)
+ * Geliştirici: Ekip Frontend / Sistem Entegrasyon Sorumlusu
+ * Açıklama: Bu dosya, C# Web API ile haberleşerek stok hareketlerini çeker, ekler ve günceller.
+ * QR Kod (Scanner) modülü ile entegre çalışır.
  */
 
 const API_URL = `${CONFIG.API_BASE_URL}/stock/movements`;
@@ -28,9 +31,6 @@ let stokHareketleri = [];
 let tumUrunler = [];
 let tumLokasyonlar = [];
 
-let aktifFiltre = 'TUMU';
-let aktifArama = '';
-let tarihArtan = false; 
 
 const tabloGovdesi = document.getElementById("hareketTablosuGövdesi");
 const aramaKutusu = document.getElementById("aramaKutusu");
@@ -67,13 +67,13 @@ async function hareketleriYukle() {
 function veriyiGuncelle() {
     let filtrelenmis = [...stokHareketleri];
 
-    // Önce tip filtresini uygula
+    // Buton Filtreleri (GIRIS / CIKIS)
     if (aktifFiltre !== 'TUMU') {
         const filterType = (aktifFiltre === 'GIRIS') ? 'IN' : (aktifFiltre === 'CIKIS' ? 'OUT' : aktifFiltre);
         filtrelenmis = filtrelenmis.filter(x => x.islemTipi === filterType || x.islemTipi === aktifFiltre);
     }
-    
-    // Sonra arama kutusu filtresini uygula
+
+    // Metin Arama Filtresi
     if (aktifArama) {
         filtrelenmis = filtrelenmis.filter(x => 
             x.urunAdı.toLowerCase().includes(aktifArama) || 
@@ -82,29 +82,24 @@ function veriyiGuncelle() {
         );
     }
 
-    // Sonra tarih sıralamasını yap (Yeniden eskiye veya Eskiden yeniye)
+    // Tarihe Göre Sıralama Algoritması
     filtrelenmis.sort((a, b) => {
         const dateA = new Date(a.tarih);
         const dateB = new Date(b.tarih);
         return tarihArtan ? dateA - dateB : dateB - dateA;
     });
 
-    // Hazırlanan son veriyi ekrana çizmesi için gönder
     tabloyuCiz(filtrelenmis);
 }
 
-// 3. TABLO ÇİZİM İŞLEMİ (HTML kodlarını JavaScript ile oluşturma)
 function tabloyuCiz(veriListesi) {
-    tabloGovdesi.innerHTML = ""; // Mevcut tabloyu temizle
-
+    tabloGovdesi.innerHTML = "";
     if (veriListesi.length === 0) {
         tabloGovdesi.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-muted">Kayıt bulunamadı.</td></tr>`;
         return;
     }
 
     let satirlar = [];
-
-    // Döngü ile her veriyi HTML satırına çevir
     veriListesi.forEach(hareket => {
         let isGiris = hareket.islemTipi === "IN" || hareket.islemTipi === "GIRIS";
         let isTransfer = hareket.islemTipi === "TRANSFER";
@@ -132,8 +127,6 @@ function tabloyuCiz(veriListesi) {
             </tr>`;
         satirlar.push(satir);
     });
-
-    // Tüm satırları tek seferde DOM'a basıyoruz
     tabloGovdesi.innerHTML = satirlar.join("");
 }
 
