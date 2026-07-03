@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using System.Text;
 using Scalar.AspNetCore;
 using Microsoft.EntityFrameworkCore;
@@ -47,7 +48,9 @@ builder.Services.AddAuthentication(options =>
         ValidateIssuerSigningKey = true,
         ValidIssuer = jwtIssuer,
         ValidAudience = jwtAudience,
-        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecretKey))
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecretKey)),
+        RoleClaimType = ClaimTypes.Role,
+        NameClaimType = ClaimTypes.NameIdentifier
     };
 
     options.Events = new Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerEvents
