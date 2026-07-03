@@ -69,7 +69,8 @@ function veriyiGuncelle() {
 
     // Önce tip filtresini uygula
     if (aktifFiltre !== 'TUMU') {
-        filtrelenmis = filtrelenmis.filter(x => x.islemTipi === aktifFiltre);
+        const filterType = (aktifFiltre === 'GIRIS') ? 'IN' : (aktifFiltre === 'CIKIS' ? 'OUT' : aktifFiltre);
+        filtrelenmis = filtrelenmis.filter(x => x.islemTipi === filterType || x.islemTipi === aktifFiltre);
     }
     
     // Sonra arama kutusu filtresini uygula
@@ -105,9 +106,17 @@ function tabloyuCiz(veriListesi) {
 
     // Döngü ile her veriyi HTML satırına çevir
     veriListesi.forEach(hareket => {
-        let tipEtiketi = hareket.islemTipi === "GIRIS" ? `<span class="badge bg-success bg-opacity-10 text-success border border-success px-2 py-1 rounded-pill">STOK GİRİŞİ</span>` : `<span class="badge bg-danger bg-opacity-10 text-danger border border-danger px-2 py-1 rounded-pill">STOK ÇIKIŞI</span>`;
-        let adetRengi = hareket.islemTipi === "GIRIS" ? "text-success" : "text-danger";
-        let adetIsareti = hareket.islemTipi === "GIRIS" ? "+" : "-";
+        let isGiris = hareket.islemTipi === "IN" || hareket.islemTipi === "GIRIS";
+        let isTransfer = hareket.islemTipi === "TRANSFER";
+
+        let tipEtiketi = isGiris 
+            ? `<span class="badge bg-success bg-opacity-10 text-success border border-success px-2 py-1 rounded-pill">STOK GİRİŞİ</span>` 
+            : isTransfer 
+                ? `<span class="badge bg-primary bg-opacity-10 text-primary border border-primary px-2 py-1 rounded-pill">STOK TRANSFERİ</span>`
+                : `<span class="badge bg-danger bg-opacity-10 text-danger border border-danger px-2 py-1 rounded-pill">STOK ÇIKIŞI</span>`;
+
+        let adetRengi = isGiris ? "text-success" : isTransfer ? "text-primary" : "text-danger";
+        let adetIsareti = isGiris ? "+" : isTransfer ? "⇄" : "-";
 
         // Tarih formatlama
         const formatliTarih = new Date(hareket.tarih).toLocaleString('tr-TR');

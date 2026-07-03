@@ -139,7 +139,6 @@ public async Task<IActionResult> Login([FromBody] LoginDto dto)
         {
             UserId = user.Id,
             SessionToken = sessionToken,
-            AccessToken = token,
             DeviceOs = os,
             DeviceBrowser = browser,
             IpAddress = ipAddress,

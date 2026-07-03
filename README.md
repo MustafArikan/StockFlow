@@ -32,16 +32,16 @@ stok_takip/
 
 ---
 
-## 📊 Görev (Task) Bazlı Backlog ve İlerleme Durumu (Genel İlerleme: %41.8 - 23/55 Görev)
+## 📊 Görev (Task) Bazlı Backlog ve İlerleme Durumu (Genel İlerleme: %61.8 - 34/55 Görev)
 
 Bu proje, geleneksel kişi bazlı rol atamaları yerine tamamen **görev (task) bazlı** yönetilmektedir. 
 * **Çalışma Prensibi:** Geliştiriciler (K1, K2, K3, K4 fark etmeksizin) backlog'dan istedikleri herhangi bir görevi (ön yüz ekranını, entegrasyonu veya API endpoint'ini) üzerine alıp geliştirebilir ve bitirdiğinde işaretleyebilir. Belirli bir alan kısıtlaması veya alan paylaşımı yoktur.
 
 | Durum | Toplam Görev | Tamamlanan | Ertelenen | Kalan | Aktif İlerleme Yüzdesi |
 | :--- | :---: | :---: | :---: | :---: | :---: |
-| **Genel Proje Durumu** | **55** | **23** | **2** | **30** | **%43.4** |
+| **Genel Proje Durumu** | **55** | **34** | **2** | **19** | **%64.2** |
 
-*Not: Canlı ortam planlarındaki değişiklikler nedeniyle ertelenen 2 görev (Nginx SSL ve otomatik veritabanı yedekleme) genel yüzdenin dışındaki "Ertelenen" kısmında tutulmaktadır. Ertelenenler düşüldüğünde aktif görev ilerleme oranı **%43.4** (23/53) seviyesindedir.*
+*Not: Canlı ortam planlarındaki değişiklikler nedeniyle ertelenen 2 görev (Nginx SSL ve otomatik veritabanı yedekleme) genel yüzdenin dışındaki "Ertelenen" kısmında tutulmaktadır. Ertelenenler düşüldüğünde aktif görev ilerleme oranı **%64.2** (34/53) seviyesindedir.*
 
 ---
 
@@ -67,22 +67,22 @@ Bu proje, geleneksel kişi bazlı rol atamaları yerine tamamen **görev (task) 
 - [x] **API:** `POST /api/categories` (Yeni kategori oluşturma endpoint'i)
 
 ### 🏢 Modül 3: Depo & Lokasyon (Raf) Yönetimi
-- [ ] **Arayüz:** Depo Yönetim Sayfası (`warehouses.html` - Depoları ve ilişkili konumları listeleme ekranı)
-- [ ] **Arayüz:** Lokasyon/Raf Ekleme Modalı (Deponun içine raf, bölge veya kutu ekleme arayüzü)
-- [ ] **API:** `GET /api/warehouses` (Sistemdeki tüm depoları listeleme endpoint'i)
-- [ ] **API:** `POST /api/warehouses` (Yeni depo oluşturma endpoint'i)
-- [ ] **API:** `PUT /api/warehouses/{id}` (Depo bilgilerini güncelleme endpoint'i)
-- [ ] **API:** `DELETE /api/warehouses/{id}` (Depoyu silme endpoint'i)
-- [ ] **API:** `POST /api/locations` (Depo içerisine raf/lokasyon ekleme endpoint'i)
+- [x] **Arayüz:** Depo Yönetim Sayfası (`warehouses.html` - Depoları ve ilişkili konumları listeleme ekranı)
+- [x] **Arayüz:** Lokasyon/Raf Ekleme Modalı (Deponun içine raf, bölge veya kutu ekleme arayüzü)
+- [x] **API:** `GET /api/warehouses` (Sistemdeki tüm depoları listeleme endpoint'i)
+- [x] **API:** `POST /api/warehouses` (Yeni depo oluşturma endpoint'i)
+- [x] **API:** `PUT /api/warehouses/{id}` (Depo bilgilerini güncelleme endpoint'i)
+- [x] **API:** `DELETE /api/warehouses/{id}` (Depoyu silme endpoint'i)
+- [x] **API:** `POST /api/locations` (Depo içerisine raf/lokasyon ekleme endpoint'i)
 
 ### 🔄 Modül 4: Stok Hareketleri & Okuyucu Entegrasyonu
 - [x] **Arayüz:** Stok Hareketleri Sayfası (`movements.html` - Giriş/Çıkış işlem geçmişi listesi ve yeni hareket formu)
 - [x] **Arayüz Yardımcısı:** Hibrit Kamera Tarayıcı Modülü (`scanner.js` ve `test-scanner.html` - html5-qrcode entegrasyonu)
 - [ ] **Arayüz Entegrasyonu:** Barkod/QR tarayıcı modülünün Stok Hareket formuna entegre edilmesi (Kamera ile ürün okutma)
-- [ ] **API:** `GET /api/stock/movements` (Tüm stok hareket geçmişini filtreli listeleme endpoint'i)
-- [ ] **API:** `POST /api/stock/movements/in` (Stok Giriş işlemi endpoint'i - Stok seviyesini artırır)
-- [ ] **API:** `POST /api/stock/movements/out` (Stok Çıkış işlemi endpoint'i - Stok seviyesini azaltır)
-- [ ] **API:** `POST /api/stock/movements/transfer` (Depolar arası stok transfer endpoint'i - ACID Uyumlu transaction)
+- [x] **API:** `GET /api/stock/movements` (Tüm stok hareket geçmişini filtreli listeleme endpoint'i)
+- [x] **API:** `POST /api/stock/movements/in` (Stok Giriş işlemi endpoint'i - Stok seviyesini artırır)
+- [x] **API:** `POST /api/stock/movements/out` (Stok Çıkış işlemi endpoint'i - Stok seviyesini azaltır)
+- [x] **API:** `POST /api/stock/movements/transfer` (Depolar arası stok transfer endpoint'i - ACID Uyumlu transaction)
 
 ### 🔔 Modül 5: Kritik Stok & Canlı Bildirimler
 - [x] **Arayüz:** Canlı Bildirim Paneli Sayfası (`notifications.html` - Kritik stok alarmları ve okundu işaretleme)
@@ -90,10 +90,10 @@ Bu proje, geleneksel kişi bazlı rol atamaları yerine tamamen **görev (task) 
 - [x] **API:** `PUT /api/notifications/{id}/read` (Bildirimi okundu olarak işaretleme endpoint'i)
 
 ### 📊 Modül 6: Dashboard, Raporlama & Analiz
-- [ ] **Arayüz:** Ana Dashboard Sayfası (`index.html` - Özet kartları, Chart.js grafik entegrasyonları)
+- [x] **Arayüz:** Ana Dashboard Sayfası (`index.html` - Özet kartları, Chart.js grafik entegrasyonları)
 - [ ] **Arayüz Entegrasyonu:** Raporları PDF formatında dışa aktarma (`jsPDF` + `html2canvas`)
 - [ ] **Arayüz Entegrasyonu:** Raporları Excel/CSV formatında dışa aktarma
-- [ ] **API:** `GET /api/reports/dashboard-summary` (Toplam ürün, toplam depo değeri, kritik ürün sayısı kart verileri endpoint'i)
+- [x] **API:** `GET /api/reports/dashboard-summary` (Toplam ürün, toplam depo değeri, kritik ürün sayısı kart verileri endpoint'i)
 - [ ] **API:** `GET /api/reports/trend` (Son 30 günlük günlük stok giriş/çıkış trend verileri endpoint'i)
 - [ ] **API:** `GET /api/reports/by-category` (Kategori bazlı stok miktarları dağılım verileri endpoint'i)
 - [ ] **API:** `GET /api/reports/top-products` (İşlem hacmi en yüksek ilk 5 ürün verisi endpoint'i)
