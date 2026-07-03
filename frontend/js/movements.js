@@ -31,6 +31,9 @@ let stokHareketleri = [];
 let tumUrunler = [];
 let tumLokasyonlar = [];
 
+let aktifFiltre = 'TUMU';
+let aktifArama = '';
+let tarihArtan = false;
 
 const tabloGovdesi = document.getElementById("hareketTablosuGövdesi");
 const aramaKutusu = document.getElementById("aramaKutusu");
