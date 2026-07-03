@@ -38,13 +38,13 @@ public async Task<IActionResult> Register([FromBody] RegisterDto dto)
             return BadRequest(new { message = "Email and Password cannot be empty." });
         }
 
-        var emailExists = await _context.Users.AnyAsync(u => u.Email == dto.Email);
+        var emailExists = await _context.Users.AsNoTracking().AnyAsync(u => u.Email == dto.Email);
         if (emailExists)
         {
-            return BadRequest(new { message = "Email is already registered."});
+            return BadRequest(new {message = "The email you have provided is already associated with an account. Sign in or reset your password."});
         }
 
-        var verificationCode = System.Security.Cryptography.RandomNumberGenerator.GetInt32(100000, 999999).ToString();  // 6 haneli doğrulama kodu
+        var verificationCode = System.Security.Cryptography.RandomNumberGenerator.GetInt32(100000, 1000000).ToString();  // 6 haneli doğrulama kodu
 
         var newUser = new User
         {

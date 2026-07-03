@@ -35,6 +35,12 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<Product>()
             .HasIndex(p => p.Barcode)
             .IsUnique();
+            
+        modelBuilder.Entity<Product>()
+            .HasOne(p => p.Category)
+            .WithMany(c => c.Products)
+            .HasForeignKey(p => p.CategoryId)
+            .OnDelete(DeleteBehavior.Restrict);
 
         modelBuilder.Entity<Location>()
             .HasIndex(l => l.Code)
@@ -47,6 +53,12 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<UserSession>()
             .HasIndex(s => s.SessionToken)
             .IsUnique();
+
+        modelBuilder.Entity<StockMovement>()
+            .HasOne(sm => sm.Product)
+            .WithMany(p => p.StockMovements)
+            .HasForeignKey(sm => sm.ProductId)
+            .OnDelete(DeleteBehavior.Restrict);
 
         foreach (var entity in modelBuilder.Model.GetEntityTypes())
         {

@@ -1,3 +1,5 @@
+using Microsoft.AspNetCore.Authorization;
+using System.Security.Claims;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using stok_takip.Data;
@@ -5,9 +7,10 @@ using stok_takip.Models;
 using stok_takip.DTOs;
 
 namespace stok_takip.Controllers
-{
+{ 
     [ApiController]
     [Route("api/stock/movements")]
+    [Authorize]
     public class StockMovementsController : ControllerBase
     {
         private readonly AppDbContext _context;
@@ -22,6 +25,7 @@ namespace stok_takip.Controllers
         public async Task<IActionResult> GetAllMovements([FromQuery] string? type, [FromQuery] string? search)
         {
             var query = _context.StockMovements
+                .AsNoTracking()
                 .Include(m => m.Product)
                 .AsQueryable();
 
@@ -37,17 +41,19 @@ namespace stok_takip.Controllers
                                          (m.Description != null && m.Description.Contains(search)));
             }
 
+            var userEmail = User.FindFirst(ClaimTypes.Email)?.Value ?? "Bilinmeyen Personel";
+
             var result = await query
                 .OrderByDescending(m => m.Id) // Assuming BaseEntity has Id or CreatedAt
                 .Select(m => new
                 {
                     m.Id,
-                    Tarih = m.Id, // Frontend expects date format, map your BaseEntity CreatedAt here if available
+                    Tarih = m.CreatedAt, 
                     UrunKodu = m.Product.Barcode,
                     UrunAdı = m.Product.Name,
                     IslemTipi = m.MovementType,
                     m.Quantity,
-                    Personel = "Zülal Yıldız" // Mocked until JWT setup
+                    Personel = userEmail
                 })
                 .ToListAsync();
 
@@ -116,6 +122,11 @@ namespace stok_takip.Controllers
 
                     return Ok(new { message = "Stock transfer successfully completed.", movementId = movement.Id });
                 }
+                catch (DbUpdateConcurrencyException)
+                {
+                    await transaction.RollbackAsync();
+                    return Conflict(new { message = "Stok transfer işlemi sırasında çakışma tespit edildi. Lütfen sayfayı yenileyip tekrar deneyin." });
+                }
                 catch (Exception)
                 {
                     await transaction.RollbackAsync(); // Rollback if anything fails
@@ -129,36 +140,50 @@ namespace stok_takip.Controllers
                 if (dto.TargetLocationId == null)
                     return BadRequest(new { message = "Target location is required for IN operations." });
 
-                // Hedef lokasyonda ürün var mı kontrol et, yoksa sıfırdan ekle, varsa miktarını artır
-                var targetStock = await _context.StockLevels
-                    .FirstOrDefaultAsync(s => s.ProductId == product.Id && s.LocationId == dto.TargetLocationId);
+                using var transaction = await _context.Database.BeginTransactionAsync();
+                try
+                {
+                    var targetStock = await _context.StockLevels
+                        .FirstOrDefaultAsync(s => s.ProductId == product.Id && s.LocationId == dto.TargetLocationId);
 
-                if (targetStock == null)
-                {
-                    _context.StockLevels.Add(new StockLevel 
-                    { 
-                        ProductId = product.Id, 
-                        LocationId = dto.TargetLocationId.Value, 
-                        Quantity = dto.Quantity 
-                    });
-                }
-                else
-                {
-                    targetStock.Quantity += dto.Quantity;
-                }
+                        if (targetStock == null)
+                        {
+                            _context.StockLevels.Add(new StockLevel 
+                            { 
+                                ProductId = product.Id, 
+                                LocationId = dto.TargetLocationId.Value, 
+                                Quantity = dto.Quantity 
+                            });
+                        }
+                        else
+                        {
+                            targetStock.Quantity += dto.Quantity;
+                        }
 
-                var movement = new StockMovement
+                        var movement = new StockMovement
+                        {
+                            ProductId = product.Id,
+                            MovementType = "IN",
+                            Quantity = dto.Quantity,
+                            Description = dto.Description ?? "Stock IN operation"
+                        };
+
+                        _context.StockMovements.Add(movement);
+                        await _context.SaveChangesAsync();
+                        await transaction.CommitAsync();
+
+                        return Ok(new { message = "Stock successfully added.", movementId = movement.Id });
+                }
+                catch (DbUpdateConcurrencyException)
                 {
-                    ProductId = product.Id,
-                    MovementType = "IN",
-                    Quantity = dto.Quantity,
-                    Description = dto.Description ?? "Stock IN operation"
-                };
-                
-                _context.StockMovements.Add(movement);
-                await _context.SaveChangesAsync();
-                
-                return Ok(new { message = "Stock successfully added.", movementId = movement.Id });
+                    await transaction.RollbackAsync();
+                    return Conflict(new { message = "Stok giriş işlemi sırasında çakışma tespit edildi. Lütfen sayfayı yenileyip tekrar deneyin." });
+                }
+                catch (Exception)
+                {
+                    await transaction.RollbackAsync();
+                    return StatusCode(500, new { message = "An error occurred during the stock IN transaction." });
+                }
             }
             
             if (upperType == "OUT")
@@ -166,30 +191,44 @@ namespace stok_takip.Controllers
                 if (dto.SourceLocationId == null)
                     return BadRequest(new { message = "Source location is required for OUT operations." });
 
-                // Kaynak lokasyondan stoğu düş, yeterli stok yoksa hata fırlat
-                var sourceStock = await _context.StockLevels
-                    .FirstOrDefaultAsync(s => s.ProductId == product.Id && s.LocationId == dto.SourceLocationId);
-
-                if (sourceStock == null || sourceStock.Quantity < dto.Quantity)
-                    return BadRequest(new { message = "Insufficient stock at source location." });
-
-                sourceStock.Quantity -= dto.Quantity;
-
-                var movement = new StockMovement
+                using var transaction = await _context.Database.BeginTransactionAsync();
+                try
                 {
-                    ProductId = product.Id,
-                    MovementType = "OUT",
-                    Quantity = dto.Quantity,
-                    Description = dto.Description ?? "Stock OUT operation"
-                };
-                
-                _context.StockMovements.Add(movement);
-                await _context.SaveChangesAsync();
-                
-                return Ok(new { message = "Stock successfully dispatched.", movementId = movement.Id });
+                    var sourceStock = await _context.StockLevels
+                        .FirstOrDefaultAsync(s => s.ProductId == product.Id && s.LocationId == dto.SourceLocationId);
+
+                    if (sourceStock == null || sourceStock.Quantity < dto.Quantity)
+                        return BadRequest(new { message = "Insufficient stock at source location." });
+
+                    sourceStock.Quantity -= dto.Quantity;
+
+                    var movement = new StockMovement
+                    {
+                        ProductId = product.Id,
+                        MovementType = "OUT",
+                        Quantity = dto.Quantity,
+                        Description = dto.Description ?? "Stock OUT operation"
+                    };
+
+                    _context.StockMovements.Add(movement);
+                    await _context.SaveChangesAsync();
+                    await transaction.CommitAsync();
+
+                    return Ok(new { message = "Stock successfully removed.", movementId = movement.Id });
+                }
+                catch (DbUpdateConcurrencyException)
+                {
+                    await transaction.RollbackAsync();
+                    return Conflict(new { message = "Stok çıkış işlemi sırasında çakışma tespit edildi. Lütfen sayfayı yenileyip tekrar deneyin." });
+                }
+                catch (Exception)
+                {
+                    await transaction.RollbackAsync();
+                    return StatusCode(500, new { message = "An error occurred during the stock OUT transaction." });
+                }
             }
 
-            return BadRequest(new { message = "Invalid movement type. Must be IN, OUT, or TRANSFER." });
+            return BadRequest(new { message = "Invalid movement type." });
         }
     }
 }
