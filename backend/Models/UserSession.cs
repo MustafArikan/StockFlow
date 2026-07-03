@@ -13,9 +13,6 @@ public class UserSession : BaseEntity
 
     [Required]
     public string SessionToken { get; set; } = string.Empty;
-    
-    [Required]
-    public string AccessToken { get; set; } = string.Empty;
 
     public string DeviceOs { get; set; } = string.Empty;
     public string DeviceBrowser { get; set; } = string.Empty;

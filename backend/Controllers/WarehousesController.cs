@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using System.Reflection.Metadata.Ecma335;
 using System.Xml;
 using Microsoft.AspNetCore.Mvc;
@@ -10,6 +11,7 @@ namespace stok_takip.Controllers;
 
 [ApiController]
 [Route("api/warehouses")]
+[Authorize]
 public class WarehousesController : ControllerBase
 {
     private readonly AppDbContext _context;

@@ -1,0 +1,110 @@
+/* Temel Tema Değişkenleri */
+:root {
+    --bg-primary: #f8f9fa;
+    --text-primary: #212529;
+    --card-bg: #ffffff;
+    --border-color: #dee2e6;
+}
+
+[data-theme="dark"] {
+    --bg-primary: #121212;
+    --text-primary: #f8f9fa;
+    --card-bg: #1e1e1e;
+    --border-color: #333333;
+}
+
+body {
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    transition: background-color 0.2s, color 0.2s;
+}
+
+/* Temel Kart ve Dropdown Uyumlamaları */
+.card {
+    background-color: var(--card-bg) !important;
+    border: 1px solid var(--border-color) !important;
+}
+
+.dropdown-menu {
+    background-color: var(--card-bg) !important;
+    border: 1px solid var(--border-color) !important;
+    color: var(--text-primary) !important;
+}
+
+.theme-toggle-btn {
+    cursor: pointer;
+    background: none;
+    border: none;
+    font-size: 1.25rem;
+}
+
+.no-caret::after {
+    display: none !important;
+}
+
+.stat-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+}
+
+/* CSP ve 'unsafe-inline' Temizliği İçin Ek Sınıflar */
+.notification-dropdown-menu {
+    width: 320px;
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.pointer-events-none {
+    pointer-events: none;
+}
+
+.min-w-700 {
+    min-width: 700px;
+}
+
+.col-tarih {
+    cursor: pointer;
+    width: 18%;
+}
+
+.col-kod {
+    width: 15%;
+}
+
+.col-ad {
+    width: 32%;
+}
+
+.col-tip {
+    width: 15%;
+}
+
+.col-adet {
+    width: 10%;
+}
+
+.col-personel {
+    width: 20%;
+}
+
+.text-orange-custom {
+    color: #fd7e14 !important;
+}
+
+.flex-1-min-0 {
+    flex: 1;
+    min-width: 0;
+}
+
+.fs-085 {
+    font-size: 0.85rem;
+}
+
+.fs-075 {
+    font-size: 0.75rem;
+}

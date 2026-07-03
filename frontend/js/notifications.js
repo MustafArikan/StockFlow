@@ -78,7 +78,7 @@ function renderNotifications(notificationsList) {
         
         if (notification.severity === "CRITICAL") {
             borderClass = "alert-border-critical";
-            iconHtml = '<i class="bi bi-exclamation-circle-fill text-orange fs-4" style="color: #fd7e14;"></i>';
+            iconHtml = '<i class="bi bi-exclamation-circle-fill text-orange fs-4 text-orange-custom"></i>';
         } else if (notification.severity === "DANGER") {
             borderClass = "alert-border-danger";
             iconHtml = '<i class="bi bi-shield-fill-x text-danger fs-4"></i>';
@@ -110,9 +110,9 @@ function renderNotifications(notificationsList) {
                         </div>
                     </div>
                     <div>
-                        <button class="btn btn-sm btn-outline-success rounded-pill px-3 fw-bold" 
+                        <button class="btn btn-sm btn-outline-success rounded-pill px-3 fw-bold btn-read" 
                                 ${buttonAttributes} 
-                                onclick="markNotificationAsRead(${notification.id})">
+                                data-id="${notification.id}">
                             ${buttonText}
                         </button>
                     </div>
@@ -123,6 +123,15 @@ function renderNotifications(notificationsList) {
 
     listContainer.innerHTML = htmlContent;
 }
+
+// Olay Delege Etme (Event Delegation) - Satır içi onclick kaldırıldı
+document.getElementById("notificationList").addEventListener("click", (e) => {
+    const btnRead = e.target.closest(".btn-read");
+    if (btnRead && !btnRead.disabled) {
+        const id = parseInt(btnRead.getAttribute("data-id"));
+        markNotificationAsRead(id);
+    }
+});
 
 // 5. MARK SINGLE NOTIFICATION AS READ
 async function markNotificationAsRead(id) {
@@ -185,6 +194,12 @@ document.getElementById("btnFilterUnread").addEventListener("click", () => {
 function logout() {
     localStorage.removeItem("token");
     window.location.href = "login.html";
+}
+
+// Attach navbar logout listener
+const btnNavbarLogout = document.getElementById("btnNavbarLogout");
+if (btnNavbarLogout) {
+    btnNavbarLogout.addEventListener("click", logout);
 }
 
 // Initial load

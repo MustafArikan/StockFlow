@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using stok_takip.Data;
@@ -12,7 +13,7 @@ namespace stok_takip.Controllers;
 
 [ApiController]
 [Route("api/categories")]
-
+[Authorize]
 public class CategoriesController : ControllerBase
 {
     private readonly AppDbContext _context;
