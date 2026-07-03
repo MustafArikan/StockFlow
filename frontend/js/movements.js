@@ -1,120 +1,145 @@
 /**
- * Modül: Stok Hareketleri
+ * Modül: Stok Hareketleri Yönetimi (Movements)
+ * Geliştirici: Ekip Frontend / Sistem Entegrasyon Sorumlusu
+ * Açıklama: Bu dosya, C# Web API ile haberleşerek stok hareketlerini çeker, ekler ve günceller.
+ * QR Kod (Scanner) modülü ile entegre çalışır.
  */
 
-const MAX_ISLEM_ADEDI = 100000; // Güvenlik kuralı: Tek seferde en fazla işlem limiti
-// XSS koruması için html karakterlerini encode eder
+const MAX_ISLEM_ADEDI = 100000;
+
+// GÜVENLİK: XSS Saldırılarına karşı kullanıcı girdilerini temizler (Injection önlemi)
 function escapeHtml(text) {
-        if (!text) return "";
-        return text
-            .toString()
-            .replace(/&/g, "&amp;")
-            .replace(/</g, "&lt;")
-            .replace(/>/g, "&gt;")
-            .replace(/"/g, "&quot;")
-            .replace(/'/g, "&#039;");
+    if (!text) return "";
+    return text.toString().replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
 }
-// 1. HAFIZA YÖNETİMİ
-const VARSAYILAN_VERILER = [
-    { id: 4, tarih: "28.06.2026 09:20", kod: "SSD-1TB", ad: "Samsung 990 PRO 1TB M.2", tip: "CIKIS", adet: 10, personel: "hamit@godeva.com.tr", duzenlendi: false },
-    { id: 3, tarih: "29.06.2026 10:15", kod: "VGA-4090", ad: "NVIDIA GeForce RTX 4090 24GB", tip: "GIRIS", adet: 15, personel: "admin@godeva.com.tr", duzenlendi: false },
-    { id: 2, tarih: "29.06.2026 11:30", kod: "CPU-7800", ad: "AMD Ryzen 7 7800X3D İşlemci", tip: "CIKIS", adet: 3, personel: "operator@godeva.com.tr", duzenlendi: true },
-    { id: 1, tarih: "29.06.2026 14:00", kod: "RAM-C32", ad: "Corsair Vengeance 32GB DDR5", tip: "GIRIS", adet: 50, personel: "admin@godeva.com.tr", duzenlendi: false }
-];
 
-// Tarayıcı hafızasını oku (F5 yapınca silinmesin diye)
-let stokHareketleri = JSON.parse(localStorage.getItem('stokHareketleri')) || VARSAYILAN_VERILER;
+// Global Değişkenler
+let stokHareketleri = []; // API'den gelen veriler burada tutulacak
+let aktifFiltre = 'TUMU';
+let aktifArama = '';
+let tarihArtan = false;
 
-// Değişiklik olunca bunu çağırıp tarayıcıya yazarız
+// DOM Element Referansları
+const tabloGovdesi = document.getElementById("hareketTablosuGövdesi");
+const aramaKutusu = document.getElementById("aramaKutusu");
+const urunSecimi = document.getElementById("urunSecimi");
+const kaydetButonu = document.getElementById("btnKaydet");
+const islemTipi = document.getElementById("islemTipi");
+const islemAdedi = document.getElementById("islemAdedi");
+const hareketId = document.getElementById("hareketId");
+
+
+// ==========================================
+// 1. API İLETİŞİMİ (ÜRÜNLERİ VE HAREKETLERİ ÇEKME)
+// ==========================================
+
+/**
+ * Görev: Backend API'den kayıtlı ürünleri çeker ve Formdaki Dropdown'u (Select) doldurur.
+ */
+async function formIcinUrunleriGetir() {
+    try {
+        const cevap = await fetch(`${CONFIG.API_BASE_URL}/products`);
+        if (!cevap.ok) throw new Error(`HTTP Hatası: ${cevap.status}`);
+
+        const urunler = await cevap.json();
+
+        // Kutunun içini temizle
+        urunSecimi.innerHTML = '<option value="" selected disabled>Lütfen bir ürün seçiniz...</option>';
+
+        // API'den gelen ürünleri döngü ile ekle (value = Barkod, Text = İsim)
+        urunler.forEach(urun => {
+            urunSecimi.innerHTML += `<option value="${urun.barcode}">${urun.name}</option>`;
+        });
+    } catch (hata) {
+        console.error("Ürün listesi çekilemedi:", hata);
+        urunSecimi.innerHTML = '<option value="" disabled>API Bağlantı Hatası! Backend çalışıyor mu?</option>';
+    }
+}
+
+/**
+ * Görev: Şu an test amaçlı LocalStorage kullanılıyor.
+ * İlerleyen fazlarda burası `fetch('${CONFIG.API_BASE_URL}/stock/movements')` olarak güncellenecektir.
+ */
+function verileriYukle() {
+    stokHareketleri = JSON.parse(localStorage.getItem('stokHareketleri')) || [];
+    veriyiGuncelle();
+}
+
 function veriyiHafizayaKaydet() {
     localStorage.setItem('stokHareketleri', JSON.stringify(stokHareketleri));
 }
 
-let aktifFiltre = 'TUMU';
-let aktifArama = '';
-let tarihArtan = false; 
 
-const tabloGovdesi = document.getElementById("hareketTablosuGövdesi");
-const aramaKutusu = document.getElementById("aramaKutusu");
-
-// 2. FİLTRELEME VE SIRALAMA MANTIĞI
+// ==========================================
+// 2. TABLO İŞLEMLERİ VE FİLTRELEME (UI RENDER)
+// ==========================================
 function veriyiGuncelle() {
     let filtrelenmis = [...stokHareketleri];
 
-    // Önce tip filtresini uygula
+    // Buton Filtreleri (GIRIS / CIKIS)
     if (aktifFiltre !== 'TUMU') {
         filtrelenmis = filtrelenmis.filter(x => x.tip === aktifFiltre);
     }
-    
-    // Sonra arama kutusu filtresini uygula
+
+    // Metin Arama Filtresi
     if (aktifArama) {
-        filtrelenmis = filtrelenmis.filter(x => 
-            x.ad.toLowerCase().includes(aktifArama) || 
-            x.kod.toLowerCase().includes(aktifArama) || 
+        filtrelenmis = filtrelenmis.filter(x =>
+            x.ad.toLowerCase().includes(aktifArama) ||
+            x.kod.toLowerCase().includes(aktifArama) ||
             x.personel.toLowerCase().includes(aktifArama)
         );
     }
 
-    // Sonra tarih sıralamasını yap (Yeniden eskiye veya Eskiden yeniye)
+    // Tarihe Göre Sıralama Algoritması
     filtrelenmis.sort((a, b) => {
         const parcala = (t) => {
-            const temizTarih = t.replace(',', '');
+            const temizTarih = t.replace(',', ''); // Hatalı virgülleri temizler
             const [gun, ay, yil] = temizTarih.split(' ')[0].split('.');
             const [saat, dakika] = temizTarih.split(' ')[1].split(':');
             return new Date(yil, ay - 1, gun, saat, dakika);
         };
         const dateA = parcala(a.tarih);
         const dateB = parcala(b.tarih);
-        
-        if(dateA.getTime() === dateB.getTime()) return tarihArtan ? a.id - b.id : b.id - a.id;
         return tarihArtan ? dateA - dateB : dateB - dateA;
     });
 
-    // Hazırlanan son veriyi ekrana çizmesi için gönder
     tabloyuCiz(filtrelenmis);
 }
 
-// 3. TABLO ÇİZİM İŞLEMİ (HTML kodlarını JavaScript ile oluşturma)
 function tabloyuCiz(veriListesi) {
-    tabloGovdesi.innerHTML = ""; // Mevcut tabloyu temizle
-
+    tabloGovdesi.innerHTML = "";
     if (veriListesi.length === 0) {
         tabloGovdesi.innerHTML = `<tr><td colspan="7" class="text-center py-4 text-muted">Kayıt bulunamadı.</td></tr>`;
         return;
     }
 
     let satirlar = [];
-
-    // Döngü ile her veriyi HTML satırına çevir
     veriListesi.forEach(hareket => {
-        let tipEtiketi = hareket.tip === "GIRIS" ? `<span class="badge bg-success bg-opacity-10 text-success border border-success px-2 py-1 rounded-pill">STOK GİRİŞİ</span>` : `<span class="badge bg-danger bg-opacity-10 text-danger border border-danger px-2 py-1 rounded-pill">STOK ÇIKIŞI</span>`;
+        let tipEtiketi = hareket.tip === "GIRIS" ? `<span class="badge bg-success bg-opacity-10 text-success px-2 py-1 rounded-pill">STOK GİRİŞİ</span>` : `<span class="badge bg-danger bg-opacity-10 text-danger px-2 py-1 rounded-pill">STOK ÇIKIŞI</span>`;
         let adetRengi = hareket.tip === "GIRIS" ? "text-success" : "text-danger";
         let adetIsareti = hareket.tip === "GIRIS" ? "+" : "-";
-        let duzenlendiEtiketi = hareket.duzenlendi ? `<span class="badge bg-warning text-dark ms-2" style="font-size: 0.65rem;">Düzenlendi</span>` : "";
 
-        // d-none d-md-table-cell sınıfları telefonda ilgili sütunları gizler
-        // XSS zafiyetini engellemek için hareket.kod, hareket.ad ve hareket.personel escapeHtml()'den geçirildi
         const satir = `
             <tr>
                 <td class="text-muted small text-center border-end align-middle">${escapeHtml(hareket.tarih)}</td>
                 <td class="fw-bold text-center border-end align-middle d-none d-md-table-cell">${escapeHtml(hareket.kod)}</td>
-                <td class="border-end align-middle">${escapeHtml(hareket.ad)} ${duzenlendiEtiketi}</td>
+                <td class="border-end align-middle">${escapeHtml(hareket.ad)}</td>
                 <td class="text-center border-end align-middle">${tipEtiketi}</td>
                 <td class="fw-bold text-center border-end align-middle ${adetRengi}">${adetIsareti}${hareket.adet}</td>
-                <td class="text-center border-end align-middle d-none d-md-table-cell">${escapeHtml(hareket.personel)}</td>
-                <td class="text-center align-middle d-flex gap-2 justify-content-center flex-wrap">
-                    <button class="btn btn-sm btn-outline-primary rounded-pill px-3" onclick="islemDuzenle(${hareket.id})">Düzenle</button>
-                    <button class="btn btn-sm btn-outline-danger rounded-pill px-3" onclick="silIslem(${hareket.id})">Sil</button>
+                <td class="text-center border-end align-middle d-none d-md-table-cell">${escapeHtml(hareket.personel)}</td>               
+                <td class="text-center align-middle">
+                    <div class="d-flex flex-column flex-md-row gap-1 justify-content-center">
+                        <button class="btn btn-sm btn-outline-primary rounded-pill px-3" onclick="islemDuzenle(${hareket.id})">Düzenle</button>
+                        <button class="btn btn-sm btn-outline-danger rounded-pill px-3" onclick="silIslem(${hareket.id})">Sil</button>
+                    </div>
                 </td>
             </tr>`;
         satirlar.push(satir);
     });
-
-    // Tüm satırları tek seferde DOM'a basıyoruz
     tabloGovdesi.innerHTML = satirlar.join("");
 }
 
-// 4. BUTON VE ARAMA DİNLEYİCİLERİ (Kullanıcı hareketlerini yakalar)
+// Filtreleme Dinleyicileri
 document.getElementById("btnTumu").addEventListener("click", () => { aktifFiltre = 'TUMU'; aktifButonuGuncelle("btnTumu"); veriyiGuncelle(); });
 document.getElementById("btnGirisler").addEventListener("click", () => { aktifFiltre = 'GIRIS'; aktifButonuGuncelle("btnGirisler"); veriyiGuncelle(); });
 document.getElementById("btnCikislar").addEventListener("click", () => { aktifFiltre = 'CIKIS'; aktifButonuGuncelle("btnCikislar"); veriyiGuncelle(); });
@@ -126,106 +151,177 @@ function siralaTarih() {
     veriyiGuncelle();
 }
 
-// 5. GÜVENLİK VE FORM KONTROLÜ
-function formuDenetle() {
-    const tip = document.getElementById("islemTipi").value;
-    const urun = document.getElementById("urunSecimi").value;
-    const adet = document.getElementById("islemAdedi").value;
-    const kaydetButonu = document.getElementById("btnKaydet");
+function aktifButonuGuncelle(aktifId) {
+    document.querySelectorAll("#btnTumu, #btnGirisler, #btnCikislar").forEach(btn => {
+        btn.className = btn.className.replace("btn-dark", "btn-outline-dark").replace("btn-success", "btn-outline-success").replace("btn-danger", "btn-outline-danger").replace("text-white", "");
+    });
+    const seciliBtn = document.getElementById(aktifId);
+    if (aktifId === "btnTumu") seciliBtn.className = "btn btn-dark btn-sm rounded-pill px-3";
+    if (aktifId === "btnGirisler") seciliBtn.className = "btn btn-success btn-sm rounded-pill px-3 text-white";
+    if (aktifId === "btnCikislar") seciliBtn.className = "btn btn-danger btn-sm rounded-pill px-3 text-white";
+}
 
-    // Bütün alanlar doluysa ve adet sıfırdan büyükse butonu aç
-    if (tip !== "" && urun !== "" && adet && parseInt(adet) > 0) {
-        kaydetButonu.disabled = false;
-    } else {
+
+// ==========================================
+// 3. FORM DENETİMİ (DÜZENLE BUTONU KİLİDİ)
+// ==========================================
+/**
+ * Görev: Kullanıcı formda değişiklik yapmadan "Kaydet" butonuna basamasın.
+ */
+function formuDenetle() {
+    const tip = islemTipi.value;
+    const urun = urunSecimi.value;
+    const adet = islemAdedi.value;
+    const gId = hareketId.value;
+
+    // Kural 1: Tüm alanlar doldurulmuş olmalı
+    if (tip === "" || urun === "" || !adet || parseInt(adet) <= 0) {
         kaydetButonu.disabled = true;
+        return;
+    }
+
+    // Kural 2: Düzenleme modundaysa, veriler eskisinden farklı olmalı
+    if (gId) {
+        const eskiKayit = stokHareketleri.find(x => x.id == gId);
+        if (eskiKayit && eskiKayit.tip === tip && eskiKayit.kod === urun && eskiKayit.adet == parseInt(adet)) {
+            kaydetButonu.disabled = true; // Değişiklik yok, KİLİTLE!
+        } else {
+            kaydetButonu.disabled = false; // Veri değişti, AÇ!
+        }
+    } else {
+        kaydetButonu.disabled = false; // Yeni Ekleme modu, AÇ!
     }
 }
 
-// Kutuların içindeki veriler değiştikçe sürekli formu denetle
-document.getElementById("islemTipi").addEventListener("change", formuDenetle);
-document.getElementById("urunSecimi").addEventListener("change", formuDenetle);
-document.getElementById("islemAdedi").addEventListener("input", formuDenetle);
+islemTipi.addEventListener("change", formuDenetle);
+urunSecimi.addEventListener("change", formuDenetle);
+islemAdedi.addEventListener("input", formuDenetle);
 
-document.querySelector('[data-bs-target="#stokIslemModal"]').addEventListener("click", () => {
-    document.getElementById("modalBaslik").innerText = "Yeni Stok İşlemi";
-    document.getElementById("hareketId").value = ""; 
-    document.getElementById("stokIslemFormu").reset(); 
-    document.getElementById("btnKaydet").innerText = "Ekle ve Onayla";
-    formuDenetle(); 
+
+// ==========================================
+// 4. BARKOD (KAMERA) ENTEGRASYONU
+// ==========================================
+const btnKameraAc = document.getElementById("btnKameraAc");
+const btnKameraKapat = document.getElementById("btnKameraKapat");
+const kameraAlani = document.getElementById("kameraAlani");
+
+btnKameraAc.addEventListener("click", () => {
+
+    //Okuma başladığı an diğer işlemleri engelle
+    btnKameraAc.disabled = true;
+    kaydetButonu.disabled = true;
+
+    kameraAlani.classList.remove("d-none"); // Kutuyu göster
+
+    startScanner('reader', (okunanBarkod) => {
+        // Okunan verideki alt satır ve boşlukları temizler
+        const temizBarkod = okunanBarkod.replace(/[\n\r]+/g, '').trim();
+
+        // API'den gelen listede bu barkoda sahip ürün var mı?
+        const secenek = Array.from(urunSecimi.options).find(o => o.value === temizBarkod);
+
+        if (secenek) {
+            urunSecimi.value = temizBarkod; // Eşleşeni Seç
+            formuDenetle(); // Buton kilidini hesapla
+            stopScanner(); // Donanımı kapat
+            kameraAlani.classList.add("d-none");
+
+            // İşlem bitti, kilitleri aç
+            btnKameraAc.disabled = false;
+            // Başarılı okuma mesajı
+            // // alert("Ürün Eşleşti: " + secenek.text); 
+            alert("Ürün başarıyla bulundu: " + secenek.text);
+        } else {
+            alert(`Sistemde eşleşen ürün bulunamadı: [${temizBarkod}]\nNot: Ürünlerin Backend'den yüklendiğinden emin olun.`);
+        }
+    }, (hataMesaji) => {
+        // Hata fırlatıldığında (Kamera izni reddedilmesi vb. durumlarda)
+        if (hataMesaji === "CAMERA_START_FAILED") {
+            kameraAlani.classList.add("d-none"); // Açılamayan kameranın kutusunu gizle
+        }
+    });
 });
 
+btnKameraKapat.addEventListener("click", () => {
+    stopScanner();
+    kameraAlani.classList.add("d-none");
+});
+
+document.getElementById('stokIslemModal').addEventListener('hidden.bs.modal', () => {
+    stopScanner();
+    kameraAlani.classList.add("d-none");
+});
+
+
+// ==========================================
+// 5. CRUD İŞLEMLERİ (EKLE, DÜZENLE, SİL)
+// ==========================================
+document.querySelector('[data-bs-target="#stokIslemModal"]').addEventListener("click", () => {
+    document.getElementById("modalBaslik").innerText = "Yeni Stok İşlemi";
+    hareketId.value = "";
+    document.getElementById("stokIslemFormu").reset();
+    kaydetButonu.innerText = "Ekle ve Onayla";
+    formuDenetle();
+});
+
+// Tablodaki Mavi Düzenle Butonuna Tıklanınca
 function islemDuzenle(id) {
     const kayit = stokHareketleri.find(x => x.id === id);
-    document.getElementById("hareketId").value = kayit.id;
-    document.getElementById("islemTipi").value = kayit.tip;
-    document.getElementById("urunSecimi").value = kayit.kod;
-    document.getElementById("islemAdedi").value = kayit.adet;
-    
-    document.getElementById("btnKaydet").innerText = "Düzenle ve Onayla";
+    hareketId.value = kayit.id;
+    islemTipi.value = kayit.tip;
+    urunSecimi.value = kayit.kod; // Burada dropdown'dan otomatik eşleşme yapılır
+    islemAdedi.value = kayit.adet;
+
+    kaydetButonu.innerText = "Düzenle ve Onayla";
     document.getElementById("modalBaslik").innerText = "İşlemi Düzenle";
-    
-    formuDenetle(); 
+
+    formuDenetle(); // Veriler aynı olduğu için Kaydet butonu kilitli başlar!
     bootstrap.Modal.getOrCreateInstance(document.getElementById('stokIslemModal')).show();
 }
 
-// KAYDETME İŞLEMİ (Ekle veya Güncelle)
-document.getElementById("btnKaydet").addEventListener("click", () => {
-    const gizliId = document.getElementById("hareketId").value;
-    const islemAdedi = parseInt(document.getElementById("islemAdedi").value);
+kaydetButonu.addEventListener("click", () => {
+    const gId = hareketId.value;
+    const adet = parseInt(islemAdedi.value);
 
-    // KURAL: Girilen sayı sınırı aşıyorsa sistemi durdur
-    if (islemAdedi > MAX_ISLEM_ADEDI) {
-        alert(`Sistem Koruması: Tek seferde en fazla ${MAX_ISLEM_ADEDI.toLocaleString('tr-TR')} adet işlem yapabilirsiniz!`);
-        return; 
+    if (adet > MAX_ISLEM_ADEDI) {
+        alert(`Maksimum ${MAX_ISLEM_ADEDI} adet girebilirsiniz!`); return;
     }
 
-    if (gizliId) {
-        // ID varsa bu eski bir kayıttır, sadece güncelle (Tarihe dokunma)
-        let mevcutKayit = stokHareketleri.find(x => x.id == gizliId);
-        mevcutKayit.tip = document.getElementById("islemTipi").value;
-        mevcutKayit.kod = document.getElementById("urunSecimi").value;
-        mevcutKayit.ad = document.getElementById("urunSecimi").options[document.getElementById("urunSecimi").selectedIndex].text;
-        mevcutKayit.adet = islemAdedi;
-        mevcutKayit.duzenlendi = true; 
+    if (gId) {
+        // GÜNCELLEME İŞLEMİ
+        let mevcutKayit = stokHareketleri.find(x => x.id == gId);
+        mevcutKayit.tip = islemTipi.value;
+        mevcutKayit.kod = urunSecimi.value;
+        mevcutKayit.ad = urunSecimi.options[urunSecimi.selectedIndex].text.replace(/\[.*?\] /, ""); // [Barkod] kısmını temizleyip ismi alır
+        mevcutKayit.adet = adet;
+        mevcutKayit.duzenlendi = true;
     } else {
-        // ID yoksa bu yepyeni bir kayıttır.
+        // YENİ EKLEME İŞLEMİ
         stokHareketleri.unshift({
-            id: Date.now(), // Benzersiz bir kimlik oluştur
-            tarih: new Date().toLocaleString("tr-TR").slice(0, 16), // SİSTEM SAATİNİ OTOMATİK AL
-            kod: document.getElementById("urunSecimi").value,
-            ad: document.getElementById("urunSecimi").options[document.getElementById("urunSecimi").selectedIndex].text,
-            tip: document.getElementById("islemTipi").value,
-            adet: islemAdedi,
-            personel: "aktif.kullanici@godeva.com.tr", 
+            id: Date.now(),
+            tarih: new Date().toLocaleString("tr-TR").slice(0, 16),
+            kod: urunSecimi.value,
+            ad: urunSecimi.options[urunSecimi.selectedIndex].text.replace(/\[.*?\] /, ""),
+            tip: islemTipi.value,
+            adet: adet,
+            personel: "aktif.kullanici@godeva.com.tr",
             duzenlendi: false
         });
     }
 
-    veriyiHafizayaKaydet(); // F5 yapınca silinmesin diye hafızaya kaydet
+    veriyiHafizayaKaydet();
     veriyiGuncelle();
     bootstrap.Modal.getInstance(document.getElementById('stokIslemModal')).hide();
 });
 
 function silIslem(id) {
     if (confirm("Bu işlemi silmek istediğinizden emin misiniz?")) {
-        // id'si eşit OLMAYANLARI filtreleyerek, silineni dışarıda bırakıyoruz
         stokHareketleri = stokHareketleri.filter(x => x.id !== id);
         veriyiHafizayaKaydet();
         veriyiGuncelle();
     }
 }
 
-// Butonların renklerini ayarlayan görsel fonksiyon
-function aktifButonuGuncelle(aktifId) {
-    document.getElementById("btnTumu").className = "btn btn-outline-dark btn-sm rounded-pill px-3";
-    document.getElementById("btnGirisler").className = "btn btn-outline-success btn-sm rounded-pill px-3";
-    document.getElementById("btnCikislar").className = "btn btn-outline-danger btn-sm rounded-pill px-3";
-
-    const btn = document.getElementById(aktifId);
-    if (aktifId === "btnTumu") btn.className = "btn btn-dark btn-sm rounded-pill px-3";
-    if (aktifId === "btnGirisler") btn.className = "btn btn-success btn-sm rounded-pill px-3 text-white";
-    if (aktifId === "btnCikislar") btn.className = "btn btn-danger btn-sm rounded-pill px-3 text-white";
-}
-
-// Sayfa ilk yüklendiğinde tabloda verileri göstermesi için başlatıcı
-veriyiGuncelle();
+// 6. UYGULAMAYI BAŞLAT
+formIcinUrunleriGetir();
+verileriYukle();
