@@ -58,13 +58,15 @@
                     <table class="table table-hover table-striped align-middle border mb-0" style="min-width: 700px;">
                         <thead class="table-light border-bottom border-secondary-subtle">
                             <tr>
-                                <th id="tarihBaslik" class="text-secondary small fw-bold text-center border-end" onclick="siralaTarih()" style="cursor: pointer; width: 15%;">Tarih ↕</th>
-                                <th class="text-secondary small fw-bold text-center border-end d-none d-md-table-cell" style="width: 12%;">Ürün Kodu</th>
-                                <th class="text-secondary small fw-bold border-end" style="width: 25%;">Ürün Adı</th>
-                                <th class="text-secondary small fw-bold text-center border-end" style="width: 12%;">İşlem Tipi</th>
-                                <th class="text-secondary small fw-bold text-center border-end" style="width: 8%;">Adet</th>
-                                <th class="text-secondary small fw-bold text-center border-end d-none d-md-table-cell" style="width: 15%;">Personel</th>
-                                <th class="text-secondary small fw-bold text-center" style="width: 13%;">İşlemler</th>
+                                <th id="tarihBaslik" class="text-secondary small fw-bold text-center border-end"
+                                    style="cursor: pointer; width: 18%;">Tarih ↕</th>
+                                <th class="text-secondary small fw-bold text-center border-end d-none d-md-table-cell"
+                                    style="width: 15%;">Ürün Kodu</th>
+                                <th class="text-secondary small fw-bold border-end" style="width: 32%;">Ürün Adı</th>
+                                <th class="text-secondary small fw-bold text-center border-end" style="width: 15%;">
+                                    İşlem Tipi</th>
+                                <th class="text-secondary small fw-bold text-center border-end" style="width: 10%;">Adet</th>
+                                <th class="text-secondary small fw-bold text-center" style="width: 20%;">Personel</th>
                             </tr>
                         </thead>
                         <tbody id="hareketTablosuGövdesi"></tbody>
@@ -105,7 +107,19 @@
                                 <button type="button" class="btn btn-sm btn-danger w-100 rounded-0" id="btnKameraKapat">Taramayı İptal Et</button>
                             </div>
                             <select class="form-select border-light-subtle" id="urunSecimi">
-                                <option value="" selected disabled>Ürünler Yükleniyor...</option>
+                                <option value="" selected disabled>Ürün yükleniyor...</option>
+                            </select>
+                        </div>
+                        <div class="mb-3 d-none" id="sourceLocationGroup">
+                            <label class="form-label text-muted small fw-bold">Kaynak Lokasyon (Raf)</label>
+                            <select class="form-select border-light-subtle" id="sourceLocationId">
+                                <option value="" selected disabled>Kaynak raf seçiniz...</option>
+                            </select>
+                        </div>
+                        <div class="mb-3 d-none" id="targetLocationGroup">
+                            <label class="form-label text-muted small fw-bold">Hedef Lokasyon (Raf)</label>
+                            <select class="form-select border-light-subtle" id="targetLocationId">
+                                <option value="" selected disabled>Hedef raf seçiniz...</option>
                             </select>
                         </div>
                         <div class="mb-4">
