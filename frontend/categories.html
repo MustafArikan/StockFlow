@@ -3,16 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ürünler - Stockflow</title>
+    <title>Kategoriler - Stockflow</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap">
     <style>
-        body { font-family: 'Inter', sans-serif; }
+        body { font-family: 'Inter',  sans-serif; }
     </style>
 </head>
 <body>
     
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm"> 
+    <nav class=" navbar navbar-expand-lg navbar-dark bg-dark shadow-sm">
         <div class="container">
             <a class="navbar-brand fw-bold text-primary" href="index.html">
                 Stock<span class="text-white">Flow </span>
@@ -23,8 +23,8 @@
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav me-auto">
                     <li class="nav-item"><a class="nav-link" href="index.html">Ana Sayfa</a></li>
-                    <li class="nav-item"><a class="nav-link" href="categories.html">Kategoriler</a></li>
-                    <li class="nav-item"><a class="nav-link active" href="products.html">Ürünler</a></li>
+                    <li class="nav-item"><a class="nav-link active" href="categories.html">Kategoriler</a></li>
+                    <li class="nav-item"><a class="nav-link" href="products.html">Ürünler</a></li>
                     <li class="nav-item"><a class="nav-link" href="movements.html">Stok Hareketleri</a></li>
                     <li class="nav-item"><a class="nav-link" href="warehouses.html">Depolar</a></li>
                     <li class="nav-item"><a class="nav-link" href="test-scanner.html">Barkod Okuyucu</a></li>
@@ -37,35 +37,31 @@
     </nav>
 
     <div class="container my-5">
-
         <div class="d-flex justify-content-between align-items-center mb-4">
             <div>
-                <h1 class="fw-bold text-dark">Ürünler</h1>
-                <p class="text-muted mb-0">Ürün katoloğu ve stok bilgileri</p>
+                <h1 class="fw-bold text-dark">Kategoriler</h1>
+                <p class="text-muted mb-0">Ürün Kategorilerini Yönetin</p>
             </div>
-            <button class="btn btn-primary rounded-pill px-4 shadaow-sm" data-bs-toggle="modal" data-bs-target="#urunModal">+Yeni Ürün Ekle</button>
+            <button class="btn btn-primary rounden-pill px-4 shadow-sm" data-bs-toggle="modal" data-bs-target="#kategoriModal">+ Yeni Kategori Ekle</button>
         </div>
-        <div class="card border-0 shadow-sm rounded-3">
+
+        <div class="card border-0 shadaow-sm rounded-3">
             <div class="mb-3">
-                <input type="text" id="aramaKutusu" class="form-control rounded-pill" placeholder="Ürün adı veya barkod ile ara...">
+                <input type="text" id="aramaKutusu" class="form-control rounded-pill" placeholder="Kategori adı ile ara...">
             </div>
             <div class="card-body">
-
                 <table class="table table-hover align-middle mb-0">
                     <thead>
                         <tr class="text-muted small text-uppercase">
                             <th>ID</th>
-                            <th>Ürün Adı</th>
-                            <th>Barkod</th>
-                            <th>Min. Stok</th>
-                            <th>Kategori </th>
+                            <th>Kategori Adı</th>
                             <th class="text-end">İşlemler</th>
                         </tr>
                     </thead>
-                    <tbody id="urunTablosuGovdesi">
+                    <tbody id="kategoriTablosuGovdesi">
                         <tr>
-                            <td colspan="6" class="text-center text-muted py-4">Yükleniyor...</td>
-                        </tr> 
+                            <td colspan="3" class="text-center text-muted py-4"> Yükleniyor... </td>
+                        </tr>
                     </tbody>
                 </table>
             </div>
@@ -73,46 +69,31 @@
 
     </div>
 
-
-    <!--Yeni ürün ekleme modal-->
-    <div class="modal fade" id="urunModal" tabindex="-1" aria-hidden="true">
+    <!-- Yeni Kategori Ekleme Modal -->
+     <div class="modal fade" id="kategoriModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centred">
             <div class="modal-content border-0 shadow rounded-3">
                 <div class="modal-header border-bottom-0 bg-light rounded-top-3">
-                    <h5 class="modal-title fw-bold text-dark" id="modalBaslik"> Yeni Ürün Ekle </h5>
+                    <h5 class="modal-title fw-bold text-dark" id="modalBaslik">Yeni Kategori Ekle</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Kapat"></button>
                 </div>
                 <div class="modal-body p-4">
-                    <form id="urunFormu">
-                    <input type="hidden" id="urunId">
-                        <div class="mb-3">
-                            <label class="form-label text-muted small fw-bold">Ürün Adı</label>
-                            <input type="text" class="form-control" id="urunAdi" placeholder="Örn: M5 Vida">
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label text-muted small fw-bold">Barkod</label>
-                            <input type="text" class="form-control" id="urunBarkod" placeholder="Örn: 123456">
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label text-muted small fw-bold">Minimum Stok Seviyesi</label>
-                            <input type="number" class="form-control" id="urunMinStok" placeholder="Örn: 10" min="0">
-                        </div>
+                    <form id="kategoriFormu">
+                        <input type="hidden" id="kategoriId">
                         <div class="mb-4">
-                            <label class="form-label text-muted small fw-bold">Kategori</label>
-                            <select class="form-select" id="urunKategoriId">
-                                <option value="">Kategori seçin...</option>
-                            </select>
+                            <label class="form-label text-muted small fw-bold">Kategori Adı </label>
+                            <input type="text" class="form-control" id="kategoriAdi" placeholder="Örn: Elektronik">
                         </div>
-                        <button type="button" id="btnUrunKaydet" class="btn btn-primary w-100 rounded-pill py-2 fw-bold">Ekle ve Kaydet </button>
+                        <button type="button" id="btnKategoriKaydet" class="btn btn-primary w-100 rounded-pill py-2 fw-bold">Ekle ve Kaydet</button>
                     </form>
                 </div>
             </div>
         </div>
-    </div>
+     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="js/config.js"></script>
-    <script src="js/products.js"></script>
-
+    <script src="js/categories.js"></script>
 </body>
+
 </html>

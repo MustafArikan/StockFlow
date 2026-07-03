@@ -41,6 +41,14 @@ public class WarehousesController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> Create(CreateWarehouseDto dto)
     {
+        var mevcut = await _context.Warehouses.FirstOrDefaultAsync(w=> w.Name == dto.Name && w.Address == dto.Address);
+
+        if (mevcut != null)
+        {
+            return BadRequest("Bu isim ve adrese sahip bir depo zaten var.");
+        }
+
+
         var warehouse = new Warehouse
         {
             Name = dto.Name,
@@ -74,6 +82,13 @@ public class WarehousesController : ControllerBase
         var warehouse = await _context.Warehouses.FindAsync(id);
         if(warehouse == null)
             return NotFound();
+
+        //Raf kontrolü
+        var rafVarMi = await _context.Locations.AnyAsync(l => l.WarehouseId == id);
+        if (rafVarMi)
+        {
+            return BadRequest("Bu depoda raflar var. Önce onları silmelisiniz.");
+        }
 
         _context.Warehouses.Remove(warehouse);
         await _context.SaveChangesAsync();

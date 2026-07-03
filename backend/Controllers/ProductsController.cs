@@ -50,13 +50,19 @@ public class ProductsController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> Create(CreateProductDto dto)
     {
-       var product = new Product
-       {
-           Name = dto.Name,
-           Barcode = dto.Barcode,
-           MinStockLevel = dto.MinStockLevel,
-           CategoryId = dto.CategoryId
-       };
+        var mevcut = await _context.Products.FirstOrDefaultAsync(p => p.Name == dto.Name || p.Barcode == dto.Barcode);
+        if (mevcut != null)
+        {
+            return BadRequest("Bu isim veya barkoda sahip bir ürün zaten var.");
+        }    
+        
+        var product = new Product
+        {
+            Name = dto.Name,
+            Barcode = dto.Barcode,
+            MinStockLevel = dto.MinStockLevel,
+            CategoryId = dto.CategoryId
+        };
        
         _context.Products.Add(product);
         await _context.SaveChangesAsync();
