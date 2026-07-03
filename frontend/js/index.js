@@ -45,6 +45,11 @@ document.addEventListener('DOMContentLoaded', () => {
     if (btnNavbarReadAll) {
         btnNavbarReadAll.addEventListener("click", markAllAsRead);
     }
+
+    const btnNavbarLogout = document.getElementById('btnNavbarLogout');
+    if (btnNavbarLogout) {
+        btnNavbarLogout.addEventListener("click", logout);
+    }
 });
 
 async function loadDashboardSummary() {

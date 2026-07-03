@@ -1,7 +1,11 @@
-
 // Backend API adresi — depo işlemleri
-
 const API_URL = `${CONFIG.API_BASE_URL}/warehouses`;
+const token = localStorage.getItem('token');
+
+// Güvenlik kontrolü: Token yoksa login'e yönlendir
+if (!token) {
+    window.location.href = 'login.html';
+}
 
 // Tüm depoları arama için burada saklarız
 let tumDepolar = [];
@@ -12,7 +16,19 @@ const tabloGovdesi = document.getElementById("depoTablosuGovdesi");
 // API'den depoları çekip tabloya basan ana fonksiyon
 async function depolariYukle() {
     try {
-        const cevap = await fetch(API_URL);
+        const cevap = await fetch(API_URL, {
+            method: 'GET',
+            headers: {
+                "Authorization": `Bearer ${token}`
+            }
+        });
+
+        if (cevap.status === 401) {
+            localStorage.removeItem('token');
+            window.location.href = 'login.html';
+            return;
+        }
+
         if (!cevap.ok) {
             throw new Error("Sunucu hatası: " + cevap.status);
         }
@@ -46,14 +62,44 @@ function tabloyuCiz(depolar) {
                 <td>${depo.name}</td>
                 <td>${depo.address}</td>
                 <td class="text-end">
-                    <button class="btn btn-sm btn-outline-success rounded-pill" onclick="raflariAc(${depo.id}, '${depo.name}')">Raflar</button>
-                    <button class="btn btn-sm btn-outline-primary rounded-pill" onclick="depoDuzenle(${depo.id})">Düzenle</button>
-                    <button class="btn btn-sm btn-outline-danger rounded-pill" onclick="depoSil(${depo.id})">Sil</button>
+                    <button class="btn btn-sm btn-outline-success rounded-pill btn-raflar" data-id="${depo.id}" data-name="${escapeHtml(depo.name)}">Raflar</button>
+                    <button class="btn btn-sm btn-outline-primary rounded-pill btn-duzenle" data-id="${depo.id}">Düzenle</button>
+                    <button class="btn btn-sm btn-outline-danger rounded-pill btn-sil" data-id="${depo.id}">Sil</button>
                 </td>
             </tr>`;
         tabloGovdesi.innerHTML += satir;
     });
 }
+
+// XSS koruması için html kaçırma fonksiyonu
+function escapeHtml(text) {
+    if (!text) return "";
+    return text.toString()
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
+
+// Olay Delege Etme (Event Delegation) - Depo İşlemleri Satır içi onclick kaldırıldı
+tabloGovdesi.addEventListener("click", (e) => {
+    const btnRaflar = e.target.closest(".btn-raflar");
+    const btnDuzenle = e.target.closest(".btn-duzenle");
+    const btnSil = e.target.closest(".btn-sil");
+
+    if (btnRaflar) {
+        const id = parseInt(btnRaflar.getAttribute("data-id"));
+        const name = btnRaflar.getAttribute("data-name");
+        raflariAc(id, name);
+    } else if (btnDuzenle) {
+        const id = parseInt(btnDuzenle.getAttribute("data-id"));
+        depoDuzenle(id);
+    } else if (btnSil) {
+        const id = parseInt(btnSil.getAttribute("data-id"));
+        depoSil(id);
+    }
+});
 
 depolariYukle();
 
@@ -79,9 +125,18 @@ document.getElementById("btnDepoKaydet").addEventListener("click", async () => {
     try {
         const cevap = await fetch(adres, {
             method: metod,
-            headers: { "Content-Type": "application/json" },
+            headers: { 
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${token}`
+            },
             body: JSON.stringify(depoVerisi)
         });
+
+        if (cevap.status === 401) {
+            localStorage.removeItem('token');
+            window.location.href = 'login.html';
+            return;
+        }
 
         if (!cevap.ok) {
             throw new Error("İşlem başarısız: " + cevap.status);
@@ -114,7 +169,7 @@ function depoDuzenle(id) {
     document.getElementById("btnDepoKaydet").innerText = "Güncelle";
 
     const modalElement = document.getElementById("depoModal");
-    const modalInstance = new bootstrap.Modal(modalElement);
+    const modalInstance = bootstrap.Modal.getOrCreateInstance(modalElement);
     modalInstance.show();
 }
 
@@ -125,8 +180,18 @@ async function depoSil(id) {
 
     try {
         const cevap = await fetch(API_URL + "/" + id, {
-            method: "DELETE"
+            method: "DELETE",
+            headers: {
+                "Authorization": `Bearer ${token}`
+            }
         });
+
+        if (cevap.status === 401) {
+            localStorage.removeItem('token');
+            window.location.href = 'login.html';
+            return;
+        }
+
         if (!cevap.ok) {
             throw new Error("Silme başarısız: " + cevap.status);
         }
@@ -173,7 +238,7 @@ async function raflariAc(depoId, depoAdi) {
 
     // Modalı aç
     const modalElement = document.getElementById("raflarModal");
-    const modalInstance = new bootstrap.Modal(modalElement);
+    const modalInstance = bootstrap.Modal.getOrCreateInstance(modalElement);
     modalInstance.show();
 }
 
@@ -181,7 +246,19 @@ async function raflariAc(depoId, depoAdi) {
 async function raflariYukle(depoId) {
     const tabloGovdesi = document.getElementById("rafTablosuGovdesi");
     try {
-        const cevap = await fetch(`${CONFIG.API_BASE_URL}/locations/by-warehouse/${depoId}`);
+        const cevap = await fetch(`${CONFIG.API_BASE_URL}/locations/by-warehouse/${depoId}`, {
+            method: 'GET',
+            headers: {
+                "Authorization": `Bearer ${token}`
+            }
+        });
+
+        if (cevap.status === 401) {
+            localStorage.removeItem('token');
+            window.location.href = 'login.html';
+            return;
+        }
+
         if (!cevap.ok) throw new Error("Raflar alınamadı: " + cevap.status);
 
         const raflar = await cevap.json();
@@ -202,7 +279,7 @@ async function raflariYukle(depoId) {
                     <td class="fw-bold">${raf.id}</td>
                     <td>${raf.code}</td>
                     <td class="text-end">
-                        <button class="btn btn-sm btn-outline-danger rounded-pill" onclick="rafSil(${raf.id})">Sil</button>
+                        <button class="btn btn-sm btn-outline-danger rounded-pill btn-raf-sil" data-id="${raf.id}">Sil</button>
                     </td>
                 </tr>`;
             tabloGovdesi.innerHTML += satir;
@@ -220,8 +297,8 @@ async function raflariYukle(depoId) {
 document.getElementById("btnRafEkle").addEventListener("click", async () => {
     const code = document.getElementById("rafKodu").value;
 
-    if(!code){
-        alert("lütfen raf kodu girin!");
+    if (!code) {
+        alert("Lütfen raf kodu girin!");
         return;
     }
 
@@ -230,44 +307,69 @@ document.getElementById("btnRafEkle").addEventListener("click", async () => {
         warehouseId: aktifDepoId
     };
 
-    try{
+    try {
         const cevap = await fetch(`${CONFIG.API_BASE_URL}/locations`, {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: { 
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${token}`
+            },
             body: JSON.stringify(yeniRaf)
         });
 
-        if(!cevap.ok){
+        if (cevap.status === 401) {
+            localStorage.removeItem('token');
+            window.location.href = 'login.html';
+            return;
+        }
+
+        if (!cevap.ok) {
             throw new Error("Raf eklenemedi: " + cevap.status);
         }
 
         document.getElementById("rafKodu").value = "";
         raflariYukle(aktifDepoId);
-    }catch (hata) {
-        alert("Raf eklenemedi: "+ hata.message+ "\n(Bu raf kodu zaten kullanılıyor olabilir.)");
+    } catch (hata) {
+        alert("Raf eklenemedi: " + hata.message + "\n(Bu raf kodu zaten kullanılıyor olabilir.)");
         console.error("Hata:", hata);
     }
-
 });
 
 // Raf silme
 async function rafSil(id) {
-    const onay = confirm("Bu rafı silmek istedğinize emin misiniz?");
-    if(!onay) return;
+    const onay = confirm("Bu rafı silmek istediğinize emin misiniz?");
+    if (!onay) return;
 
-    try{
-        const cevap = await fetch(`${CONFIG.API_BASE_URL}/locations/${id}`,{
-            method: "DELETE"
+    try {
+        const cevap = await fetch(`${CONFIG.API_BASE_URL}/locations/${id}`, {
+            method: "DELETE",
+            headers: {
+                "Authorization": `Bearer ${token}`
+            }
         });
-        if(!cevap.ok){
-            throw new Error("Silme başarısız: " + cevap.status);
 
+        if (cevap.status === 401) {
+            localStorage.removeItem('token');
+            window.location.href = 'login.html';
+            return;
+        }
+
+        if (!cevap.ok) {
+            throw new Error("Silme başarısız: " + cevap.status);
         }
 
         raflariYukle(aktifDepoId);
-    }catch (hata){
+    } catch (hata) {
         alert("Raf silinemedi: " + hata.message);
         console.error("Hata", hata);
     }
-    
 }
+
+// Olay Delege Etme (Event Delegation) - Raf Silme İşlemi satır içi onclick kaldırıldı
+document.getElementById("rafTablosuGovdesi").addEventListener("click", (e) => {
+    const btnRafSil = e.target.closest(".btn-raf-sil");
+    if (btnRafSil) {
+        const id = parseInt(btnRafSil.getAttribute("data-id"));
+        rafSil(id);
+    }
+});

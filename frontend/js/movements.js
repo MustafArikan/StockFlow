@@ -2,33 +2,31 @@
  * Modül: Stok Hareketleri
  */
 
-const MAX_ISLEM_ADEDI = 100000; // Güvenlik kuralı: Tek seferde en fazla işlem limiti
+const API_URL = `${CONFIG.API_BASE_URL}/stock/movements`;
+const token = localStorage.getItem('token');
+
+// Güvenlik kontrolü: Token yoksa login'e yönlendir
+if (!token) {
+    window.location.href = 'login.html';
+}
+
+const MAX_ISLEM_ADEDI = 100000;
+
 // XSS koruması için html karakterlerini encode eder
 function escapeHtml(text) {
-        if (!text) return "";
-        return text
-            .toString()
-            .replace(/&/g, "&amp;")
-            .replace(/</g, "&lt;")
-            .replace(/>/g, "&gt;")
-            .replace(/"/g, "&quot;")
-            .replace(/'/g, "&#039;");
+    if (!text) return "";
+    return text
+        .toString()
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
 }
-// 1. HAFIZA YÖNETİMİ
-const VARSAYILAN_VERILER = [
-    { id: 4, tarih: "28.06.2026 09:20", kod: "SSD-1TB", ad: "Samsung 990 PRO 1TB M.2", tip: "CIKIS", adet: 10, personel: "hamit@godeva.com.tr", duzenlendi: false },
-    { id: 3, tarih: "29.06.2026 10:15", kod: "VGA-4090", ad: "NVIDIA GeForce RTX 4090 24GB", tip: "GIRIS", adet: 15, personel: "admin@godeva.com.tr", duzenlendi: false },
-    { id: 2, tarih: "29.06.2026 11:30", kod: "CPU-7800", ad: "AMD Ryzen 7 7800X3D İşlemci", tip: "CIKIS", adet: 3, personel: "operator@godeva.com.tr", duzenlendi: true },
-    { id: 1, tarih: "29.06.2026 14:00", kod: "RAM-C32", ad: "Corsair Vengeance 32GB DDR5", tip: "GIRIS", adet: 50, personel: "admin@godeva.com.tr", duzenlendi: false }
-];
 
-// Tarayıcı hafızasını oku (F5 yapınca silinmesin diye)
-let stokHareketleri = JSON.parse(localStorage.getItem('stokHareketleri')) || VARSAYILAN_VERILER;
-
-// Değişiklik olunca bunu çağırıp tarayıcıya yazarız
-function veriyiHafizayaKaydet() {
-    localStorage.setItem('stokHareketleri', JSON.stringify(stokHareketleri));
-}
+let stokHareketleri = [];
+let tumUrunler = [];
+let tumLokasyonlar = [];
 
 let aktifFiltre = 'TUMU';
 let aktifArama = '';
@@ -37,36 +35,56 @@ let tarihArtan = false;
 const tabloGovdesi = document.getElementById("hareketTablosuGövdesi");
 const aramaKutusu = document.getElementById("aramaKutusu");
 
+// API'den hareketleri yükleyen ana fonksiyon
+async function hareketleriYukle() {
+    try {
+        const cevap = await fetch(API_URL, {
+            method: 'GET',
+            headers: {
+                "Authorization": `Bearer ${token}`
+            }
+        });
+
+        if (cevap.status === 401) {
+            localStorage.removeItem('token');
+            window.location.href = 'login.html';
+            return;
+        }
+
+        if (!cevap.ok) {
+            throw new Error("Stok hareketleri yüklenemedi: " + cevap.status);
+        }
+
+        stokHareketleri = await cevap.json();
+        veriyiGuncelle();
+    } catch (hata) {
+        tabloGovdesi.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-danger">Bağlantı Hatası: ${hata.message}</td></tr>`;
+        console.error("Hata:", hata);
+    }
+}
+
 // 2. FİLTRELEME VE SIRALAMA MANTIĞI
 function veriyiGuncelle() {
     let filtrelenmis = [...stokHareketleri];
 
     // Önce tip filtresini uygula
     if (aktifFiltre !== 'TUMU') {
-        filtrelenmis = filtrelenmis.filter(x => x.tip === aktifFiltre);
+        filtrelenmis = filtrelenmis.filter(x => x.islemTipi === aktifFiltre);
     }
     
     // Sonra arama kutusu filtresini uygula
     if (aktifArama) {
         filtrelenmis = filtrelenmis.filter(x => 
-            x.ad.toLowerCase().includes(aktifArama) || 
-            x.kod.toLowerCase().includes(aktifArama) || 
+            x.urunAdı.toLowerCase().includes(aktifArama) || 
+            x.urunKodu.toLowerCase().includes(aktifArama) || 
             x.personel.toLowerCase().includes(aktifArama)
         );
     }
 
     // Sonra tarih sıralamasını yap (Yeniden eskiye veya Eskiden yeniye)
     filtrelenmis.sort((a, b) => {
-        const parcala = (t) => {
-            const temizTarih = t.replace(',', '');
-            const [gun, ay, yil] = temizTarih.split(' ')[0].split('.');
-            const [saat, dakika] = temizTarih.split(' ')[1].split(':');
-            return new Date(yil, ay - 1, gun, saat, dakika);
-        };
-        const dateA = parcala(a.tarih);
-        const dateB = parcala(b.tarih);
-        
-        if(dateA.getTime() === dateB.getTime()) return tarihArtan ? a.id - b.id : b.id - a.id;
+        const dateA = new Date(a.tarih);
+        const dateB = new Date(b.tarih);
         return tarihArtan ? dateA - dateB : dateB - dateA;
     });
 
@@ -79,7 +97,7 @@ function tabloyuCiz(veriListesi) {
     tabloGovdesi.innerHTML = ""; // Mevcut tabloyu temizle
 
     if (veriListesi.length === 0) {
-        tabloGovdesi.innerHTML = `<tr><td colspan="7" class="text-center py-4 text-muted">Kayıt bulunamadı.</td></tr>`;
+        tabloGovdesi.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-muted">Kayıt bulunamadı.</td></tr>`;
         return;
     }
 
@@ -87,25 +105,21 @@ function tabloyuCiz(veriListesi) {
 
     // Döngü ile her veriyi HTML satırına çevir
     veriListesi.forEach(hareket => {
-        let tipEtiketi = hareket.tip === "GIRIS" ? `<span class="badge bg-success bg-opacity-10 text-success border border-success px-2 py-1 rounded-pill">STOK GİRİŞİ</span>` : `<span class="badge bg-danger bg-opacity-10 text-danger border border-danger px-2 py-1 rounded-pill">STOK ÇIKIŞI</span>`;
-        let adetRengi = hareket.tip === "GIRIS" ? "text-success" : "text-danger";
-        let adetIsareti = hareket.tip === "GIRIS" ? "+" : "-";
-        let duzenlendiEtiketi = hareket.duzenlendi ? `<span class="badge bg-warning text-dark ms-2" style="font-size: 0.65rem;">Düzenlendi</span>` : "";
+        let tipEtiketi = hareket.islemTipi === "GIRIS" ? `<span class="badge bg-success bg-opacity-10 text-success border border-success px-2 py-1 rounded-pill">STOK GİRİŞİ</span>` : `<span class="badge bg-danger bg-opacity-10 text-danger border border-danger px-2 py-1 rounded-pill">STOK ÇIKIŞI</span>`;
+        let adetRengi = hareket.islemTipi === "GIRIS" ? "text-success" : "text-danger";
+        let adetIsareti = hareket.islemTipi === "GIRIS" ? "+" : "-";
 
-        // d-none d-md-table-cell sınıfları telefonda ilgili sütunları gizler
-        // XSS zafiyetini engellemek için hareket.kod, hareket.ad ve hareket.personel escapeHtml()'den geçirildi
+        // Tarih formatlama
+        const formatliTarih = new Date(hareket.tarih).toLocaleString('tr-TR');
+
         const satir = `
             <tr>
-                <td class="text-muted small text-center border-end align-middle">${escapeHtml(hareket.tarih)}</td>
-                <td class="fw-bold text-center border-end align-middle d-none d-md-table-cell">${escapeHtml(hareket.kod)}</td>
-                <td class="border-end align-middle">${escapeHtml(hareket.ad)} ${duzenlendiEtiketi}</td>
+                <td class="text-muted small text-center border-end align-middle">${escapeHtml(formatliTarih)}</td>
+                <td class="fw-bold text-center border-end align-middle">${escapeHtml(hareket.urunKodu)}</td>
+                <td class="border-end align-middle">${escapeHtml(hareket.urunAdı)}</td>
                 <td class="text-center border-end align-middle">${tipEtiketi}</td>
-                <td class="fw-bold text-center border-end align-middle ${adetRengi}">${adetIsareti}${hareket.adet}</td>
-                <td class="text-center border-end align-middle d-none d-md-table-cell">${escapeHtml(hareket.personel)}</td>
-                <td class="text-center align-middle d-flex gap-2 justify-content-center flex-wrap">
-                    <button class="btn btn-sm btn-outline-primary rounded-pill px-3" onclick="islemDuzenle(${hareket.id})">Düzenle</button>
-                    <button class="btn btn-sm btn-outline-danger rounded-pill px-3" onclick="silIslem(${hareket.id})">Sil</button>
-                </td>
+                <td class="fw-bold text-center border-end align-middle ${adetRengi}">${adetIsareti}${hareket.quantity}</td>
+                <td class="text-center align-middle">${escapeHtml(hareket.personel)}</td>
             </tr>`;
         satirlar.push(satir);
     });
@@ -114,11 +128,103 @@ function tabloyuCiz(veriListesi) {
     tabloGovdesi.innerHTML = satirlar.join("");
 }
 
+// API'den Ürünleri çekip dropdown'a doldurur
+async function urunleriYukle() {
+    const urunSelect = document.getElementById("urunSecimi");
+    try {
+        const cevap = await fetch(`${CONFIG.API_BASE_URL}/products`, {
+            method: 'GET',
+            headers: {
+                "Authorization": `Bearer ${token}`
+            }
+        });
+
+        if (cevap.status === 401) {
+            localStorage.removeItem('token');
+            window.location.href = 'login.html';
+            return;
+        }
+
+        if (!cevap.ok) throw new Error("Ürünler alınamadı.");
+
+        tumUrunler = await cevap.json();
+        urunSelect.innerHTML = '<option value="" selected disabled>Lütfen bir ürün seçiniz...</option>';
+        
+        tumUrunler.forEach(urun => {
+            const option = document.createElement("option");
+            option.value = urun.barcode;
+            option.textContent = `[${urun.barcode}] ${urun.name}`;
+            urunSelect.appendChild(option);
+        });
+    } catch (hata) {
+        console.error("Ürün yükleme hatası:", hata);
+        urunSelect.innerHTML = '<option value="" selected disabled>Ürünler yüklenemedi!</option>';
+    }
+}
+
+// API'den Lokasyonları çekip dropdown'lara doldurur
+async function lokasyonlariYukle() {
+    const sourceSelect = document.getElementById("sourceLocationId");
+    const targetSelect = document.getElementById("targetLocationId");
+    try {
+        const cevap = await fetch(`${CONFIG.API_BASE_URL}/locations`, {
+            method: 'GET',
+            headers: {
+                "Authorization": `Bearer ${token}`
+            }
+        });
+
+        if (cevap.status === 401) {
+            localStorage.removeItem('token');
+            window.location.href = 'login.html';
+            return;
+        }
+
+        if (!cevap.ok) throw new Error("Lokasyonlar alınamadı.");
+
+        tumLokasyonlar = await cevap.json();
+        
+        sourceSelect.innerHTML = '<option value="" selected disabled>Kaynak raf seçiniz...</option>';
+        targetSelect.innerHTML = '<option value="" selected disabled>Hedef raf seçiniz...</option>';
+
+        tumLokasyonlar.forEach(lok => {
+            const optSource = document.createElement("option");
+            optSource.value = lok.id;
+            optSource.textContent = lok.code;
+            sourceSelect.appendChild(optSource);
+
+            const optTarget = document.createElement("option");
+            optTarget.value = lok.id;
+            optTarget.textContent = lok.code;
+            targetSelect.appendChild(optTarget);
+        });
+    } catch (hata) {
+        console.error("Lokasyon yükleme hatası:", hata);
+    }
+}
+
 // 4. BUTON VE ARAMA DİNLEYİCİLERİ (Kullanıcı hareketlerini yakalar)
 document.getElementById("btnTumu").addEventListener("click", () => { aktifFiltre = 'TUMU'; aktifButonuGuncelle("btnTumu"); veriyiGuncelle(); });
 document.getElementById("btnGirisler").addEventListener("click", () => { aktifFiltre = 'GIRIS'; aktifButonuGuncelle("btnGirisler"); veriyiGuncelle(); });
 document.getElementById("btnCikislar").addEventListener("click", () => { aktifFiltre = 'CIKIS'; aktifButonuGuncelle("btnCikislar"); veriyiGuncelle(); });
 aramaKutusu.addEventListener("keyup", (event) => { aktifArama = event.target.value.toLowerCase(); veriyiGuncelle(); });
+document.getElementById("tarihBaslik").addEventListener("click", siralaTarih);
+
+function aktifButonuGuncelle(aktifId) {
+    const butonlar = ["btnTumu", "btnGirisler", "btnCikislar"];
+    butonlar.forEach(id => {
+        const btn = document.getElementById(id);
+        if (id === aktifId) {
+            btn.className = (id === "btnTumu") ? "btn btn-dark btn-sm rounded-pill px-3" : 
+                            (id === "btnGirisler") ? "btn btn-success btn-sm rounded-pill px-3 text-white" : 
+                            "btn btn-danger btn-sm rounded-pill px-3 text-white";
+        } else {
+            btn.className = (id === "btnTumu") ? "btn btn-outline-dark btn-sm rounded-pill px-3" : 
+                            (id === "btnGirisler") ? "btn btn-outline-success btn-sm rounded-pill px-3" : 
+                            "btn btn-outline-danger btn-sm rounded-pill px-3";
+        }
+    });
+}
 
 function siralaTarih() {
     tarihArtan = !tarihArtan;
@@ -131,101 +237,120 @@ function formuDenetle() {
     const tip = document.getElementById("islemTipi").value;
     const urun = document.getElementById("urunSecimi").value;
     const adet = document.getElementById("islemAdedi").value;
+    
+    const sourceLoc = document.getElementById("sourceLocationId").value;
+    const targetLoc = document.getElementById("targetLocationId").value;
+
     const kaydetButonu = document.getElementById("btnKaydet");
 
-    // Bütün alanlar doluysa ve adet sıfırdan büyükse butonu aç
-    if (tip !== "" && urun !== "" && adet && parseInt(adet) > 0) {
-        kaydetButonu.disabled = false;
-    } else {
-        kaydetButonu.disabled = true;
+    let gecerli = (tip !== "" && urun !== "" && adet && parseInt(adet) > 0 && parseInt(adet) <= MAX_ISLEM_ADEDI);
+
+    if (gecerli) {
+        if (tip === "GIRIS" && targetLoc === "") {
+            gecerli = false;
+        } else if (tip === "CIKIS" && sourceLoc === "") {
+            gecerli = false;
+        }
     }
+
+    kaydetButonu.disabled = !gecerli;
 }
 
-// Kutuların içindeki veriler değiştikçe sürekli formu denetle
-document.getElementById("islemTipi").addEventListener("change", formuDenetle);
+// Değişiklik olaylarını dinle
+document.getElementById("islemTipi").addEventListener("change", (e) => {
+    const tip = e.target.value;
+    
+    const sourceGroup = document.getElementById("sourceLocationGroup");
+    const targetGroup = document.getElementById("targetLocationGroup");
+
+    if (tip === "GIRIS") {
+        targetGroup.classList.remove("d-none");
+        sourceGroup.classList.add("d-none");
+        document.getElementById("sourceLocationId").value = "";
+    } else if (tip === "CIKIS") {
+        sourceGroup.classList.remove("d-none");
+        targetGroup.classList.add("d-none");
+        document.getElementById("targetLocationId").value = "";
+    }
+
+    formuDenetle();
+});
+
 document.getElementById("urunSecimi").addEventListener("change", formuDenetle);
 document.getElementById("islemAdedi").addEventListener("input", formuDenetle);
+document.getElementById("sourceLocationId").addEventListener("change", formuDenetle);
+document.getElementById("targetLocationId").addEventListener("change", formuDenetle);
 
-document.querySelector('[data-bs-target="#stokIslemModal"]').addEventListener("click", () => {
-    document.getElementById("modalBaslik").innerText = "Yeni Stok İşlemi";
-    document.getElementById("hareketId").value = ""; 
-    document.getElementById("stokIslemFormu").reset(); 
-    document.getElementById("btnKaydet").innerText = "Ekle ve Onayla";
-    formuDenetle(); 
-});
-
-function islemDuzenle(id) {
-    const kayit = stokHareketleri.find(x => x.id === id);
-    document.getElementById("hareketId").value = kayit.id;
-    document.getElementById("islemTipi").value = kayit.tip;
-    document.getElementById("urunSecimi").value = kayit.kod;
-    document.getElementById("islemAdedi").value = kayit.adet;
+// Ekle ve Onayla
+document.getElementById("btnKaydet").addEventListener("click", async () => {
+    const tip = document.getElementById("islemTipi").value;
+    const barcode = document.getElementById("urunSecimi").value;
+    const qty = parseInt(document.getElementById("islemAdedi").value);
     
-    document.getElementById("btnKaydet").innerText = "Düzenle ve Onayla";
-    document.getElementById("modalBaslik").innerText = "İşlemi Düzenle";
-    
-    formuDenetle(); 
-    bootstrap.Modal.getOrCreateInstance(document.getElementById('stokIslemModal')).show();
-}
+    const sourceLocVal = document.getElementById("sourceLocationId").value;
+    const targetLocVal = document.getElementById("targetLocationId").value;
 
-// KAYDETME İŞLEMİ (Ekle veya Güncelle)
-document.getElementById("btnKaydet").addEventListener("click", () => {
-    const gizliId = document.getElementById("hareketId").value;
-    const islemAdedi = parseInt(document.getElementById("islemAdedi").value);
+    const payload = {
+        productBarcode: barcode,
+        movementType: tip, // Backend "IN" veya "OUT" bekliyor olabilir, "GIRIS"->"IN", "CIKIS"->"OUT" olarak map'leyelim:
+        quantity: qty,
+        sourceLocationId: (tip === "CIKIS" && sourceLocVal) ? parseInt(sourceLocVal) : null,
+        targetLocationId: (tip === "GIRIS" && targetLocVal) ? parseInt(targetLocVal) : null,
+        description: `${tip === "GIRIS" ? "Stok Girişi" : "Stok Çıkışı"}`
+    };
 
-    // KURAL: Girilen sayı sınırı aşıyorsa sistemi durdur
-    if (islemAdedi > MAX_ISLEM_ADEDI) {
-        alert(`Sistem Koruması: Tek seferde en fazla ${MAX_ISLEM_ADEDI.toLocaleString('tr-TR')} adet işlem yapabilirsiniz!`);
-        return; 
-    }
+    // Eğer backend IN/OUT bekliyorsa dönüştürelim
+    if (payload.movementType === "GIRIS") payload.movementType = "IN";
+    if (payload.movementType === "CIKIS") payload.movementType = "OUT";
 
-    if (gizliId) {
-        // ID varsa bu eski bir kayıttır, sadece güncelle (Tarihe dokunma)
-        let mevcutKayit = stokHareketleri.find(x => x.id == gizliId);
-        mevcutKayit.tip = document.getElementById("islemTipi").value;
-        mevcutKayit.kod = document.getElementById("urunSecimi").value;
-        mevcutKayit.ad = document.getElementById("urunSecimi").options[document.getElementById("urunSecimi").selectedIndex].text;
-        mevcutKayit.adet = islemAdedi;
-        mevcutKayit.duzenlendi = true; 
-    } else {
-        // ID yoksa bu yepyeni bir kayıttır.
-        stokHareketleri.unshift({
-            id: Date.now(), // Benzersiz bir kimlik oluştur
-            tarih: new Date().toLocaleString("tr-TR").slice(0, 16), // SİSTEM SAATİNİ OTOMATİK AL
-            kod: document.getElementById("urunSecimi").value,
-            ad: document.getElementById("urunSecimi").options[document.getElementById("urunSecimi").selectedIndex].text,
-            tip: document.getElementById("islemTipi").value,
-            adet: islemAdedi,
-            personel: "aktif.kullanici@godeva.com.tr", 
-            duzenlendi: false
+    try {
+        const cevap = await fetch(API_URL, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${token}`
+            },
+            body: JSON.stringify(payload)
         });
-    }
 
-    veriyiHafizayaKaydet(); // F5 yapınca silinmesin diye hafızaya kaydet
-    veriyiGuncelle();
-    bootstrap.Modal.getInstance(document.getElementById('stokIslemModal')).hide();
+        if (cevap.status === 401) {
+            localStorage.removeItem('token');
+            window.location.href = 'login.html';
+            return;
+        }
+
+        if (cevap.status === 409) {
+            throw new Error("Stok çakışması hatası (Concurrency Conflict)! Başka bir kullanıcı aynı anda işlem yaptı. Lütfen tekrar deneyin.");
+        }
+
+        if (!cevap.ok) {
+            const errText = await cevap.text();
+            throw new Error(errText || "İşlem kaydedilemedi. Hata kodu: " + cevap.status);
+        }
+
+        // Modal kapat ve formu sıfırla
+        const modalElement = document.getElementById("stokIslemModal");
+        const modalInstance = bootstrap.Modal.getInstance(modalElement);
+        if (modalInstance) modalInstance.hide();
+
+        document.getElementById("stokIslemFormu").reset();
+        document.getElementById("sourceLocationGroup").classList.add("d-none");
+        document.getElementById("targetLocationGroup").classList.add("d-none");
+        document.getElementById("btnKaydet").disabled = true;
+
+        // Başarılıysa hareketleri yeniden yükle
+        await hareketleriYukle();
+    } catch (hata) {
+        alert("Hata: " + hata.message);
+        console.error("Hata:", hata);
+    }
 });
 
-function silIslem(id) {
-    if (confirm("Bu işlemi silmek istediğinizden emin misiniz?")) {
-        // id'si eşit OLMAYANLARI filtreleyerek, silineni dışarıda bırakıyoruz
-        stokHareketleri = stokHareketleri.filter(x => x.id !== id);
-        veriyiHafizayaKaydet();
-        veriyiGuncelle();
-    }
+// Sayfa açıldığında ilk yüklemeleri tetikle
+async function baslat() {
+    await urunleriYukle();
+    await lokasyonlariYukle();
+    await hareketleriYukle();
 }
 
-// Butonların renklerini ayarlayan görsel fonksiyon
-function aktifButonuGuncelle(aktifId) {
-    document.getElementById("btnTumu").className = "btn btn-outline-dark btn-sm rounded-pill px-3";
-    document.getElementById("btnGirisler").className = "btn btn-outline-success btn-sm rounded-pill px-3";
-    document.getElementById("btnCikislar").className = "btn btn-outline-danger btn-sm rounded-pill px-3";
-
-    const btn = document.getElementById(aktifId);
-    if (aktifId === "btnTumu") btn.className = "btn btn-dark btn-sm rounded-pill px-3";
-    if (aktifId === "btnGirisler") btn.className = "btn btn-success btn-sm rounded-pill px-3 text-white";
-    if (aktifId === "btnCikislar") btn.className = "btn btn-danger btn-sm rounded-pill px-3 text-white";
-}
-
-// Sayfa ilk yüklendiğinde tabloda verileri göstermesi için başlatıcı
-veriyiGuncelle();
+baslat();

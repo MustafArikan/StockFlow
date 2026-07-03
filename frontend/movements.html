@@ -74,17 +74,14 @@
                         <thead class="table-light border-bottom border-secondary-subtle">
                             <tr>
                                 <th id="tarihBaslik" class="text-secondary small fw-bold text-center border-end"
-                                    onclick="siralaTarih()" style="cursor: pointer; width: 15%;">Tarih ↕</th>
+                                    style="cursor: pointer; width: 18%;">Tarih ↕</th>
                                 <th class="text-secondary small fw-bold text-center border-end d-none d-md-table-cell"
-                                    style="width: 12%;">Ürün Kodu</th>
-                                <th class="text-secondary small fw-bold border-end" style="width: 25%;">Ürün Adı</th>
-                                <th class="text-secondary small fw-bold text-center border-end" style="width: 12%;">
+                                    style="width: 15%;">Ürün Kodu</th>
+                                <th class="text-secondary small fw-bold border-end" style="width: 32%;">Ürün Adı</th>
+                                <th class="text-secondary small fw-bold text-center border-end" style="width: 15%;">
                                     İşlem Tipi</th>
-                                <th class="text-secondary small fw-bold text-center border-end" style="width: 8%;">Adet
-                                </th>
-                                <th class="text-secondary small fw-bold text-center border-end d-none d-md-table-cell"
-                                    style="width: 15%;">Personel</th>
-                                <th class="text-secondary small fw-bold text-center" style="width: 13%;">İşlemler</th>
+                                <th class="text-secondary small fw-bold text-center border-end" style="width: 10%;">Adet</th>
+                                <th class="text-secondary small fw-bold text-center" style="width: 20%;">Personel</th>
                             </tr>
                         </thead>
                         <tbody id="hareketTablosuGövdesi"></tbody>
@@ -116,11 +113,19 @@
                         <div class="mb-3">
                             <label class="form-label text-muted small fw-bold">Ürünü Seçin</label>
                             <select class="form-select border-light-subtle" id="urunSecimi">
-                                <option value="" selected disabled>Lütfen bir ürün seçiniz...</option>
-                                <option value="VGA-4090">NVIDIA GeForce RTX 4090 24GB</option>
-                                <option value="CPU-7800">AMD Ryzen 7 7800X3D İşlemci</option>
-                                <option value="RAM-C32">Corsair Vengeance 32GB DDR5</option>
-                                <option value="SSD-1TB">Samsung 990 PRO 1TB M.2</option>
+                                <option value="" selected disabled>Ürün yükleniyor...</option>
+                            </select>
+                        </div>
+                        <div class="mb-3 d-none" id="sourceLocationGroup">
+                            <label class="form-label text-muted small fw-bold">Kaynak Lokasyon (Raf)</label>
+                            <select class="form-select border-light-subtle" id="sourceLocationId">
+                                <option value="" selected disabled>Kaynak raf seçiniz...</option>
+                            </select>
+                        </div>
+                        <div class="mb-3 d-none" id="targetLocationGroup">
+                            <label class="form-label text-muted small fw-bold">Hedef Lokasyon (Raf)</label>
+                            <select class="form-select border-light-subtle" id="targetLocationId">
+                                <option value="" selected disabled>Hedef raf seçiniz...</option>
                             </select>
                         </div>
                         <div class="mb-4">

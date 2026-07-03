@@ -53,7 +53,7 @@
                     <h6 class="fw-bold text-secondary mb-1">Okunan Kod İçeriği:</h6>
                     <div class="d-flex align-items-center justify-content-between">
                         <span class="fs-5 fw-bold text-success" id="result-text">-</span>
-                        <button class="btn btn-outline-secondary btn-sm" onclick="copyResult()">Kopyala</button>
+                        <button id="btnCopyResult" class="btn btn-outline-secondary btn-sm">Kopyala</button>
                     </div>
                     <div class="mt-2 text-muted small">
                         Format: <span class="fw-semibold" id="result-format">Bilinmiyor</span>
@@ -62,8 +62,8 @@
 
                 <!-- Kontrol Butonları -->
                 <div class="d-grid gap-2">
-                    <button class="btn btn-primary btn-lg" onclick="initScanner()">Kamerayı Başlat</button>
-                    <button class="btn btn-danger" onclick="stopScanner()">Kamerayı Durdur</button>
+                    <button id="btnStartScanner" class="btn btn-primary btn-lg">Kamerayı Başlat</button>
+                    <button id="btnStopScanner" class="btn btn-danger">Kamerayı Durdur</button>
                 </div>
             </div>
         </div>
@@ -74,41 +74,6 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js" type="text/javascript"></script>
 <!-- Bizim yazdığımız yardımcı tarayıcı kodları -->
 <script src="js/scanner.js"></script>
-
-<script>
-    // Kamerayı başlatma fonksiyonu
-    function initScanner() {
-        document.getElementById('result-box').classList.add('d-none');
-        
-        // startScanner fonksiyonunu bizim scanner.js'den çağırıyoruz
-        startScanner('reader', onScanSuccess, onScanError);
-    }
-
-    // Kod başarıyla okunduğunda tetiklenecek fonksiyon
-    function onScanSuccess(decodedText, decodedResult) {
-        console.log(`Kod Okundu: ${decodedText}`, decodedResult);
-        
-        document.getElementById('result-box').classList.remove('d-none');
-        document.getElementById('result-text').innerText = decodedText;
-        
-        if (decodedResult && decodedResult.result && decodedResult.result.format) {
-            document.getElementById('result-format').innerText = decodedResult.result.format.formatName;
-        } else {
-            document.getElementById('result-format').innerText = "Belirlenemedi";
-        }
-    }
-
-    function onScanError(errorMessage) {
-        // Tarama sırasındaki anlık okuma denemesi hataları (opsiyonel dinleme)
-    }
-
-    // Okunan kodu kopyalama
-    function copyResult() {
-        const text = document.getElementById('result-text').innerText;
-        navigator.clipboard.writeText(text).then(() => {
-            alert("Kod panoya kopyalandı!");
-        });
-    }
-</script>
+<script src="js/test-scanner.js"></script>
 </body>
 </html>
