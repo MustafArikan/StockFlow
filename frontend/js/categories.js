@@ -1,58 +1,104 @@
 const API_URL = `${CONFIG.API_BASE_URL}/categories`;
+const token = localStorage.getItem('token');
+
+// Güvenlik kontrolü: Token yoksa login'e yönlendir
+if (!token) {
+    window.location.href = 'login.html';
+}
+
+// XSS koruması için html karakterlerini encode eder
+function escapeHtml(text) {
+    if (!text) return "";
+    return text
+        .toString()
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
 
 let tumKategoriler = [];
-
 const tabloGovdesi = document.getElementById("kategoriTablosuGovdesi");
 
+// API'den kategorileri çeken fonksiyon
 async function kategorileriYukle() {
-    try{
-        const cevap = await fetch(API_URL);
-        if (!cevap.ok){
-            throw new Error("Sunucu hatası:" + cevap.status);
+    try {
+        const cevap = await fetch(API_URL, {
+            method: 'GET',
+            headers: {
+                "Authorization": `Bearer ${token}`
+            }
+        });
+
+        if (cevap.status === 401) {
+            localStorage.removeItem('token');
+            window.location.href = 'login.html';
+            return;
         }
+
+        if (!cevap.ok) {
+            throw new Error("Sunucu hatası: " + cevap.status);
+        }
+
         const kategoriler = await cevap.json();
         tumKategoriler = kategoriler;
         tabloyuCiz(tumKategoriler);
-    } catch (hata){
-        tabloGovdesi.innerHTML=`
+    } catch (hata) {
+        tabloGovdesi.innerHTML = `
         <tr>
             <td colspan="3" class="text-center text-danger py-4">Kategori Yüklenemedi. Backend çalışıyor mu? (${hata.message})</td>
         </tr>`;
         console.error("Hata:", hata);
     }
-    
 }
 
-function tabloyuCiz(kategoriler){
-    tabloGovdesi.innerHTML="";
+// Tabloyu çizen fonksiyon (CSP uyumlu - satır içi onClick kaldırıldı)
+function tabloyuCiz(kategoriler) {
+    tabloGovdesi.innerHTML = "";
 
-    if (kategoriler.length === 0){
-        tabloGovdesi.innerHTML =`
+    if (kategoriler.length === 0) {
+        tabloGovdesi.innerHTML = `
         <tr>
-            <td colspan="3" class="text-center tect-muted py-4">Henüz kategori yok. "Yeni kategori ekle" ile başlayın. " </td>
+            <td colspan="3" class="text-center text-muted py-4">Henüz kategori yok. "Yeni kategori ekle" ile başlayın.</td>
         </tr>`;
         return;
     }
 
-    kategoriler.forEach(kategori=>{
+    let satirlar = [];
+    kategoriler.forEach(kategori => {
         const satir = `
             <tr>
                 <td class="fw-bold">${kategori.id}</td>
-                <td>${kategori.name}</td>
+                <td>${escapeHtml(kategori.name)}</td>
                 <td class="text-end">
-                    <button class="btn btn-sm btn-outline-primary rounded-pill" onclick="kategoriDuzenle(${kategori.id})">Düzenle</button>
-                    <button class="btn btn-sm btn-outline-danger rounded-pill" onclick="kategoriSil(${kategori.id})">Sil</button>
+                    <button class="btn btn-sm btn-outline-primary rounded-pill btn-duzenle" data-id="${kategori.id}">Düzenle</button>
+                    <button class="btn btn-sm btn-outline-danger rounded-pill btn-sil" data-id="${kategori.id}">Sil</button>
                 </td>
             </tr>`;
-        tabloGovdesi.innerHTML += satir;
-    }); 
+        satirlar.push(satir);
+    });
+    tabloGovdesi.innerHTML = satirlar.join("");
 }
 
+// Olay Delege Etme (Event Delegation)
+tabloGovdesi.addEventListener("click", (e) => {
+    const btnDuzenle = e.target.closest(".btn-duzenle");
+    const btnSil = e.target.closest(".btn-sil");
 
+    if (btnDuzenle) {
+        const id = parseInt(btnDuzenle.getAttribute("data-id"));
+        kategoriDuzenle(id);
+    } else if (btnSil) {
+        const id = parseInt(btnSil.getAttribute("data-id"));
+        kategoriSil(id);
+    }
+});
+
+// Sayfa yüklenince kategorileri çek
 kategorileriYukle();
 
-
-// Ekle / Güncelle butonu — gizli id'ye göre karar verir
+// Ekle / Güncelle işlemi
 document.getElementById("btnKategoriKaydet").addEventListener("click", async () => {
     const id = document.getElementById("kategoriId").value;
     const name = document.getElementById("kategoriAdi").value;
@@ -73,9 +119,18 @@ document.getElementById("btnKategoriKaydet").addEventListener("click", async () 
     try {
         const cevap = await fetch(adres, {
             method: metod,
-            headers: { "Content-Type": "application/json" },
+            headers: { 
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${token}`
+            },
             body: JSON.stringify(kategoriVerisi)
         });
+
+        if (cevap.status === 401) {
+            localStorage.removeItem('token');
+            window.location.href = 'login.html';
+            return;
+        }
 
         if (!cevap.ok) {
             const hataMesaji = await cevap.text();
@@ -83,7 +138,7 @@ document.getElementById("btnKategoriKaydet").addEventListener("click", async () 
         }
 
         const modalElement = document.getElementById("kategoriModal");
-        const modalInstance = bootstrap.Modal.getInstance(modalElement);
+        const modalInstance = bootstrap.Modal.getOrCreateInstance(modalElement);
         if (modalInstance) modalInstance.hide();
 
         document.getElementById("kategoriFormu").reset();
@@ -96,26 +151,37 @@ document.getElementById("btnKategoriKaydet").addEventListener("click", async () 
     }
 });
 
+// Silme işlemi
 async function kategoriSil(id) {
     const onay = confirm("Bu kategoriyi silmek istediğinize emin misiniz?");
-    if(!onay) return;
+    if (!onay) return;
 
-    try{
+    try {
         const cevap = await fetch(API_URL + "/" + id, {
-            method: "DELETE"
+            method: "DELETE",
+            headers: {
+                "Authorization": `Bearer ${token}`
+            }
         });
-        if(!cevap.ok){
-            throw new Error("Silme başarısız: " + cevap.status + "(Bu kategoriye bağlı ürünler olabilir.)");
+
+        if (cevap.status === 401) {
+            localStorage.removeItem('token');
+            window.location.href = 'login.html';
+            return;
+        }
+
+        if (!cevap.ok) {
+            throw new Error("Silme başarısız: " + cevap.status + " (Bu kategoriye bağlı ürünler olabilir.)");
         }
         kategorileriYukle();
-    } catch(hata){
-        alert("Kategori silinemedi: "+ hata.message);
+    } catch (hata) {
+        alert("Kategori silinemedi: " + hata.message);
         console.error("Hata:", hata);
     }
-    
 }
 
-document.getElementById("aramaKutusu").addEventListener("keyup", (event) =>{
+// Arama kutusu
+document.getElementById("aramaKutusu").addEventListener("keyup", (event) => {
     const arananKelime = event.target.value.toLowerCase();
     const filtrelenmis = tumKategoriler.filter(kategori =>
         kategori.name.toLowerCase().includes(arananKelime)
@@ -123,8 +189,7 @@ document.getElementById("aramaKutusu").addEventListener("keyup", (event) =>{
     tabloyuCiz(filtrelenmis);
 });
 
-
-// Düzenle — formu o kategorinin bilgileriyle doldurup modalı açar
+// Düzenleme modalını açma
 function kategoriDuzenle(id) {
     const kategori = tumKategoriler.find(k => k.id === id);
     if (!kategori) return;
@@ -136,11 +201,11 @@ function kategoriDuzenle(id) {
     document.getElementById("btnKategoriKaydet").innerText = "Güncelle";
 
     const modalElement = document.getElementById("kategoriModal");
-    const modalInstance = new bootstrap.Modal(modalElement);
+    const modalInstance = bootstrap.Modal.getOrCreateInstance(modalElement);
     modalInstance.show();
 }
 
-// "Yeni Kategori Ekle" butonuna basınca formu sıfırla (ekleme modu)
+// Yeni kategori ekleme butonu
 document.querySelector('[data-bs-target="#kategoriModal"]').addEventListener("click", () => {
     document.getElementById("kategoriFormu").reset();
     document.getElementById("kategoriId").value = "";
