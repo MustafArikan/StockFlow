@@ -271,4 +271,88 @@ public async Task<IActionResult> Logout()
 
         return (os, browser);
     }
+
+    [AllowAnonymous]
+    [HttpPost("forgot-password")]
+    public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordDto dto)
+    {
+        var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == dto.Email);
+
+        if (user == null)
+        {
+            return Ok(new {message = "Eğer e-posta adresiniz sistemde kayıtlıysa, şifre sıfırlama talimatları gönderilecektir."});
+        }
+
+        var resetCode = System.Security.Cryptography.RandomNumberGenerator.GetInt32(100000, 1000000).ToString(); // 6 haneli şifre sıfırlama kodu
+        user.PasswordResetCode = resetCode;
+        user.PasswordResetCodeExpiry = DateTime.UtcNow.AddMinutes(10); 
+        await _context.SaveChangesAsync();
+
+        string subject = "StockFlow Şifre Sıfırlama Kodu";
+        string body = $@"
+                <div style='font-family: Arial; padding: 20px; background: #f4f4f4; text-align: center;'>
+                    <h2>Şifre Sıfırlama Talebi</h2>
+                    <p>Hesabınızın şifresini sıfırlamak için aşağıdaki 6 haneli kodu kullanın:</p>
+                    <h1 style='color: #dc2626; letter-spacing: 5px;'>{resetCode}</h1>
+                    <p>Bu kod 15 dakika boyunca geçerlidir.</p>
+                </div>";
+
+        await _emailService.SendEmailAsync(user.Email, subject, body);
+
+        return Ok(new {message = "Eğer e-posta adresiniz sistemde kayıtlıysa, şifre sıfırlama talimatları gönderilecektir."});
+    }
+
+    [AllowAnonymous]
+    [HttpPost("reset-password")]
+    public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordDto dto)
+    {
+        var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == dto.Email);
+
+        if (user == null || user.PasswordResetCode != dto.ResetCode || user.PasswordResetCodeExpiry < DateTime.UtcNow)
+        {
+            return BadRequest(new {message = "Geçersiz veya süresi dolmuş şifre sıfırlama kodu."});
+        }
+
+        user.PasswordHash = _passwordHasher.HashPassword(user, dto.NewPassword);
+        user.PasswordResetCode = null;
+        user.PasswordResetCodeExpiry = null;
+
+        var activeSessions = await _context.UserSessions.Where(s => s.UserId == user.Id && s.IsActive).ToListAsync();
+        foreach (var session in activeSessions)
+        {
+            session.IsActive = false; // Tüm aktif oturumları devre dışı bırak
+        }
+
+        await _context.SaveChangesAsync();
+
+        return Ok(new {message = "Şifreniz başarıyla sıfırlandı. Yeni şifrenizle giriş yapabilirsiniz."});
+    }
+
+    [Authorize]
+    [HttpPost("change-password")]
+    public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordDto dto)
+    {
+        var userIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int userID))
+        {
+            return Unauthorized(new { message = "Geçersiz token bilgileri."});
+        }
+
+        var user = await _context.Users.FindAsync(userID);
+        if (user == null)
+        {
+            return NotFound(new { message = "Kullanıcı bulunamadı." });
+        }
+
+        var verificationResult = _passwordHasher.VerifyHashedPassword(user, user.PasswordHash, dto.OldPassword);
+        if (verificationResult == PasswordVerificationResult.Failed)
+        {
+            return BadRequest(new { message = "Eski şifre hatalı." });
+        }
+
+        user.PasswordHash = _passwordHasher.HashPassword(user, dto.NewPassword);
+        await _context.SaveChangesAsync();
+
+        return Ok(new { message = "Şifreniz başarıyla güncellendi." });
+    }
 }

@@ -8,6 +8,8 @@ public class User : BaseEntity
     public bool IsEmailConfirmed { get; set; } = false;
     public string? EmailConfirmationCode { get; set; }
     public DateTime? ConfirmationCodeExpiry { get; set; }
+    public string? PasswordResetCode { get; set; }
+    public DateTime? PasswordResetCodeExpiry { get; set; }
     public ICollection<UserWarehouse> UserWarehouses { get; set; } = new List<UserWarehouse>();
     public ICollection<AssetHistory> AssetHistories { get; set; } = new List<AssetHistory>();
     public ICollection<SecurityAuditLog> SecurityAuditLogs { get; set; } = new List<SecurityAuditLog>();
