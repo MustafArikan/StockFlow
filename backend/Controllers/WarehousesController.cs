@@ -11,6 +11,7 @@ namespace stok_takip.Controllers;
 
 [ApiController]
 [Route("api/warehouses")]
+[Authorize] // Tüm eylemler için yetkilendirme gerektirir
 
 public class WarehousesController : ControllerBase
 {
@@ -25,7 +26,7 @@ public class WarehousesController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> GetAll()
     {
-        var warehouses = await _context.Warehouses.ToListAsync();
+        var warehouses = await _context.Warehouses.AsNoTracking().ToListAsync();
         return Ok(warehouses);
     }
 
@@ -41,6 +42,7 @@ public class WarehousesController : ControllerBase
 
     // POST /api/warehouses yeni depo ekleme
     [HttpPost]
+    [Authorize]
     public async Task<IActionResult> Create(CreateWarehouseDto dto)
     {
         var mevcut = await _context.Warehouses.FirstOrDefaultAsync(w=> w.Name == dto.Name && w.Address == dto.Address);
@@ -64,6 +66,7 @@ public class WarehousesController : ControllerBase
 
     //PUT /api/warehouse/5 mecvut depoyu güncelleme
     [HttpPut("{id}")]
+    [Authorize(Roles = "admin")] // Sadece Admin rolüne sahip kullanıcılar depo güncelleyebilir
     public async Task<IActionResult> Update(int id, CreateWarehouseDto dto)
     {
         var warehouse = await _context.Warehouses.FindAsync(id);
@@ -79,6 +82,7 @@ public class WarehousesController : ControllerBase
 
     //DELETE /api/warehouses/5 ürünü slime
     [HttpDelete("{id}")]
+    [Authorize(Roles = "admin")] // Sadece Admin rolüne sahip kullanıcılar depo silebilir
     public async Task<IActionResult> Delete(int id)
     {
         var warehouse = await _context.Warehouses.FindAsync(id);

@@ -9,7 +9,7 @@ namespace stok_takip.Controllers;
 
 [ApiController]
 [Route("api/products")]
-
+[Authorize] // Tüm eylemler için yetkilendirme gerektirir
 public class ProductsController : ControllerBase
 {
     private readonly AppDbContext _context;
@@ -97,7 +97,7 @@ public class ProductsController : ControllerBase
         await _context.SaveChangesAsync();
         return Ok(product);
         
-    }
+    } 
 
     // DELETE /api/products/5 : ürünü sil
     [HttpDelete("{id}")]

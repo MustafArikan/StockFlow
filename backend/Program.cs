@@ -21,6 +21,8 @@ builder.Services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
 
 builder.Services.AddScoped<stok_takip.Services.IEmailService, stok_takip.Services.EmailService>();
 
+builder.Services.AddHostedService<stok_takip.Services.SessionCleanupService>();
+
 var jwtSecretKey = builder.Configuration["JwtSettings:SecretKey"];
 if (string.IsNullOrEmpty(jwtSecretKey))
 {

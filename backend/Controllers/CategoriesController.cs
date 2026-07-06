@@ -13,6 +13,7 @@ namespace stok_takip.Controllers;
 
 [ApiController]
 [Route("api/categories")]
+[Authorize] // Tüm eylemler için yetkilendirme gerektirir
 
 public class CategoriesController : ControllerBase
 {
@@ -27,13 +28,14 @@ public class CategoriesController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> GetAll()
     {
-        var categories = await _context.Categories.ToListAsync();
+        var categories = await _context.Categories.AsNoTracking().ToListAsync();
         return Ok(categories);
     }
 
 
     // POST /api/categories : yeni kategori ekle
     [HttpPost]
+    [Authorize(Roles = "admin")] // Sadece Admin rolüne sahip kullanıcılar kategori ekleyebilir
     public async Task<IActionResult> Create(CreateCategoryDto dto)
     {
         var mevcut = await _context.Categories.FirstOrDefaultAsync(c=> c.Name == dto.Name);
@@ -56,6 +58,7 @@ public class CategoriesController : ControllerBase
     }
 
     [HttpDelete("{id}")]
+    [Authorize(Roles = "admin")] // Sadece Admin rolüne sahip kullanıcılar kategori silebilir
     public async Task<IActionResult> Delete(int id)
     {
         var category = await _context.Categories.FindAsync(id);
@@ -70,6 +73,7 @@ public class CategoriesController : ControllerBase
 
     // PUT /api/categories/5 : kategori güncelle
     [HttpPut("{id}")]
+    [Authorize(Roles = "admin")] // Sadece Admin rolüne sahip kullanıcılar kategori güncelleyebilir
     public async Task<IActionResult> Update(int id, CreateCategoryDto dto)
     {
         var category = await _context.Categories.FindAsync(id);

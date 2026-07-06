@@ -23,7 +23,7 @@ public class LocationsController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> GetAll()
     {
-        var locations = await _context.Locations.ToListAsync();
+        var locations = await _context.Locations.AsNoTracking().ToListAsync();
         return Ok(locations);
     }
 
@@ -32,6 +32,7 @@ public class LocationsController : ControllerBase
     public async Task<IActionResult> GetByWarehouse(int warehouseId)
     {
         var locations = await _context.Locations
+            .AsNoTracking()
             .Where(l => l.WarehouseId == warehouseId)
             .ToListAsync();
         return Ok(locations);
