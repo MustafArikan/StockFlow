@@ -9,6 +9,7 @@ using Microsoft.IdentityModel.Tokens;
 using stok_takip.Data;
 using stok_takip.DTOs;
 using stok_takip.Models;
+using stok_takip.Services;
 
 namespace stok_takip.Controllers;
 
@@ -19,15 +20,18 @@ public class AuthController : ControllerBase
     private readonly AppDbContext _context;
     private readonly IPasswordHasher<User> _passwordHasher;
     private readonly IConfiguration _configuration;
+    private readonly IEmailService _emailService;
 
     public AuthController(
         AppDbContext context,
         IPasswordHasher<User> passwordHasher,
-        IConfiguration configuration)
+        IConfiguration configuration,
+        IEmailService emailService)
     {
         _context = context;
         _passwordHasher = passwordHasher;
         _configuration = configuration;
+        _emailService = emailService;
     }
 
 [AllowAnonymous]
@@ -61,10 +65,17 @@ public async Task<IActionResult> Register([FromBody] RegisterDto dto)
         _context.Users.Add(newUser);
         await _context.SaveChangesAsync();
 
-        Console.WriteLine("\n================================");
-        Console.WriteLine($"[E-MAIL SIMULATION] To: {newUser.Email}");
-        Console.WriteLine($"Account Verification Code: {verificationCode}");
-        Console.WriteLine("===============================\n");
+        // E-posta gönderme
+        var emailSubject = "StockFlow E-posta Doğrulama Kodu";
+        string emailBody = $@"
+                <div style='font-family: Arial; padding: 20px; background: #f4f4f4; text-align: center;'>
+                    <h2>StockFlow'a Hoş Geldiniz!</h2>
+                    <p>Hesabınızı aktifleştirmek için aşağıdaki 6 haneli doğrulama kodunu kullanın:</p>
+                    <h1 style='color: #2563eb; letter-spacing: 5px;'>{verificationCode}</h1>
+                    <p>Bu kod 10 dakika boyunca geçerlidir.</p>
+                </div>";
+
+        await _emailService.SendEmailAsync(newUser.Email, emailSubject, emailBody);
 
         return Ok(new { message = "User registered successfully. Please check your email for the verification code." });
     }

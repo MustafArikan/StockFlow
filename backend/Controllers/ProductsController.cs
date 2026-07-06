@@ -25,6 +25,7 @@ public class ProductsController : ControllerBase
         // Kategorileri veritabanından çekerek her ürünü sadece DTO'ya çevirir
         var products = await _context.Products
         .AsNoTracking()
+        .Where(p => !p.IsDeleted) // Silinmiş ürünleri hariç tut
         .Include(p=>p.Category)
         .Select(p=> new ProductDto
         {
@@ -79,8 +80,14 @@ public class ProductsController : ControllerBase
     public async Task<IActionResult> Update(int id, CreateProductDto dto)
     {
         var product = await _context.Products.FindAsync(id);
-        if (product == null)
+        if (product == null || product.IsDeleted)
             return NotFound();
+
+        var mevcut = await _context.Products.FirstOrDefaultAsync(p => (p.Name == dto.Name || p.Barcode == dto.Barcode) && p.Id != id && !p.IsDeleted);
+        if (mevcut != null)
+        {
+            return BadRequest("Bu isim veya barkoda sahip bir ürün zaten var.");
+        }
 
         product.Name = dto.Name;
         product.Barcode = dto.Barcode;
@@ -97,10 +104,11 @@ public class ProductsController : ControllerBase
     public async Task<IActionResult> Delete(int id)
     {
         var product = await _context.Products.FindAsync(id);
-        if (product == null)
+        if (product == null || product.IsDeleted)
             return NotFound();
 
-        _context.Products.Remove(product);
+        product.IsDeleted = true; // Soft delete
+
         await _context.SaveChangesAsync();
         return NoContent();
     }
