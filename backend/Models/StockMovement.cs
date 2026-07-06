@@ -6,6 +6,7 @@ public class StockMovement : BaseEntity
     public string MovementType { get; set; } = string.Empty; // IN, OUT, TRANSFER
     public int Quantity { get; set; }
     public string? Description { get; set; }
-
+    public int? UserId { get; set; }
+    public User? User { get; set; }
     public Product Product { get; set; } = null!;
 }

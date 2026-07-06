@@ -294,7 +294,7 @@ public async Task<IActionResult> Logout()
                     <h2>Şifre Sıfırlama Talebi</h2>
                     <p>Hesabınızın şifresini sıfırlamak için aşağıdaki 6 haneli kodu kullanın:</p>
                     <h1 style='color: #dc2626; letter-spacing: 5px;'>{resetCode}</h1>
-                    <p>Bu kod 15 dakika boyunca geçerlidir.</p>
+                    <p>Bu kod 10 dakika boyunca geçerlidir.</p>
                 </div>";
 
         await _emailService.SendEmailAsync(user.Email, subject, body);

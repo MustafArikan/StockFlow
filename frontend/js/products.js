@@ -2,6 +2,8 @@
 const API_URL = `${CONFIG.API_BASE_URL}/products`;
 const token = localStorage.getItem('token');
 
+const userRole = getUserRole(); // config.js'den gelir
+
 // Güvenlik kontrolü: Token yoksa login'e yönlendir
 if (!token) {
     window.location.href = 'login.html';
@@ -76,6 +78,15 @@ function tabloyuCiz(urunler) {
 
     // Her ürün için bir satır oluştur
     urunler.forEach(urun => {
+        let aksiyonButonlari = "";
+        
+        let btnDuzenle = hasPermission("Product.Edit") ? `<button class="btn btn-sm btn-outline-primary rounded-pill btn-duzenle" data-id="${urun.id}">Düzenle</button>` : "";
+        let btnSil = hasPermission("Product.Delete") ? `<button class="btn btn-sm btn-outline-danger rounded-pill btn-sil" data-id="${urun.id}">Sil</button>` : "";
+        
+        if (btnDuzenle || btnSil) {
+            aksiyonButonlari = `<td class="text-end">${btnDuzenle} ${btnSil}</td>`;
+        }
+
         const satir = `
             <tr>
                 <td class="fw-bold">${urun.id}</td>
@@ -88,10 +99,7 @@ function tabloyuCiz(urunler) {
                         ${urun.stockQuantity} Adet
                     </span>
                 </td>
-                <td class="text-end">
-                    <button class="btn btn-sm btn-outline-primary rounded-pill btn-duzenle" data-id="${urun.id}">Düzenle</button>
-                    <button class="btn btn-sm btn-outline-danger rounded-pill btn-sil" data-id="${urun.id}">Sil</button>
-                </td>
+                ${aksiyonButonlari}
             </tr>`;
         satirlar.push(satir);
     });
@@ -285,3 +293,12 @@ document.querySelector('[data-bs-target="#urunModal"]').addEventListener("click"
     document.getElementById("modalBaslik").innerText = "Yeni ürün ekle";
     document.getElementById("btnUrunKaydet").innerText = "Ekle ve Kaydet";
 });
+
+if (!hasPermission("Product.Add")) {
+    const btnEkle = document.querySelector('[data-bs-target="#urunModal"]');
+    if (btnEkle) btnEkle.classList.add('d-none');
+}
+if (!hasPermission("Product.Edit") && !hasPermission("Product.Delete")) {
+    const islemSutunuBasligi = document.getElementById("islemSutunuBasligi");
+    if (islemSutunuBasligi) islemSutunuBasligi.classList.add('d-none');
+}

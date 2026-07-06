@@ -1,6 +1,8 @@
 const API_URL = `${CONFIG.API_BASE_URL}/categories`;
 const token = localStorage.getItem('token');
 
+const userRole = getUserRole(); // config.js'den gelir
+
 // Güvenlik kontrolü: Token yoksa login'e yönlendir
 if (!token) {
     window.location.href = 'login.html';
@@ -67,14 +69,19 @@ function tabloyuCiz(kategoriler) {
 
     let satirlar = [];
     kategoriler.forEach(kategori => {
+        let aksiyonButonlari = "";
+        let btnDuzenle = hasPermission("Category.Edit") ? `<button class="btn btn-sm btn-outline-primary rounded-pill btn-duzenle" data-id="${kategori.id}">Düzenle</button>` : "";
+        let btnSil = hasPermission("Category.Delete") ? `<button class="btn btn-sm btn-outline-danger rounded-pill btn-sil" data-id="${kategori.id}">Sil</button>` : "";
+
+        if (btnDuzenle || btnSil) {
+            aksiyonButonlari = `<td class="text-end">${btnDuzenle} ${btnSil}</td>`;
+        }
+
         const satir = `
             <tr>
                 <td class="fw-bold">${kategori.id}</td>
                 <td>${escapeHtml(kategori.name)}</td>
-                <td class="text-end">
-                    <button class="btn btn-sm btn-outline-primary rounded-pill btn-duzenle" data-id="${kategori.id}">Düzenle</button>
-                    <button class="btn btn-sm btn-outline-danger rounded-pill btn-sil" data-id="${kategori.id}">Sil</button>
-                </td>
+                ${aksiyonButonlari}
             </tr>`;
         satirlar.push(satir);
     });
@@ -212,3 +219,12 @@ document.querySelector('[data-bs-target="#kategoriModal"]').addEventListener("cl
     document.getElementById("modalBaslik").innerText = "Yeni Kategori Ekle";
     document.getElementById("btnKategoriKaydet").innerText = "Ekle ve Kaydet";
 });
+
+if (!hasPermission("Category.Add")) {
+    const btnEkle = document.querySelector('[data-bs-target="#kategoriModal"]');
+    if (btnEkle) btnEkle.classList.add('d-none');
+}
+if (!hasPermission("Category.Edit") && !hasPermission("Category.Delete")) {
+    const islemSutunuBasligi = document.getElementById("islemSutunuBasligi");
+    if (islemSutunuBasligi) islemSutunuBasligi.classList.add('d-none');
+}

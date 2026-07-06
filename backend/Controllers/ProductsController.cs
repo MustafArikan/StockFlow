@@ -60,6 +60,12 @@ public class ProductsController : ControllerBase
         {
             return BadRequest("Bu isim veya barkoda sahip bir ürün zaten var.");
         }    
+
+        var categoryExists = await _context.Categories.AnyAsync(c => c.Id == dto.CategoryId);
+        if (!categoryExists)
+        {
+            return BadRequest("Belirtilen kategori bulunamadı.");
+        }
         
         var product = new Product
         {
@@ -87,6 +93,12 @@ public class ProductsController : ControllerBase
         if (mevcut != null)
         {
             return BadRequest("Bu isim veya barkoda sahip bir ürün zaten var.");
+        }
+
+        var categoryExists = await _context.Categories.AnyAsync(c => c.Id == dto.CategoryId);
+        if (!categoryExists)
+        {
+            return BadRequest("Belirtilen kategori bulunamadı.");
         }
 
         product.Name = dto.Name;

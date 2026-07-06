@@ -9,7 +9,7 @@ namespace stok_takip.Controllers;
 
 [ApiController]
 [Route("api/locations")]
-
+[Authorize]
 public class LocationsController : ControllerBase
 {
     private readonly AppDbContext _context;
@@ -42,6 +42,10 @@ public class LocationsController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> Create(CreateLocationDto dto)
     {
+        var warehouseExists = await _context.Warehouses.AnyAsync(w => w.Id == dto.WarehouseId);
+        if (!warehouseExists)
+            return BadRequest(new { message = "Belirtilen depo bulunamadı." });
+
         var location = new Location
         {
             Code = dto.Code,

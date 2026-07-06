@@ -27,6 +27,7 @@ namespace stok_takip.Controllers
             var query = _context.StockMovements
                 .AsNoTracking()
                 .Include(m => m.Product)
+                .Include(m => m.User)
                 .AsQueryable();
 
             if (!string.IsNullOrEmpty(type))
@@ -41,8 +42,6 @@ namespace stok_takip.Controllers
                                          (m.Description != null && m.Description.Contains(search)));
             }
 
-            var userEmail = User.FindFirst(ClaimTypes.Email)?.Value ?? "Bilinmeyen Personel";
-
             var result = await query
                 .OrderByDescending(m => m.Id) // Assuming BaseEntity has Id or CreatedAt
                 .Select(m => new
@@ -53,7 +52,7 @@ namespace stok_takip.Controllers
                     UrunAdı = m.Product.Name,
                     IslemTipi = m.MovementType,
                     m.Quantity,
-                    Personel = userEmail
+                    Personel = m.User != null ? m.User.Email : "Bilinmeyen Personel",
                 })
                 .ToListAsync();
 
@@ -64,6 +63,12 @@ namespace stok_takip.Controllers
         [HttpPost]
         public async Task<IActionResult> CreateMovement([FromBody] StockMovementRequestDto dto)
         {
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            int? currentUserId = null;
+            if (!string.IsNullOrEmpty(userIdClaim) && int.TryParse(userIdClaim, out int parsedId))
+            {
+                currentUserId = parsedId;
+            }
             var product = await _context.Products.FirstOrDefaultAsync(p => p.Barcode == dto.ProductBarcode);
             if (product == null) 
                 return NotFound(new { message = "Product not found." });
@@ -111,6 +116,7 @@ namespace stok_takip.Controllers
                     var movement = new StockMovement
                     {
                         ProductId = product.Id,
+                        UserId = currentUserId,
                         MovementType = "TRANSFER",
                         Quantity = dto.Quantity,
                         Description = dto.Description ?? $"Transferred from Loc {dto.SourceLocationId} to Loc {dto.TargetLocationId}"
@@ -163,6 +169,7 @@ namespace stok_takip.Controllers
                         var movement = new StockMovement
                         {
                             ProductId = product.Id,
+                            UserId = currentUserId,
                             MovementType = "IN",
                             Quantity = dto.Quantity,
                             Description = dto.Description ?? "Stock IN operation"
@@ -205,6 +212,7 @@ namespace stok_takip.Controllers
                     var movement = new StockMovement
                     {
                         ProductId = product.Id,
+                        UserId = currentUserId,
                         MovementType = "OUT",
                         Quantity = dto.Quantity,
                         Description = dto.Description ?? "Stock OUT operation"

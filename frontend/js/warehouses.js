@@ -2,6 +2,8 @@
 const API_URL = `${CONFIG.API_BASE_URL}/warehouses`;
 const token = localStorage.getItem('token');
 
+const userRole = getUserRole(); // config.js'den gelir
+
 // Güvenlik kontrolü: Token yoksa login'e yönlendir
 if (!token) {
     window.location.href = 'login.html';
@@ -56,16 +58,21 @@ function tabloyuCiz(depolar) {
     }
 
     depolar.forEach(depo => {
+        let aksiyonButonlari = "";
+        let btnRaflar = hasPermission("Warehouse.Edit") || hasPermission("Warehouse.Add") || hasPermission("Location.Add") || hasPermission("Location.Delete") ? `<button class="btn btn-sm btn-outline-success rounded-pill btn-raflar" data-id="${depo.id}" data-name="${escapeHtml(depo.name)}">Raflar</button>` : "";
+        let btnDuzenle = hasPermission("Warehouse.Edit") ? `<button class="btn btn-sm btn-outline-primary rounded-pill btn-duzenle" data-id="${depo.id}">Düzenle</button>` : "";
+        let btnSil = hasPermission("Warehouse.Delete") ? `<button class="btn btn-sm btn-outline-danger rounded-pill btn-sil" data-id="${depo.id}">Sil</button>` : "";
+
+        if (btnRaflar || btnDuzenle || btnSil) {
+            aksiyonButonlari = `<td class="text-end">${btnRaflar} ${btnDuzenle} ${btnSil}</td>`;
+        }
+
         const satir = `
             <tr>
                 <td class="fw-bold">${depo.id}</td>
                 <td>${depo.name}</td>
                 <td>${depo.address}</td>
-                <td class="text-end">
-                    <button class="btn btn-sm btn-outline-success rounded-pill btn-raflar" data-id="${depo.id}" data-name="${escapeHtml(depo.name)}">Raflar</button>
-                    <button class="btn btn-sm btn-outline-primary rounded-pill btn-duzenle" data-id="${depo.id}">Düzenle</button>
-                    <button class="btn btn-sm btn-outline-danger rounded-pill btn-sil" data-id="${depo.id}">Sil</button>
-                </td>
+                ${aksiyonButonlari}
             </tr>`;
         tabloGovdesi.innerHTML += satir;
     });
@@ -274,13 +281,18 @@ async function raflariYukle(depoId) {
         }
 
         raflar.forEach(raf => {
+            let rafSilButonu = "";
+            if (hasPermission("Location.Delete")) {
+                rafSilButonu = `<td class="text-end">
+                                    <button class="btn btn-sm btn-outline-danger rounded-pill btn-raf-sil" data-id="${raf.id}">Sil</button>
+                                </td>`;
+            }
+
             const satir = `
                 <tr>
                     <td class="fw-bold">${raf.id}</td>
                     <td>${raf.code}</td>
-                    <td class="text-end">
-                        <button class="btn btn-sm btn-outline-danger rounded-pill btn-raf-sil" data-id="${raf.id}">Sil</button>
-                    </td>
+                    ${rafSilButonu}
                 </tr>`;
             tabloGovdesi.innerHTML += satir;
         });
@@ -373,3 +385,27 @@ document.getElementById("rafTablosuGovdesi").addEventListener("click", (e) => {
         rafSil(id);
     }
 });
+
+// Yeni Depo Ekle ve Yeni Raf Ekle butonlarını viewer'lardan gizle
+if (!hasPermission("Warehouse.Add")) {
+    const btnDepoEkle = document.querySelector('[data-bs-target="#depoModal"]');
+    if (btnDepoEkle) btnDepoEkle.classList.add('d-none');
+}
+
+if (!hasPermission("Location.Add")) {
+    const btnRafEkleModal = document.getElementById("btnRafEkle");
+    if (btnRafEkleModal) btnRafEkleModal.classList.add('d-none');
+    
+    const divRafEkle = document.querySelector("#raflarModal .input-group");
+    if (divRafEkle) divRafEkle.classList.add('d-none');
+}
+
+if (!hasPermission("Warehouse.Edit") && !hasPermission("Warehouse.Delete") && !hasPermission("Location.Add") && !hasPermission("Location.Delete")) {
+    const islemSutunuBasligi = document.getElementById("islemSutunuBasligi");
+    if (islemSutunuBasligi) islemSutunuBasligi.classList.add('d-none');
+}
+
+if (!hasPermission("Location.Delete")) {
+    const islemSutunuBasligiRaf = document.getElementById("islemSutunuBasligiRaf");
+    if (islemSutunuBasligiRaf) islemSutunuBasligiRaf.classList.add('d-none');
+}

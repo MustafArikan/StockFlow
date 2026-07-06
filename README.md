@@ -39,9 +39,9 @@ Bu proje, geleneksel kişi bazlı rol atamaları yerine tamamen **görev (task) 
 
 | Durum | Toplam Görev | Tamamlanan | Ertelenen | Kalan | Aktif İlerleme Yüzdesi |
 | :--- | :---: | :---: | :---: | :---: | :---: |
-| **Genel Proje Durumu** | **55** | **34** | **2** | **19** | **%64.2** |
+| **Genel Proje Durumu** | **55** | **36** | **2** | **17** | **%67.9** |
 
-*Not: Canlı ortam planlarındaki değişiklikler nedeniyle ertelenen 2 görev (Nginx SSL ve otomatik veritabanı yedekleme) genel yüzdenin dışındaki "Ertelenen" kısmında tutulmaktadır. Ertelenenler düşüldüğünde aktif görev ilerleme oranı **%64.2** (34/53) seviyesindedir.*
+*Not: Canlı ortam planlarındaki değişiklikler nedeniyle ertelenen 2 görev (Nginx SSL ve otomatik veritabanı yedekleme) genel yüzdenin dışındaki "Ertelenen" kısmında tutulmaktadır. Ertelenenler düşüldüğünde aktif görev ilerleme oranı **%67.9** (36/53) seviyesindedir.*
 
 ---
 
@@ -57,7 +57,7 @@ Bu proje, geleneksel kişi bazlı rol atamaları yerine tamamen **görev (task) 
 ### 📦 Modül 2: Ürün Kataloğu & Kategori Yönetimi
 - [x] **Arayüz:** Ürün Listesi Sayfası (`products.html` - Arama, kategori filtreleme ve modal tetikleyicileri)
 - [x] **Arayüz:** Ürün Ekleme/Düzenleme Form Modalı (Admin yetkisine özel ürün bilgileri formu)
-- [ ] **Arayüz:** Kategori Yönetim Modalı (Ürünler ekranından açılan hiyerarşik kategori ekleme/silme arayüzü)
+- [x] **Arayüz:** Kategori Yönetim Modalı (Ürünler ekranından açılan hiyerarşik kategori ekleme/silme arayüzü)
 - [x] **API:** `GET /api/products` (Ürünleri arama, kategoriye göre filtreleme, sayfalama ve listeleme endpoint'i)
 - [x] **API:** `GET /api/products/{id}` (Belirli bir ürünün detaylarını getirme endpoint'i)
 - [x] **API:** `POST /api/products` (Yeni ürün ekleme endpoint'i - Sadece Admin yetkili)
@@ -78,7 +78,7 @@ Bu proje, geleneksel kişi bazlı rol atamaları yerine tamamen **görev (task) 
 ### 🔄 Modül 4: Stok Hareketleri & Okuyucu Entegrasyonu
 - [x] **Arayüz:** Stok Hareketleri Sayfası (`movements.html` - Giriş/Çıkış işlem geçmişi listesi ve yeni hareket formu)
 - [x] **Arayüz Yardımcısı:** Hibrit Kamera Tarayıcı Modülü (`scanner.js` ve `test-scanner.html` - html5-qrcode entegrasyonu)
-- [ ] **Arayüz Entegrasyonu:** Barkod/QR tarayıcı modülünün Stok Hareket formuna entegre edilmesi (Kamera ile ürün okutma)
+- [x] **Arayüz Entegrasyonu:** Barkod/QR tarayıcı modülünün Stok Hareket formuna entegre edilmesi (Kamera ile ürün okutma)
 - [x] **API:** `GET /api/stock/movements` (Tüm stok hareket geçmişini filtreli listeleme endpoint'i)
 - [x] **API:** `POST /api/stock/movements/in` (Stok Giriş işlemi endpoint'i - Stok seviyesini artırır)
 - [x] **API:** `POST /api/stock/movements/out` (Stok Çıkış işlemi endpoint'i - Stok seviyesini azaltır)
