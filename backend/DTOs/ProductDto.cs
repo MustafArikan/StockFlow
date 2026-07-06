@@ -8,4 +8,5 @@ public class ProductDto
     public int MinStockLevel {  get; set;}
     public int CategoryId {get; set;}
     public string CategoryName { get; set;} = string.Empty;
+    public int StockQuantity { get; set;}
 }

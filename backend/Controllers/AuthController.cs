@@ -30,6 +30,7 @@ public class AuthController : ControllerBase
         _configuration = configuration;
     }
 
+[AllowAnonymous]
 [HttpPost("register")]
 public async Task<IActionResult> Register([FromBody] RegisterDto dto)
     {
@@ -68,6 +69,7 @@ public async Task<IActionResult> Register([FromBody] RegisterDto dto)
         return Ok(new { message = "User registered successfully. Please check your email for the verification code." });
     }
 
+[AllowAnonymous]
 [HttpPost("verify-email")]
 public async Task<IActionResult> VerifyEmail([FromBody] VerifyEmailDto dto)
     {
@@ -102,6 +104,7 @@ public async Task<IActionResult> VerifyEmail([FromBody] VerifyEmailDto dto)
         return Ok(new { message = "Email verified successfully. You can now log in." });
     }
 
+[AllowAnonymous]
 [HttpPost("login")]
 public async Task<IActionResult> Login([FromBody] LoginDto dto)
     {
@@ -165,7 +168,6 @@ public IActionResult TestAdmin()
     }
 
 [HttpGet("me")]
-[Authorize]
 public async Task<IActionResult> GetMe()
     {
         var userIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
@@ -190,7 +192,6 @@ public async Task<IActionResult> GetMe()
     }
 
 [HttpPost("logout")]
-[Authorize]   // Sadece giriş yapmış (token'ı olan) kullanıcılar çıkış yapabilir
 public async Task<IActionResult> Logout()
     {
         var sessionToken = User.FindFirst(JwtRegisteredClaimNames.Jti)?.Value;

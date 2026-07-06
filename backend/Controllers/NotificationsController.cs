@@ -9,7 +9,7 @@ namespace stok_takip.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    [Authorize]
+
     public class NotificationsController : ControllerBase
     {
         private readonly AppDbContext _context;

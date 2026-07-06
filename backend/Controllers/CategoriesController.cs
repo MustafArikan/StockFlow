@@ -13,7 +13,7 @@ namespace stok_takip.Controllers;
 
 [ApiController]
 [Route("api/categories")]
-[Authorize]
+
 public class CategoriesController : ControllerBase
 {
     private readonly AppDbContext _context;

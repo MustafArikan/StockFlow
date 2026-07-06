@@ -286,6 +286,51 @@ document.getElementById("islemAdedi").addEventListener("input", formuDenetle);
 document.getElementById("sourceLocationId").addEventListener("change", formuDenetle);
 document.getElementById("targetLocationId").addEventListener("change", formuDenetle);
 
+// --- BARCODE SCANNER INTEGRATION ---
+const cameraArea = document.getElementById("kameraAlani");
+const btnOpenCamera = document.getElementById("btnKameraAc");
+const btnCloseCamera = document.getElementById("btnKameraKapat");
+const productSelect = document.getElementById("urunSecimi");
+
+btnOpenCamera.addEventListener("click", () => {
+    cameraArea.classList.remove("d-none"); // Show camera area
+    
+    startScanner("reader", (scannedText) => {
+        // ON SUCCESSFUL SCAN
+        let isProductFound = false;
+        
+        for (let i = 0; i < productSelect.options.length; i++) {
+            if (productSelect.options[i].value === scannedText) {
+                productSelect.selectedIndex = i; // Auto-select product
+                isProductFound = true;
+                break;
+            }
+        }
+
+        if (isProductFound) {
+            // Success beep sound
+            let audio = new Audio('https://www.soundjay.com/button/beep-07.wav');
+            audio.play().catch(e => {});
+
+            formuDenetle(); // Existing validation function
+            closeCamera();  // Hide camera when done
+        } else {
+            // User-facing error message (Turkish)
+            alert(`Taranan barkod (${scannedText}) sistemde kayıtlı hiçbir ürünle eşleşmedi!`);
+        }
+        
+    }, (errorMessage) => {
+        // Silent errors during scanning frames
+    });
+});
+
+btnCloseCamera.addEventListener("click", closeCamera);
+
+function closeCamera() {
+    cameraArea.classList.add("d-none"); // Hide camera area
+    stopScanner(); // Stop camera hardware
+}
+// ------------------------------------
 // Ekle ve Onayla
 document.getElementById("btnKaydet").addEventListener("click", async () => {
     const tip = document.getElementById("islemTipi").value;

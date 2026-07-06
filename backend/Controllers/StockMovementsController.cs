@@ -10,7 +10,7 @@ namespace stok_takip.Controllers
 { 
     [ApiController]
     [Route("api/stock/movements")]
-    [Authorize]
+
     public class StockMovementsController : ControllerBase
     {
         private readonly AppDbContext _context;

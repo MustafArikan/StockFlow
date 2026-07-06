@@ -11,7 +11,7 @@ namespace stok_takip.Controllers;
 
 [ApiController]
 [Route("api/warehouses")]
-[Authorize]
+
 public class WarehousesController : ControllerBase
 {
     private readonly AppDbContext _context;

@@ -9,7 +9,7 @@ namespace stok_takip.Controllers;
 
 [ApiController]
 [Route("api/locations")]
-[Authorize]
+
 public class LocationsController : ControllerBase
 {
     private readonly AppDbContext _context;

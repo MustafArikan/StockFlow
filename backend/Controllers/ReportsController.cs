@@ -7,7 +7,7 @@ namespace stok_takip.Controllers
 {
     [ApiController]
     [Route("api/reports")]
-    [Authorize]
+
     public class ReportsController : ControllerBase
     {
         private readonly AppDbContext _context;

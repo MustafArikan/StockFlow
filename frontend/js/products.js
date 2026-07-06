@@ -67,7 +67,7 @@ function tabloyuCiz(urunler) {
     if (urunler.length === 0) {
         tabloGovdesi.innerHTML = `
             <tr>
-                <td colspan="6" class="text-center text-muted py-4"> Henüz ürün yok. "Yeni ürün ekle" ile başlayın.</td>
+                <td colspan="7" class="text-center text-muted py-4"> Henüz ürün yok. "Yeni ürün ekle" ile başlayın.</td>
             </tr>`;
         return;
     }
@@ -83,6 +83,11 @@ function tabloyuCiz(urunler) {
                 <td>${escapeHtml(urun.barcode)}</td>
                 <td>${urun.minStockLevel}</td>
                 <td>${escapeHtml(urun.categoryName)}</td>
+                <td>
+                    <span class="badge ${urun.stockQuantity <= urun.minStockLevel ? 'bg-danger' : 'bg-success'} bg-opacity-10 ${urun.stockQuantity <= urun.minStockLevel ? 'text-danger' : 'text-success'} border ${urun.stockQuantity <= urun.minStockLevel ? 'border-danger' : 'border-success'} px-2 py-1 rounded-pill">
+                        ${urun.stockQuantity} Adet
+                    </span>
+                </td>
                 <td class="text-end">
                     <button class="btn btn-sm btn-outline-primary rounded-pill btn-duzenle" data-id="${urun.id}">Düzenle</button>
                     <button class="btn btn-sm btn-outline-danger rounded-pill btn-sil" data-id="${urun.id}">Sil</button>

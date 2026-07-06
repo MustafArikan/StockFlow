@@ -9,7 +9,7 @@ namespace stok_takip.Controllers;
 
 [ApiController]
 [Route("api/products")]
-[Authorize]
+
 public class ProductsController : ControllerBase
 {
     private readonly AppDbContext _context;
@@ -24,6 +24,7 @@ public class ProductsController : ControllerBase
     {
         // Kategorileri veritabanından çekerek her ürünü sadece DTO'ya çevirir
         var products = await _context.Products
+        .AsNoTracking()
         .Include(p=>p.Category)
         .Select(p=> new ProductDto
         {
@@ -32,7 +33,8 @@ public class ProductsController : ControllerBase
             Barcode = p.Barcode,
             MinStockLevel = p.MinStockLevel,
             CategoryId = p.CategoryId,
-            CategoryName = p.Category.Name
+            CategoryName = p.Category.Name,
+            StockQuantity = p.StockLevels.Sum(sl => sl.Quantity) // Stok miktarını hesapla
         })
         .ToListAsync();
         return Ok(products);
