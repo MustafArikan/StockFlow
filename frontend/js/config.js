@@ -2,12 +2,26 @@
 //     API_BASE_URL: 'http://localhost:5000/api', // 5136'yı 5000 yaptık!
 // }
 
+// --- Akıllı Port Tespiti (Auto-Discovery) ---
+let activePort = localStorage.getItem('API_PORT_OVERRIDE');
+
+if (!activePort) {
+    // Eğer override yoksa 5000 portuna (Docker) ufak bir gizli istek atıp ayakta mı diye bakarız.
+    try {
+        const xhr = new XMLHttpRequest();
+        // Asenkron olmayan (senkron) istek atıyoruz ki diğer JS kodları çalışmadan port belli olsun
+        xhr.open('OPTIONS', 'http://localhost:5000/api/auth/login', false);
+        xhr.send(null);
+        // Hata fırlatmadıysa 5000 portu ayaktadır ve cevap veriyordur
+        activePort = '5000';
+    } catch (error) {
+        // Eğer 5000 portuna ulaşılamazsa (Connection Refused vs.), 5136 (Visual Studio) kullan
+        activePort = '5136';
+    }
+}
+
 const CONFIG = {
-    // Eğer tarayıcı konsoluna manuel bir port override girildiyse onu kullan,
-    // Yoksa ön yüz portuna göre otomatik eşleştirme yap (3000 -> 5000, 5500 -> 5136)
-    API_BASE_URL: localStorage.getItem('API_PORT_OVERRIDE') 
-        ? `http://localhost:${localStorage.getItem('API_PORT_OVERRIDE')}/api`
-        : (window.location.port === '3000' ? 'http://localhost:5000/api' : 'http://localhost:5136/api')
+    API_BASE_URL: `http://localhost:${activePort}/api`
 };
 
 // Merkezi Yetki Denetim Sistemi (RBAC)
