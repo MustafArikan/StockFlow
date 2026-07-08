@@ -9,16 +9,20 @@ if (!token) {
     window.location.href = 'login.html';
 }
 
-// Tüm depoları arama için burada saklarız
 let tumDepolar = [];
 
 // Tablo gövdesi referansı
 const tabloGovdesi = document.getElementById("depoTablosuGovdesi");
 
+let depoPage = 1;
+const depoPageSize = 10;
+let rafPage = 1;
+const rafPageSize = 10;
+
 // API'den depoları çekip tabloya basan ana fonksiyon
-async function depolariYukle() {
+async function depolariYukle(page = 1) {
     try {
-        const cevap = await fetch(API_URL, {
+        const cevap = await fetch(`${API_URL}?pageNumber=${page}&pageSize=${depoPageSize}`, {
             method: 'GET',
             headers: {
                 "Authorization": `Bearer ${token}`
@@ -34,16 +38,50 @@ async function depolariYukle() {
         if (!cevap.ok) {
             throw new Error("Sunucu hatası: " + cevap.status);
         }
-        const depolar = await cevap.json();
-        tumDepolar = depolar;      
+        const sonuc = await cevap.json();
+        tumDepolar = sonuc.items || sonuc;      
+        depoPage = sonuc.currentPage || 1;
+
         tabloyuCiz(tumDepolar);
+        sayfalamayiCizDepolar(sonuc.totalPages || 1, depoPage);
     } catch (hata) {
         tabloGovdesi.innerHTML = `
             <tr>
                 <td colspan="4" class="text-center text-danger py-4">Depolar yüklenemedi. Backend çalışıyor mu? (${hata.message})</td>
             </tr>`;
+        const paginationContainer = document.getElementById("depoPaginationContainer");
+        if(paginationContainer) paginationContainer.innerHTML = "";
         console.error("Hata:", hata);
     }
+}
+
+function sayfalamayiCizDepolar(totalPages, currentPage) {
+    const container = document.getElementById("depoPaginationContainer");
+    if (!container) return;
+
+    if (totalPages <= 1) {
+        container.innerHTML = "";
+        return;
+    }
+
+    let html = `<nav><ul class="pagination pagination-sm m-0 justify-content-center mt-3">`;
+
+    html += `<li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
+                <button class="page-link text-dark" onclick="depolariYukle(${currentPage - 1})">Önceki</button>
+             </li>`;
+
+    for (let i = 1; i <= totalPages; i++) {
+        html += `<li class="page-item ${currentPage === i ? 'active' : ''}">
+                    <button class="page-link ${currentPage === i ? 'bg-dark border-dark text-white' : 'text-dark'}" onclick="depolariYukle(${i})">${i}</button>
+                 </li>`;
+    }
+
+    html += `<li class="page-item ${currentPage === totalPages ? 'disabled' : ''}">
+                <button class="page-link text-dark" onclick="depolariYukle(${currentPage + 1})">Sonraki</button>
+             </li>`;
+
+    html += `</ul></nav>`;
+    container.innerHTML = html;
 }
 
 function tabloyuCiz(depolar) {
@@ -250,10 +288,10 @@ async function raflariAc(depoId, depoAdi) {
 }
 
 // Belirli bir deponun raflarını API'den çekip modal tablosuna basar
-async function raflariYukle(depoId) {
+async function raflariYukle(depoId, page = 1) {
     const tabloGovdesi = document.getElementById("rafTablosuGovdesi");
     try {
-        const cevap = await fetch(`${CONFIG.API_BASE_URL}/locations/by-warehouse/${depoId}`, {
+        const cevap = await fetch(`${CONFIG.API_BASE_URL}/locations/by-warehouse/${depoId}?pageNumber=${page}&pageSize=${rafPageSize}`, {
             method: 'GET',
             headers: {
                 "Authorization": `Bearer ${token}`
@@ -268,7 +306,9 @@ async function raflariYukle(depoId) {
 
         if (!cevap.ok) throw new Error("Raflar alınamadı: " + cevap.status);
 
-        const raflar = await cevap.json();
+        const sonuc = await cevap.json();
+        const raflar = sonuc.items || sonuc;
+        rafPage = sonuc.currentPage || 1;
 
         tabloGovdesi.innerHTML = "";
 
@@ -277,6 +317,8 @@ async function raflariYukle(depoId) {
                 <tr>
                     <td colspan="3" class="text-center text-muted py-3">Bu depoda henüz raf yok.</td>
                 </tr>`;
+            const container = document.getElementById("rafPaginationContainer");
+            if (container) container.innerHTML = "";
             return;
         }
 
@@ -296,13 +338,46 @@ async function raflariYukle(depoId) {
                 </tr>`;
             tabloGovdesi.innerHTML += satir;
         });
+
+        sayfalamayiCizRaflar(sonuc.totalPages || 1, rafPage, depoId);
     } catch (hata) {
         tabloGovdesi.innerHTML = `
             <tr>
                 <td colspan="3" class="text-center text-danger py-3">Raflar yüklenemedi. (${hata.message})</td>
             </tr>`;
+        const container = document.getElementById("rafPaginationContainer");
+        if (container) container.innerHTML = "";
         console.error("Hata:", hata);
     }
+}
+
+function sayfalamayiCizRaflar(totalPages, currentPage, depoId) {
+    const container = document.getElementById("rafPaginationContainer");
+    if (!container) return;
+
+    if (totalPages <= 1) {
+        container.innerHTML = "";
+        return;
+    }
+
+    let html = `<nav><ul class="pagination pagination-sm m-0 justify-content-center mt-3">`;
+
+    html += `<li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
+                <button class="page-link text-dark" onclick="raflariYukle(${depoId}, ${currentPage - 1})">Önceki</button>
+             </li>`;
+
+    for (let i = 1; i <= totalPages; i++) {
+        html += `<li class="page-item ${currentPage === i ? 'active' : ''}">
+                    <button class="page-link ${currentPage === i ? 'bg-dark border-dark text-white' : 'text-dark'}" onclick="raflariYukle(${depoId}, ${i})">${i}</button>
+                 </li>`;
+    }
+
+    html += `<li class="page-item ${currentPage === totalPages ? 'disabled' : ''}">
+                <button class="page-link text-dark" onclick="raflariYukle(${depoId}, ${currentPage + 1})">Sonraki</button>
+             </li>`;
+
+    html += `</ul></nav>`;
+    container.innerHTML = html;
 }
 
 // Raf Ekle 

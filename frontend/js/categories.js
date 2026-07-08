@@ -23,10 +23,14 @@ function escapeHtml(text) {
 let tumKategoriler = [];
 const tabloGovdesi = document.getElementById("kategoriTablosuGovdesi");
 
+let currentPage = 1;
+const pageSize = 10;
+
 // API'den kategorileri çeken fonksiyon
-async function kategorileriYukle() {
+async function kategorileriYukle(page = 1) {
     try {
-        const cevap = await fetch(API_URL, {
+        const adres = `${API_URL}?pageNumber=${page}&pageSize=${pageSize}`;
+        const cevap = await fetch(adres, {
             method: 'GET',
             headers: {
                 "Authorization": `Bearer ${token}`
@@ -43,16 +47,60 @@ async function kategorileriYukle() {
             throw new Error("Sunucu hatası: " + cevap.status);
         }
 
-        const kategoriler = await cevap.json();
-        tumKategoriler = kategoriler;
+        const sonuc = await cevap.json();
+        tumKategoriler = sonuc.items || sonuc; // Pagination varsa items, yoksa kendisi
+        currentPage = sonuc.currentPage || 1;
+
         tabloyuCiz(tumKategoriler);
+        sayfalamayiCiz(sonuc.totalPages || 1, currentPage);
     } catch (hata) {
         tabloGovdesi.innerHTML = `
         <tr>
             <td colspan="3" class="text-center text-danger py-4">Kategori Yüklenemedi. Backend çalışıyor mu? (${hata.message})</td>
         </tr>`;
+        const paginationContainer = document.getElementById("paginationContainer");
+        if(paginationContainer) paginationContainer.innerHTML = "";
         console.error("Hata:", hata);
     }
+}
+
+function sayfalamayiCiz(totalPages, currentPage) {
+    const container = document.getElementById("paginationContainer");
+    if (!container) return;
+
+    if (totalPages <= 1) {
+        container.innerHTML = "";
+        return;
+    }
+
+    let html = `<nav><ul class="pagination pagination-sm m-0 justify-content-center mt-3">`;
+
+    html += `<li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
+                <button class="page-link text-dark" onclick="kategorileriYukle(${currentPage - 1})">Önceki</button>
+             </li>`;
+
+    for (let i = 1; i <= totalPages; i++) {
+        if (totalPages > 7) {
+            if (i === 1 || i === totalPages || (i >= currentPage - 1 && i <= currentPage + 1)) {
+                html += `<li class="page-item ${currentPage === i ? 'active' : ''}">
+                            <button class="page-link ${currentPage === i ? 'bg-dark border-dark text-white' : 'text-dark'}" onclick="kategorileriYukle(${i})">${i}</button>
+                         </li>`;
+            } else if (i === 2 || i === totalPages - 1) {
+                html += `<li class="page-item disabled"><span class="page-link text-muted">...</span></li>`;
+            }
+        } else {
+            html += `<li class="page-item ${currentPage === i ? 'active' : ''}">
+                        <button class="page-link ${currentPage === i ? 'bg-dark border-dark text-white' : 'text-dark'}" onclick="kategorileriYukle(${i})">${i}</button>
+                     </li>`;
+        }
+    }
+
+    html += `<li class="page-item ${currentPage === totalPages ? 'disabled' : ''}">
+                <button class="page-link text-dark" onclick="kategorileriYukle(${currentPage + 1})">Sonraki</button>
+             </li>`;
+
+    html += `</ul></nav>`;
+    container.innerHTML = html;
 }
 
 // Tabloyu çizen fonksiyon (CSP uyumlu - satır içi onClick kaldırıldı)

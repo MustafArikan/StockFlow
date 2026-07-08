@@ -259,7 +259,7 @@ async function urunSil(id) {
 // Kategorileri API'den çekip dropdown'a doldurur
 async function kategorileriYukle() {
     try {
-        const cevap = await fetch(`${CONFIG.API_BASE_URL}/categories`, {
+        const cevap = await fetch(`${CONFIG.API_BASE_URL}/categories?pageSize=1000`, {
             method: "GET",
             headers: {
                 "Authorization": `Bearer ${token}`
@@ -274,7 +274,9 @@ async function kategorileriYukle() {
 
         if (!cevap.ok) throw new Error("Kategoriler alınamadı.");
 
-        const kategoriler = await cevap.json();
+        const data = await cevap.json();
+        const kategoriler = data.items || data;
+        
         const select = document.getElementById("urunKategoriId");
 
         // Önceki seçenekleri temizle (varsayılan hariç)

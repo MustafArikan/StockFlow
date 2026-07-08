@@ -22,7 +22,7 @@ namespace stok_takip.Controllers
 
         // 1. GET: Fetch all movements with optional filters (For frontend table)
         [HttpGet]
-        public async Task<IActionResult> GetAllMovements([FromQuery] string? type, [FromQuery] string? search)
+        public async Task<IActionResult> GetAllMovements([FromQuery] string? type, [FromQuery] string? search, [FromQuery] string? sort, [FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
         {
             var query = _context.StockMovements
                 .AsNoTracking()
@@ -42,8 +42,13 @@ namespace stok_takip.Controllers
                                          (m.Description != null && m.Description.Contains(search)));
             }
 
-            var result = await query
-                .OrderByDescending(m => m.Id) // Assuming BaseEntity has Id or CreatedAt
+            var totalRecords = await query.CountAsync();
+
+            var orderedQuery = sort == "asc" ? query.OrderBy(m => m.CreatedAt) : query.OrderByDescending(m => m.CreatedAt);
+
+            var result = await orderedQuery
+                .Skip((pageNumber - 1) * pageSize)
+                .Take(pageSize)
                 .Select(m => new
                 {
                     m.Id,
@@ -56,7 +61,13 @@ namespace stok_takip.Controllers
                 })
                 .ToListAsync();
 
-            return Ok(result);
+            return Ok(new 
+            {
+                items = result,
+                totalRecords = totalRecords,
+                currentPage = pageNumber,
+                totalPages = (int)Math.Ceiling((double)totalRecords / pageSize)
+            });
         }
 
         // 2. POST: Create a new stock movement (IN, OUT, or TRANSFER)

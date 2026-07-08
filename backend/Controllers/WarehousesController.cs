@@ -24,10 +24,24 @@ public class WarehousesController : ControllerBase
 
     // GET /api/warehouses tüm depoları listeleme
     [HttpGet]
-    public async Task<IActionResult> GetAll()
+    public async Task<IActionResult> GetAll([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
     {
-        var warehouses = await _context.Warehouses.AsNoTracking().ToListAsync();
-        return Ok(warehouses);
+        var query = _context.Warehouses.AsNoTracking();
+        var totalRecords = await query.CountAsync();
+
+        var warehouses = await query
+            .OrderByDescending(w => w.Id)
+            .Skip((pageNumber - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync();
+
+        return Ok(new 
+        {
+            items = warehouses,
+            totalRecords = totalRecords,
+            currentPage = pageNumber,
+            totalPages = (int)Math.Ceiling((double)totalRecords / pageSize)
+        });
     }
 
     // GET /api/warehouses/5 tek bir depoyu getir

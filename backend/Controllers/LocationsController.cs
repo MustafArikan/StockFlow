@@ -21,21 +21,49 @@ public class LocationsController : ControllerBase
 
     // GET /api/locations  tüm rafları listele
     [HttpGet]
-    public async Task<IActionResult> GetAll()
+    public async Task<IActionResult> GetAll([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
     {
-        var locations = await _context.Locations.AsNoTracking().ToListAsync();
-        return Ok(locations);
+        var query = _context.Locations.AsNoTracking();
+        var totalRecords = await query.CountAsync();
+
+        var locations = await query
+            .OrderByDescending(l => l.Id)
+            .Skip((pageNumber - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync();
+
+        return Ok(new 
+        {
+            items = locations,
+            totalRecords = totalRecords,
+            currentPage = pageNumber,
+            totalPages = (int)Math.Ceiling((double)totalRecords / pageSize)
+        });
     }
 
     // GET /api/locations/by-warehouse/5  belirli bir deponun raflarını getir
     [HttpGet("by-warehouse/{warehouseId}")]
-    public async Task<IActionResult> GetByWarehouse(int warehouseId)
+    public async Task<IActionResult> GetByWarehouse(int warehouseId, [FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
     {
-        var locations = await _context.Locations
+        var query = _context.Locations
             .AsNoTracking()
-            .Where(l => l.WarehouseId == warehouseId)
+            .Where(l => l.WarehouseId == warehouseId);
+
+        var totalRecords = await query.CountAsync();
+
+        var locations = await query
+            .OrderByDescending(l => l.Id)
+            .Skip((pageNumber - 1) * pageSize)
+            .Take(pageSize)
             .ToListAsync();
-        return Ok(locations);
+
+        return Ok(new 
+        {
+            items = locations,
+            totalRecords = totalRecords,
+            currentPage = pageNumber,
+            totalPages = (int)Math.Ceiling((double)totalRecords / pageSize)
+        });
     }
 
     // POST /api/locations  yeni raf ekle
