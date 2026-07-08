@@ -6,16 +6,16 @@
 let activePort = localStorage.getItem('API_PORT_OVERRIDE');
 
 if (!activePort) {
-    // Eğer override yoksa 5000 portuna (Docker) ufak bir gizli istek atıp ayakta mı diye bakarız.
+    // Eğer override yoksa 5000 portuna istek at
     try {
         const xhr = new XMLHttpRequest();
-        // Asenkron olmayan (senkron) istek atıyoruz ki diğer JS kodları çalışmadan port belli olsun
+        // senkron istek
         xhr.open('OPTIONS', 'http://localhost:5000/api/auth/login', false);
         xhr.send(null);
-        // Hata fırlatmadıysa 5000 portu ayaktadır ve cevap veriyordur
+        // Hata yoksa 5000 portu ayaktadır ve cevap veriyordur
         activePort = '5000';
     } catch (error) {
-        // Eğer 5000 portuna ulaşılamazsa (Connection Refused vs.), 5136 (Visual Studio) kullan
+        // 5000 portuna ulaşılamazsa
         activePort = '5136';
     }
 }
@@ -57,3 +57,29 @@ function hasPermission(action) {
     const role = getUserRole();
     return PERMISSIONS[role] && PERMISSIONS[role].includes(action);
 }
+
+// Merkezi Şifre Göster/Gizle İşlemi (Event Delegation / CSP Uyumlu)
+document.addEventListener('click', function(e) {
+    const btn = e.target.closest('.toggle-password');
+    if (btn) {
+        const targetId = btn.getAttribute('data-target');
+        const input = document.getElementById(targetId);
+        if (!input) return;
+        
+        const icon = btn.querySelector('i');
+        
+        if (input.type === 'password') {
+            input.type = 'text';
+            if(icon) {
+                icon.classList.remove('bi-eye-slash');
+                icon.classList.add('bi-eye');
+            }
+        } else {
+            input.type = 'password';
+            if(icon) {
+                icon.classList.remove('bi-eye');
+                icon.classList.add('bi-eye-slash');
+            }
+        }
+    }
+});

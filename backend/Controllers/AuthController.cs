@@ -327,6 +327,12 @@ public async Task<IActionResult> Logout()
             return BadRequest(new {message = "Geçersiz veya süresi dolmuş şifre sıfırlama kodu."});
         }
 
+        var verificationResult = _passwordHasher.VerifyHashedPassword(user, user.PasswordHash, dto.NewPassword);
+        if (verificationResult == PasswordVerificationResult.Success)
+        {
+            return BadRequest(new {message = "Yeni şifreniz eski şifrenizle aynı olamaz."});
+        }
+
         user.PasswordHash = _passwordHasher.HashPassword(user, dto.NewPassword);
         user.PasswordResetCode = null;
         user.PasswordResetCodeExpiry = null;
@@ -362,6 +368,12 @@ public async Task<IActionResult> Logout()
         if (verificationResult == PasswordVerificationResult.Failed)
         {
             return BadRequest(new { message = "Eski şifre hatalı." });
+        }
+
+        var isSamePassword = _passwordHasher.VerifyHashedPassword(user, user.PasswordHash, dto.NewPassword);
+        if (isSamePassword == PasswordVerificationResult.Success)
+        {
+            return BadRequest(new { message = "Yeni şifreniz eski şifrenizle aynı olamaz." });
         }
 
         user.PasswordHash = _passwordHasher.HashPassword(user, dto.NewPassword);

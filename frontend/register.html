@@ -46,7 +46,21 @@
                 </div>
                 <div class="mb-4">
                     <label for="regPassword" class="form-label fw-bold small text-muted">Şifre</label>
-                    <input type="password" class="form-control" id="regPassword" required placeholder="En az 6 karakter, harf ve rakam">
+                    <div class="input-group">
+                        <input type="password" class="form-control" id="regPassword" required placeholder="En az 6 karakter, harf ve rakam">
+                        <button class="btn btn-outline-secondary toggle-password" type="button" data-target="regPassword">
+                            <i class="bi bi-eye-slash"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="mb-4">
+                    <label for="regPasswordConfirm" class="form-label fw-bold small text-muted">Şifre (Tekrar)</label>
+                    <div class="input-group">
+                        <input type="password" class="form-control" id="regPasswordConfirm" required placeholder="Şifrenizi tekrar girin">
+                        <button class="btn btn-outline-secondary toggle-password" type="button" data-target="regPasswordConfirm">
+                            <i class="bi bi-eye-slash"></i>
+                        </button>
+                    </div>
                 </div>
                 <button type="submit" class="btn btn-primary w-100 py-2 fw-bold" id="btnRegister">
                     Kayıt Ol

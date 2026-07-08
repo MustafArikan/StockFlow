@@ -54,7 +54,12 @@
                         <label for="password" class="form-label fw-bold small text-muted mb-0">Şifre</label>
                         <a href="forgot-password.html" class="small fw-bold text-decoration-none">Şifremi Unuttum</a>
                     </div>
-                    <input type="password" class="form-control" id="password" required placeholder="••••••••">
+                    <div class="input-group">
+                        <input type="password" class="form-control" id="password" required placeholder="••••••••">
+                        <button class="btn btn-outline-secondary toggle-password" type="button" data-target="password">
+                            <i class="bi bi-eye-slash"></i>
+                        </button>
+                    </div>
                 </div>
                 <button type="submit" class="btn btn-primary w-100 py-2 fw-bold" id="btnLogin">
                     Giriş Yap

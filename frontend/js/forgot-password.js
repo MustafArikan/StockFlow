@@ -102,7 +102,13 @@ document.addEventListener("DOMContentLoaded", () => {
     resetPasswordForm.addEventListener("submit", async (e) => {
         e.preventDefault();
         const newPassword = document.getElementById("newPassword").value;
+        const newPasswordConfirm = document.getElementById("newPasswordConfirm").value;
         hideAlert();
+        
+        if (newPassword !== newPasswordConfirm) {
+            showAlert("danger", "Şifreler eşleşmiyor. Lütfen kontrol edin.");
+            return;
+        }
         
         btnResetPassword.disabled = true;
         btnResetPassword.innerHTML = `<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Yenileniyor...`;
