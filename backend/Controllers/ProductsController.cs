@@ -10,6 +10,7 @@ namespace stok_takip.Controllers;
 [ApiController]
 [Route("api/products")]
 [Authorize] // Tüm eylemler için yetkilendirme gerektirir
+
 public class ProductsController : ControllerBase
 {
     private readonly AppDbContext _context;
@@ -20,25 +21,35 @@ public class ProductsController : ControllerBase
     }
     // GET /api/products : tüm ürünleri listele
     [HttpGet]
-    public async Task<IActionResult> GetAll()
+    public async Task<IActionResult> GetAll([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
     {
-        // Kategorileri veritabanından çekerek her ürünü sadece DTO'ya çevirir
+        var totalRecords = await _context.Products.CountAsync(p => !p.IsDeleted);
+
         var products = await _context.Products
-        .AsNoTracking()
-        .Where(p => !p.IsDeleted) // Silinmiş ürünleri hariç tut
-        .Include(p=>p.Category)
-        .Select(p=> new ProductDto
+            .AsNoTracking()
+            .Where(p => !p.IsDeleted)
+            .Include(p => p.Category)
+            .Skip((pageNumber - 1) * pageSize)
+            .Take(pageSize)
+            .Select(p => new ProductDto
+            {
+                Id = p.Id,
+                Name = p.Name,
+                Barcode = p.Barcode,
+                MinStockLevel = p.MinStockLevel,
+                CategoryId = p.CategoryId,
+                CategoryName = p.Category.Name,
+                StockQuantity = p.StockLevels.Sum(sl => sl.Quantity)
+            })
+            .ToListAsync();
+
+        return Ok(new 
         {
-            Id = p.Id,
-            Name = p.Name,
-            Barcode = p.Barcode,
-            MinStockLevel = p.MinStockLevel,
-            CategoryId = p.CategoryId,
-            CategoryName = p.Category.Name,
-            StockQuantity = p.StockLevels.Sum(sl => sl.Quantity) // Stok miktarını hesapla
-        })
-        .ToListAsync();
-        return Ok(products);
+            items = products,
+            totalRecords = totalRecords,
+            currentPage = pageNumber,
+            totalPages = (int)Math.Ceiling((double)totalRecords / pageSize)
+        });
     }
 
     //GET / api/products/5 : tek bir ürünü getir
@@ -60,12 +71,6 @@ public class ProductsController : ControllerBase
         {
             return BadRequest("Bu isim veya barkoda sahip bir ürün zaten var.");
         }    
-
-        var categoryExists = await _context.Categories.AnyAsync(c => c.Id == dto.CategoryId);
-        if (!categoryExists)
-        {
-            return BadRequest("Belirtilen kategori bulunamadı.");
-        }
         
         var product = new Product
         {
@@ -93,12 +98,6 @@ public class ProductsController : ControllerBase
         if (mevcut != null)
         {
             return BadRequest("Bu isim veya barkoda sahip bir ürün zaten var.");
-        }
-
-        var categoryExists = await _context.Categories.AnyAsync(c => c.Id == dto.CategoryId);
-        if (!categoryExists)
-        {
-            return BadRequest("Belirtilen kategori bulunamadı.");
         }
 
         product.Name = dto.Name;

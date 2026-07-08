@@ -4,6 +4,9 @@ const token = localStorage.getItem('token');
 
 const userRole = getUserRole(); // config.js'den gelir
 
+let currentPage = 1;
+const pageSize = 10; // Her sayfada kaç ürün gösterilecek?
+
 // Güvenlik kontrolü: Token yoksa login'e yönlendir
 if (!token) {
     window.location.href = 'login.html';
@@ -28,10 +31,11 @@ let tumUrunler = [];
 const tabloGovdesi = document.getElementById("urunTablosuGovdesi");
 
 // API'den ürünleri çekip tabloya basan ana fonksiyon
-async function urunleriYukle() {
+async function urunleriYukle(page = 1) {
     try {
-        // 1. API'ye istek at (Authorization Token ile)
-        const cevap = await fetch(API_URL, {
+        const adres = `${API_URL}?pageNumber=${page}&pageSize=${pageSize}`;
+
+        const cevap = await fetch(adres, {
             method: 'GET',
             headers: {
                 "Authorization": `Bearer ${token}`
@@ -48,18 +52,53 @@ async function urunleriYukle() {
             throw new Error("Sunucu hatası: " + cevap.status);
         }
 
-        const urunler = await cevap.json();
-        tumUrunler = urunler; // tüm listeyi arama için saklıyor
+        const sonuc = await cevap.json();
+        
+        tumUrunler = sonuc.items; 
+        currentPage = sonuc.currentPage;
 
         tabloyuCiz(tumUrunler);
+        sayfalamayiCiz(sonuc.totalPages, sonuc.currentPage);
 
     } catch (hata) {
         tabloGovdesi.innerHTML = `
             <tr>
-                <td colSpan="6" class="text-center text-danger py-4">Ürünler yüklenemedi. Backend çalışıyor mu? (${hata.message})</td>
+                <td colSpan="7" class="text-center text-danger py-4">Ürünler yüklenemedi. Backend çalışıyor mu? (${hata.message})</td>
             </tr>`;
         console.error("Hata:", hata);
     }
+}
+
+function sayfalamayiCiz(totalPages, currentPage) {
+    const container = document.getElementById("paginationContainer");
+    
+    if (totalPages <= 1) {
+        container.innerHTML = "";
+        return;
+    }
+
+    let html = `<nav><ul class="pagination pagination-sm m-0">`;
+
+    html += `<li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
+                <a class="page-link" href="#" onclick="sayfaDegistir(${currentPage - 1}); return false;">Önceki</a>
+             </li>`;
+
+    for (let i = 1; i <= totalPages; i++) {
+        html += `<li class="page-item ${currentPage === i ? 'active' : ''}">
+                    <a class="page-link" href="#" onclick="sayfaDegistir(${i}); return false;">${i}</a>
+                 </li>`;
+    }
+
+    html += `<li class="page-item ${currentPage === totalPages ? 'disabled' : ''}">
+                <a class="page-link" href="#" onclick="sayfaDegistir(${currentPage + 1}); return false;">Sonraki</a>
+             </li>`;
+
+    html += `</ul></nav>`;
+    container.innerHTML = html;
+}
+
+window.sayfaDegistir = function(yeniSayfa) {
+    urunleriYukle(yeniSayfa);
 }
 
 // Ürün dizisini alıp tabloya satır satır basan fonksiyon
@@ -123,7 +162,7 @@ tabloGovdesi.addEventListener("click", (e) => {
 });
 
 // sayfa açılınca ürünleri yükle
-urunleriYukle();
+urunleriYukle(currentPage);
 
 // Ekle ve Kaydet butonları için
 document.getElementById("btnUrunKaydet").addEventListener("click", async () => {
@@ -179,7 +218,7 @@ document.getElementById("btnUrunKaydet").addEventListener("click", async () => {
         document.getElementById("urunFormu").reset();
         document.getElementById("urunId").value = ""; // gizli id'yi temizlemek için
         
-        urunleriYukle();
+        urunleriYukle(currentPage);
     } catch (hata) {
         alert("Ürün yüklenemedi: " + hata.message);
         console.error("Hata:", hata);
@@ -210,7 +249,7 @@ async function urunSil(id) {
             throw new Error("Silme başarısız: " + cevap.status);
         }
         // Başarılıysa tabloyu yeniden yükler
-        urunleriYukle();
+        urunleriYukle(currentPage);
     } catch (hata) {
         alert("Ürün silinemedi: " + hata.message);
         console.error("Hata:", hata);
