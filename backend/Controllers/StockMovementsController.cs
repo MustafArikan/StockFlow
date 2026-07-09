@@ -11,6 +11,7 @@ namespace stok_takip.Controllers
     [ApiController]
     [Route("api/stock/movements")]
 
+    [Authorize]
     public class StockMovementsController : ControllerBase
     {
         private readonly AppDbContext _context;
@@ -91,6 +92,9 @@ namespace stok_takip.Controllers
             {
                 if (dto.SourceLocationId == null || dto.TargetLocationId == null)
                     return BadRequest(new { message = "Source and Target locations are required for transfer operations." });
+
+                if (dto.SourceLocationId == dto.TargetLocationId)
+                    return BadRequest(new { message = "Kaynak ve hedef raf aynı olamaz." });
 
                 using var transaction = await _context.Database.BeginTransactionAsync();
                 try

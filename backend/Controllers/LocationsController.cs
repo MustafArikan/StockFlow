@@ -92,7 +92,7 @@ public class LocationsController : ControllerBase
         if (location == null)
             return NotFound();
 
-        _context.Locations.Remove(location);
+        location.IsDeleted = true; // Soft delete
         await _context.SaveChangesAsync();
         return NoContent();
     }

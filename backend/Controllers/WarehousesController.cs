@@ -21,7 +21,25 @@ public class WarehousesController : ControllerBase
     {
         _context = context;
     }
+    // GET /api/warehouses/{id}/stocks
+    [HttpGet("{id}/stocks")]
+    public async Task<IActionResult> GetWarehouseStocks(int id)
+    {
+        var stocks = await _context.StockLevels
+            .Where(sl => sl.Location.WarehouseId == id) // Raflar üzerinden depoya ulaşıyoruz
+            .Select(sl => new 
+            {
+                ProductId = sl.ProductId,
+                ProductName = sl.Product.Name,
+                ProductCode = sl.Product.Barcode,
+                Quantity = sl.Quantity,
+                LocationId = sl.LocationId, // Frontend'deki filtreleme için kritik!
+                CategoryName = sl.Product.Category.Name
+            })
+            .ToListAsync();
 
+        return Ok(stocks);
+    }
     // GET /api/warehouses tüm depoları listeleme
     [HttpGet]
     public async Task<IActionResult> GetAll([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
@@ -110,11 +128,11 @@ public class WarehousesController : ControllerBase
             return BadRequest("Bu depoda raflar var. Önce onları silmelisiniz.");
         }
 
-        _context.Warehouses.Remove(warehouse);
+        warehouse.IsDeleted = true; // Soft delete
         await _context.SaveChangesAsync();
         return NoContent();
     }
-
+    
 
 
 }

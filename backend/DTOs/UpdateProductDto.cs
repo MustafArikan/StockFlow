@@ -2,7 +2,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace stok_takip.DTOs;
 
-public class CreateProductDto
+public class UpdateProductDto
 {
     [Required(ErrorMessage = "Ürün adı boş bırakılamaz.")]
     [StringLength(100, MinimumLength = 2, ErrorMessage = "Ürün adı en az 2, en fazla 100 karakter olabilir.")]
@@ -17,14 +17,4 @@ public class CreateProductDto
 
     [Range(1, int.MaxValue, ErrorMessage = "Geçerli bir kategori seçilmelidir.")]
     public int CategoryId { get; set; }
-
-    // 🎯 YENİ: Depodan doğrudan ekleme yaptığımız için hedef raf/lokasyon zorunlu
-    [Required(ErrorMessage = "Ürünün yerleştirileceği raf/lokasyon seçilmelidir.")]
-    [Range(1, int.MaxValue, ErrorMessage = "Geçerli bir raf seçilmelidir.")]
-    public int TargetLocationId { get; set; }
-
-    // 🎯 YENİ: Başlangıç stok miktarı (Negatif olamaz, varsayılan 0 olabilir)
-    [Range(0, int.MaxValue, ErrorMessage = "Başlangıç stok adedi negatif olamaz.")]
-    public int InitialQuantity { get; set; }
-    public int LocationId { get; set; }
 }

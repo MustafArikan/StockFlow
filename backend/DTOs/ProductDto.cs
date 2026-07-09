@@ -9,4 +9,5 @@ public class ProductDto
     public int CategoryId {get; set;}
     public string CategoryName { get; set;} = string.Empty;
     public int StockQuantity { get; set;}
+    public int LocationId { get; set; }
 }

@@ -22,6 +22,18 @@ public class AppDbContext : DbContext
     {
         base.OnModelCreating(modelBuilder);
 
+        // GLOBAL QUERY FILTERS FOR SOFT DELETE
+        modelBuilder.Entity<User>().HasQueryFilter(e => !e.IsDeleted);
+        modelBuilder.Entity<Category>().HasQueryFilter(e => !e.IsDeleted);
+        modelBuilder.Entity<Product>().HasQueryFilter(e => !e.IsDeleted);
+        modelBuilder.Entity<Warehouse>().HasQueryFilter(e => !e.IsDeleted);
+        modelBuilder.Entity<Location>().HasQueryFilter(e => !e.IsDeleted);
+        modelBuilder.Entity<StockLevel>().HasQueryFilter(e => !e.IsDeleted);
+        modelBuilder.Entity<StockMovement>().HasQueryFilter(e => !e.IsDeleted);
+        modelBuilder.Entity<Notification>().HasQueryFilter(e => !e.IsDeleted);
+        
+
+
         modelBuilder.Entity<User>()
             .HasIndex(u => u.Email)
             .IsUnique();
@@ -34,7 +46,8 @@ public class AppDbContext : DbContext
 
         modelBuilder.Entity<Product>()
             .HasIndex(p => p.Barcode)
-            .IsUnique();
+            .IsUnique()
+            .HasFilter("[is_deleted] = 0");
             
         modelBuilder.Entity<Product>()
             .HasOne(p => p.Category)

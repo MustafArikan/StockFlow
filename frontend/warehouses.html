@@ -4,26 +4,36 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Depolar - StockFlow</title>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap">
+    <title>Depolar ve Raflar - StockFlow</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link href="css/style.css" rel="stylesheet">
+    <script src="js/theme.js"></script>
     <style>
-        body { font-family: 'Inter', sans-serif; background-color: #f8f9fa; }
-        .depo-karti { cursor: pointer; transition: all 0.3s ease; }
-        .depo-karti:hover { transform: translateY(-5px); box-shadow: 0 10px 20px rgba(0,0,0,0.1) !important; border-color: #0d6efd !important; }
-        .emoji-icon { font-size: 3rem; }
+        /* Özel Gölgelendirme (Hover) Efekti */
+        .depo-karti {
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        .depo-karti:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 15px 30px rgba(0,0,0,0.1) !important;
+            border-color: #0d6efd !important;
+        }
     </style>
 </head>
+<body class="bg-light">
 
-<body>
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm">
         <div class="container">
             <a class="navbar-brand fw-bold text-primary" href="index.html">
-                Stock<span class="text-white">Flow</span>
+                Stock<span class="text-white">Flow</span>    
             </a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
             </button>
+
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav me-auto">
                     <li class="nav-item"><a class="nav-link" href="index.html">Ana Sayfa</a></li>
@@ -33,308 +43,294 @@
                     <li class="nav-item"><a class="nav-link active" href="warehouses.html">Depolar</a></li>
                     <li class="nav-item"><a class="nav-link" href="test-scanner.html">Barkod Okuyucu</a></li>
                 </ul>
+
                 <div class="d-flex align-items-center text-white-50">
-                    <button id="themeToggleBtn" class="theme-toggle-btn border-0 me-3 text-white-50"
-                        title="Temayı Değiştir" style="background: transparent; font-size: 1.2rem;">
-                        <i class="bi bi-moon-fill" id="themeIcon"></i>
-                    </button>
-                    <span id="userProfile" class="me-3 small fw-bold text-white-50"></span>
-                    <button id="btnNavbarLogout" class="btn btn-sm btn-outline-danger rounded-pill px-3">Çıkış
-                        Yap</button>
+                    <button id="themeToggleBtn" class="theme-toggle-btn border-0 me-3 text-white-50" title="Temayı Değiştir"></button>
+                    <span id="userProfile" class="me-3 small fw-bold text-white">Yükleniyor...</span>
+                    <button id="btnNavbarLogout" class="btn btn-sm btn-outline-danger rounded-pill px-3">Çıkış Yap</button>
                 </div>
             </div>
         </div>
-    </nav>
+    </nav> 
 
     <div class="container my-5">
-
+        
         <div id="depoListesiGorunumu">
             <div class="d-flex justify-content-between align-items-center mb-4">
-                <div>
-                    <h1 class="fw-bold text-dark mb-0">Depolar</h1>
-                    <p class="text-muted mb-0">Tesis ve yöneticileri görüntüleyin</p>
-                </div>
-                <button class="btn btn-primary rounded-pill px-4 shadow-sm" data-bs-toggle="modal" data-bs-target="#depoModal">+ Yeni Depo Ekle</button>
+                <h2 class="fw-bold text-dark m-0">🏭 Depolar</h2>
+                <button class="btn btn-primary rounded-pill px-4 shadow-sm fw-bold" data-bs-toggle="modal" data-bs-target="#depoModal">
+                    + Yeni Depo Ekle
+                </button>
             </div>
-
-            <div class="card border-0 shadow-sm rounded-3 bg-white mb-4">
-                <div class="card-body p-3 d-flex flex-column flex-md-row gap-3">
-                    <div class="position-relative flex-grow-1">
-                        <span class="position-absolute top-50 translate-middle-y ms-3 text-muted">🔍</span>
-                        <input type="text" id="aramaKutusuDepo" class="form-control rounded-pill ps-5" placeholder="Depo Adı Ara...">
-                    </div>
-                    <div class="d-flex align-items-center gap-2">
-                        <label class="text-muted small fw-bold text-nowrap">Sırala:</label>
-                        <select class="form-select rounded-pill border-light-subtle" id="siralamaDepo">
-                            <option value="EN_COK_URUN" selected>En Çok Ürün Bulunan (Varsayılan)</option>
-                            <option value="A_Z">A'dan Z'ye (Alfabetik)</option>
-                            <option value="Z_A">Z'den A'ya</option>
-                        </select>
-                    </div>
+            
+            <div class="row mb-4">
+                <div class="col-md-8">
+                    <input type="text" id="aramaKutusuDepo" class="form-control form-control-lg rounded-pill border-light-subtle shadow-sm px-4" placeholder="Depo adı veya lokasyon ara...">
+                </div>
+                <div class="col-md-4">
+                    <select id="siralamaDepo" class="form-select form-select-lg rounded-pill border-light-subtle shadow-sm px-4">
+                        <option value="URUN_COK">Ürün Sayısı (Çoktan Aza)</option>
+                        <option value="URUN_AZ">Ürün Sayısı (Azdan Çoğa)</option>
+                        <option value="TARIH_YENI">Tarih (Yeniden Eskiye)</option>
+                        <option value="TARIH_ESKI">Tarih (Eskiden Yeniye)</option>
+                        <option value="A_Z">Alfabetik (A-Z)</option>
+                        <option value="Z_A">Alfabetik (Z-A)</option>
+                    </select>
                 </div>
             </div>
 
             <div class="row g-4" id="depoKartlariContainer">
                 </div>
+            <div id="depoPaginationContainer" class="mt-4"></div>
         </div>
 
-        <div id="depoDetayGorunumu" class="d-none">
-            <div class="d-flex align-items-center mb-4 gap-3">
-                <button class="btn btn-outline-secondary rounded-circle p-2" id="btnGeriDon" title="Depolara Dön">
-                    ←
-                </button>
-                <div>
-                    <h2 class="fw-bold text-dark mb-0" id="seciliDepoAdi">Depo Adı Yükleniyor...</h2>
-                    <p class="text-muted small mb-0">Bu depoya ait anlık stok durumu</p>
-                </div>
+        <div id="rafListesiGorunumu" class="d-none">
+            <div class="d-flex align-items-center mb-4">
+                <button class="btn btn-outline-secondary rounded-circle me-3 fw-bold" id="btnGeriDonDepolara" title="Depolara Dön">←</button>
+                <h3 class="fw-bold text-dark m-0"><span id="seciliDepoAdiRaflaricin" class="text-primary"></span> Deposu Rafları</h3>
             </div>
-<<<<<<< HEAD
 
             <div class="row g-3 mb-4">
                 <div class="col-md-4">
-                    <div class="card border-0 shadow-sm rounded-4 bg-primary text-white h-100 p-3 d-flex flex-row align-items-center">
-                        <div class="display-5 me-3">📦</div>
-                        <div>
-                            <h6 class="mb-1 text-white-50 fw-bold text-uppercase">Kayıtlı Ürün Çeşidi</h6>
-                            <h3 class="mb-0 fw-bold" id="kutuUrunCesidi">0</h3>
-                        </div>
+                    <div class="card bg-white border-0 shadow-sm rounded-4 text-center p-3">
+                        <h6 class="text-muted mb-1 small text-uppercase fw-bold">Kayıtlı Raf</h6>
+                        <h3 class="fw-bold text-primary m-0" id="kutuToplamRaf">0</h3>
                     </div>
                 </div>
                 <div class="col-md-4">
-                    <div class="card border-0 shadow-sm rounded-4 bg-success text-white h-100 p-3 d-flex flex-row align-items-center">
-                        <div class="display-5 me-3">📊</div>
-                        <div>
-                            <h6 class="mb-1 text-white-50 fw-bold text-uppercase">Toplam Stok Miktarı</h6>
-                            <h3 class="mb-0 fw-bold" id="kutuToplamMiktar">0</h3>
-                        </div>
+                    <div class="card bg-white border-0 shadow-sm rounded-4 text-center p-3">
+                        <h6 class="text-muted mb-1 small text-uppercase fw-bold">Toplam Çeşit (Bu Depoda)</h6>
+                        <h3 class="fw-bold text-dark m-0" id="kutuToplamUrunDepo">0</h3>
                     </div>
                 </div>
                 <div class="col-md-4">
-                    <div class="card border-0 shadow-sm rounded-4 bg-danger text-white h-100 p-3 d-flex flex-row align-items-center">
-                        <div class="display-5 me-3">⚠️</div>
-                        <div>
-                            <h6 class="mb-1 text-white-50 fw-bold text-uppercase">Kritik Stoktaki Ürünler</h6>
-                            <h3 class="mb-0 fw-bold" id="kutuKritikStok">0</h3>
-                        </div>
+                    <div class="card bg-danger bg-opacity-10 border-0 shadow-sm rounded-4 text-center p-3">
+                        <h6 class="text-danger mb-1 small text-uppercase fw-bold">Kritik Stok Uyarıları</h6>
+                        <h3 class="fw-bold text-danger m-0" id="kutuKritikStokDepo">0</h3>
                     </div>
                 </div>
             </div>
 
-            <div class="card border-0 shadow-sm rounded-3 bg-white">
-                <div class="card-header bg-white border-bottom-0 pt-4 px-4 d-flex flex-column flex-md-row gap-3 align-items-center">
-                    
-                    <button type="button" class="btn btn-success rounded-pill px-4 shadow-sm fw-bold" id="btnDepoIciUrunEkle">
-                        + Depoya Ürün Ekle
-                    </button>
-
-                    <div class="ms-auto position-relative" style="min-width: 300px;">
-                        <span class="position-absolute top-50 translate-middle-y ms-3 text-muted">🔍</span>
-                        <input type="text" id="aramaKutusuUrun" class="form-control rounded-pill ps-5" placeholder="Ürün Adı veya Kodu Ara...">
-                    </div>
-                    <div class="d-flex align-items-center gap-2">
-                        <select class="form-select rounded-pill border-light-subtle" id="siralamaUrun">
-                            <option value="SON_ISLEM" selected>Son İşlem Görenler (Varsayılan)</option>
-                            <option value="A_Z">A-Z (Alfabetik)</option>
-                            <option value="MIKTAR_AZALAN">Miktar (Çoktan Aza)</option>
-                            <option value="MIKTAR_ARTAN">Miktar (Azdan Çoğa)</option>
+            <div class="card border-0 shadow-sm rounded-4 p-3 mb-4 bg-white">
+                <div class="row g-2 align-items-center">
+                    <div class="col-md-5">
+                        <select id="rafAramaSelect" class="form-select rounded-pill bg-light border-0 px-4">
+                            <option value="">Raf Seçiniz (Tümünü Göster)</option>
                         </select>
                     </div>
-                </div>
-                <div class="card-body p-0">
-                    <div class="table-responsive">
-                        <table class="table table-hover align-middle mb-0">
-                            <thead class="table-light border-bottom border-secondary-subtle">
-                                <tr class="text-muted small text-uppercase">
-                                    <th class="ps-4">ID</th>
-                                    <th>Ürün Adı</th>
-                                    <th>Barkod</th>
-                                    <th>Kategori</th>
-                                    <th class="text-center">Mevcut Stok</th>
-                                    <th class="text-end pe-4">İşlemler</th>
-                                </tr>
-                            </thead>
-                            <tbody id="depoUrunTablosuGovdesi">
-                                </tbody>
-                        </table>
+                    <div class="col-md-7 text-end">
+                        <button class="btn btn-outline-primary rounded-pill px-4 me-2 fw-bold" data-bs-toggle="modal" data-bs-target="#rafEkleModal">+ Yeni Raf</button>
+                        <button class="btn btn-success rounded-pill px-4 shadow-sm fw-bold" id="btnDepoyaUrunEkleModalAc">+ Yeni Ürün Girişi</button>
                     </div>
                 </div>
-=======
-            <div class="card-body">
+            </div>
+
+            <div class="card border-0 shadow-sm rounded-4 bg-white overflow-hidden">
                 <div class="table-responsive">
                     <table class="table table-hover align-middle mb-0">
-                        <thead>
-                            <tr class="text-muted small text-uppercase">
-                                <th id="thId" style="cursor: pointer;" class="user-select-none">ID ↕</th>
-                                <th id="thAd" style="cursor: pointer;" class="user-select-none">Depo Adı ↕</th>
-                                <th id="thAdres" style="cursor: pointer;" class="user-select-none">Adres ↕</th>
-                                <th class="text-end" id="islemSutunuBasligi">İşlemler</th>
+                        <thead class="table-light">
+                            <tr>
+                                <th class="ps-4 text-muted small">RAF ID</th>
+                                <th class="text-muted small">RAF KODU</th>
+                                <th class="text-end pe-4 text-muted small">İŞLEMLER</th>
                             </tr>
                         </thead>
-                        <tbody id="depoTablosuGovdesi">
-                            <tr>
-                                <td colspan="4" class="text-center text-muted py-4">Yükleniyor...</td>
-                            </tr>
-                        </tbody>
+                        <tbody id="rafTablosuGovdesi">
+                            </tbody>
                     </table>
                 </div>
-                <div id="depoPaginationContainer" class="mt-3"></div>
->>>>>>> 38579f31772a8c1e2943e5cd8f490910968b04bc
+            </div>
+            <div id="rafSayfalamaContainer" class="mt-4"></div>
+        </div>
+
+        <div id="urunListesiGorunumu" class="d-none">
+            <div class="d-flex align-items-center mb-4">
+                <button class="btn btn-outline-secondary rounded-circle me-3 fw-bold" id="btnGeriDonRaflara" title="Raflara Dön">←</button>
+                <h3 class="fw-bold text-dark m-0"><span id="seciliRafKoduUrunlerIcin" class="text-primary"></span> Rafındaki Ürünler</h3>
+            </div>
+
+            <div class="row mb-3 align-items-center">
+                <div class="col-md-5">
+                    <input type="text" id="aramaKutusuUrun" class="form-control rounded-pill border-light-subtle px-4" placeholder="Ürün adı veya barkod ara...">
+                </div>
+                <div class="col-md-3">
+                    <select id="siralamaUrun" class="form-select rounded-pill border-light-subtle px-4">
+                        <option value="SON_ISLEM">Son Eklenenler</option>
+                        <option value="A_Z">İsme Göre (A-Z)</option>
+                        <option value="MIKTAR_AZALAN">Miktar (Çoktan Aza)</option>
+                        <option value="MIKTAR_ARTAN">Miktar (Azdan Çoğa)</option>
+                    </select>
+                </div>
+                <div class="col-md-4 text-end">
+                    <button class="btn btn-success rounded-pill px-4 shadow-sm fw-bold" id="btnRafaUrunEkleModalAc">+ Bu Rafa Ürün Ekle</button>
+                </div>
+            </div>
+
+            <div class="card border-0 shadow-sm rounded-4 bg-white overflow-hidden">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th class="ps-4">ID</th>
+                                <th>Ürün Adı</th>
+                                <th>Barkod</th>
+                                <th>Kategori</th>
+                                <th class="text-center">Miktar</th>
+                                <th class="text-end pe-4">İşlemler</th>
+                            </tr>
+                        </thead>
+                        <tbody id="urunTablosuGovdesi">
+                            </tbody>
+                    </table>
+                </div>
             </div>
         </div>
     </div>
 
-    <div class="modal fade" id="depoModal" tabindex="-1" aria-hidden="true"> 
+    <div class="modal fade" id="depoModal" tabindex="-1">
         <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content border-0 shadow rounded-3">
-                <div class="modal-header border-bottom-0 bg-light rounded-top-3">
-                    <h5 class="modal-title fw-bold text-dark" id="modalBaslik">Yeni Depo Ekle</h5>
+            <div class="modal-content border-0 shadow rounded-4">
+                <div class="modal-header border-0 bg-light rounded-top-4">
+                    <h5 class="modal-title fw-bold" id="modalBaslik">Yeni Depo Ekle</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body p-4">
                     <form id="depoFormu">
                         <input type="hidden" id="depoId">
                         <div class="mb-3">
-                            <label class="form-label text-muted small fw-bold">Depo Adı</label>
-                            <input type="text" class="form-control" id="depoAdi" placeholder="Örn: Merkez Depo">
+                            <label class="form-label fw-bold text-muted small">Depo Adı <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control rounded-3" id="depoAdi" placeholder="Örn: Merkez Dağıtım Deposu" required>
                         </div>
+                        
                         <div class="mb-3">
-                            <label class="form-label text-muted small fw-bold">Adres</label>
-                            <input type="text" class="form-control" id="depoAdres" placeholder="Örn: Selçuklu, Konya">
-                        </div>
-                        <div class="mb-4">
-                            <label class="form-label text-muted small fw-bold">Depo Yöneticisi</label>
-                            <select class="form-select" id="depoYoneticisi">
-                                <option value="" selected disabled>Yönetici Seçin...</option>
+                            <label class="form-label fw-bold text-muted small">Depo Yöneticisi</label>
+                            <select class="form-select rounded-3" id="depoYoneticiId">
+                                <option value="">Yönetici Seçiniz...</option>
                             </select>
                         </div>
-                        <button type="button" id="btnDepoKaydet" class="btn btn-primary w-100 rounded-pill py-2 fw-bold">Ekle ve Kaydet</button>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold text-muted small">Adres / Lokasyon Bilgisi</label>
+                            <textarea class="form-control rounded-3" id="depoAdres" rows="3" placeholder="Açık adres veya sanayi bölgesi..."></textarea>
+                        </div>
                     </form>
                 </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="modal fade" id="stokGecmisiModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered modal-xl">
-            <div class="modal-content border-0 shadow rounded-3">
-                <div class="modal-header border-bottom-0 bg-light rounded-top-3 align-items-center">
-                    <h5 class="modal-title fw-bold text-dark" id="gecmisModalBaslik">Ürün Adı - Stok Geçmişi</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body p-4 bg-light">
-                    <div class="d-flex flex-column flex-md-row gap-3 mb-4 bg-white p-3 rounded-4 shadow-sm">
-                        <div class="d-flex align-items-center gap-2">
-                            <label class="text-muted small fw-bold text-nowrap">Zaman Filtresi:</label>
-                            <select class="form-select rounded-pill border-light-subtle" id="filtreZaman">
-                                <option value="TUMU" selected>Tüm Zamanlar</option>
-                                <option value="SON_1_HAFTA">Son 1 Hafta</option>
-                                <option value="SON_1_AY">Son 1 Ay</option>
-                            </select>
-                        </div>
-                        <div class="d-flex align-items-center gap-2">
-                            <label class="text-muted small fw-bold text-nowrap">Sırala:</label>
-                            <select class="form-select rounded-pill border-light-subtle" id="siralaGecmis">
-                                <option value="YENIDEN_ESKIYE" selected>En Son İşlem Başta (Varsayılan)</option>
-                                <option value="ESKIDEN_YENIYE">İlk İşlem Başta (Tarihsel)</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="card border-0 shadow-sm rounded-3 bg-white">
-                        <div class="table-responsive">
-                            <table class="table table-striped table-hover align-middle mb-0">
-                                <thead class="table-dark">
-                                    <tr class="small text-uppercase">
-                                        <th class="ps-4">Tarih</th>
-                                        <th>İşlem Tipi</th>
-                                        <th>Adet Değişimi</th>
-                                        <th>İşlemi Yapan</th>
-                                        <th class="pe-4">Açıklama</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="stokGecmisiTabloGovdesi">
-                                    </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-                <div class="modal-footer border-top-0 bg-light rounded-bottom-3">
-                    <button type="button" class="btn btn-secondary rounded-pill px-4" data-bs-dismiss="modal">Kapat</button>
+                <div class="modal-footer border-0 bg-light rounded-bottom-4">
+                    <button type="button" class="btn btn-outline-secondary rounded-pill px-4" data-bs-dismiss="modal">İptal</button>
+                    <button type="button" class="btn btn-primary rounded-pill px-4 fw-bold" id="btnDepoKaydet">Kaydet</button>
                 </div>
             </div>
         </div>
     </div>
 
-    <div class="modal fade" id="depoIciUrunModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content border-0 shadow rounded-3">
-                <div class="modal-header border-bottom-0 bg-light rounded-top-3">
-                    <h5 class="modal-title fw-bold text-dark">Depoya Yeni Ürün Tanımla</h5>
+    <div class="modal fade" id="rafEkleModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered modal-sm">
+            <div class="modal-content border-0 shadow rounded-4">
+                <div class="modal-header border-0 bg-light rounded-top-4">
+                    <h6 class="modal-title fw-bold">Yeni Raf Tanımla</h6>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body p-4">
-<<<<<<< HEAD
-                    <form id="depoIciUrunFormu">
-                        <div class="mb-3">
-                            <label class="form-label text-muted small fw-bold">Hedef Tesis / Depo</label>
-                            <input type="text" class="form-control bg-light fw-bold" id="urunSabitDepoAdi" readonly>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label text-muted small fw-bold">Ürün Adı</label>
-                            <input type="text" class="form-control border-light-subtle" id="depoIciUrunAdi" placeholder="Örn: 12mm CNC Matkap Ucu" required>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label text-muted small fw-bold">Barkod / Ürün Kodu</label>
-                            <input type="text" class="form-control border-light-subtle" id="depoIciUrunBarkod" placeholder="Örn: BRK-8892" required>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label text-muted small fw-bold">Kategori</label>
-                            <select class="form-select border-light-subtle" id="depoIciUrunKategoriId" required>
-                                <option value="" selected disabled>Yükleniyor...</option>
-                            </select>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label text-muted small fw-bold">Yerleştirilecek Raf / Lokasyon</label>
-                            <select class="form-select border-light-subtle border-primary" id="depoIciUrunRafId" required>
-                                <option value="" selected disabled>Önce raflar yükleniyor...</option>
-                            </select>
-                        </div>
-                        <div class="row">
-                            <div class="col-6 mb-4">
-                                <label class="form-label text-muted small fw-bold">Başlangıç Stok Adedi</label>
-                                <input type="number" class="form-control border-light-subtle" id="depoIciUrunIlkStok" value="0" min="0">
-                            </div>
-                            <div class="col-6 mb-4">
-                                <label class="form-label text-muted small fw-bold">Kritik Stok Seviyesi</label>
-                                <input type="number" class="form-control border-light-subtle" id="depoIciUrunMinStok" value="5" min="0">
-                            </div>
-                        </div>
-                        <button type="button" id="btnDepoIciUrunKaydet" class="btn btn-success w-100 rounded-pill py-2 fw-bold">Ürünü Depoya Giriş Yap</button>
-                    </form>
-=======
-                    <!--Yeni raf ekleme-->
-                    <div class="d-flex gap-2 mb-4">
-                        <input type="text" class="form-control" id="rafKodu" placeholder="Raf Kodu (örn: RAF-A1)">
-                        <button type="submit" id="btnRafEkle"
-                            class="btn btn-primary rounded-pill px-4 fw-bold text-nowrap">Raf Ekle</button>
-                    </form>
+                    <label class="form-label fw-bold text-muted small">Raf Kodu <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control rounded-3 text-uppercase" id="modalRafKodu" placeholder="Örn: A1-RAF">
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-primary rounded-pill w-100 fw-bold" id="btnRafKaydetModal">Rafı Oluştur</button>
+                </div>
+            </div>
+        </div>
+    </div>
 
+    <div class="modal fade" id="depoIciUrunModal" tabindex="-1" data-bs-backdrop="static">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content border-0 shadow rounded-4">
+                <div class="modal-header border-0 bg-light rounded-top-4">
+                    <h5 class="modal-title fw-bold">📦 Depoya Yeni Ürün Girişi</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <form id="depoIciUrunFormu">
+                        <div class="mb-4">
+                            <label class="form-label fw-bold text-muted small">İşlem Yapılan Depo</label>
+                            <input type="text" class="form-control rounded-3 bg-light text-primary fw-bold border-0" id="urunSabitDepoAdi" readonly>
+                        </div>
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold text-muted small">Ürün Adı <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control rounded-3" id="depoIciUrunAdi" placeholder="Örn: 12mm Karbür Freze">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold text-muted small">Barkod / Ürün Kodu <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control rounded-3 font-monospace" id="depoIciUrunBarkod" placeholder="Örn: FRZ-12MM">
+                            </div>
+                        </div>
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-6 position-relative">
+                                <label class="form-label fw-bold text-muted small">Kategori <span class="text-danger">*</span></label>
+                                <select class="form-select rounded-3" id="depoIciUrunKategoriId"><option value="">Yükleniyor...</option></select>
+                            </div>
+                            <div class="col-md-6 position-relative">
+                                <label class="form-label fw-bold text-muted small">Yerleştirilecek Raf <span class="text-danger">*</span></label>
+                                <select class="form-select rounded-3" id="depoIciUrunRafId"><option value="">Yükleniyor...</option></select>
+                            </div>
+                        </div>
+                        <div class="row g-3 bg-light p-3 rounded-3 border">
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold text-muted small">Başlangıç Miktarı</label>
+                                <input type="number" class="form-control rounded-3" id="depoIciUrunIlkStok" value="0" min="0">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold text-muted small">Kritik Stok Uyarı Limiti</label>
+                                <input type="number" class="form-control rounded-3 text-danger fw-bold" id="depoIciUrunMinStok" value="5" min="0">
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer border-0 bg-light rounded-bottom-4">
+                    <button type="button" class="btn btn-outline-secondary rounded-pill px-4" data-bs-dismiss="modal">İptal</button>
+                    <button type="button" class="btn btn-success rounded-pill px-4 fw-bold shadow-sm" id="btnDepoIciUrunKaydet">Ürünü Kaydet ve Stoğa İşle</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="stokGecmisiModal" tabindex="-1">
+        <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content border-0 shadow rounded-4">
+                <div class="modal-header border-0 bg-light rounded-top-4">
+                    <h5 class="modal-title fw-bold" id="gecmisModalBaslik">Ürün Stok Geçmişi</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-0">
+                    <div class="bg-white p-3 border-bottom d-flex gap-2">
+                        <select id="filtreZaman" class="form-select form-select-sm rounded-pill w-auto">
+                            <option value="TUMU">Tüm Zamanlar</option>
+                            <option value="SON_1_HAFTA">Son 1 Hafta</option>
+                            <option value="SON_1_AY">Son 1 Ay</option>
+                        </select>
+                        <select id="siralaGecmis" class="form-select form-select-sm rounded-pill w-auto">
+                            <option value="YENIDEN_ESKIYE">Yeniden Eskiye</option>
+                            <option value="ESKIDEN_YENIYE">Eskiden Yeniye</option>
+                        </select>
+                    </div>
                     <div class="table-responsive">
                         <table class="table table-hover align-middle mb-0">
-                            <thead>
-                                <tr class="text-muted small text-uppercase">
-                                    <th>ID</th>
-                                    <th>Raf Kodu</th>
-                                    <th class="text-end" id="islemSutunuBasligiRaf">İşlemler</th>
+                            <thead class="table-light">
+                                <tr>
+                                    <th class="ps-4">Tarih</th>
+                                    <th>İşlem</th>
+                                    <th>Miktar</th>
+                                    <th>Personel</th>
+                                    <th class="pe-4">Açıklama</th>
                                 </tr>
                             </thead>
-                            <tbody id="rafTablosuGovdesi"></tbody>
+                            <tbody id="stokGecmisiTabloGovdesi">
+                                </tbody>
                         </table>
                     </div>
-                    <div id="rafPaginationContainer" class="mt-3"></div>
                 </div>
-                <div class="modal-footer border-top-0">
-                    <button type="button" class="btn btn-outline-secondary rounden-pill px4" data-bs-dismiss="modal">← Depolara Dön</button>
->>>>>>> 38579f31772a8c1e2943e5cd8f490910968b04bc
+                <div class="modal-footer border-0 bg-light rounded-bottom-4">
+                    <button type="button" class="btn btn-secondary rounded-pill px-4" data-bs-dismiss="modal">Kapat</button>
                 </div>
             </div>
         </div>
