@@ -1,22 +1,22 @@
-// backend api adersi - tek yerde tanımlı değişirse buradan değiştirilir
 const API_URL = `${CONFIG.API_BASE_URL}/products`;
 const token = localStorage.getItem('token');
+const userRole = getUserRole();
 
-const userRole = getUserRole(); // config.js'den gelir
-
+let tumUrunler = [];
+let filtreliUrunler = [];
+const tabloGovdesi = document.getElementById("urunTablosuGovdesi");
 let currentPage = 1;
-const pageSize = 10; // Her sayfada kaç ürün gösterilecek?
+const pageSize = 10;
 
-// Güvenlik kontrolü: Token yoksa login'e yönlendir
-if (!token) {
-    window.location.href = 'login.html';
-}
+let aktifArama = '';
+let siralamaSutunu = 'id';
+let siralamaYonu = 'asc';
 
-// XSS koruması için html karakterlerini encode eder
+if (!token) window.location.href = 'login.html';
+
 function escapeHtml(text) {
     if (!text) return "";
-    return text
-        .toString()
+    return text.toString()
         .replace(/&/g, "&amp;")
         .replace(/</g, "&lt;")
         .replace(/>/g, "&gt;")
@@ -24,22 +24,75 @@ function escapeHtml(text) {
         .replace(/'/g, "&#039;");
 }
 
-// Tüm ürünler burada saklanıyor arama için
-let tumUrunler = [];
+function veriyiGuncelle() {
+    filtreliUrunler = tumUrunler.filter(urun =>
+        (urun.name && urun.name.toLowerCase().includes(aktifArama)) ||
+        (urun.barcode && urun.barcode.toLowerCase().includes(aktifArama)) ||
+        (urun.categoryName && urun.categoryName.toLowerCase().includes(aktifArama)) ||
+        (urun.id && urun.id.toString().includes(aktifArama))
+    );
 
-// Tablo gövdesi referansı
-const tabloGovdesi = document.getElementById("urunTablosuGovdesi");
+    filtreliUrunler.sort((a, b) => {
+        let degerA = a[siralamaSutunu] != null ? a[siralamaSutunu] : '';
+        let degerB = b[siralamaSutunu] != null ? b[siralamaSutunu] : '';
 
-// API'den ürünleri çekip tabloya basan ana fonksiyon
+        if (typeof degerA === 'string') {
+            return siralamaYonu === 'asc' ? degerA.localeCompare(degerB) : degerB.localeCompare(degerA);
+        } else {
+            return siralamaYonu === 'asc' ? degerA - degerB : degerB - degerA;
+        }
+    });
+
+    const yeniToplamSayfa = Math.ceil(filtreliUrunler.length / pageSize) || 1;
+    if (currentPage > yeniToplamSayfa) currentPage = yeniToplamSayfa;
+
+    const baslangic = (currentPage - 1) * pageSize;
+    const bitis = baslangic + pageSize;
+    const sayfadakiVeriler = filtreliUrunler.slice(baslangic, bitis);
+
+    tabloyuCiz(sayfadakiVeriler);
+    sayfalamayiCiz(yeniToplamSayfa, currentPage);
+}
+
+function sirala(sutun) {
+    if (siralamaSutunu === sutun) {
+        siralamaYonu = siralamaYonu === 'asc' ? 'desc' : 'asc';
+    } else {
+        siralamaSutunu = sutun;
+        siralamaYonu = 'asc';
+    }
+
+    const sutunlar = { id: 'thId', name: 'thAd', barcode: 'thBarkod', minStockLevel: 'thMinStok', categoryName: 'thKategori', stockQuantity: 'thMevcutStok' };
+    const metinler = { id: 'ID', name: 'Ürün Adı', barcode: 'Barkod', minStockLevel: 'Min. Stok', categoryName: 'Kategori', stockQuantity: 'Mevcut Stok' };
+
+    Object.keys(sutunlar).forEach(key => {
+        const el = document.getElementById(sutunlar[key]);
+        if (el) {
+            el.innerText = siralamaSutunu === key ? (siralamaYonu === 'asc' ? `${metinler[key]} ↑` : `${metinler[key]} ↓`) : `${metinler[key]} ↕`;
+        }
+    });
+
+    veriyiGuncelle();
+}
+
+if (document.getElementById("thId")) document.getElementById("thId").addEventListener("click", () => sirala("id"));
+if (document.getElementById("thAd")) document.getElementById("thAd").addEventListener("click", () => sirala("name"));
+if (document.getElementById("thBarkod")) document.getElementById("thBarkod").addEventListener("click", () => sirala("barcode"));
+if (document.getElementById("thMinStok")) document.getElementById("thMinStok").addEventListener("click", () => sirala("minStockLevel"));
+if (document.getElementById("thKategori")) document.getElementById("thKategori").addEventListener("click", () => sirala("categoryName"));
+if (document.getElementById("thMevcutStok")) document.getElementById("thMevcutStok").addEventListener("click", () => sirala("stockQuantity"));
+
+document.getElementById("aramaKutusu").addEventListener("keyup", (event) => {
+    aktifArama = event.target.value.toLowerCase();
+    currentPage = 1;
+    veriyiGuncelle();
+});
+
 async function urunleriYukle(page = 1) {
     try {
-        const adres = `${API_URL}?pageNumber=${page}&pageSize=${pageSize}`;
-
-        const cevap = await fetch(adres, {
+        const cevap = await fetch(`${API_URL}?pageNumber=1&pageSize=1000`, {
             method: 'GET',
-            headers: {
-                "Authorization": `Bearer ${token}`
-            }
+            headers: { "Authorization": `Bearer ${token}` }
         });
 
         if (cevap.status === 401) {
@@ -48,83 +101,58 @@ async function urunleriYukle(page = 1) {
             return;
         }
 
-        if (!cevap.ok) {
-            throw new Error("Sunucu hatası: " + cevap.status);
-        }
+        if (!cevap.ok) throw new Error("Sunucu hatası: " + cevap.status);
 
         const sonuc = await cevap.json();
-        
-        tumUrunler = sonuc.items; 
-        currentPage = sonuc.currentPage;
+        tumUrunler = sonuc.items || sonuc;
+        currentPage = page;
 
-        tabloyuCiz(tumUrunler);
-        sayfalamayiCiz(sonuc.totalPages, sonuc.currentPage);
-
+        veriyiGuncelle();
     } catch (hata) {
-        tabloGovdesi.innerHTML = `
-            <tr>
-                <td colSpan="7" class="text-center text-danger py-4">Ürünler yüklenemedi. Backend çalışıyor mu? (${hata.message})</td>
-            </tr>`;
-        console.error("Hata:", hata);
+        tabloGovdesi.innerHTML = `<tr><td colspan="7" class="text-center text-danger py-4">Ürünler yüklenemedi. (${hata.message})</td></tr>`;
     }
 }
 
-function sayfalamayiCiz(totalPages, currentPage) {
-    const container = document.getElementById("paginationContainer");
-    
-    if (totalPages <= 1) {
-        container.innerHTML = "";
-        return;
+async function dropdownKategorileriniYukle() {
+    try {
+        const cevap = await fetch(`${CONFIG.API_BASE_URL}/categories?pageSize=1000`, {
+            method: "GET",
+            headers: { "Authorization": `Bearer ${token}` }
+        });
+
+        if (!cevap.ok) throw new Error("Kategoriler alınamadı.");
+
+        const data = await cevap.json();
+        const kategoriler = data.items || data;
+        const select = document.getElementById("urunKategoriId");
+
+        if (select) {
+            select.innerHTML = '<option value="">Kategori seçin...</option>';
+            kategoriler.forEach(kategori => {
+                const option = document.createElement("option");
+                option.value = kategori.id;
+                option.textContent = kategori.name;
+                select.appendChild(option);
+            });
+        }
+    } catch (hata) {
+        console.error("Kategori dropdown yükleme hatası:", hata);
     }
-
-    let html = `<nav><ul class="pagination pagination-sm m-0">`;
-
-    html += `<li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
-                <a class="page-link" href="#" onclick="sayfaDegistir(${currentPage - 1}); return false;">Önceki</a>
-             </li>`;
-
-    for (let i = 1; i <= totalPages; i++) {
-        html += `<li class="page-item ${currentPage === i ? 'active' : ''}">
-                    <a class="page-link" href="#" onclick="sayfaDegistir(${i}); return false;">${i}</a>
-                 </li>`;
-    }
-
-    html += `<li class="page-item ${currentPage === totalPages ? 'disabled' : ''}">
-                <a class="page-link" href="#" onclick="sayfaDegistir(${currentPage + 1}); return false;">Sonraki</a>
-             </li>`;
-
-    html += `</ul></nav>`;
-    container.innerHTML = html;
 }
 
-window.sayfaDegistir = function(yeniSayfa) {
-    urunleriYukle(yeniSayfa);
-}
-
-// Ürün dizisini alıp tabloya satır satır basan fonksiyon
 function tabloyuCiz(urunler) {
     tabloGovdesi.innerHTML = "";
 
     if (urunler.length === 0) {
-        tabloGovdesi.innerHTML = `
-            <tr>
-                <td colspan="7" class="text-center text-muted py-4"> Henüz ürün yok. "Yeni ürün ekle" ile başlayın.</td>
-            </tr>`;
+        tabloGovdesi.innerHTML = `<tr><td colspan="7" class="text-center text-muted py-4">Kayıt bulunamadı.</td></tr>`;
         return;
     }
 
     let satirlar = [];
-
-    // Her ürün için bir satır oluştur
     urunler.forEach(urun => {
-        let aksiyonButonlari = "";
-        
         let btnDuzenle = hasPermission("Product.Edit") ? `<button class="btn btn-sm btn-outline-primary rounded-pill btn-duzenle" data-id="${urun.id}">Düzenle</button>` : "";
         let btnSil = hasPermission("Product.Delete") ? `<button class="btn btn-sm btn-outline-danger rounded-pill btn-sil" data-id="${urun.id}">Sil</button>` : "";
-        
-        if (btnDuzenle || btnSil) {
-            aksiyonButonlari = `<td class="text-end">${btnDuzenle} ${btnSil}</td>`;
-        }
+        let aksiyonButonlari = (btnDuzenle || btnSil) ? `<td class="text-end">${btnDuzenle} ${btnSil}</td>` : "";
 
         const satir = `
             <tr>
@@ -134,7 +162,7 @@ function tabloyuCiz(urunler) {
                 <td>${urun.minStockLevel}</td>
                 <td>${escapeHtml(urun.categoryName)}</td>
                 <td>
-                    <span class="badge ${urun.stockQuantity <= urun.minStockLevel ? 'bg-danger' : 'bg-success'} bg-opacity-10 ${urun.stockQuantity <= urun.minStockLevel ? 'text-danger' : 'text-success'} border ${urun.stockQuantity <= urun.minStockLevel ? 'border-danger' : 'border-success'} px-2 py-1 rounded-pill">
+                    <span class="badge ${urun.stockQuantity <= urun.minStockLevel ? 'bg-danger text-danger' : 'bg-success text-success'} bg-opacity-10 border ${urun.stockQuantity <= urun.minStockLevel ? 'border-danger' : 'border-success'} px-2 py-1 rounded-pill">
                         ${urun.stockQuantity} Adet
                     </span>
                 </td>
@@ -142,55 +170,81 @@ function tabloyuCiz(urunler) {
             </tr>`;
         satirlar.push(satir);
     });
-
-    // Tüm satırları tek seferde DOM'a basarak performansı artırıyoruz
     tabloGovdesi.innerHTML = satirlar.join("");
 }
 
-// Olay Delege Etme (Event Delegation) - Satır içi onclick eventlerini kaldırdık
-tabloGovdesi.addEventListener("click", (e) => {
-    const btnDuzenle = e.target.closest(".btn-duzenle");
-    const btnSil = e.target.closest(".btn-sil");
+function sayfalamayiCiz(totalPages, currentPage) {
+    const container = document.getElementById("paginationContainer");
+    if (!container) return;
 
-    if (btnDuzenle) {
-        const id = parseInt(btnDuzenle.getAttribute("data-id"));
-        urunDuzenle(id);
-    } else if (btnSil) {
-        const id = parseInt(btnSil.getAttribute("data-id"));
-        urunSil(id);
+    if (totalPages <= 1) {
+        container.innerHTML = "";
+        return;
+    }
+
+    let html = `<nav><ul class="pagination pagination-sm mb-0 shadow-sm justify-content-center mt-3">`;
+    html += `<li class="page-item ${currentPage === 1 ? 'disabled' : ''}"><a class="page-link page-action" href="#" data-page="${currentPage - 1}">« Önceki</a></li>`;
+
+    for (let i = 1; i <= totalPages; i++) {
+        if (totalPages > 7) {
+            if (i === 1 || i === totalPages || (i >= currentPage - 1 && i <= currentPage + 1)) {
+                html += `<li class="page-item ${currentPage === i ? 'active' : ''}"><a class="page-link page-action" href="#" data-page="${i}">${i}</a></li>`;
+            } else if (i === 2 || i === totalPages - 1) {
+                html += `<li class="page-item disabled"><span class="page-link text-muted">...</span></li>`;
+            }
+        } else {
+            html += `<li class="page-item ${currentPage === i ? 'active' : ''}"><a class="page-link page-action" href="#" data-page="${i}">${i}</a></li>`;
+        }
+    }
+
+    html += `<li class="page-item ${currentPage === totalPages ? 'disabled' : ''}"><a class="page-link page-action" href="#" data-page="${currentPage + 1}">Sonraki »</a></li>`;
+    html += `</ul></nav>`;
+    container.innerHTML = html;
+}
+
+document.getElementById("paginationContainer").addEventListener("click", (e) => {
+    e.preventDefault();
+    const btn = e.target.closest(".page-action");
+    if (btn) {
+        const parentLi = btn.closest(".page-item");
+        if (parentLi && (parentLi.classList.contains("disabled") || parentLi.classList.contains("active"))) return;
+
+        const page = parseInt(btn.getAttribute("data-page"));
+        if (!isNaN(page)) {
+            currentPage = page;
+            veriyiGuncelle();
+        }
     }
 });
 
-// sayfa açılınca ürünleri yükle
-urunleriYukle(currentPage);
-
-// Ekle ve Kaydet butonları için
 document.getElementById("btnUrunKaydet").addEventListener("click", async () => {
-    const id = document.getElementById("urunId").value; // boşsa ekle, doluysa güncelle
+    const id = document.getElementById("urunId").value;
     const name = document.getElementById("urunAdi").value;
     const barcode = document.getElementById("urunBarkod").value;
     const minStockLevel = document.getElementById("urunMinStok").value;
     const categoryId = document.getElementById("urunKategoriId").value;
+    const btnKaydet = document.getElementById("btnUrunKaydet");
 
     if (!name) {
         alert("Lütfen ürün adı girin!");
         return;
     }
 
-    // API'ye gönderilecek veri nesnesi
     const urunVerisi = {
         name: name,
         barcode: barcode,
-        minStockLevel: parseInt(minStockLevel),
-        categoryId: parseInt(categoryId)
+        minStockLevel: parseInt(minStockLevel) || 0,
+        categoryId: parseInt(categoryId) || null
     };
 
-    // id varsa güncelleme yoksa ekleme
     const metod = id ? "PUT" : "POST";
-    const adres = id ? (API_URL + "/" + id) : API_URL;
+    const adres = id ? (`${API_URL}/${id}`) : API_URL;
 
     try {
-        // API'ye Yetkilendirilmiş istek gönder
+        const orjinalMetin = btnKaydet.innerText;
+        btnKaydet.disabled = true;
+        btnKaydet.innerText = "Kaydediliyor...";
+
         const cevap = await fetch(adres, {
             method: metod,
             headers: {
@@ -205,110 +259,47 @@ document.getElementById("btnUrunKaydet").addEventListener("click", async () => {
             window.location.href = 'login.html';
             return;
         }
-        
-        if (!cevap.ok) {
-            throw new Error("İşlem başarısız: " + cevap.status);
-        }
 
-        // Başarılı olursa modalı kapatıp formu temizleyerek tabloyu yeniliyor
+        if (!cevap.ok) throw new Error("İşlem başarısız: " + cevap.status);
+
         const modalElement = document.getElementById("urunModal");
-        const modalInstance = bootstrap.Modal.getInstance(modalElement);
+        const modalInstance = bootstrap.Modal.getOrCreateInstance(modalElement);
         if (modalInstance) modalInstance.hide();
 
         document.getElementById("urunFormu").reset();
-        document.getElementById("urunId").value = ""; // gizli id'yi temizlemek için
-        
+        document.getElementById("urunId").value = "";
+
+        aktifArama = "";
+        const aramaKutusu = document.getElementById("aramaKutusu");
+        if (aramaKutusu) aramaKutusu.value = "";
+
         urunleriYukle(currentPage);
+        btnKaydet.disabled = false;
+        btnKaydet.innerText = "Ekle ve Kaydet";
     } catch (hata) {
-        alert("Ürün yüklenemedi: " + hata.message);
-        console.error("Hata:", hata);
+        alert("İşlem başarısız: " + hata.message);
+        btnKaydet.disabled = false;
+        btnKaydet.innerText = id ? "Güncelle" : "Ekle ve Kaydet";
     }
 });
 
-// Silme için
 async function urunSil(id) {
     const onay = confirm("Bu ürünü silmek istediğinize emin misiniz?");
     if (!onay) return;
 
     try {
-        // API'ye Yetkilendirilmiş DELETE isteği
-        const cevap = await fetch(API_URL + "/" + id, {
+        const cevap = await fetch(`${API_URL}/${id}`, {
             method: "DELETE",
-            headers: {
-                "Authorization": `Bearer ${token}`
-            }
+            headers: { "Authorization": `Bearer ${token}` }
         });
 
-        if (cevap.status === 401) {
-            localStorage.removeItem('token');
-            window.location.href = 'login.html';
-            return;
-        }
-
-        if (!cevap.ok) {
-            throw new Error("Silme başarısız: " + cevap.status);
-        }
-        // Başarılıysa tabloyu yeniden yükler
+        if (!cevap.ok) throw new Error("Silme başarısız: " + cevap.status);
         urunleriYukle(currentPage);
     } catch (hata) {
         alert("Ürün silinemedi: " + hata.message);
-        console.error("Hata:", hata);
     }
 }
 
-// Kategorileri API'den çekip dropdown'a doldurur
-async function kategorileriYukle() {
-    try {
-        const cevap = await fetch(`${CONFIG.API_BASE_URL}/categories?pageSize=1000`, {
-            method: "GET",
-            headers: {
-                "Authorization": `Bearer ${token}`
-            }
-        });
-
-        if (cevap.status === 401) {
-            localStorage.removeItem('token');
-            window.location.href = 'login.html';
-            return;
-        }
-
-        if (!cevap.ok) throw new Error("Kategoriler alınamadı.");
-
-        const data = await cevap.json();
-        const kategoriler = data.items || data;
-        
-        const select = document.getElementById("urunKategoriId");
-
-        // Önceki seçenekleri temizle (varsayılan hariç)
-        select.innerHTML = '<option value="">Kategori seçin...</option>';
-
-        // Her kategori için birer <option> ekle
-        kategoriler.forEach(kategori => {
-            const option = document.createElement("option");
-            option.value = kategori.id;
-            option.textContent = kategori.name;
-            select.appendChild(option);
-        });
-    } catch (hata) {
-        console.error("Kategori yükleme hatası:", hata);
-    }
-}
-
-// Sayfa açılınca kategorileri yükle
-kategorileriYukle();
-
-// Arama kutusu için
-document.getElementById("aramaKutusu").addEventListener("keyup", (event) => {
-    const arananKelime = event.target.value.toLowerCase();
-
-    const filtrelenmis = tumUrunler.filter(urun =>
-        urun.name.toLowerCase().includes(arananKelime) || urun.barcode.toLowerCase().includes(arananKelime)
-    );
-
-    tabloyuCiz(filtrelenmis);
-});
-
-// Düzenle butonu
 function urunDuzenle(id) {
     const urun = tumUrunler.find(u => u.id === id);
     if (!urun) return;
@@ -317,9 +308,9 @@ function urunDuzenle(id) {
     document.getElementById("urunAdi").value = urun.name;
     document.getElementById("urunBarkod").value = urun.barcode;
     document.getElementById("urunMinStok").value = urun.minStockLevel;
-    document.getElementById("urunKategoriId").value = urun.categoryId;
+    document.getElementById("urunKategoriId").value = urun.categoryId || "";
 
-    document.getElementById("modalBaslik").innerText = "Ürün düzenle";
+    document.getElementById("modalBaslik").innerText = "Ürün Düzenle";
     document.getElementById("btnUrunKaydet").innerText = "Güncelle";
 
     const modalElement = document.getElementById("urunModal");
@@ -327,11 +318,18 @@ function urunDuzenle(id) {
     modalInstance.show();
 }
 
-// yeni ürün ekle butonuna basınca formu sıfırlama
+tabloGovdesi.addEventListener("click", (e) => {
+    const btnDuzenle = e.target.closest(".btn-duzenle");
+    const btnSil = e.target.closest(".btn-sil");
+
+    if (btnDuzenle) urunDuzenle(parseInt(btnDuzenle.getAttribute("data-id")));
+    else if (btnSil) urunSil(parseInt(btnSil.getAttribute("data-id")));
+});
+
 document.querySelector('[data-bs-target="#urunModal"]').addEventListener("click", () => {
     document.getElementById("urunFormu").reset();
     document.getElementById("urunId").value = "";
-    document.getElementById("modalBaslik").innerText = "Yeni ürün ekle";
+    document.getElementById("modalBaslik").innerText = "Yeni Ürün Ekle";
     document.getElementById("btnUrunKaydet").innerText = "Ekle ve Kaydet";
 });
 
@@ -343,3 +341,6 @@ if (!hasPermission("Product.Edit") && !hasPermission("Product.Delete")) {
     const islemSutunuBasligi = document.getElementById("islemSutunuBasligi");
     if (islemSutunuBasligi) islemSutunuBasligi.classList.add('d-none');
 }
+
+urunleriYukle(currentPage);
+dropdownKategorileriniYukle();
