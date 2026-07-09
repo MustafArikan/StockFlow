@@ -16,26 +16,13 @@ public static class DbInitializer
         {
             var defaultUsers = new List<User>
             {
-                new User 
-                { 
-                    Email = "admin@godeva.com.tr", 
-                    PasswordHash = "adminpassword", 
-                    Role = "admin",
-                    IsEmailConfirmed = true 
-                },
-                new User 
-                { 
-                    Email = "test@godeva.com.tr", 
-                    PasswordHash = "adminpassword", 
-                    Role = "admin",
-                    IsEmailConfirmed = true
-                }
+                new User { Email = "admin@godeva.com.tr", PasswordHash = "adminpassword", Role = "admin", IsEmailConfirmed = true },
+                new User { Email = "test@godeva.com.tr", PasswordHash = "adminpassword", Role = "admin", IsEmailConfirmed = true }
             };
             context.Users.AddRange(defaultUsers);
             context.SaveChanges();
         }
 
-        // 3. KATEGORİLER
         if (!context.Categories.Any())
         {
             var defaultCategories = new List<Category>
@@ -47,14 +34,9 @@ public static class DbInitializer
             context.SaveChanges();
         }
 
-        // 4. DEPOLAR VE LOKASYONLAR
         if (!context.Warehouses.Any())
         {
-            var merkezDepo = new Warehouse 
-            { 
-                Name = "Merkez Depo", 
-                Address = "Organize Sanayi Bölgesi, 1. Cadde" 
-            };
+            var merkezDepo = new Warehouse { Name = "Merkez Depo", Address = "Organize Sanayi Bölgesi, 1. Cadde" };
             context.Warehouses.Add(merkezDepo);
             context.SaveChanges();
 
@@ -75,36 +57,11 @@ public static class DbInitializer
 
             var defaultProducts = new List<Product>
             {
-                new Product 
-                { 
-                    Barcode = "VGA-4090", 
-                    Name = "NVIDIA GeForce RTX 4090 24GB", 
-                    MinStockLevel = 5, 
-                    CategoryId = bilesenKategori 
-                },
-                new Product 
-                { 
-                    Barcode = "CPU-7800", 
-                    Name = "AMD Ryzen 7 7800X3D İşlemci", 
-                    MinStockLevel = 10, 
-                    CategoryId = bilesenKategori 
-                },
-                new Product 
-                { 
-                    Barcode = "RAM-C32", 
-                    Name = "Corsair Vengeance 32GB DDR5", 
-                    MinStockLevel = 15, 
-                    CategoryId = bilesenKategori 
-                },
-                new Product 
-                { 
-                    Barcode = "SSD-1TB", 
-                    Name = "Samsung 990 PRO 1TB M.2", 
-                    MinStockLevel = 8, 
-                    CategoryId = depolamaKategori 
-                }
+                new Product { Barcode = "VGA-4090", Name = "NVIDIA GeForce RTX 4090 24GB", MinStockLevel = 5, CategoryId = bilesenKategori },
+                new Product { Barcode = "CPU-7800", Name = "AMD Ryzen 7 7800X3D İşlemci", MinStockLevel = 10, CategoryId = bilesenKategori },
+                new Product { Barcode = "RAM-C32", Name = "Corsair Vengeance 32GB DDR5", MinStockLevel = 15, CategoryId = bilesenKategori },
+                new Product { Barcode = "SSD-1TB", Name = "Samsung 990 PRO 1TB M.2", MinStockLevel = 8, CategoryId = depolamaKategori }
             };
-
             context.Products.AddRange(defaultProducts);
             context.SaveChanges();
         }
