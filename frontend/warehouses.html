@@ -80,6 +80,7 @@
                     <p class="text-muted small mb-0">Bu depoya ait anlık stok durumu</p>
                 </div>
             </div>
+<<<<<<< HEAD
 
             <div class="row g-3 mb-4">
                 <div class="col-md-4">
@@ -149,6 +150,27 @@
                         </table>
                     </div>
                 </div>
+=======
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead>
+                            <tr class="text-muted small text-uppercase">
+                                <th>ID</th>
+                                <th>Depo Adı</th>
+                                <th>Adres</th>
+                                <th class="text-end" id="islemSutunuBasligi">İşlemler</th>
+                            </tr>
+                        </thead>
+                        <tbody id="depoTablosuGovdesi">
+                            <tr>
+                                <td colspan="4" class="text-center text-muted py-4">Yükleniyor...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div id="depoPaginationContainer" class="mt-3"></div>
+>>>>>>> 38579f31772a8c1e2943e5cd8f490910968b04bc
             </div>
         </div>
 
@@ -243,6 +265,7 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body p-4">
+<<<<<<< HEAD
                     <form id="depoIciUrunFormu">
                         <div class="mb-3">
                             <label class="form-label text-muted small fw-bold">Hedef Tesis / Depo</label>
@@ -280,6 +303,30 @@
                         </div>
                         <button type="button" id="btnDepoIciUrunKaydet" class="btn btn-success w-100 rounded-pill py-2 fw-bold">Ürünü Depoya Giriş Yap</button>
                     </form>
+=======
+                    <!--Yeni raf ekleme-->
+                    <div class="d-flex gap-2 mb-4">
+                        <input type="text" class="form-control" id="rafKodu" placeholder="Raf Kodu (örn: RAF-A1)">
+                        <button type="button" id="btnRafEkle" class="btn btn-primary rounded-pill px-4 fw-bold text-nowrap">Raf Ekle</button>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead>
+                                <tr class="text-muted small text-uppercase">
+                                    <th>ID</th>
+                                    <th>Raf Kodu</th>
+                                    <th class="text-end" id="islemSutunuBasligiRaf">İşlemler</th>
+                                </tr>
+                            </thead>
+                            <tbody id="rafTablosuGovdesi"></tbody>
+                        </table>
+                    </div>
+                    <div id="rafPaginationContainer" class="mt-3"></div>
+                </div>
+                <div class="modal-footer border-top-0">
+                    <button type="button" class="btn btn-outline-secondary rounden-pill px4" data-bs-dismiss="modal">← Depolara Dön</button>
+>>>>>>> 38579f31772a8c1e2943e5cd8f490910968b04bc
                 </div>
             </div>
         </div>

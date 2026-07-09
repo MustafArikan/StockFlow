@@ -38,10 +38,17 @@ let tarihArtan = false;
 const tabloGovdesi = document.getElementById("hareketTablosuGövdesi");
 const aramaKutusu = document.getElementById("aramaKutusu");
 
+let currentPage = 1;
+const pageSize = 10;
+
 // API'den hareketleri yükleyen ana fonksiyon
-async function hareketleriYukle() {
+async function hareketleriYukle(page = 1) {
     try {
-        const cevap = await fetch(API_URL, {
+        const filterType = (aktifFiltre === 'GIRIS') ? 'IN' : (aktifFiltre === 'CIKIS' ? 'OUT' : '');
+        const sortParam = tarihArtan ? "asc" : "desc";
+        const adres = `${API_URL}?pageNumber=${page}&pageSize=${pageSize}&type=${filterType}&search=${encodeURIComponent(aktifArama)}&sort=${sortParam}`;
+
+        const cevap = await fetch(adres, {
             method: 'GET',
             headers: {
                 "Authorization": `Bearer ${token}`
@@ -58,41 +65,73 @@ async function hareketleriYukle() {
             throw new Error("Stok hareketleri yüklenemedi: " + cevap.status);
         }
 
-        stokHareketleri = await cevap.json();
-        veriyiGuncelle();
+        const sonuc = await cevap.json();
+        stokHareketleri = sonuc.items || [];
+        currentPage = sonuc.currentPage || 1;
+        
+        tabloyuCiz(stokHareketleri);
+        sayfalamayiCiz(sonuc.totalPages || 1, currentPage);
     } catch (hata) {
         tabloGovdesi.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-danger">Bağlantı Hatası: ${hata.message}</td></tr>`;
+        const paginationContainer = document.getElementById("paginationContainer");
+        if(paginationContainer) paginationContainer.innerHTML = "";
         console.error("Hata:", hata);
     }
 }
 
+function sayfalamayiCiz(totalPages, currentPage) {
+    const container = document.getElementById("paginationContainer");
+    if (!container) return;
+
+    if (totalPages <= 1) {
+        container.innerHTML = "";
+        return;
+    }
+
+    let html = `<ul class="pagination pagination-sm mb-0 shadow-sm justify-content-center mt-3">`;
+
+    // Önceki Butonu
+    html += `
+        <li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
+            <button class="page-link text-dark" onclick="hareketleriYukle(${currentPage - 1})">«</button>
+        </li>
+    `;
+
+    // Sayfa Numaraları
+    for (let i = 1; i <= totalPages; i++) {
+        if (totalPages > 7) {
+            if (i === 1 || i === totalPages || (i >= currentPage - 1 && i <= currentPage + 1)) {
+                html += `
+                    <li class="page-item ${i === currentPage ? 'active' : ''}">
+                        <button class="page-link ${i === currentPage ? 'bg-dark border-dark text-white' : 'text-dark'}" onclick="hareketleriYukle(${i})">${i}</button>
+                    </li>
+                `;
+            } else if (i === 2 || i === totalPages - 1) {
+                html += `<li class="page-item disabled"><span class="page-link text-muted">...</span></li>`;
+            }
+        } else {
+            html += `
+                <li class="page-item ${i === currentPage ? 'active' : ''}">
+                    <button class="page-link ${i === currentPage ? 'bg-dark border-dark text-white' : 'text-dark'}" onclick="hareketleriYukle(${i})">${i}</button>
+                </li>
+            `;
+        }
+    }
+
+    // Sonraki Butonu
+    html += `
+        <li class="page-item ${currentPage === totalPages ? 'disabled' : ''}">
+            <button class="page-link text-dark" onclick="hareketleriYukle(${currentPage + 1})">»</button>
+        </li>
+    `;
+
+    html += `</ul>`;
+    container.innerHTML = html;
+}
+
 // 2. FİLTRELEME VE SIRALAMA MANTIĞI
 function veriyiGuncelle() {
-    let filtrelenmis = [...stokHareketleri];
-
-    // Buton Filtreleri (GIRIS / CIKIS)
-    if (aktifFiltre !== 'TUMU') {
-        const filterType = (aktifFiltre === 'GIRIS') ? 'IN' : (aktifFiltre === 'CIKIS' ? 'OUT' : aktifFiltre);
-        filtrelenmis = filtrelenmis.filter(x => x.islemTipi === filterType || x.islemTipi === aktifFiltre);
-    }
-
-    // Metin Arama Filtresi
-    if (aktifArama) {
-        filtrelenmis = filtrelenmis.filter(x => 
-            x.urunAdı.toLowerCase().includes(aktifArama) || 
-            x.urunKodu.toLowerCase().includes(aktifArama) || 
-            x.personel.toLowerCase().includes(aktifArama)
-        );
-    }
-
-    // Tarihe Göre Sıralama Algoritması
-    filtrelenmis.sort((a, b) => {
-        const dateA = new Date(a.tarih);
-        const dateB = new Date(b.tarih);
-        return tarihArtan ? dateA - dateB : dateB - dateA;
-    });
-
-    tabloyuCiz(filtrelenmis);
+    hareketleriYukle(1);
 }
 
 function tabloyuCiz(veriListesi) {
@@ -137,7 +176,7 @@ function tabloyuCiz(veriListesi) {
 async function urunleriYukle() {
     const urunSelect = document.getElementById("urunSecimi");
     try {
-        const cevap = await fetch(`${CONFIG.API_BASE_URL}/products`, {
+        const cevap = await fetch(`${CONFIG.API_BASE_URL}/products?pageSize=1000`, {
             method: 'GET',
             headers: {
                 "Authorization": `Bearer ${token}`
@@ -152,7 +191,8 @@ async function urunleriYukle() {
 
         if (!cevap.ok) throw new Error("Ürünler alınamadı.");
 
-        tumUrunler = await cevap.json();
+        const data = await cevap.json();
+        tumUrunler = data.items || data; // Pagination varsa items kullan, yoksa direkt datayı kullan
         urunSelect.innerHTML = '<option value="" selected disabled>Lütfen bir ürün seçiniz...</option>';
         
         tumUrunler.forEach(urun => {
@@ -172,7 +212,7 @@ async function lokasyonlariYukle() {
     const sourceSelect = document.getElementById("sourceLocationId");
     const targetSelect = document.getElementById("targetLocationId");
     try {
-        const cevap = await fetch(`${CONFIG.API_BASE_URL}/locations`, {
+        const cevap = await fetch(`${CONFIG.API_BASE_URL}/locations?pageSize=1000`, {
             method: 'GET',
             headers: {
                 "Authorization": `Bearer ${token}`
@@ -187,7 +227,8 @@ async function lokasyonlariYukle() {
 
         if (!cevap.ok) throw new Error("Lokasyonlar alınamadı.");
 
-        tumLokasyonlar = await cevap.json();
+        const data = await cevap.json();
+        tumLokasyonlar = data.items || data;
         
         sourceSelect.innerHTML = '<option value="" selected disabled>Kaynak raf seçiniz...</option>';
         targetSelect.innerHTML = '<option value="" selected disabled>Hedef raf seçiniz...</option>';

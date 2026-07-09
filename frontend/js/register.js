@@ -14,8 +14,14 @@ document.addEventListener("DOMContentLoaded", () => {
         
         const email = document.getElementById("regEmail").value.trim();
         const password = document.getElementById("regPassword").value;
+        const confirmPassword = document.getElementById("regPasswordConfirm").value;
         
         hideAlert();
+
+        if (password !== confirmPassword) {
+            showAlert("danger", "Şifreler eşleşmiyor. Lütfen kontrol edin.");
+            return;
+        }
         
         btnRegister.disabled = true;
         btnRegister.innerHTML = `<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Kayıt Yapılıyor...`;

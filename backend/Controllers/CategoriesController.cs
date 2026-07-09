@@ -26,10 +26,24 @@ public class CategoriesController : ControllerBase
 
     // GET /api/categories : tüm kategorileri listele
     [HttpGet]
-    public async Task<IActionResult> GetAll()
+    public async Task<IActionResult> GetAll([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
     {
-        var categories = await _context.Categories.AsNoTracking().ToListAsync();
-        return Ok(categories);
+        var query = _context.Categories.AsNoTracking();
+        var totalRecords = await query.CountAsync();
+
+        var categories = await query
+            .OrderByDescending(c => c.Id)
+            .Skip((pageNumber - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync();
+
+        return Ok(new 
+        {
+            items = categories,
+            totalRecords = totalRecords,
+            currentPage = pageNumber,
+            totalPages = (int)Math.Ceiling((double)totalRecords / pageSize)
+        });
     }
 
 

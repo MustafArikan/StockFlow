@@ -303,6 +303,20 @@ public async Task<IActionResult> Logout()
     }
 
     [AllowAnonymous]
+    [HttpPost("verify-reset-code")]
+    public async Task<IActionResult> VerifyResetCode([FromBody] VerifyResetCodeDto dto)
+    {
+        var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == dto.Email);
+
+        if (user == null || user.PasswordResetCode != dto.ResetCode || user.PasswordResetCodeExpiry < DateTime.UtcNow)
+        {
+            return BadRequest(new {message = "Geçersiz veya süresi dolmuş şifre sıfırlama kodu."});
+        }
+
+        return Ok(new {message = "Sıfırlama kodu doğrulandı. Lütfen yeni şifrenizi belirleyin."});
+    }
+
+    [AllowAnonymous]
     [HttpPost("reset-password")]
     public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordDto dto)
     {
@@ -311,6 +325,12 @@ public async Task<IActionResult> Logout()
         if (user == null || user.PasswordResetCode != dto.ResetCode || user.PasswordResetCodeExpiry < DateTime.UtcNow)
         {
             return BadRequest(new {message = "Geçersiz veya süresi dolmuş şifre sıfırlama kodu."});
+        }
+
+        var verificationResult = _passwordHasher.VerifyHashedPassword(user, user.PasswordHash, dto.NewPassword);
+        if (verificationResult == PasswordVerificationResult.Success)
+        {
+            return BadRequest(new {message = "Yeni şifreniz eski şifrenizle aynı olamaz."});
         }
 
         user.PasswordHash = _passwordHasher.HashPassword(user, dto.NewPassword);
@@ -348,6 +368,12 @@ public async Task<IActionResult> Logout()
         if (verificationResult == PasswordVerificationResult.Failed)
         {
             return BadRequest(new { message = "Eski şifre hatalı." });
+        }
+
+        var isSamePassword = _passwordHasher.VerifyHashedPassword(user, user.PasswordHash, dto.NewPassword);
+        if (isSamePassword == PasswordVerificationResult.Success)
+        {
+            return BadRequest(new { message = "Yeni şifreniz eski şifrenizle aynı olamaz." });
         }
 
         user.PasswordHash = _passwordHasher.HashPassword(user, dto.NewPassword);
