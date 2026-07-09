@@ -66,25 +66,26 @@ public class ProductsController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> Create(CreateProductDto dto)
     {
-        var mevcut = await _context.Products.FirstOrDefaultAsync(p => p.Name == dto.Name || p.Barcode == dto.Barcode);
-        if (mevcut != null)
-        {
-            return BadRequest("Bu isim veya barkoda sahip bir ürün zaten var.");
-        }    
-        
-        var product = new Product
-        {
+        var product = new Product {
             Name = dto.Name,
             Barcode = dto.Barcode,
             MinStockLevel = dto.MinStockLevel,
             CategoryId = dto.CategoryId
         };
-       
         _context.Products.Add(product);
-        await _context.SaveChangesAsync();
-        return CreatedAtAction(nameof(GetById), new{id = product.Id}, product);
+        await _context.SaveChangesAsync(); // Önce ürünü kaydet ki ID oluşsun
 
-    }
+        // 🎯 İlk Stoğu Oluştur (StockLevel tablosuna)
+        var initialStock = new StockLevel {
+            ProductId = product.Id,
+            LocationId = dto.TargetLocationId,
+            Quantity = dto.InitialQuantity
+        };
+        _context.StockLevels.Add(initialStock);
+        await _context.SaveChangesAsync();
+
+        return CreatedAtAction(nameof(GetById), new { id = product.Id }, product);
+}
 
     // PUT /api/products/5 : mecvut ürünü güncelle 
     [HttpPut("{id}")]

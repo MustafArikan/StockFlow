@@ -26,4 +26,5 @@ public class CreateProductDto
     // 🎯 YENİ: Başlangıç stok miktarı (Negatif olamaz, varsayılan 0 olabilir)
     [Range(0, int.MaxValue, ErrorMessage = "Başlangıç stok adedi negatif olamaz.")]
     public int InitialQuantity { get; set; }
+    public int LocationId { get; set; }
 }
