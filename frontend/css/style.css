@@ -6,13 +6,6 @@
     --border-color: #dee2e6;
 }
 
-[data-theme="dark"] {
-    --bg-primary: #121212;
-    --text-primary: #f8f9fa;
-    --card-bg: #1e1e1e;
-    --border-color: #333333;
-}
-
 body {
     background-color: var(--bg-primary);
     color: var(--text-primary);
@@ -23,6 +16,8 @@ body {
 .card {
     background-color: var(--card-bg) !important;
     border: 1px solid var(--border-color) !important;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.4) !important;
+    /* Karanlıkta karta hafif derinlik katar */
 }
 
 .dropdown-menu {
@@ -107,4 +102,144 @@ body {
 
 .fs-075 {
     font-size: 0.75rem;
+}
+
+/* KARANLIK TEMA PALETİ */
+[data-theme="dark"] {
+    --bg-primary: #18191a;
+
+    --text-primary: #e4e6eb;
+
+    --card-bg: #242526;
+
+    --border-color: #3a3b3c;
+}
+
+/* KARANLIK TEMA ÖZEL BOOTSTRAP EZMELERİ */
+
+[data-theme="dark"] .text-dark,
+[data-theme="dark"] h1,
+[data-theme="dark"] h2,
+[data-theme="dark"] h3,
+[data-theme="dark"] h4,
+[data-theme="dark"] h5,
+[data-theme="dark"] h6,
+[data-theme="dark"] p {
+    color: #ffffff !important;
+    /* Başlıklar tam beyaz olsun ki canlansın */
+}
+
+[data-theme="dark"] .text-muted {
+    color: #b0b3b8 !important;
+    /* Alt yazılar daha okunaklı ve parlak bir gri */
+}
+
+[data-theme="dark"] .bg-white,
+[data-theme="dark"] .bg-light,
+[data-theme="dark"] .bg-body {
+    background-color: var(--card-bg) !important;
+}
+
+/* Tablo Tasarımı */
+[data-theme="dark"] .table {
+    color: var(--text-primary) !important;
+    border-color: var(--border-color) !important;
+}
+
+[data-theme="dark"] .table th,
+[data-theme="dark"] .table td {
+    background-color: transparent !important;
+    color: var(--text-primary) !important;
+    border-bottom-color: var(--border-color) !important;
+}
+
+[data-theme="dark"] .table-light th {
+    background-color: #303132 !important;
+    /* Tablo başlıklarına hafif bir vurgu ve ayrıştırma */
+    color: #ffffff !important;
+}
+
+[data-theme="dark"] .table-hover tbody tr:hover {
+    background-color: #3a3b3c !important;
+    /* Üzerine gelince belirginleşsin */
+    color: #ffffff !important;
+}
+
+[data-theme="dark"] .modal-content {
+    background-color: var(--card-bg) !important;
+    border: 1px solid var(--border-color) !important;
+}
+
+/* 🔍 Arama Kutuları ve Form Alanları (Karanlıkta Kaybolmaması İçin) */
+[data-theme="dark"] .form-control,
+[data-theme="dark"] .form-select {
+    background-color: #3a3b3c !important;
+    /* Inputlar karttan daha aydınlık olsun ki öne çıksın */
+    color: #ffffff !important;
+    border-color: #555658 !important;
+}
+
+[data-theme="dark"] .form-control::placeholder {
+    color: #a0a4a8 !important;
+    /* "Kategori adı ile ara..." yazısı artık çok net okunacak */
+}
+
+[data-theme="dark"] .form-control:focus,
+[data-theme="dark"] .form-select:focus {
+    background-color: #444648 !important;
+    /* Tıklanınca biraz daha parlasın */
+    color: #ffffff !important;
+    border-color: #86b7fe !important;
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+}
+
+/* Karanlık Modda Çarpı (Kapatma) Butonunu Beyaz Yap */
+[data-theme="dark"] .btn-close {
+    filter: invert(1) grayscale(100%) brightness(200%);
+}
+
+/* SAYFALAMA (PAGINATION) KARANLIK MOD AYARLARI */
+[data-theme="dark"] .page-link {
+    background-color: var(--card-bg) !important;
+    border-color: var(--border-color) !important;
+    color: var(--text-primary) !important;
+}
+
+/* Seçili (Aktif) Sayfa Rengi */
+[data-theme="dark"] .page-item.active .page-link {
+    background-color: #0d6efd !important;
+    /* Bootstrap orijinal mavisi */
+    border-color: #0d6efd !important;
+    color: #ffffff !important;
+}
+
+/* Tıklanamayan (Önceki/Sonraki) Butonlar */
+[data-theme="dark"] .page-item.disabled .page-link {
+    background-color: #1a1b1c !important;
+    color: #6c757d !important;
+    border-color: var(--border-color) !important;
+}
+
+/* Butonun Üzerine Gelince (Hover) */
+[data-theme="dark"] .page-link:hover:not(.active) {
+    background-color: #3a3b3c !important;
+    color: #ffffff !important;
+}
+
+/* Tıklanabilir Filtreler, Sayfalama ve Tablo Başlıkları İçin İmleç Kontrolü */
+.filtre-elemani,
+.page-action,
+.page-link,
+#tarihBaslik {
+    cursor: pointer !important;
+}
+
+.filtre-elemani:hover {
+    filter: brightness(1.1);
+}
+
+/* TABLO BAŞLIKLARI VE FİLTRELER İÇİN EL İŞARETİ (TÜM SAYFALAR) */
+th[style*="cursor: pointer"],
+.filtre-elemani {
+    cursor: pointer !important;
 }

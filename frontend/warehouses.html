@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="tr">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -13,6 +14,7 @@
         .emoji-icon { font-size: 3rem; }
     </style>
 </head>
+
 <body>
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm">
         <div class="container">
@@ -31,8 +33,14 @@
                     <li class="nav-item"><a class="nav-link active" href="warehouses.html">Depolar</a></li>
                     <li class="nav-item"><a class="nav-link" href="test-scanner.html">Barkod Okuyucu</a></li>
                 </ul>
-                <div class="d-flex">
-                    <a href="login.html" class="btn btn-outline-light btn-sm rounded-pill px-3">Giriş Yap</a>
+                <div class="d-flex align-items-center text-white-50">
+                    <button id="themeToggleBtn" class="theme-toggle-btn border-0 me-3 text-white-50"
+                        title="Temayı Değiştir" style="background: transparent; font-size: 1.2rem;">
+                        <i class="bi bi-moon-fill" id="themeIcon"></i>
+                    </button>
+                    <span id="userProfile" class="me-3 small fw-bold text-white-50"></span>
+                    <button id="btnNavbarLogout" class="btn btn-sm btn-outline-danger rounded-pill px-3">Çıkış
+                        Yap</button>
                 </div>
             </div>
         </div>
@@ -156,9 +164,9 @@
                     <table class="table table-hover align-middle mb-0">
                         <thead>
                             <tr class="text-muted small text-uppercase">
-                                <th>ID</th>
-                                <th>Depo Adı</th>
-                                <th>Adres</th>
+                                <th id="thId" style="cursor: pointer;" class="user-select-none">ID ↕</th>
+                                <th id="thAd" style="cursor: pointer;" class="user-select-none">Depo Adı ↕</th>
+                                <th id="thAdres" style="cursor: pointer;" class="user-select-none">Adres ↕</th>
                                 <th class="text-end" id="islemSutunuBasligi">İşlemler</th>
                             </tr>
                         </thead>
@@ -173,7 +181,6 @@
 >>>>>>> 38579f31772a8c1e2943e5cd8f490910968b04bc
             </div>
         </div>
-
     </div>
 
     <div class="modal fade" id="depoModal" tabindex="-1" aria-hidden="true"> 
@@ -307,8 +314,9 @@
                     <!--Yeni raf ekleme-->
                     <div class="d-flex gap-2 mb-4">
                         <input type="text" class="form-control" id="rafKodu" placeholder="Raf Kodu (örn: RAF-A1)">
-                        <button type="button" id="btnRafEkle" class="btn btn-primary rounded-pill px-4 fw-bold text-nowrap">Raf Ekle</button>
-                    </div>
+                        <button type="submit" id="btnRafEkle"
+                            class="btn btn-primary rounded-pill px-4 fw-bold text-nowrap">Raf Ekle</button>
+                    </form>
 
                     <div class="table-responsive">
                         <table class="table table-hover align-middle mb-0">
@@ -336,4 +344,5 @@
     <script src="js/config.js"></script>
     <script src="js/warehouses.js"></script>
 </body>
+
 </html>
