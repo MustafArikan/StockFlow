@@ -23,8 +23,13 @@
         }
     </style>
 </head>
+<<<<<<< HEAD
 <body class="bg-light">
 
+=======
+
+<body>
+>>>>>>> bb9ee96f24a4ac3dde1cfac7c4e5ee099673897a
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm">
         <div class="container">
             <a class="navbar-brand fw-bold text-primary" href="index.html">
@@ -43,11 +48,22 @@
                     <li class="nav-item"><a class="nav-link active" href="warehouses.html">Depolar</a></li>
                     <li class="nav-item"><a class="nav-link" href="test-scanner.html">Barkod Okuyucu</a></li>
                 </ul>
+<<<<<<< HEAD
 
                 <div class="d-flex align-items-center text-white-50">
                     <button id="themeToggleBtn" class="theme-toggle-btn border-0 me-3 text-white-50" title="Temayı Değiştir"></button>
                     <span id="userProfile" class="me-3 small fw-bold text-white">Yükleniyor...</span>
                     <button id="btnNavbarLogout" class="btn btn-sm btn-outline-danger rounded-pill px-3">Çıkış Yap</button>
+=======
+                <div class="d-flex align-items-center text-white-50">
+                    <button id="themeToggleBtn" class="theme-toggle-btn border-0 me-3 text-white-50"
+                        title="Temayı Değiştir" style="background: transparent; font-size: 1.2rem;">
+                        <i class="bi bi-moon-fill" id="themeIcon"></i>
+                    </button>
+                    <span id="userProfile" class="me-3 small fw-bold text-white-50"></span>
+                    <button id="btnNavbarLogout" class="btn btn-sm btn-outline-danger rounded-pill px-3">Çıkış
+                        Yap</button>
+>>>>>>> bb9ee96f24a4ac3dde1cfac7c4e5ee099673897a
                 </div>
             </div>
         </div>
@@ -128,11 +144,20 @@
             <div class="card border-0 shadow-sm rounded-4 bg-white overflow-hidden">
                 <div class="table-responsive">
                     <table class="table table-hover align-middle mb-0">
+<<<<<<< HEAD
                         <thead class="table-light">
                             <tr>
                                 <th class="ps-4 text-muted small">RAF ID</th>
                                 <th class="text-muted small">RAF KODU</th>
                                 <th class="text-end pe-4 text-muted small">İŞLEMLER</th>
+=======
+                        <thead>
+                            <tr class="text-muted small text-uppercase">
+                                <th id="thId" style="cursor: pointer;" class="user-select-none">ID ↕</th>
+                                <th id="thAd" style="cursor: pointer;" class="user-select-none">Depo Adı ↕</th>
+                                <th id="thAdres" style="cursor: pointer;" class="user-select-none">Adres ↕</th>
+                                <th class="text-end" id="islemSutunuBasligi">İşlemler</th>
+>>>>>>> bb9ee96f24a4ac3dde1cfac7c4e5ee099673897a
                             </tr>
                         </thead>
                         <tbody id="rafTablosuGovdesi">
@@ -231,6 +256,7 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body p-4">
+<<<<<<< HEAD
                     <label class="form-label fw-bold text-muted small">Raf Kodu <span class="text-danger">*</span></label>
                     <input type="text" class="form-control rounded-3 text-uppercase" id="modalRafKodu" placeholder="Örn: A1-RAF">
                 </div>
@@ -240,6 +266,14 @@
             </div>
         </div>
     </div>
+=======
+                    <!--Yeni raf ekleme-->
+                    <div class="d-flex gap-2 mb-4">
+                        <input type="text" class="form-control" id="rafKodu" placeholder="Raf Kodu (örn: RAF-A1)">
+                        <button type="submit" id="btnRafEkle"
+                            class="btn btn-primary rounded-pill px-4 fw-bold text-nowrap">Raf Ekle</button>
+                    </form>
+>>>>>>> bb9ee96f24a4ac3dde1cfac7c4e5ee099673897a
 
     <div class="modal fade" id="depoIciUrunModal" tabindex="-1" data-bs-backdrop="static">
         <div class="modal-dialog modal-lg modal-dialog-centered">

@@ -10,8 +10,14 @@ if (!token) {
 let tumDepolar = [];
 let seciliRafUrunleri = [];
 let aktifDepoId = null;
+<<<<<<< HEAD
 let aktifRafId = null;
 
+=======
+
+// Tablo gövdesi referansı
+const tabloGovdesi = document.getElementById("depoTablosuGovdesi");
+>>>>>>> bb9ee96f24a4ac3dde1cfac7c4e5ee099673897a
 let depoPage = 1;
 const depoPageSize = 10;
 let rafPage = 1;
@@ -32,6 +38,7 @@ function escapeHtml(text) {
         .replace(/'/g, "&#039;");
 }
 
+<<<<<<< HEAD
 function kullaniciBilgisiniDoldur() {
     try {
         const payloadBase64 = token.split('.')[1];
@@ -57,10 +64,76 @@ document.getElementById("btnNavbarLogout")?.addEventListener("click", () => {
 async function depolariYukle(page = 1) {
     try {
         const cevap = await fetch(`${API_URL}?pageNumber=${page}&pageSize=${depoPageSize}`, {
+=======
+function veriyiGuncelle() {
+    filtreliDepolar = tumDepolar.filter(depo =>
+        (depo.name && depo.name.toLowerCase().includes(aktifArama)) ||
+        (depo.address && depo.address.toLowerCase().includes(aktifArama)) ||
+        (depo.id && depo.id.toString().includes(aktifArama))
+    );
+
+    filtreliDepolar.sort((a, b) => {
+        let degerA = a[siralamaSutunu] != null ? a[siralamaSutunu] : '';
+        let degerB = b[siralamaSutunu] != null ? b[siralamaSutunu] : '';
+
+        if (typeof degerA === 'string') {
+            return siralamaYonu === 'asc' ? degerA.localeCompare(degerB) : degerB.localeCompare(degerA);
+        } else {
+            return siralamaYonu === 'asc' ? degerA - degerB : degerB - degerA;
+        }
+    });
+
+    const yeniToplamSayfa = Math.ceil(filtreliDepolar.length / depoPageSize) || 1;
+    if (depoPage > yeniToplamSayfa) depoPage = yeniToplamSayfa;
+
+    const baslangic = (depoPage - 1) * depoPageSize;
+    const bitis = baslangic + depoPageSize;
+    const sayfadakiVeriler = filtreliDepolar.slice(baslangic, bitis);
+
+    tabloyuCiz(sayfadakiVeriler);
+    sayfalamayiCizDepolar(yeniToplamSayfa, depoPage);
+}
+
+function sirala(sutun) {
+    if (siralamaSutunu === sutun) {
+        siralamaYonu = siralamaYonu === 'asc' ? 'desc' : 'asc';
+    } else {
+        siralamaSutunu = sutun;
+        siralamaYonu = 'asc';
+    }
+
+    const sutunlar = { id: 'thId', name: 'thAd', address: 'thAdres' };
+    const metinler = { id: 'ID', name: 'Depo Adı', address: 'Adres' };
+
+    Object.keys(sutunlar).forEach(key => {
+        const el = document.getElementById(sutunlar[key]);
+        if (el) {
+            el.innerText = siralamaSutunu === key ? (siralamaYonu === 'asc' ? `${metinler[key]} ↑` : `${metinler[key]} ↓`) : `${metinler[key]} ↕`;
+        }
+    });
+
+    veriyiGuncelle();
+}
+
+if (document.getElementById("thId")) document.getElementById("thId").addEventListener("click", () => sirala("id"));
+if (document.getElementById("thAd")) document.getElementById("thAd").addEventListener("click", () => sirala("name"));
+if (document.getElementById("thAdres")) document.getElementById("thAdres").addEventListener("click", () => sirala("address"));
+
+document.getElementById("aramaKutusu").addEventListener("keyup", (event) => {
+    aktifArama = event.target.value.toLowerCase();
+    depoPage = 1;
+    veriyiGuncelle();
+});
+
+async function depolariYukle(page = 1) {
+    try {
+        const cevap = await fetch(`${API_URL}?pageNumber=1&pageSize=1000`, {
+>>>>>>> bb9ee96f24a4ac3dde1cfac7c4e5ee099673897a
             method: 'GET',
             headers: { "Authorization": `Bearer ${token}` }
         });
 
+<<<<<<< HEAD
         if (cevap.status === 401) return window.location.href = 'login.html';
         if (!cevap.ok) throw new Error("Sunucu hatası: " + cevap.status);
         
@@ -94,6 +167,93 @@ function sayfalamayiCizDepolar(totalPages, currentPage) {
 
 function depolariFiltreleVeCiz() {
     const aramaKutusu = document.getElementById("aramaKutusuDepo") || document.getElementById("aramaKutusu");
+=======
+        if (cevap.status === 401) { localStorage.removeItem('token'); window.location.href = 'login.html'; return; }
+        if (!cevap.ok) throw new Error("Sunucu hatası: " + cevap.status);
+
+        const sonuc = await cevap.json();
+        tumDepolar = sonuc.items || sonuc;
+        depoPage = page;
+
+        veriyiGuncelle();
+    } catch (hata) {
+        tabloGovdesi.innerHTML = `<tr><td colspan="4" class="text-center text-danger py-4">Depolar yüklenemedi. (${hata.message})</td></tr>`;
+    }
+}
+
+function tabloyuCiz(depolar) {
+    tabloGovdesi.innerHTML = "";
+
+    if (depolar.length === 0) {
+        tabloGovdesi.innerHTML = `<tr><td colspan="4" class="text-center text-muted py-4">Kayıt bulunamadı.</td></tr>`;
+        return;
+    }
+
+    let satirlar = [];
+    depolar.forEach(depo => {
+        let aksiyonButonlari = "";
+        let btnRaflar = hasPermission("Warehouse.Edit") || hasPermission("Warehouse.Add") || hasPermission("Location.Add") || hasPermission("Location.Delete") ? `<button class="btn btn-sm btn-outline-success rounded-pill btn-raflar" data-id="${depo.id}" data-name="${escapeHtml(depo.name)}">Raflar</button>` : "";
+        let btnDuzenle = hasPermission("Warehouse.Edit") ? `<button class="btn btn-sm btn-outline-primary rounded-pill btn-duzenle" data-id="${depo.id}">Düzenle</button>` : "";
+        let btnSil = hasPermission("Warehouse.Delete") ? `<button class="btn btn-sm btn-outline-danger rounded-pill btn-sil" data-id="${depo.id}">Sil</button>` : "";
+
+        if (btnRaflar || btnDuzenle || btnSil) {
+            aksiyonButonlari = `<td class="text-end">${btnRaflar} ${btnDuzenle} ${btnSil}</td>`;
+        }
+
+        const satir = `
+            <tr>
+                <td class="fw-bold">${depo.id}</td>
+                <td>${escapeHtml(depo.name)}</td>
+                <td>${escapeHtml(depo.address)}</td>
+                ${aksiyonButonlari}
+            </tr>`;
+        satirlar.push(satir);
+    });
+    tabloGovdesi.innerHTML = satirlar.join("");
+}
+
+// XSS koruması için html kaçırma fonksiyonu
+function escapeHtml(text) {
+    if (!text) return "";
+    return text.toString()
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
+
+// ============================================================================
+// 1. DEPO KARTLARI YÜKLEME, ARAMA, SIRALAMA VE YETKİ KONTROLÜ
+// ============================================================================
+
+async function depolariYukle() {
+    try {
+        const cevap = await fetch(API_URL, {
+            method: 'GET',
+            headers: { "Authorization": `Bearer ${token}` }
+        });
+
+        if (cevap.status === 401) {
+            localStorage.removeItem('token');
+            window.location.href = 'login.html';
+            return;
+        }
+
+        if (!cevap.ok) throw new Error("Sunucu hatası: " + cevap.status);
+        
+        tumDepolar = await cevap.json();
+        depolariFiltreleVeSila(); 
+    } catch (hata) {
+        const container = document.getElementById("depoKartlariContainer");
+        if(container) container.innerHTML = `<div class="col-12 text-center text-danger py-4">Depolar yüklenemedi. (${hata.message})</div>`;
+        console.error("Hata:", hata);
+    }
+}
+
+function depolariFiltreleVeSila() {
+    const aramaKutusu = document.getElementById("aramaKutusuDepo");
+>>>>>>> bb9ee96f24a4ac3dde1cfac7c4e5ee099673897a
     const siralama = document.getElementById("siralamaDepo")?.value || "URUN_COK";
     const aranan = aramaKutusu ? aramaKutusu.value.toLowerCase() : aktifArama;
 
@@ -530,11 +690,208 @@ function gecmisTablosunuGuncelle() {
 }
 
 // ============================================================================
+<<<<<<< HEAD
 // 5. YENİ: DEPO İÇİNDEN DİNAMİK ÜRÜN EKLEME MOTORU 
 // ============================================================================
 
 // Formu Sıfırlamak için Ortak Fonksiyon
 function modalIcinSifirla() {
+=======
+// 5. DEPO İÇİNDEN DİNAMİK ÜRÜN EKLEME (AKILLI RAF DOLDURMA MANTIĞIYLA)
+// ============================================================================
+
+document.getElementById("btnDepoKaydet")?.addEventListener("click", async () => {
+    const id = document.getElementById("depoId").value;
+    const name = document.getElementById("depoAdi").value;
+    const address = document.getElementById("depoAdres").value;
+    const btnKaydet = document.getElementById("btnDepoKaydet");
+
+    if (!name) return alert("Lütfen depo adı girin!");
+
+    const depoVerisi = { name, address };
+    const metod = id ? "PUT" : "POST";
+    const adres = id ? `${API_URL}/${id}` : API_URL;
+
+    try {
+        const orjinalMetin = btnKaydet.innerText;
+        btnKaydet.disabled = true;
+        btnKaydet.innerText = "Kaydediliyor...";
+
+        const cevap = await fetch(adres, {
+            method: metod,
+            headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+            body: JSON.stringify(depoVerisi)
+        });
+
+        if (cevap.status === 401) return window.location.href = 'login.html';
+        if (!cevap.ok) throw new Error("İşlem başarısız: " + cevap.status);
+
+        bootstrap.Modal.getInstance(document.getElementById("depoModal"))?.hide();
+        document.getElementById("depoFormu").reset();
+        document.getElementById("depoId").value = "";
+
+        aktifArama = "";
+        const aramaKutu = document.getElementById("aramaKutusu");
+        if (aramaKutu) aramaKutu.value = "";
+
+        depolariYukle(depoPage);
+        btnKaydet.disabled = false;
+        btnKaydet.innerText = "Ekle ve Kaydet";
+    } catch (hata) {
+        alert("İşlem başarısız: " + hata.message);
+    }
+});
+
+function depoDuzenle(id) {
+    const depo = tumDepolar.find(d => d.id === id);
+    if (!depo) return;
+
+    document.getElementById("depoId").value = depo.id;
+    document.getElementById("depoAdi").value = depo.name;
+    document.getElementById("depoAdres").value = depo.address;
+    document.getElementById("modalBaslik").innerText = "Depo Düzenle";
+    document.getElementById("btnDepoKaydet").innerText = "Güncelle";
+
+    bootstrap.Modal.getOrCreateInstance(document.getElementById("depoModal")).show();
+}
+
+async function depoSil(id) {
+    if (!confirm("Bu depoyu silmek istediğinize emin misiniz?")) return;
+
+    try {
+        const cevap = await fetch(`${API_URL}/${id}`, {
+            method: "DELETE",
+            headers: { "Authorization": `Bearer ${token}` }
+        });
+
+        if (cevap.status === 401) return window.location.href = 'login.html';
+        if (!cevap.ok) throw new Error("Silme başarısız: " + cevap.status);
+        
+        depolariYukle();
+    } catch (hata) {
+        alert("Depo silinemedi: " + hata.message);
+    }
+}
+
+document.querySelector('[data-bs-target="#depoModal"]')?.addEventListener("click", () => {
+    document.getElementById("depoFormu").reset();
+    document.getElementById("depoId").value = "";
+    document.getElementById("modalBaslik").innerText = "Yeni Depo Ekle";
+    document.getElementById("btnDepoKaydet").innerText = "Ekle ve Kaydet";
+});
+
+// ============================================================================
+// 5. YENİ: DEPO İÇİNDEN DİNAMİK ÜRÜN EKLEME MOTORU 
+// ============================================================================
+
+// Şu an raflarını gördüğümüz deponun id'si (raf eklerken lazım)
+let aktifDepoId = null;
+
+// "Raflar" butonuna basınca: o deponun raflarını çekip modalı açar
+async function raflariAc(depoId, depoAdi) {
+    aktifDepoId = depoId;
+    document.getElementById("raflarModalBaslik").innerText = depoAdi + " — Raflar";
+    document.getElementById("rafKodu").value = "";
+    await raflariYukle(depoId, 1);
+
+    const modalElement = document.getElementById("raflarModal");
+    const modalInstance = bootstrap.Modal.getOrCreateInstance(modalElement);
+    modalInstance.show();
+}
+
+async function raflariYukle(depoId, page = 1) {
+    const rafTabloGovdesi = document.getElementById("rafTablosuGovdesi");
+    try {
+        const cevap = await fetch(`${CONFIG.API_BASE_URL}/locations/by-warehouse/${depoId}?pageNumber=${page}&pageSize=${rafPageSize}`, {
+            method: 'GET',
+            headers: { "Authorization": `Bearer ${token}` }
+        });
+
+        if (!cevap.ok) throw new Error("Raflar alınamadı: " + cevap.status);
+
+        const sonuc = await cevap.json();
+        const raflar = sonuc.items || sonuc;
+        rafPage = page;
+
+        rafTabloGovdesi.innerHTML = "";
+
+        if (raflar.length === 0) {
+            rafTabloGovdesi.innerHTML = `<tr><td colspan="3" class="text-center text-muted py-3">Bu depoda henüz raf yok.</td></tr>`;
+            const container = document.getElementById("rafPaginationContainer");
+            if (container) container.innerHTML = "";
+            return;
+        }
+
+        let satirlar = [];
+        raflar.forEach(raf => {
+            let rafSilButonu = hasPermission("Location.Delete") ? `<button class="btn btn-sm btn-outline-danger rounded-pill btn-raf-sil" data-id="${raf.id}">Sil</button>` : "";
+            const satir = `
+                <tr>
+                    <td class="fw-bold">${raf.id}</td>
+                    <td>${escapeHtml(raf.code)}</td>
+                    <td class="text-end">${rafSilButonu}</td>
+                </tr>`;
+            satirlar.push(satir);
+        });
+        rafTabloGovdesi.innerHTML = satirlar.join("");
+        sayfalamayiCizRaflar(sonuc.totalPages || 1, rafPage, depoId);
+    } catch (hata) {
+        rafTabloGovdesi.innerHTML = `<tr><td colspan="3" class="text-center text-danger py-3">Raflar yüklenemedi. (${hata.message})</td></tr>`;
+    }
+}
+
+function sayfalamayiCizRaflar(totalPages, currentPage, depoId) {
+    const container = document.getElementById("rafPaginationContainer");
+    if (!container) return;
+    if (totalPages <= 1) { container.innerHTML = ""; return; }
+
+    let html = `<nav><ul class="pagination pagination-sm m-0 shadow-sm justify-content-center mt-3">`;
+    html += `<li class="page-item ${currentPage === 1 ? 'disabled' : ''}"><a class="page-link raf-page-action" href="#" data-page="${currentPage - 1}">« Önceki</a></li>`;
+
+    for (let i = 1; i <= totalPages; i++) {
+        if (totalPages > 7) {
+            if (i === 1 || i === totalPages || (i >= currentPage - 1 && i <= currentPage + 1)) {
+                html += `<li class="page-item ${currentPage === i ? 'active' : ''}"><a class="page-link raf-page-action" href="#" data-page="${i}">${i}</a></li>`;
+            } else if (i === 2 || i === totalPages - 1) {
+                html += `<li class="page-item disabled"><span class="page-link text-muted">...</span></li>`;
+            }
+        } else {
+            html += `<li class="page-item ${currentPage === i ? 'active' : ''}"><a class="page-link raf-page-action" href="#" data-page="${i}">${i}</a></li>`;
+        }
+    }
+
+    html += `<li class="page-item ${currentPage === totalPages ? 'disabled' : ''}"><a class="page-link raf-page-action" href="#" data-page="${currentPage + 1}">Sonraki »</a></li>`;
+    html += `</ul></nav>`;
+    container.innerHTML = html;
+}
+
+document.getElementById("rafPaginationContainer").addEventListener("click", (e) => {
+    e.preventDefault();
+    const btn = e.target.closest(".raf-page-action");
+    if (btn) {
+        const parentLi = btn.closest(".page-item");
+        if (parentLi && (parentLi.classList.contains("disabled") || parentLi.classList.contains("active"))) return;
+
+        const page = parseInt(btn.getAttribute("data-page"));
+        if (!isNaN(page) && aktifDepoId) raflariYukle(aktifDepoId, page);
+    }
+});
+
+document.getElementById("rafFormu").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const code = document.getElementById("rafKodu").value;
+    const btnKaydet = document.getElementById("btnRafEkle");
+
+    if (!code) {
+        alert("Lütfen raf kodu girin!");
+        return;
+    }
+
+    const depoIsmi = document.getElementById("seciliDepoAdi")?.innerText || "Seçili Depo";
+    const sabitDepoGirdisi = document.getElementById("urunSabitDepoAdi");
+    if (sabitDepoGirdisi) sabitDepoGirdisi.value = depoIsmi;
+
+>>>>>>> bb9ee96f24a4ac3dde1cfac7c4e5ee099673897a
     const form = document.getElementById("depoIciUrunFormu");
     if (form) form.reset();
     
