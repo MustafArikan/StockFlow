@@ -114,6 +114,17 @@
                                 <option value="">Kategori seçin...</option>
                             </select>
                         </div>
+                        
+                        <div class="mb-3" id="rafSecimiAlani">
+                            <label class="form-label text-muted small fw-bold">Yerleştirilecek Raf (Zorunlu)</label>
+                            <select class="form-select" id="urunRafId">
+                                <option value="">Yükleniyor...</option>
+                            </select>
+                        </div>
+                        <div class="mb-4" id="baslangicStokAlani">
+                            <label class="form-label text-muted small fw-bold">Başlangıç Stok Adedi</label>
+                            <input type="number" class="form-control" id="urunBaslangicStok" placeholder="Örn: 10" min="0" value="0">
+                        </div>
                         <button type="button" id="btnUrunKaydet"
                             class="btn btn-primary w-100 rounded-pill py-2 fw-bold">Ekle ve Kaydet</button>
                     </form>

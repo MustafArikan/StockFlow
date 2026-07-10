@@ -79,7 +79,7 @@ public class CategoriesController : ControllerBase
         if (category== null)
         return NotFound();
 
-        _context.Categories.Remove(category);
+        category.IsDeleted = true; // Soft delete
         await _context.SaveChangesAsync();
         return NoContent();
     }

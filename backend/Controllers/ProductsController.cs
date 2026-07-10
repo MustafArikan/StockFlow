@@ -89,7 +89,7 @@ public class ProductsController : ControllerBase
 
     // PUT /api/products/5 : mecvut ürünü güncelle 
     [HttpPut("{id}")]
-    public async Task<IActionResult> Update(int id, CreateProductDto dto)
+    public async Task<IActionResult> Update(int id, UpdateProductDto dto)
     {
         var product = await _context.Products.FindAsync(id);
         if (product == null || product.IsDeleted)

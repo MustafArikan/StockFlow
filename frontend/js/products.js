@@ -223,6 +223,8 @@ document.getElementById("btnUrunKaydet").addEventListener("click", async () => {
     const barcode = document.getElementById("urunBarkod").value;
     const minStockLevel = document.getElementById("urunMinStok").value;
     const categoryId = document.getElementById("urunKategoriId").value;
+    const targetLocationId = document.getElementById("urunRafId")?.value;
+    const initialQuantity = document.getElementById("urunBaslangicStok")?.value;
     const btnKaydet = document.getElementById("btnUrunKaydet");
 
     if (!name) {
@@ -234,7 +236,9 @@ document.getElementById("btnUrunKaydet").addEventListener("click", async () => {
         name: name,
         barcode: barcode,
         minStockLevel: parseInt(minStockLevel) || 0,
-        categoryId: parseInt(categoryId) || null
+        categoryId: parseInt(categoryId) || null,
+        targetLocationId: parseInt(targetLocationId) || 0,
+        initialQuantity: parseInt(initialQuantity) || 0
     };
 
     const metod = id ? "PUT" : "POST";
@@ -311,6 +315,8 @@ function urunDuzenle(id) {
     document.getElementById("urunKategoriId").value = urun.categoryId || "";
 
     document.getElementById("modalBaslik").innerText = "Ürün Düzenle";
+    document.getElementById("rafSecimiAlani").classList.add("d-none");
+    document.getElementById("baslangicStokAlani").classList.add("d-none");
     document.getElementById("btnUrunKaydet").innerText = "Güncelle";
 
     const modalElement = document.getElementById("urunModal");
@@ -330,6 +336,8 @@ document.querySelector('[data-bs-target="#urunModal"]').addEventListener("click"
     document.getElementById("urunFormu").reset();
     document.getElementById("urunId").value = "";
     document.getElementById("modalBaslik").innerText = "Yeni Ürün Ekle";
+    document.getElementById("rafSecimiAlani").classList.remove("d-none");
+    document.getElementById("baslangicStokAlani").classList.remove("d-none");
     document.getElementById("btnUrunKaydet").innerText = "Ekle ve Kaydet";
 });
 
@@ -344,3 +352,29 @@ if (!hasPermission("Product.Edit") && !hasPermission("Product.Delete")) {
 
 urunleriYukle(currentPage);
 dropdownKategorileriniYukle();
+
+async function dropdownRaflariYukle() {
+    try {
+        const cevap = await fetch(`${CONFIG.API_BASE_URL}/locations?pageSize=1000`, {
+            method: "GET",
+            headers: { "Authorization": `Bearer ${token}` }
+        });
+        if (!cevap.ok) throw new Error("Raflar alınamadı.");
+        const data = await cevap.json();
+        const raflar = data.items || data;
+        const select = document.getElementById("urunRafId");
+        if (select) {
+            select.innerHTML = '<option value="">Raf seçin...</option>';
+            raflar.forEach(raf => {
+                const option = document.createElement("option");
+                option.value = raf.id;
+                option.textContent = raf.code;
+                select.appendChild(option);
+            });
+        }
+    } catch (hata) {
+        console.error("Raf dropdown yükleme hatası:", hata);
+    }
+}
+
+dropdownRaflariYukle();

@@ -83,11 +83,11 @@ function sayfalamayiCizDepolar(totalPages, currentPage) {
     if (totalPages <= 1) { container.innerHTML = ""; return; }
 
     let html = `<nav><ul class="pagination pagination-sm m-0 justify-content-center mt-3">`;
-    html += `<li class="page-item ${currentPage === 1 ? 'disabled' : ''}"><button class="page-link text-dark" onclick="depolariYukle(${currentPage - 1})">Önceki</button></li>`;
+    html += `<li class="page-item ${currentPage === 1 ? 'disabled' : ''}"><button data-page="${currentPage - 1}" class="page-link text-dark btn-depo-page">Önceki</button></li>`;
     for (let i = 1; i <= totalPages; i++) {
-        html += `<li class="page-item ${currentPage === i ? 'active' : ''}"><button class="page-link ${currentPage === i ? 'bg-dark border-dark text-white' : 'text-dark'}" onclick="depolariYukle(${i})">${i}</button></li>`;
+        html += `<li class="page-item ${currentPage === i ? 'active' : ''}"><button data-page="${i}" class="page-link ${currentPage === i ? 'bg-dark border-dark text-white' : 'text-dark'} btn-depo-page">${i}</button></li>`;
     }
-    html += `<li class="page-item ${currentPage === totalPages ? 'disabled' : ''}"><button class="page-link text-dark" onclick="depolariYukle(${currentPage + 1})">Sonraki</button></li>`;
+    html += `<li class="page-item ${currentPage === totalPages ? 'disabled' : ''}"><button data-page="${currentPage + 1}" class="page-link text-dark btn-depo-page">Sonraki</button></li>`;
     html += `</ul></nav>`;
     container.innerHTML = html;
 }
@@ -126,12 +126,12 @@ function depolariFiltreleVeCiz() {
 
     filtrelenmis.forEach(depo => {
         const silİkonu = (typeof hasPermission === "function" && hasPermission("Warehouse.Delete")) 
-            ? `<button class="btn btn-sm btn-light text-danger shadow-sm rounded-circle me-1 border" title="Depoyu Sil" onclick="event.stopPropagation(); depoSil(${depo.id}, '${escapeHtml(depo.name)}')">🗑️</button>`
-            : `<button class="btn btn-sm btn-light text-danger shadow-sm rounded-circle me-1 border" title="Depoyu Sil" onclick="event.stopPropagation(); depoSil(${depo.id}, '${escapeHtml(depo.name)}')">🗑️</button>`;
+            ? `<button class="btn btn-sm btn-light text-danger shadow-sm rounded-circle me-1 border btn-depo-sil" title="Depoyu Sil" data-id="${depo.id}" data-name="${escapeHtml(depo.name)}">🗑️</button>`
+            : "";
             
         const duzenleİkonu = (typeof hasPermission === "function" && hasPermission("Warehouse.Edit")) 
-            ? `<button class="btn btn-sm btn-light text-primary shadow-sm rounded-circle border" title="Düzenle" onclick="event.stopPropagation(); depoDuzenle(${depo.id})">✏️</button>`
-            : `<button class="btn btn-sm btn-light text-primary shadow-sm rounded-circle border" title="Düzenle" onclick="event.stopPropagation(); depoDuzenle(${depo.id})">✏️</button>`;
+            ? `<button class="btn btn-sm btn-light text-primary shadow-sm rounded-circle border btn-depo-duzenle" title="Düzenle" data-id="${depo.id}">✏️</button>`
+            : "";
 
         let icon = "🏭"; 
         const depoAdiKucuk = depo.name.toLowerCase();
@@ -142,7 +142,7 @@ function depolariFiltreleVeCiz() {
 
         const cardHtml = `
             <div class="col-md-4">
-                <div class="card h-100 border border-light-subtle shadow-sm rounded-4 text-center p-4 position-relative depo-karti" onclick="raflariGoruntule(${depo.id}, '${escapeHtml(depo.name)}')">
+                <div class="card h-100 border border-light-subtle shadow-sm rounded-4 text-center p-4 position-relative depo-karti" data-id="${depo.id}" data-name="${escapeHtml(depo.name)}">
                     <div class="position-absolute top-0 end-0 m-3 d-flex">
                         ${silİkonu} ${duzenleİkonu}
                     </div>
@@ -213,7 +213,7 @@ document.getElementById("btnDepoKaydet")?.addEventListener("click", async () => 
 });
 
 function depoDuzenle(id) {
-    const depo = tumDepolar.find(d => d.id === id);
+    const depo = tumDepolar.find(d => d.id == id);
     if (!depo) return;
     document.getElementById("depoId").value = depo.id;
     document.getElementById("depoAdi").value = depo.name;
@@ -308,8 +308,8 @@ async function raflariSayfaliYukle(depoId, page = 1) {
                     <td class="ps-4 fw-bold text-muted small">${raf.id}</td>
                     <td class="fw-bold text-primary">${escapeHtml(raf.code)}</td>
                     <td class="text-end pe-4">
-                        <button class="btn btn-sm btn-outline-danger rounded-circle me-2" title="Rafı Sil" onclick="rafSil(${raf.id}, '${escapeHtml(raf.code)}')">🗑️</button>
-                        <button class="btn btn-sm btn-dark rounded-pill px-3 shadow-sm fw-bold" onclick="raftakiUrunleriGoruntule(${raf.id}, '${escapeHtml(raf.code)}')">Raftaki Ürünleri Görüntüle ➔</button>
+                        <button class="btn btn-sm btn-outline-danger rounded-circle me-2 btn btn-sm btn-outline-danger rounded-circle me-2 btn-raf-sil" title="Rafı Sil" data-id="${raf.id}" data-code="${escapeHtml(raf.code)}" >🗑️</button>
+                        <button data-id="${raf.id}" data-code="${escapeHtml(raf.code)}" class="btn btn-sm btn-dark rounded-pill px-3 shadow-sm fw-bold btn-raftaki-urunler">Raftaki Ürünleri Görüntüle ➔</button>
                     </td>
                 </tr>`;
         });
@@ -330,16 +330,16 @@ document.getElementById("rafAramaSelect")?.addEventListener("change", function()
 });
 
 function sayfalamayiCizRaflar(totalPages, currentPage, depoId) {
-    const container = document.getElementById("rafSayfalamaContainer") || document.getElementById("rafPaginationContainer");
+    const container = document.getElementById("rafSayfalamaContainer") || document.getElementById("rafSayfalamaContainer");
     if (!container) return;
     if (totalPages <= 1) { container.innerHTML = ""; return; }
 
     let html = `<nav><ul class="pagination pagination-sm m-0 justify-content-center mt-3">`;
-    html += `<li class="page-item ${currentPage === 1 ? 'disabled' : ''}"><button class="page-link text-dark" onclick="raflariSayfaliYukle(${depoId}, ${currentPage - 1})">Önceki</button></li>`;
+    html += `<li class="page-item ${currentPage === 1 ? 'disabled' : ''}"><button data-page="${currentPage - 1}" data-depoid="${depoId}" class="page-link text-dark btn-raf-page">Önceki</button></li>`;
     for (let i = 1; i <= totalPages; i++) {
-        html += `<li class="page-item ${currentPage === i ? 'active' : ''}"><button class="page-link ${currentPage === i ? 'bg-dark border-dark text-white' : 'text-dark'}" onclick="raflariSayfaliYukle(${depoId}, ${i})">${i}</button></li>`;
+        html += `<li class="page-item ${currentPage === i ? 'active' : ''}"><button data-page="${i}" data-depoid="${depoId}" class="page-link ${currentPage === i ? 'bg-dark border-dark text-white' : 'text-dark'} btn-raf-page">${i}</button></li>`;
     }
-    html += `<li class="page-item ${currentPage === totalPages ? 'disabled' : ''}"><button class="page-link text-dark" onclick="raflariSayfaliYukle(${depoId}, ${currentPage + 1})">Sonraki</button></li>`;
+    html += `<li class="page-item ${currentPage === totalPages ? 'disabled' : ''}"><button data-page="${currentPage + 1}" data-depoid="${depoId}" class="page-link text-dark btn-raf-page">Sonraki</button></li>`;
     html += `</ul></nav>`;
     container.innerHTML = html;
 }
@@ -362,11 +362,10 @@ async function rafSil(rafId, rafKodu) {
     }
 }
 
-const rafFormu = document.getElementById("rafFormu");
-if (rafFormu) {
-    rafFormu.addEventListener("submit", async (e) => {
-        e.preventDefault();
-        const code = document.getElementById("modalRafKodu")?.value || document.getElementById("rafKodu")?.value;
+const btnRafKaydetModal = document.getElementById("btnRafKaydetModal");
+if (btnRafKaydetModal) {
+    btnRafKaydetModal.addEventListener("click", async (e) => {
+        const code = document.getElementById("modalRafKodu")?.value || document.getElementById("modalRafKodu")?.value;
         if (!code) return alert("Raf kodu giriniz!");
 
         try {
@@ -377,7 +376,7 @@ if (rafFormu) {
             });
             if (!cevap.ok) throw new Error("Raf eklenemedi");
 
-            const modalInstance = bootstrap.Modal.getInstance(document.getElementById("rafEkleModal")) || bootstrap.Modal.getInstance(document.getElementById("raflarModal"));
+            const modalInstance = bootstrap.Modal.getInstance(document.getElementById("rafEkleModal")) || bootstrap.Modal.getInstance(document.getElementById("rafEkleModal"));
             if (modalInstance) modalInstance.hide();
             
             if (document.getElementById("modalRafKodu")) document.getElementById("modalRafKodu").value = "";
@@ -455,7 +454,7 @@ function urunleriFiltreleVeSila() {
                 <td><span class="badge bg-light text-secondary border">${escapeHtml(urun.categoryName || "-")}</span></td>
                 <td class="text-center fw-bold ${miktarRenk}">${urun.stockQuantity}</td>
                 <td class="text-end pe-4">
-                    <button class="btn btn-sm btn-outline-dark rounded-pill px-3 fw-bold" onclick="stokGecmisiniAc(${urun.id}, '${escapeHtml(urun.name)}')">Stok Hareketlerini Görüntüle</button>
+                    <button data-id="${urun.id}" data-name="${escapeHtml(urun.name)}" class="btn btn-sm btn-outline-dark rounded-pill px-3 fw-bold btn-stok-gecmisi">Stok Hareketlerini Görüntüle</button>
                 </td>
             </tr>`;
     });
@@ -547,7 +546,7 @@ function modalIcinSifirla() {
     if (document.getElementById("depoIciUrunIlkStok")) document.getElementById("depoIciUrunIlkStok").value = "0";
     if (document.getElementById("depoIciUrunMinStok")) document.getElementById("depoIciUrunMinStok").value = "5";
     
-    const depoIsmi = document.getElementById("seciliDepoAdiRaflaricin")?.innerText || document.getElementById("seciliDepoAdi")?.innerText || "Seçili Depo";
+    const depoIsmi = document.getElementById("seciliDepoAdiRaflaricin")?.innerText || document.getElementById("seciliDepoAdiRaflaricin")?.innerText || "Seçili Depo";
     const sabitDepoGirdisi = document.getElementById("urunSabitDepoAdi");
     if (sabitDepoGirdisi) sabitDepoGirdisi.value = depoIsmi;
 }
@@ -608,17 +607,17 @@ async function depoIciKategorileriYukle() {
             container.className = "input-group mt-2 d-none";
             container.innerHTML = `
                 <input type="text" id="yeniKategoriAdi" class="form-control form-control-sm border-success" placeholder="Yeni kategori adını yazın...">
-                <button class="btn btn-sm btn-success fw-bold" type="button" onclick="hizliKategoriKaydet()">Kaydet</button>
-                <button class="btn btn-sm btn-outline-secondary" type="button" onclick="hizliKategoriIptal()">İptal</button>
+                <button class="btn btn-sm btn-success fw-bold" type="button" id="btnHizliKategoriKaydet">Kaydet</button>
+                <button class="btn btn-sm btn-outline-secondary" type="button" id="btnHizliKategoriIptal">İptal</button>
             `;
             select.parentNode.insertBefore(container, select.nextSibling);
 
             select.addEventListener("change", function() {
                 if (this.value === "YENI_KATEGORI") {
-                    document.getElementById("yeniKategoriAlani").classList.remove("d-none");
+                    document.getElementById("yeniKategoriAlani")?.classList.remove("d-none");
                     document.getElementById("yeniKategoriAdi").focus();
                 } else {
-                    document.getElementById("yeniKategoriAlani").classList.add("d-none");
+                    document.getElementById("yeniKategoriAlani")?.classList.add("d-none");
                 }
             });
         }
@@ -639,12 +638,12 @@ async function hizliKategoriKaydet() {
         const data = await cevap.json();
         await depoIciKategorileriYukle();
         if(data.id) document.getElementById("depoIciUrunKategoriId").value = data.id; 
-        document.getElementById("yeniKategoriAlani").classList.add("d-none");
+        document.getElementById("yeniKategoriAlani")?.classList.add("d-none");
     } catch(e) { alert("Hata: " + e.message); }
 }
 
 function hizliKategoriIptal() {
-    document.getElementById("yeniKategoriAlani").classList.add("d-none");
+    document.getElementById("yeniKategoriAlani")?.classList.add("d-none");
     document.getElementById("depoIciUrunKategoriId").value = ""; 
 }
 
@@ -666,17 +665,17 @@ async function depoIciRaflariYukle(depoId) {
             container.className = "input-group mt-2 d-none";
             container.innerHTML = `
                 <input type="text" id="yeniRafKodu" class="form-control form-control-sm border-success" placeholder="Örn: RAF-X1">
-                <button class="btn btn-sm btn-success fw-bold" type="button" onclick="hizliRafKaydet()">Kaydet</button>
-                <button class="btn btn-sm btn-outline-secondary" type="button" onclick="hizliRafIptal()">İptal</button>
+                <button class="btn btn-sm btn-success fw-bold" type="button" id="btnHizliRafKaydet">Kaydet</button>
+                <button class="btn btn-sm btn-outline-secondary" type="button" id="btnHizliRafIptal">İptal</button>
             `;
             select.parentNode.insertBefore(container, select.nextSibling);
 
             select.addEventListener("change", function() {
                 if (this.value === "YENI_RAF") {
-                    document.getElementById("yeniRafAlani").classList.remove("d-none");
+                    document.getElementById("yeniRafAlani")?.classList.remove("d-none");
                     document.getElementById("yeniRafKodu").focus();
                 } else {
-                    document.getElementById("yeniRafAlani").classList.add("d-none");
+                    document.getElementById("yeniRafAlani")?.classList.add("d-none");
                 }
             });
         }
@@ -700,13 +699,13 @@ async function hizliRafKaydet() {
         const rafSelect = document.getElementById("depoIciUrunRafId");
         if(data.id) rafSelect.value = data.id; 
         
-        document.getElementById("yeniRafAlani").classList.add("d-none");
+        document.getElementById("yeniRafAlani")?.classList.add("d-none");
         raflariSayfaliYukle(aktifDepoId, rafPage);
     } catch(e) { alert("Hata: " + e.message); }
 }
 
 function hizliRafIptal() {
-    document.getElementById("yeniRafAlani").classList.add("d-none");
+    document.getElementById("yeniRafAlani")?.classList.add("d-none");
     document.getElementById("depoIciUrunRafId").value = ""; 
 }
 
@@ -781,4 +780,93 @@ document.getElementById("btnGeriDonRaflara")?.addEventListener("click", () => {
 document.addEventListener("DOMContentLoaded", () => {
     kullaniciBilgisiniDoldur();
     depolariYukle();
+});
+
+// --- EVENT DELEGATION ---
+document.addEventListener("DOMContentLoaded", () => {
+    // 1. Depo Kartları ve Butonları
+    const depoKartlariContainer = document.getElementById("depoKartlariContainer");
+    if (depoKartlariContainer) {
+        depoKartlariContainer.addEventListener("click", (e) => {
+            const btnSil = e.target.closest(".btn-depo-sil");
+            if (btnSil) {
+                e.stopPropagation();
+                depoSil(btnSil.getAttribute("data-id"), btnSil.getAttribute("data-name"));
+                return;
+            }
+            const btnDuzenle = e.target.closest(".btn-depo-duzenle");
+            if (btnDuzenle) {
+                e.stopPropagation();
+                depoDuzenle(btnDuzenle.getAttribute("data-id"));
+                return;
+            }
+            const card = e.target.closest(".depo-karti");
+            if (card) {
+                raflariGoruntule(card.getAttribute("data-id"), card.getAttribute("data-name"));
+            }
+        });
+    }
+
+    // 2. Depo Sayfalama
+    const depoPaginationContainer = document.getElementById("depoPaginationContainer");
+    if (depoPaginationContainer) {
+        depoPaginationContainer.addEventListener("click", (e) => {
+            const btn = e.target.closest(".btn-depo-page");
+            if (btn) {
+                const parent = btn.parentElement;
+                if (!parent.classList.contains("disabled") && !parent.classList.contains("active")) {
+                    depolariYukle(parseInt(btn.getAttribute("data-page")));
+                }
+            }
+        });
+    }
+
+    // 3. Raf Tablosu (Sil & Görüntüle)
+    const rafTablosuGovdesi = document.getElementById("rafTablosuGovdesi");
+    if (rafTablosuGovdesi) {
+        rafTablosuGovdesi.addEventListener("click", (e) => {
+            const btnSil = e.target.closest(".btn-raf-sil");
+            if (btnSil) {
+                rafSil(btnSil.getAttribute("data-id"), btnSil.getAttribute("data-code"));
+                return;
+            }
+            const btnGoruntule = e.target.closest(".btn-raftaki-urunler");
+            if (btnGoruntule) {
+                raftakiUrunleriGoruntule(btnGoruntule.getAttribute("data-id"), btnGoruntule.getAttribute("data-code"));
+            }
+        });
+    }
+
+    // 4. Raf Sayfalama
+    const rafSayfalamaContainer = document.getElementById("rafSayfalamaContainer");
+    if (rafSayfalamaContainer) {
+        rafSayfalamaContainer.addEventListener("click", (e) => {
+            const btn = e.target.closest(".btn-raf-page");
+            if (btn) {
+                const parent = btn.parentElement;
+                if (!parent.classList.contains("disabled") && !parent.classList.contains("active")) {
+                    raflariSayfaliYukle(btn.getAttribute("data-depoid"), parseInt(btn.getAttribute("data-page")));
+                }
+            }
+        });
+    }
+
+    // 5. Ürün Stok Geçmişi
+    const seciliRafUrunleriTabloGovdesi = document.getElementById("urunTablosuGovdesi");
+    if (seciliRafUrunleriTabloGovdesi) {
+        document.getElementById("urunTablosuGovdesi").addEventListener("click", (e) => {
+            const btnGecmis = e.target.closest(".btn-stok-gecmisi");
+            if (btnGecmis) {
+                stokGecmisiniAc(btnGecmis.getAttribute("data-id"), btnGecmis.getAttribute("data-name"));
+            }
+        });
+    }
+
+    // 6. Modal İçi Hızlı Kayıt Butonları
+    document.body.addEventListener("click", (e) => {
+        if (e.target.id === "btnHizliKategoriKaydet") hizliKategoriKaydet();
+        if (e.target.id === "btnHizliKategoriIptal") hizliKategoriIptal();
+        if (e.target.id === "btnHizliRafKaydet") hizliRafKaydet();
+        if (e.target.id === "btnHizliRafIptal") hizliRafIptal();
+    });
 });

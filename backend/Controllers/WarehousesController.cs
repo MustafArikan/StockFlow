@@ -128,7 +128,7 @@ public class WarehousesController : ControllerBase
             return BadRequest("Bu depoda raflar var. Önce onları silmelisiniz.");
         }
 
-        _context.Warehouses.Remove(warehouse);
+        warehouse.IsDeleted = true; // Soft delete
         await _context.SaveChangesAsync();
         return NoContent();
     }

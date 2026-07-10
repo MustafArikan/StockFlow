@@ -326,6 +326,7 @@ function formuDenetle() {
     if (gecerli) {
         if (tip === "GIRIS" && targetLoc === "") gecerli = false;
         else if (tip === "CIKIS" && sourceLoc === "") gecerli = false;
+        else if (tip === "TRANSFER" && (sourceLoc === "" || targetLoc === "" || sourceLoc === targetLoc)) gecerli = false;
     }
     kaydetButonu.disabled = !gecerli;
 }
@@ -341,6 +342,8 @@ document.getElementById("islemTipi").addEventListener("change", (e) => {
     } else if (tip === "CIKIS") {
         sourceGroup.classList.remove("d-none"); targetGroup.classList.add("d-none");
         document.getElementById("targetLocationId").value = "";
+    } else if (tip === "TRANSFER") {
+        sourceGroup.classList.remove("d-none"); targetGroup.classList.remove("d-none");
     }
     formuDenetle();
 });
@@ -362,11 +365,11 @@ document.getElementById("stokIslemFormu").addEventListener("submit", async (e) =
 
     const payload = {
         productBarcode: barcode,
-        movementType: tip === "GIRIS" ? "IN" : "OUT",
+        movementType: tip === "GIRIS" ? "IN" : tip === "CIKIS" ? "OUT" : "TRANSFER",
         quantity: qty,
-        sourceLocationId: (tip === "CIKIS" && sourceLocVal) ? parseInt(sourceLocVal) : null,
-        targetLocationId: (tip === "GIRIS" && targetLocVal) ? parseInt(targetLocVal) : null,
-        description: tip === "GIRIS" ? "Stok Girişi" : "Stok Çıkışı"
+        sourceLocationId: ((tip === "CIKIS" || tip === "TRANSFER") && sourceLocVal) ? parseInt(sourceLocVal) : null,
+        targetLocationId: ((tip === "GIRIS" || tip === "TRANSFER") && targetLocVal) ? parseInt(targetLocVal) : null,
+        description: tip === "GIRIS" ? "Stok Girişi" : tip === "CIKIS" ? "Stok Çıkışı" : "Raf Arası Transfer"
     };
 
     try {
