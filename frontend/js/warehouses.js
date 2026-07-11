@@ -266,6 +266,45 @@ async function raflariGoruntule(depoId, depoIsmi) {
     
     document.getElementById("seciliDepoAdiRaflaricin").innerText = depoIsmi;
     await raflariSayfaliYukle(depoId, 1);
+    
+    // 📊 Kutu İstatistiklerini Güncelle (Toplam Çeşit ve Kritik Stok)
+    try {
+        const depoCevap = await fetch(`${CONFIG.API_BASE_URL}/warehouses/${depoId}/stocks`, {
+            headers: { "Authorization": `Bearer ${token}` }
+        });
+        if (depoCevap.ok) {
+            const stocks = await depoCevap.json();
+            
+            // 1. Bu depodaki benzersiz (unique) ürün çeşidi sayısı
+            const uniqueProductIds = new Set(stocks.map(s => s.id || s.productId));
+            const kutuToplamUrun = document.getElementById("kutuToplamUrunDepo");
+            if (kutuToplamUrun) kutuToplamUrun.innerText = uniqueProductIds.size;
+            
+            // 2. Bu depoda bulunan ürünlerden hangileri global olarak kritik seviyenin altında?
+            let criticalCount = 0;
+            const productMap = new Map();
+            
+            stocks.forEach(s => {
+                let pid = s.id || s.productId;
+                if (!productMap.has(pid)) {
+                    let globalQty = s.globalStockQuantity !== undefined ? s.globalStockQuantity : (s.stockQuantity || s.quantity);
+                    let minLvl = s.minStockLevel || 5;
+                    productMap.set(pid, { globalStock: globalQty, minStock: minLvl });
+                }
+            });
+            
+            productMap.forEach(val => {
+                if (val.globalStock <= val.minStock) {
+                    criticalCount++;
+                }
+            });
+            
+            const kutuKritik = document.getElementById("kutuKritikStokDepo");
+            if (kutuKritik) kutuKritik.innerText = criticalCount;
+        }
+    } catch(e) {
+        console.error("Depo kutu istatistikleri yüklenirken hata:", e);
+    }
 }
 
 async function raflariSayfaliYukle(depoId, page = 1) {
@@ -424,15 +463,22 @@ function urunleriFiltreleVeSila() {
     const siralama = document.getElementById("siralamaUrun")?.value || "SON_ISLEM";
 
     let filtrelenmis = seciliRafUrunleri.filter(u => 
-        (u.name && u.name.toLowerCase().includes(arama)) ||
-        (u.barcode && u.barcode.toLowerCase().includes(arama))
+        ((u.name || u.productName) && (u.name || u.productName).toLowerCase().includes(arama)) ||
+        ((u.barcode || u.productCode) && (u.barcode || u.productCode).toLowerCase().includes(arama))
     );
 
     filtrelenmis.sort((a, b) => {
-        if (siralama === "A_Z") return a.name.localeCompare(b.name);
-        if (siralama === "MIKTAR_AZALAN") return b.stockQuantity - a.stockQuantity;
-        if (siralama === "MIKTAR_ARTAN") return a.stockQuantity - b.stockQuantity;
-        return b.id - a.id; 
+        let nameA = a.name || a.productName || "";
+        let nameB = b.name || b.productName || "";
+        let qtyA = a.stockQuantity !== undefined ? a.stockQuantity : a.quantity;
+        let qtyB = b.stockQuantity !== undefined ? b.stockQuantity : b.quantity;
+        let idA = a.id || a.productId;
+        let idB = b.id || b.productId;
+
+        if (siralama === "A_Z") return nameA.localeCompare(nameB);
+        if (siralama === "MIKTAR_AZALAN") return qtyB - qtyA;
+        if (siralama === "MIKTAR_ARTAN") return qtyA - qtyB;
+        return idB - idA; 
     });
 
     const tbody = document.getElementById("urunTablosuGovdesi");
@@ -443,18 +489,27 @@ function urunleriFiltreleVeSila() {
     }
 
     filtrelenmis.forEach(urun => {
-        const isKritik = urun.stockQuantity <= (urun.minStockLevel || 5);
+        let id = urun.id || urun.productId;
+        let name = urun.name || urun.productName;
+        let barcode = urun.barcode || urun.productCode;
+        let categoryName = urun.categoryName;
+        let stockQuantity = urun.stockQuantity !== undefined ? urun.stockQuantity : urun.quantity;
+        let globalStock = urun.globalStockQuantity !== undefined ? urun.globalStockQuantity : stockQuantity;
+        let minStockLevel = urun.minStockLevel || 5;
+
+        // 🎯 Kritik Stok Kontrolü artık RAFTAKİ miktara göre değil, TÜM DEPOLARDAKİ (Global) toplam miktara göre yapılıyor!
+        const isKritik = globalStock <= minStockLevel;
         const miktarRenk = isKritik ? "text-danger" : "text-success";
         
         tbody.innerHTML += `
             <tr>
-                <td class="ps-4 fw-bold text-muted small">${urun.id}</td>
-                <td class="fw-bold">${escapeHtml(urun.name)}</td>
-                <td><code class="text-secondary">${escapeHtml(urun.barcode)}</code></td>
-                <td><span class="badge bg-light text-secondary border">${escapeHtml(urun.categoryName || "-")}</span></td>
-                <td class="text-center fw-bold ${miktarRenk}">${urun.stockQuantity}</td>
+                <td class="ps-4 fw-bold text-muted small">${id}</td>
+                <td class="fw-bold">${escapeHtml(name)}</td>
+                <td><code class="text-secondary">${escapeHtml(barcode)}</code></td>
+                <td><span class="badge bg-light text-secondary border">${escapeHtml(categoryName || "-")}</span></td>
+                <td class="text-center fw-bold ${miktarRenk}">${stockQuantity}</td>
                 <td class="text-end pe-4">
-                    <button data-id="${urun.id}" data-name="${escapeHtml(urun.name)}" class="btn btn-sm btn-outline-dark rounded-pill px-3 fw-bold btn-stok-gecmisi">Stok Hareketlerini Görüntüle</button>
+                    <button data-id="${id}" data-name="${escapeHtml(name)}" class="btn btn-sm btn-outline-dark rounded-pill px-3 fw-bold btn-stok-gecmisi">Stok Hareketlerini Görüntüle</button>
                 </td>
             </tr>`;
     });
@@ -593,9 +648,10 @@ async function depoIciKategorileriYukle() {
     const select = document.getElementById("depoIciUrunKategoriId");
     if (!select) return;
     try {
-        const cevap = await fetch(`${CONFIG.API_BASE_URL}/categories`, { headers: { "Authorization": `Bearer ${token}` } });
+        const cevap = await fetch(`${CONFIG.API_BASE_URL}/categories?pageSize=1000`, { headers: { "Authorization": `Bearer ${token}` } });
         if (!cevap.ok) throw new Error("Kategoriler alınamadı");
-        const kategoriler = await cevap.json();
+        const sonuc = await cevap.json();
+        const kategoriler = sonuc.items || sonuc;
         
         select.innerHTML = '<option value="" selected disabled>Kategori seçin...</option>';
         kategoriler.forEach(k => { select.innerHTML += `<option value="${k.id}">${escapeHtml(k.name)}</option>`; });
@@ -651,9 +707,10 @@ async function depoIciRaflariYukle(depoId) {
     const select = document.getElementById("depoIciUrunRafId");
     if (!select) return;
     try {
-        const cevap = await fetch(`${CONFIG.API_BASE_URL}/locations/by-warehouse/${depoId}`, { headers: { "Authorization": `Bearer ${token}` } });
+        const cevap = await fetch(`${CONFIG.API_BASE_URL}/locations/by-warehouse/${depoId}?pageSize=1000`, { headers: { "Authorization": `Bearer ${token}` } });
         if (!cevap.ok) throw new Error("Raflar alınamadı");
-        const raflar = await cevap.json();
+        const sonuc = await cevap.json();
+        const raflar = sonuc.items || sonuc;
         
         select.innerHTML = '<option value="" selected disabled>Ürünün konulacağı rafı seçin...</option>';
         raflar.forEach(r => { select.innerHTML += `<option value="${r.id}">${escapeHtml(r.code)}</option>`; });
@@ -726,8 +783,11 @@ document.getElementById("btnDepoIciUrunKaydet")?.addEventListener("click", async
     }
 
     const urunPayload = {
-        Name: name, Barcode: barcode, MinStockLevel: parseInt(minStockLevel) || 0,
-        CategoryId: parseInt(categoryId), TargetLocationId: parseInt(targetLocationId),
+        Name: name, 
+        Barcode: barcode, 
+        MinStockLevel: parseInt(minStockLevel) || 0,
+        CategoryId: parseInt(categoryId), 
+        TargetLocationId: parseInt(targetLocationId),
         InitialQuantity: parseInt(initialQuantity) || 0
     };
 

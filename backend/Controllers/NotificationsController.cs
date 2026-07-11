@@ -43,12 +43,22 @@ namespace stok_takip.Controllers
                 return NotFound(new { message = "Notification not found."});
             }
 
-            if (notification.Severity == "DANGER")
+            if (notification.Severity == "DANGER" || notification.Severity == "EMPTY_STOCK")
             {
                 var userRole = User.FindFirst(ClaimTypes.Role)?.Value;
                 if (userRole != "admin")
                 {
-                    return BadRequest(new { message = "Only administrators can dismiss DANGER alert. Please contact your manager." });
+                    return BadRequest(new { message = "Only administrators can dismiss DANGER or EMPTY_STOCK alerts. Please contact your manager." });
+                }
+
+                // Log into the message itself to keep a permanent record
+                var userEmail = User.FindFirst(ClaimTypes.Email)?.Value 
+                    ?? User.FindFirst("http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress")?.Value 
+                    ?? "Admin";
+                
+                if (!notification.Message.Contains("[ONAYLAYAN:")) 
+                {
+                    notification.Message = $"[ONAYLAYAN: {userEmail} - {DateTime.Now:dd.MM.yyyy HH:mm}] {notification.Message}";
                 }
             }
 
@@ -66,6 +76,9 @@ namespace stok_takip.Controllers
             
             IQueryable<Notification> query = _context.Notifications.Where(n => !n.IsRead);
             
+            // EMPTY_STOCK kesinlikle tek tek "sonucunu anlıyorum" denerek onaylanmalı, toplu okundu yapılamaz!
+            query = query.Where(n => n.Severity != "EMPTY_STOCK");
+
             if (userRole != "admin")
             {
                 query = query.Where(n => n.Severity != "DANGER");

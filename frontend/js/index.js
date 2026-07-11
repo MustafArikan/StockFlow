@@ -122,30 +122,37 @@ function renderNavbarNotifications(notifications) {
     }
 
     const recentNotifications = notifications.slice(0, 4);
-    let htmlContent = "";
-
+    list.innerHTML = ""; // Clear existing first
+    
     recentNotifications.forEach(notification => {
-        let iconHtml = '<i class="bi bi-exclamation-triangle-fill text-warning me-2"></i>';
+        let iconClass = "bi-exclamation-triangle-fill text-warning";
         if (notification.severity === "CRITICAL") {
-            iconHtml = '<i class="bi bi-exclamation-circle-fill text-warning me-2 text-orange-custom"></i>';
-        } else if (notification.severity === "DANGER") {
-            iconHtml = '<i class="bi bi-shield-fill-x text-danger me-2"></i>';
+            iconClass = "bi-exclamation-circle-fill text-orange-custom";
+        } else if (notification.severity === "DANGER" || notification.severity === "EMPTY_STOCK") {
+            iconClass = "bi-shield-fill-x text-danger";
+        } else if (notification.severity === "INFO") {
+            iconClass = "bi-info-circle-fill text-secondary";
         }
-
-        htmlContent += `
-            <li class="p-2 border-bottom small rounded hover-bg">
-                <div class="d-flex align-items-start">
-                    ${iconHtml}
-                    <div class="flex-1-min-0">
-                        <p class="mb-0 text-dark text-truncate fs-085" title="${escapeHtml(notification.message)}">${escapeHtml(notification.message)}</p>
-                        <small class="text-muted fs-075">${new Date(notification.createdAt).toLocaleTimeString("tr-TR", {hour: '2-digit', minute:'2-digit'})}</small>
-                    </div>
+        
+        const li = document.createElement("li");
+        li.className = "p-2 border-bottom small rounded hover-bg";
+        
+        li.innerHTML = `
+            <div class="d-flex align-items-start">
+                <i class="bi ${iconClass} me-2"></i>
+                <div class="flex-1-min-0">
+                    <p class="mb-0 text-dark text-truncate fs-085 safe-message-container"></p>
+                    <small class="text-muted fs-075">${new Date(notification.createdAt).toLocaleTimeString("tr-TR", {hour: '2-digit', minute:'2-digit'})}</small>
                 </div>
-            </li>
+            </div>
         `;
+        
+        const msgContainer = li.querySelector(".safe-message-container");
+        msgContainer.title = notification.message;
+        msgContainer.textContent = notification.message; // GÜVENLİ XSS koruması
+        
+        list.appendChild(li);
     });
-
-    list.innerHTML = htmlContent;
 }
 
 async function markAllAsRead() {

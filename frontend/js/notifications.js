@@ -13,8 +13,8 @@ function getUserRole() {
     try {
         const payloadBase64 = token.split('.')[1];
         const payloadDecoded = JSON.parse(atob(payloadBase64));
-        // Retrieve role value from ASP.NET Core claims schema
-        return payloadDecoded["http://schemas.microsoft.com/ws/2008/06/identity/claims/role"] || "user";
+        // Retrieve role value from common ASP.NET Core claims schemas or standard keys
+        return payloadDecoded["http://schemas.microsoft.com/ws/2008/06/identity/claims/role"] || payloadDecoded["role"] || payloadDecoded["Role"] || "user";
     } catch (e) {
         return "user"; // Fallback to lowest privilege on error
     }
@@ -70,58 +70,59 @@ function renderNotifications(notificationsList) {
         return;
     }
 
-    let htmlContent = ""; // Accumulate row strings
+    listContainer.innerHTML = "";
 
     notificationsList.forEach(notification => {
         let borderClass = "alert-border-warning";
-        let iconHtml = '<i class="bi bi-exclamation-triangle-fill text-warning fs-4"></i>';
+        let iconClass = "bi-exclamation-triangle-fill text-warning fs-4";
         
         if (notification.severity === "CRITICAL") {
-            borderClass = "alert-border-critical";
-            iconHtml = '<i class="bi bi-exclamation-circle-fill text-orange fs-4 text-orange-custom"></i>';
-        } else if (notification.severity === "DANGER") {
+            borderClass = "alert-border-critical"; 
+            iconClass = "bi-exclamation-circle-fill fs-4 text-orange-custom";
+        } else if (notification.severity === "DANGER" || notification.severity === "EMPTY_STOCK") {
             borderClass = "alert-border-danger";
-            iconHtml = '<i class="bi bi-shield-fill-x text-danger fs-4"></i>';
+            iconClass = "bi-shield-fill-x text-danger fs-4";
+        } else if (notification.severity === "INFO") {
+            borderClass = "alert-border-secondary";
+            iconClass = "bi-info-circle-fill text-secondary fs-4";
         }
 
         const opacityClass = notification.isRead ? "opacity-50" : "";
         const isDanger = notification.severity === "DANGER";
         const isAdmin = userRole === "admin";
         
-        let buttonAttributes = "";
-        let buttonText = '<i class="bi bi-check2"></i> Okundu İşaretle';
-
+        const card = document.createElement("div");
+        card.className = `card border-0 shadow-sm rounded-3 p-3 notification-card ${borderClass} ${opacityClass}`;
+        
+        let buttonHtml = `<button class="btn btn-sm btn-outline-success rounded-pill px-3 fw-bold btn-read" data-id="${notification.id}" ${notification.isRead || (isDanger && !isAdmin) ? 'disabled' : ''}>`;
         if (notification.isRead) {
-            buttonAttributes = "disabled";
-            buttonText = "Okundu";
+            buttonHtml += `Okundu</button>`;
         } else if (isDanger && !isAdmin) {
-            buttonAttributes = "disabled";
-            buttonText = '<i class="bi bi-lock-fill"></i> Kilitli (Sadece Admin)';
+            buttonHtml += `<i class="bi bi-lock-fill"></i> Kilitli (Sadece Admin)</button>`;
+        } else {
+            buttonHtml += `<i class="bi bi-check2"></i> Okundu İşaretle</button>`;
         }
-
-        htmlContent += `
-            <div class="card border-0 shadow-sm rounded-3 p-3 notification-card ${borderClass} ${opacityClass}">
-                <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
-                    <div class="d-flex align-items-center gap-3">
-                        ${iconHtml}
-                        <div>
-                            <p class="mb-0 fw-semibold text-dark">${escapeHtml(notification.message)}</p>
-                            <small class="text-muted">${new Date(notification.createdAt).toLocaleString("tr-TR")}</small>
-                        </div>
-                    </div>
+        
+        card.innerHTML = `
+            <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                <div class="d-flex align-items-center gap-3">
+                    <i class="bi ${iconClass}"></i>
                     <div>
-                        <button class="btn btn-sm btn-outline-success rounded-pill px-3 fw-bold btn-read" 
-                                ${buttonAttributes} 
-                                data-id="${notification.id}">
-                            ${buttonText}
-                        </button>
+                        <p class="mb-0 fw-semibold text-dark safe-message-container"></p>
+                        <small class="text-muted">${new Date(notification.createdAt).toLocaleString("tr-TR")}</small>
                     </div>
+                </div>
+                <div>
+                    ${buttonHtml}
                 </div>
             </div>
         `;
+        
+        // GÜVENLİ: Tarayıcı otomatik escape yapar
+        card.querySelector('.safe-message-container').textContent = notification.message;
+        
+        listContainer.appendChild(card);
     });
-
-    listContainer.innerHTML = htmlContent;
 }
 
 // Olay Delege Etme (Event Delegation) - Satır içi onclick kaldırıldı

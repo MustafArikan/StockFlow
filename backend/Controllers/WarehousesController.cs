@@ -21,7 +21,6 @@ public class WarehousesController : ControllerBase
     {
         _context = context;
     }
-    // GET /api/warehouses/{id}/stocks
     [HttpGet("{id}/stocks")]
     public async Task<IActionResult> GetWarehouseStocks(int id)
     {
@@ -29,12 +28,14 @@ public class WarehousesController : ControllerBase
             .Where(sl => sl.Location.WarehouseId == id) // Raflar üzerinden depoya ulaşıyoruz
             .Select(sl => new 
             {
-                ProductId = sl.ProductId,
-                ProductName = sl.Product.Name,
-                ProductCode = sl.Product.Barcode,
-                Quantity = sl.Quantity,
+                Id = sl.ProductId,
+                Name = sl.Product.Name,
+                Barcode = sl.Product.Barcode,
+                StockQuantity = sl.Quantity,
+                GlobalStockQuantity = sl.Product.StockLevels.Sum(x => x.Quantity),
+                MinStockLevel = sl.Product.MinStockLevel,
                 LocationId = sl.LocationId, // Frontend'deki filtreleme için kritik!
-                CategoryName = sl.Product.Category.Name
+                CategoryName = sl.Product.Category != null ? sl.Product.Category.Name : null
             })
             .ToListAsync();
 
