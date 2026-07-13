@@ -71,6 +71,29 @@ namespace stok_takip.Controllers
             });
         }
 
+        // GET /api/stock/movements/product/{productId}
+        [HttpGet("product/{productId}")]
+        public async Task<IActionResult> GetMovementsByProduct(int productId)
+        {
+            var movements = await _context.StockMovements
+                .AsNoTracking()
+                .Include(m => m.User)
+                .Where(m => m.ProductId == productId)
+                .OrderByDescending(m => m.CreatedAt)
+                .Select(m => new
+                {
+                    m.Id,
+                    Date = m.CreatedAt, 
+                    MovementType = m.MovementType,
+                    Quantity = m.Quantity,
+                    Personel = m.User != null ? m.User.Email : "Sistem",
+                    Description = m.Description
+                })
+                .ToListAsync();
+
+            return Ok(movements);
+        }
+
         // 2. POST: Create a new stock movement (IN, OUT, or TRANSFER)
         [HttpPost]
         public async Task<IActionResult> CreateMovement([FromBody] StockMovementRequestDto dto)
@@ -235,9 +258,60 @@ namespace stok_takip.Controllers
 
                     _context.StockMovements.Add(movement);
                     await _context.SaveChangesAsync();
+
+                    // 🎯 Kritik Stok Kontrolü (Tüm depoların/rafların toplamını hesapla)
+                    var totalStock = await _context.StockLevels
+                        .Where(sl => sl.ProductId == product.Id && !sl.IsDeleted)
+                        .SumAsync(sl => (int?)sl.Quantity) ?? 0;
+
+                    if (totalStock <= product.MinStockLevel)
+                    {
+                        double percentage = product.MinStockLevel > 0 ? ((double)totalStock / product.MinStockLevel) * 100 : 0;
+                        string severity = "INFO";
+                        string msg = $"Bilgi: {product.Name} (Barkod: {product.Barcode}) kritik stok sınırında. (Mevcut: {totalStock})";
+
+                        if (totalStock == 0)
+                        {
+                            severity = "EMPTY_STOCK";
+                            msg = $"DİKKAT: {product.Name} (Barkod: {product.Barcode}) tamamen tükendi!";
+                        }
+                        else if (percentage < 20)
+                        {
+                            severity = "DANGER";
+                            msg = $"Çok Kritik: {product.Name} (Barkod: {product.Barcode}) stok seviyesi %20'nin altına indi! (Mevcut: {totalStock})";
+                        }
+                        else if (percentage <= 50)
+                        {
+                            severity = "CRITICAL";
+                            msg = $"Kritik: {product.Name} (Barkod: {product.Barcode}) stok seviyesi %50'nin altına indi! (Mevcut: {totalStock})";
+                        }
+                        else if (percentage <= 80)
+                        {
+                            severity = "WARNING";
+                            msg = $"Ön Uyarı: {product.Name} (Barkod: {product.Barcode}) stok seviyesi %80'in altına indi. (Mevcut: {totalStock})";
+                        }
+
+                        // Aynı ürün ve aynı zorluk seviyesi için okunmamış bir bildirim zaten varsa spamlama yapma
+                        var existingUnread = await _context.Notifications
+                            .AnyAsync(n => n.Type == "CRITICAL_STOCK" && !n.IsRead && n.Message.Contains(product.Barcode) && n.Severity == severity && !n.IsDeleted);
+                        
+                        if (!existingUnread)
+                        {
+                            var notification = new Notification
+                            {
+                                Message = msg,
+                                Type = "CRITICAL_STOCK",
+                                Severity = severity,
+                                IsRead = false
+                            };
+                            _context.Notifications.Add(notification);
+                            await _context.SaveChangesAsync();
+                        }
+                    }
+
                     await transaction.CommitAsync();
 
-                    return Ok(new { message = "Stock successfully removed.", movementId = movement.Id });
+                    return Ok(new { message = "Stock successfully deducted.", movementId = movement.Id });
                 }
                 catch (DbUpdateConcurrencyException)
                 {
