@@ -92,7 +92,7 @@ function renderNotifications(notificationsList) {
         const isAdmin = userRole === "admin";
         
         const card = document.createElement("div");
-        card.className = `card border-0 shadow-sm rounded-3 p-3 notification-card ${borderClass} ${opacityClass}`;
+        card.className = `card border shadow-sm rounded-3 p-3 notification-card ${borderClass} ${opacityClass}`;
         
         let buttonHtml = `<button class="btn btn-sm btn-outline-success rounded-pill px-3 fw-bold btn-read" data-id="${notification.id}" ${notification.isRead || (isDanger && !isAdmin) ? 'disabled' : ''}>`;
         if (notification.isRead) {
@@ -108,7 +108,7 @@ function renderNotifications(notificationsList) {
                 <div class="d-flex align-items-center gap-3">
                     <i class="bi ${iconClass}"></i>
                     <div>
-                        <p class="mb-0 fw-semibold text-dark safe-message-container"></p>
+                        <p class="mb-0 fw-semibold safe-message-container"></p>
                         <small class="text-muted">${new Date(notification.createdAt).toLocaleString("tr-TR")}</small>
                     </div>
                 </div>
@@ -125,7 +125,7 @@ function renderNotifications(notificationsList) {
     });
 }
 
-// Olay Delege Etme (Event Delegation) - Satır içi onclick kaldırıldı
+// Olay Delege Etme (Event Delegation)
 document.getElementById("notificationList").addEventListener("click", (e) => {
     const btnRead = e.target.closest(".btn-read");
     if (btnRead && !btnRead.disabled) {
@@ -179,7 +179,7 @@ document.getElementById("btnMarkAllAsRead").addEventListener("click", markAllNot
 
 document.getElementById("btnFilterAll").addEventListener("click", () => {
     filterOnlyUnread = false;
-    document.getElementById("btnFilterAll").className = "btn btn-dark btn-sm rounded-pill px-3";
+    document.getElementById("btnFilterAll").className = "btn btn-primary btn-sm rounded-pill px-3";
     document.getElementById("btnFilterUnread").className = "btn btn-outline-secondary btn-sm rounded-pill px-3";
     loadNotifications();
 });
@@ -187,7 +187,7 @@ document.getElementById("btnFilterAll").addEventListener("click", () => {
 document.getElementById("btnFilterUnread").addEventListener("click", () => {
     filterOnlyUnread = true;
     document.getElementById("btnFilterAll").className = "btn btn-outline-secondary btn-sm rounded-pill px-3";
-    document.getElementById("btnFilterUnread").className = "btn btn-dark btn-sm rounded-pill px-3";
+    document.getElementById("btnFilterUnread").className = "btn btn-primary btn-sm rounded-pill px-3";
     loadNotifications();
 });
 
@@ -202,6 +202,20 @@ const btnNavbarLogout = document.getElementById("btnNavbarLogout");
 if (btnNavbarLogout) {
     btnNavbarLogout.addEventListener("click", logout);
 }
+
+// Profil Adını Çekme
+document.addEventListener('DOMContentLoaded', () => {
+    const userProfileEl = document.getElementById('userProfile');
+    if (userProfileEl) {
+        try {
+            const payloadBase64 = token.split('.')[1];
+            const payloadDecoded = JSON.parse(atob(payloadBase64));
+            userProfileEl.textContent = payloadDecoded["email"] || "Kullanıcı";
+        } catch (e) {
+            userProfileEl.textContent = "Kullanıcı";
+        }
+    }
+});
 
 // Initial load
 loadNotifications();
