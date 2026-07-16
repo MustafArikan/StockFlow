@@ -1,4 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.Text.Json.Serialization;
+using System.ComponentModel.DataAnnotations;
 namespace stok_takip.Models;
 
 public class StockLevel : BaseEntity

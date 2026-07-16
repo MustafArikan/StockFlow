@@ -1,7 +1,10 @@
-﻿namespace stok_takip.Models;
+using System.Text.Json.Serialization;
+namespace stok_takip.Models;
 
 public class User : BaseEntity
 {
+    public string FirstName { get; set; } = string.Empty;
+    public string LastName { get; set; } = string.Empty;
     public string Email { get; set; } = string.Empty;
     public string PasswordHash { get; set; } = string.Empty;
     public string Role { get; set; } = "viewer"; // admin, operator, viewer

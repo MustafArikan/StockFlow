@@ -1,4 +1,4 @@
-const API_URL = `${CONFIG.API_BASE_URL}/categories`;
+﻿const API_URL = `${CONFIG.API_BASE_URL}/categories`;
 const token = localStorage.getItem('token');
 const userRole = getUserRole();
 
@@ -299,3 +299,4 @@ if (!hasPermission("Category.Edit") && !hasPermission("Category.Delete")) {
 }
 
 kategorileriYukle();
+

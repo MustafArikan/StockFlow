@@ -59,6 +59,8 @@ namespace stok_takip.Controllers
                     IslemTipi = m.MovementType,
                     m.Quantity,
                     Personel = m.User != null ? m.User.Email : "Bilinmeyen Personel",
+                    UserId = m.UserId,
+                    PersonelName = m.User != null ? (m.User.FirstName + " " + m.User.LastName).Trim() : "Bilinmeyen Personel"
                 })
                 .ToListAsync();
 
@@ -156,6 +158,8 @@ namespace stok_takip.Controllers
                         ProductId = product.Id,
                         UserId = currentUserId,
                         MovementType = "TRANSFER",
+                        UnitPrice = dto.UnitPrice,
+                        TotalPrice = dto.UnitPrice * dto.Quantity,
                         Quantity = dto.Quantity,
                         Description = dto.Description ?? $"Transferred from Loc {dto.SourceLocationId} to Loc {dto.TargetLocationId}"
                     };
@@ -210,6 +214,10 @@ namespace stok_takip.Controllers
                             UserId = currentUserId,
                             MovementType = "IN",
                             Quantity = dto.Quantity,
+                            UnitPrice = dto.UnitPrice,
+                            TotalPrice = dto.UnitPrice * dto.Quantity,
+                            SupplierId = dto.SupplierId,
+                            DocumentNumber = dto.DocumentNumber,
                             Description = dto.Description ?? "Stock IN operation"
                         };
 
@@ -253,6 +261,10 @@ namespace stok_takip.Controllers
                         UserId = currentUserId,
                         MovementType = "OUT",
                         Quantity = dto.Quantity,
+                        UnitPrice = dto.UnitPrice,
+                        TotalPrice = dto.UnitPrice * dto.Quantity,
+                        Destination = dto.Destination,
+                        DocumentNumber = dto.DocumentNumber,    
                         Description = dto.Description ?? "Stock OUT operation"
                     };
 

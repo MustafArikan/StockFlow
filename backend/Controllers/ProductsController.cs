@@ -60,7 +60,7 @@ public class ProductsController : ControllerBase
         var product = await _context.Products.FindAsync(id);
         if (product == null)
             return NotFound();
-        return Ok(product);
+        return Ok(new ProductResponseDto(product.Id, product.Name, product.Barcode, product.MinStockLevel, product.CategoryId, product.Attributes));
     }
 
     [HttpPost]
@@ -120,7 +120,7 @@ public class ProductsController : ControllerBase
 
         await _context.SaveChangesAsync();
 
-        return CreatedAtAction(nameof(GetById), new { id = product.Id }, product);
+        return Ok(new ProductResponseDto(product.Id, product.Name, product.Barcode, product.MinStockLevel, product.CategoryId, product.Attributes));
     }
 
     // PUT /api/products/5 : mecvut ürünü güncelle 
@@ -194,7 +194,7 @@ public class ProductsController : ControllerBase
             }
         }
 
-        return Ok(product);
+        return Ok(new ProductResponseDto(product.Id, product.Name, product.Barcode, product.MinStockLevel, product.CategoryId, product.Attributes));
     } 
 
     // DELETE /api/products/5 : ürünü sil

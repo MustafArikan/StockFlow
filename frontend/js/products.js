@@ -140,6 +140,73 @@ async function dropdownKategorileriniYukle() {
     }
 }
 
+// Kategori dropdown'ı değiştiğinde tetiklenecek olay
+document.getElementById('urunKategoriId').addEventListener('change', async function() {
+    const categoryId = this.value;
+    const container = document.getElementById('dynamicAttributesContainer');
+    
+    if (!categoryId) {
+        container.innerHTML = '<div class="col-12 text-muted small"><i class="bi bi-info-circle me-1"></i> Lütfen önce bir kategori seçin...</div>';
+        return;
+    }
+
+    try {
+        container.innerHTML = '<div class="col-12 text-center"><div class="spinner-border spinner-border-sm text-primary"></div> Kurallar yükleniyor...</div>';
+        
+        // Backend'den kalıtımla gelen kuralları çekiyoruz
+        const response = await fetch(`${CONFIG.API_BASE_URL}/attribute-rules/category/${categoryId}`, {
+            headers: { "Authorization": `Bearer ${token}` }
+        });
+        
+        if (!response.ok) throw new Error("Kurallar çekilemedi!");
+        
+        const rules = await response.json();
+        
+        // Global'den En Alta doğru göstermek için ters çevir
+        rules.reverse();
+
+        container.innerHTML = ''; // İçini temizle
+
+        if (rules.length === 0) {
+            container.innerHTML = '<div class="col-12 text-muted small">Bu kategoriye atanmış özel bir kural bulunmuyor.</div>';
+            return;
+        }
+
+        // Gelen her bir kural için DataType'a göre dinamik input çiz
+        rules.forEach(rule => {
+            let inputHtml = '';
+            let requiredAttr = rule.isRequired ? 'required' : '';
+            let starHtml = rule.isRequired ? '<span class="text-danger">*</span>' : '';
+
+            if (rule.dataType === 'dropdown' && rule.allowedValues) {
+                let options = [];
+                try { options = JSON.parse(rule.allowedValues); } catch(e) {}
+                
+                let optionsHtml = options.map(opt => `<option value="${escapeHtml(opt)}">${escapeHtml(opt)}</option>`).join('');
+                inputHtml = `<select class="form-select dynamic-rule-input" data-rule-id="${rule.id}" data-rule-key="${escapeHtml(rule.attributeKey)}" ${requiredAttr}>
+                                <option value="">Seçiniz...</option>
+                                ${optionsHtml}
+                             </select>`;
+            } 
+            else if (rule.dataType === 'number') {
+                inputHtml = `<input type="number" class="form-control dynamic-rule-input" data-rule-id="${rule.id}" data-rule-key="${escapeHtml(rule.attributeKey)}" ${requiredAttr}>`;
+            } 
+            else { 
+                inputHtml = `<input type="text" class="form-control dynamic-rule-input" data-rule-id="${rule.id}" data-rule-key="${escapeHtml(rule.attributeKey)}" ${requiredAttr}>`;
+            }
+
+            const div = document.createElement('div');
+            div.className = 'col-md-6 mb-3';
+            div.innerHTML = `<label class="form-label small fw-bold">${escapeHtml(rule.attributeKey)} ${starHtml}</label>
+                             ${inputHtml}`;
+            container.appendChild(div);
+        });
+
+    } catch (error) {
+        container.innerHTML = `<div class="col-12 text-danger small"><i class="bi bi-exclamation-triangle"></i> Hata: ${error.message}</div>`;
+    }
+});
+
 function tabloyuCiz(urunler) {
     tabloGovdesi.innerHTML = "";
 
@@ -241,6 +308,25 @@ document.getElementById("btnUrunKaydet").addEventListener("click", async () => {
         initialQuantity: parseInt(initialQuantity) || 0
     };
 
+    // Dinamik özellikleri topla (Strongly Typed EAV formatı)
+    const dinamikInputlar = document.querySelectorAll('.dynamic-rule-input');
+    if (dinamikInputlar.length > 0) {
+        urunVerisi.attributes = []; // Dizi (Array) olarak başlıyoruz
+        dinamikInputlar.forEach(input => {
+            const ruleId = parseInt(input.getAttribute('data-rule-id'));
+            const key = input.getAttribute('data-rule-key');
+            const val = input.value;
+            
+            if (ruleId && key && val) {
+                urunVerisi.attributes.push({
+                    ruleId: ruleId,
+                    key: key,
+                    value: val
+                });
+            }
+        });
+    }
+
     const metod = id ? "PUT" : "POST";
     const adres = id ? (`${API_URL}/${id}`) : API_URL;
 
@@ -319,6 +405,22 @@ function urunDuzenle(id) {
     document.getElementById("baslangicStokAlani").classList.add("d-none");
     document.getElementById("btnUrunKaydet").innerText = "Güncelle";
 
+    // Kategori değişti tetiklemesini manuel yap ki formlar gelsin
+    const event = new Event('change');
+    document.getElementById("urunKategoriId").dispatchEvent(event);
+
+    // Kural formlarının gelmesini bekle ve değerleri doldur
+    setTimeout(() => {
+        if (urun.attributes && Array.isArray(urun.attributes)) {
+            urun.attributes.forEach(attr => {
+                const input = document.querySelector(`.dynamic-rule-input[data-rule-id="${attr.ruleId}"]`);
+                if (input) {
+                    input.value = attr.value;
+                }
+            });
+        }
+    }, 500);
+
     const modalElement = document.getElementById("urunModal");
     const modalInstance = bootstrap.Modal.getOrCreateInstance(modalElement);
     modalInstance.show();
@@ -378,3 +480,55 @@ async function dropdownRaflariYukle() {
 }
 
 dropdownRaflariYukle();
+let seciliKategoriKurallari = [];
+document.getElementById("urunKategoriId").addEventListener("change", async (e) => {
+    const catId = e.target.value;
+    const container = document.getElementById("dinamikKurallarContainer");
+    const anaAlan = document.getElementById("dinamikOzelliklerAlani");
+    
+    if(!catId) {
+        if(anaAlan) anaAlan.classList.add("d-none");
+        return;
+    }
+    
+    try {
+        const cevap = await fetch(`${CONFIG.API_BASE_URL}/attribute-rules/category/${catId}`, {
+            headers: { "Authorization": `Bearer ${token}` }
+        });
+        if(cevap.ok) {
+            seciliKategoriKurallari = await cevap.json();
+            if(container) container.innerHTML = "";
+            if(seciliKategoriKurallari.length > 0) {
+                if(anaAlan) anaAlan.classList.remove("d-none");
+                seciliKategoriKurallari.forEach(kural => {
+                    let requiredAttr = kural.isRequired ? 'required' : '';
+                    let asterisk = kural.isRequired ? '<span class="text-danger">*</span>' : '';
+                    let html = `<div class="mb-2">
+                        <label class="form-label small fw-bold text-secondary">${kural.attributeKey} ${asterisk}</label>`;
+                        
+                    if(kural.allowedValues && kural.allowedValues.trim() !== "") {
+                        const secenekler = kural.allowedValues.split(',').map(s=>s.trim());
+                        html += `<select class="form-select form-select-sm dinamik-kural-input" data-key="${kural.attributeKey}" ${requiredAttr}>
+                                    <option value="" selected disabled>Seçiniz...</option>`;
+                        secenekler.forEach(s => {
+                            html += `<option value="${s}">${s}</option>`;
+                        });
+                        html += `</select>`;
+                    } else if (kural.dataType === "NUMBER") {
+                        html += `<input type="number" class="form-control form-control-sm dinamik-kural-input" data-key="${kural.attributeKey}" ${requiredAttr}>`;
+                    } else {
+                        html += `<input type="text" class="form-control form-control-sm dinamik-kural-input" data-key="${kural.attributeKey}" ${requiredAttr}>`;
+                    }
+                    html += `</div>`;
+                    if(container) container.innerHTML += html;
+                });
+            } else {
+                if(anaAlan) anaAlan.classList.add("d-none");
+            }
+        }
+    } catch (e) {
+        console.error("Kurallar alınamadı", e);
+    }
+});
+
+

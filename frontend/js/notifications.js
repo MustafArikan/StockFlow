@@ -1,4 +1,4 @@
-const API_URL = `${CONFIG.API_BASE_URL}/notifications`;
+﻿const API_URL = `${CONFIG.API_BASE_URL}/notifications`;
 const token = localStorage.getItem("token");
 
 // 1. SECURITY CONTROL: Redirect to login if token is missing
@@ -205,3 +205,5 @@ if (btnNavbarLogout) {
 
 // Initial load
 loadNotifications();
+
+

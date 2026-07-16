@@ -1,4 +1,5 @@
-﻿namespace stok_takip.Models;
+using System.Text.Json.Serialization;
+namespace stok_takip.Models;
 
 public abstract class BaseEntity
 {

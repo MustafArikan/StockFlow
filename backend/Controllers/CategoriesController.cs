@@ -32,9 +32,17 @@ public class CategoriesController : ControllerBase
         var totalRecords = await query.CountAsync();
 
         var categories = await query
+            .Include(c => c.Parent)
             .OrderByDescending(c => c.Id)
             .Skip((pageNumber - 1) * pageSize)
             .Take(pageSize)
+            .Select(c => new
+            {
+                c.Id,
+                c.Name,
+                c.ParentId,
+                ParentName = c.Parent != null ? c.Parent.Name : "Ana Kategori"
+            })
             .ToListAsync();
 
         return Ok(new 
@@ -68,7 +76,7 @@ public class CategoriesController : ControllerBase
 
         _context.Categories.Add(category);
         await _context.SaveChangesAsync();
-        return Ok(category);
+        return Ok(new CategoryResponseDto(category.Id, category.Name, category.ParentId));
     }
 
     [HttpDelete("{id}")]
@@ -100,11 +108,34 @@ public class CategoriesController : ControllerBase
             return BadRequest("Bu isimde bir kategori zaten var.");
         }
 
+        if (dto.ParentId.HasValue && dto.ParentId.Value == id)
+        {
+            return BadRequest("Bir kategori kendi kendisinin üst kategorisi olamaz.");
+        }
+
+        if (dto.ParentId.HasValue)
+        {
+            var currentParentId = dto.ParentId;
+            while (currentParentId.HasValue)
+            {
+                if (currentParentId.Value == id)
+                {
+                    return BadRequest("Sonsuz döngü tespit edildi. Bir Kategori kendi alt kategorisinin veya torununun altına taşınamaz.");
+                }
+
+                var parentCategory = await _context.Categories
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(c => c.Id == currentParentId.Value);
+
+                currentParentId = parentCategory?.ParentId;
+            }
+        }
+
         category.Name = dto.Name;
         category.ParentId = dto.ParentId;
 
         await _context.SaveChangesAsync();
-        return Ok(category);
+        return Ok(new CategoryResponseDto(category.Id, category.Name, category.ParentId));
     }
 
 

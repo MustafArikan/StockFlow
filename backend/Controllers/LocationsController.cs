@@ -81,7 +81,8 @@ public class LocationsController : ControllerBase
         };
         _context.Locations.Add(location);
         await _context.SaveChangesAsync();
-        return Ok(location);
+
+        return Ok(new LocationResponseDto(location.Id, location.Code, location.WarehouseId));
     }
 
     // DELETE /api/locations/5  rafı sil

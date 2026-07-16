@@ -1,4 +1,4 @@
-document.addEventListener("DOMContentLoaded", () => {
+﻿document.addEventListener("DOMContentLoaded", () => {
     
     let targetEmail = ""; 
     let validResetCode = "";
@@ -149,3 +149,5 @@ function hideAlert() {
     const alertEl = document.getElementById("alertMessage");
     alertEl.className = "alert d-none small py-2";
 }
+
+

@@ -1,4 +1,4 @@
-document.addEventListener("DOMContentLoaded", () => {
+﻿document.addEventListener("DOMContentLoaded", () => {
     // URL parametrelerinden mesaj varsa göster (Kayıt başarılı mesajı gibi)
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get('registered') === 'true') {
@@ -71,3 +71,5 @@ function showSuccess(msg) {
 function hideSuccess() {
     document.getElementById("successMessage").classList.add("d-none");
 }
+
+

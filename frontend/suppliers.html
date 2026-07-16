@@ -1,0 +1,125 @@
+﻿<!DOCTYPE html>
+<html lang="tr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tedarikçiler - StockFlow</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link href="css/style.css" rel="stylesheet">
+    <script src="js/theme.js"></script>
+</head>
+
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm">
+        <div class="container">
+            <a class="navbar-brand fw-bold text-primary" href="index.html">
+                Stock<span class="text-white">Flow </span>
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                                                <ul class="navbar-nav me-auto">
+                    <li class="nav-item"><a class="nav-link" href="index.html">Ana Sayfa</a></li>
+                    <li class="nav-item"><a class="nav-link" href="categories.html">Kategoriler</a></li>
+                    <li class="nav-item"><a class="nav-link" href="products.html">Ürünler</a></li>
+                    <li class="nav-item"><a class="nav-link" href="movements.html">Stok Hareketleri</a></li>
+                    <li class="nav-item"><a class="nav-link" href="warehouses.html">Depolar</a></li>
+                    <li class="nav-item"><a class="nav-link" href="suppliers.html">Tedarikçiler</a></li>
+                    <li class="nav-item"><a class="nav-link" href="audit-logs.html">Sistem Logları</a></li>
+                    <li class="nav-item"><a class="nav-link" href="test-scanner.html">Barkod Okuyucu</a></li>
+                </ul>
+                <div class="d-flex align-items-center text-white-50">
+                    <button id="themeToggleBtn" class="theme-toggle-btn border-0 me-3 text-white-50"
+                        title="Temayı Değiştir" style="background: transparent; font-size: 1.2rem;">
+                        <i class="bi bi-moon-fill" id="themeIcon"></i>
+                    </button>
+                    <span id="userProfile" class="me-3 small fw-bold text-white-50"></span>
+                    <button id="btnNavbarLogout" class="btn btn-sm btn-outline-danger rounded-pill px-3">Çıkış
+                        Yap</button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container my-5">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h1 class="fw-bold">Tedarikçiler</h1>
+                <p class="text-muted mb-0">Tedarikçi Firmaları Yönetin</p>
+            </div>
+            <button class="btn btn-primary rounded-pill px-4 shadow-sm" data-bs-toggle="modal"
+                data-bs-target="#tedarikciModal">+ Yeni Tedarikçi Ekle</button>
+        </div>
+
+        <div class="card border-0 shadow-sm rounded-3">
+            <div class="card-body p-4">
+                <div class="mb-4">
+                    <input type="text" id="aramaKutusu" class="form-control rounded-pill"
+                        placeholder="Tedarikçi Adı veya ID ile Ara...">
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead>
+                            <tr class="text-muted small text-uppercase">
+                                <th id="thId" style="cursor: pointer;" class="user-select-none">ID ↕</th>
+                                <th id="thAd" style="cursor: pointer;" class="user-select-none">Tedarikçi Adı ↕</th>
+                                <th class="user-select-none">İletişim</th>
+                                <th class="text-center user-select-none">Vergi No</th>
+                                <th class="text-end" id="durumBasligi">Durum</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tedarikciTablosuGövdesi">
+                            <tr>
+                                <td colspan="4" class="text-center text-muted py-4"> Yükleniyor... </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div id="paginationContainer" class="mt-3"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="tedarikciModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow rounded-3">
+                <div class="modal-header border-bottom-0 rounded-top-3">
+                    <h5 class="modal-title fw-bold" id="modalBaslik">Yeni Tedarikçi Ekle</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Kapat"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <form id="tedarikciFormu">
+                        <div class="mb-3">
+                            <label class="form-label text-muted small fw-bold">Tedarikçi Adı</label>
+                            <input type="text" class="form-control" id="tedarikciAdi" placeholder="Örn: ABC A.Å." required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label text-muted small fw-bold">İletişim Bilgisi</label>
+                            <input type="text" class="form-control" id="tedarikciIletisim" placeholder="Örn: 0555...">
+                        </div>
+                        <div class="mb-4">
+                            <label class="form-label text-muted small fw-bold">Vergi No</label>
+                            <input type="text" class="form-control" id="tedarikciVergiNo" placeholder="Örn: 1234567890">
+                        </div>
+                        <button type="submit" id="btnTedarikciKaydet"
+                            class="btn btn-primary w-100 rounded-pill py-2 fw-bold">Ekle ve Kaydet</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="js/config.js"></script>
+    <script src="js/suppliers.js"></script>
+    <script src="js/auth.js"></script>
+</body>
+
+</html>
+
+
