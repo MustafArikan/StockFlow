@@ -5,6 +5,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.AspNetCore.RateLimiting;
+using System.Threading.RateLimiting;
 using stok_takip.Data;
 using stok_takip.DTOs;
 using stok_takip.Models;
@@ -17,6 +19,18 @@ builder.Services.AddControllers()
     {
         options.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
     });
+builder.Services.AddRateLimiter(options =>
+{
+    options.AddFixedWindowLimiter("AuthLimit", limiterOptions =>
+    {
+        limiterOptions.PermitLimit = 5; // 5 istek
+        limiterOptions.Window = TimeSpan.FromMinutes(1); // 1 dakika
+        limiterOptions.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
+        limiterOptions.QueueLimit = 0; // Kuyrukta istek bekletme
+    });
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests; // Too Many Requests
+}
+);
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddOpenApi();
 builder.Services.AddDbContextPool<AppDbContext>(options =>
@@ -130,7 +144,7 @@ if (app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 
 app.UseCors("AllowFrontend");
-
+app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
 
