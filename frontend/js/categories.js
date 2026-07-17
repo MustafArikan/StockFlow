@@ -504,6 +504,7 @@ async function kurallariYukle(categoryId) {
         if (!cevap.ok) throw new Error("Kurallar alınamadı.");
         
         const kurallar = await cevap.json();
+        window.mevcutKurallar = kurallar; // Düzenleme için sakla
         kuralTabloGovdesi.innerHTML = ""; 
         
         if (kurallar.length === 0) {
@@ -512,16 +513,41 @@ async function kurallariYukle(categoryId) {
         }
 
         kurallar.forEach(kural => {
+            let tipBadge = "";
+            switch (kural.dataType) {
+                case "text": tipBadge = '<span class="badge bg-secondary">Metin</span>'; break;
+                case "number": tipBadge = '<span class="badge bg-primary">Sayı (Int)</span>'; break;
+                case "decimal": tipBadge = '<span class="badge bg-info text-dark">Sayı (Ondalık)</span>'; break;
+                case "boolean": tipBadge = '<span class="badge bg-success">Evet/Hayır</span>'; break;
+                case "range_slider_integer": tipBadge = '<span class="badge bg-primary">Kaydırıcı (Tam Sayı)</span>'; break;
+                case "range_slider_decimal": tipBadge = '<span class="badge bg-primary">Kaydırıcı (Ondalık)</span>'; break;
+                case "dropdown": tipBadge = '<span class="badge bg-warning text-dark">Açılır Liste</span>'; break;
+                case "radio": tipBadge = '<span class="badge bg-warning text-dark">Tekli Seçim</span>'; break;
+                case "checkbox_group": tipBadge = '<span class="badge bg-warning text-dark">Çoklu Seçim</span>'; break;
+                case "color_picker": tipBadge = '<span class="badge bg-danger">Renk Seçici</span>'; break;
+                case "toggle_switch": tipBadge = '<span class="badge bg-success">Aç-Kapat</span>'; break;
+                default: tipBadge = `<span class="badge bg-light text-dark">${kural.dataType}</span>`; break;
+            }
+
+            let zorunluBadge = kural.isRequired 
+                ? '<span class="badge bg-danger">Zorunlu</span>' 
+                : '<span class="badge bg-secondary">Opsiyonel</span>';
+
+            let opts = "";
+            if (kural.allowedValues && kural.allowedValues !== "[]") {
+                try {
+                    const parsed = JSON.parse(kural.allowedValues);
+                    opts = `<br><small class="text-muted" style="font-size:0.75rem;">Seçenekler: ${parsed.join(', ')}</small>`;
+                } catch(e){}
+            }
+
             const tr = document.createElement("tr");
             tr.innerHTML = `
-                <td class="fw-bold text-dark">${escapeHtml(kural.attributeKey)}</td>
-                <td><span class="badge bg-secondary">${kural.dataType}</span></td>
-                <td>
-                    ${kural.isRequired 
-                        ? '<span class="badge bg-danger">Zorunlu</span>' 
-                        : '<span class="badge bg-light text-dark border">Opsiyonel</span>'}
-                </td>
+                <td class="fw-bold text-dark">${escapeHtml(kural.attributeKey)} ${opts}</td>
+                <td>${tipBadge}</td>
+                <td>${zorunluBadge}</td>
                 <td class="text-end">
+                    <button class="btn btn-sm btn-outline-primary rounded-pill btn-kural-duzenle me-1" data-id="${kural.id}">Düzenle</button>
                     <button class="btn btn-sm btn-outline-danger rounded-pill btn-kural-sil" data-id="${kural.id}">Sil</button>
                 </td>
             `;
@@ -538,10 +564,23 @@ document.getElementById("btnKuralEkle").addEventListener("click", async () => {
     const attributeKey = document.getElementById("kuralAd").value.trim();
     const dataType = document.getElementById("kuralTip").value;
     const isRequired = document.getElementById("kuralZorunlu").checked;
+    const allowedValues = document.getElementById("kuralSecenekler").value;
     
     if (!attributeKey) {
         alert("Lütfen kural (özellik) adını giriniz.");
         return;
+    }
+
+    let parsedAllowedValues = "[]";
+    if (["dropdown", "radio", "checkbox_group"].includes(dataType)) {
+        if (!allowedValues || allowedValues.trim() === "") {
+            alert("Bu tip için seçenekler zorunludur (virgülle ayırarak girin).");
+            return;
+        }
+        if (allowedValues && allowedValues.trim() !== "") {
+            const arr = allowedValues.split(',').map(s => s.trim()).filter(s => s.length > 0);
+            parsedAllowedValues = JSON.stringify(arr);
+        }
     }
     
     const kuralVerisi = {
@@ -549,16 +588,20 @@ document.getElementById("btnKuralEkle").addEventListener("click", async () => {
         attributeKey: attributeKey,
         dataType: dataType,
         isRequired: isRequired,
-        allowedValues: "[]"
+        allowedValues: parsedAllowedValues
     };
     
     const btnEkle = document.getElementById("btnKuralEkle");
+    const ruleId = btnEkle.getAttribute("data-rule-id");
+    const method = ruleId ? "PUT" : "POST";
+    const url = ruleId ? `${CONFIG.API_BASE_URL}/attribute-rules/${ruleId}` : `${CONFIG.API_BASE_URL}/attribute-rules`;
+
     btnEkle.disabled = true;
-    btnEkle.innerText = "Ekleniyor...";
+    btnEkle.innerText = ruleId ? "Güncelleniyor..." : "Ekleniyor...";
     
     try {
-        const cevap = await fetch(`${CONFIG.API_BASE_URL}/attribute-rules`, {
-            method: "POST",
+        const cevap = await fetch(url, {
+            method: method,
             headers: {
                 "Content-Type": "application/json",
                 "Authorization": `Bearer ${token}`
@@ -568,20 +611,53 @@ document.getElementById("btnKuralEkle").addEventListener("click", async () => {
         
         if (!cevap.ok) throw new Error(await cevap.text());
         
-        document.getElementById("yeniKuralFormu").reset();
-        kurallariYukle(categoryId);
+        // Başarılı ise formu temizle
+        document.getElementById("kuralAd").value = "";
+        document.getElementById("kuralTip").value = "text";
+        document.getElementById("kuralZorunlu").checked = false;
+        document.getElementById("kuralSecenekler").value = "";
         
+        btnEkle.removeAttribute("data-rule-id");
+        btnEkle.innerText = "+ Kuralı Ekle";
+
+        kurallariYukle(categoryId);
     } catch (hata) {
-        alert("Kural eklenemedi: " + hata.message);
+        alert("Hata: " + hata.message);
+        btnEkle.innerText = ruleId ? "Güncelle" : "+ Kuralı Ekle";
     } finally {
         btnEkle.disabled = false;
-        btnEkle.innerText = "+ Kuralı Ekle";
     }
 });
 
 document.getElementById("kurallarTabloGovdesi").addEventListener("click", async (e) => {
     const btnSil = e.target.closest(".btn-kural-sil");
-    if (btnSil) {
+    const btnDuzenle = e.target.closest(".btn-kural-duzenle");
+
+    if (btnDuzenle) {
+        const id = parseInt(btnDuzenle.getAttribute("data-id"));
+        const kural = window.mevcutKurallar.find(k => k.id === id);
+        if (kural) {
+            document.getElementById("kuralAd").value = kural.attributeKey;
+            document.getElementById("kuralTip").value = kural.dataType;
+            document.getElementById("kuralZorunlu").checked = kural.isRequired;
+            
+            // Seçenekler kutusunun görünürlüğünü tetikle
+            document.getElementById("kuralTip").dispatchEvent(new Event('change'));
+
+            if (kural.allowedValues && kural.allowedValues !== "[]") {
+                try {
+                    const parsed = JSON.parse(kural.allowedValues);
+                    document.getElementById("kuralSecenekler").value = parsed.join(", ");
+                } catch(err){}
+            } else {
+                document.getElementById("kuralSecenekler").value = "";
+            }
+
+            const btnEkle = document.getElementById("btnKuralEkle");
+            btnEkle.setAttribute("data-rule-id", kural.id);
+            btnEkle.innerText = "Güncelle";
+        }
+    } else if (btnSil) {
         if (!confirm("Bu kuralı silmek istediğinize emin misiniz? (Ürünlerdeki veriler silinmez, sadece formdan kalkar)")) return;
         
         const kuralId = btnSil.getAttribute("data-id");
@@ -602,5 +678,20 @@ document.getElementById("kurallarTabloGovdesi").addEventListener("click", async 
             alert(hata.message);
             btnSil.disabled = false;
         }
+    }
+});
+
+// Kural tipi değiştiğinde Seçenekler kutusunu göster/gizle ve ipucunu güncelle
+document.getElementById('kuralTip').addEventListener('change', (e) => {
+    const tip = e.target.value;
+    const secDiv = document.getElementById('kuralSeceneklerDiv');
+    const secInput = document.getElementById('kuralSecenekler');
+    
+    if (['dropdown', 'radio', 'checkbox_group'].includes(tip)) {
+        secDiv.classList.remove('d-none');
+        secInput.placeholder = "Örn: Siyah, Beyaz, Kırmızı";
+    } else {
+        secDiv.classList.add('d-none');
+        secInput.value = "";
     }
 });

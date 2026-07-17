@@ -181,36 +181,146 @@ document.getElementById('urunKategoriId').addEventListener('change', async funct
             let requiredAttr = rule.isRequired ? 'required' : '';
             let starHtml = rule.isRequired ? '<span class="text-danger">*</span>' : '';
 
-            if (rule.dataType === 'dropdown' && rule.allowedValues) {
-                let options = [];
-                try { 
-                    options = JSON.parse(rule.allowedValues);
-                } catch(e) {
-                    options = rule.allowedValues.split(',').map(s => s.trim());
-                }
-                
+            let options = [];
+            if (rule.allowedValues && rule.allowedValues !== "[]") {
+                try { options = JSON.parse(rule.allowedValues); } 
+                catch(e) { options = rule.allowedValues.split(',').map(s => s.trim()); }
+            }
+
+            if (rule.dataType === 'dropdown') {
                 let optionsHtml = options.map(opt => `<option value="${escapeHtml(opt)}">${escapeHtml(opt)}</option>`).join('');
-                inputHtml = `<select class="form-select dynamic-rule-input" data-rule-id="${rule.id}" data-rule-key="${escapeHtml(rule.attributeKey)}" ${requiredAttr}>
+                inputHtml = `<select class="form-select dynamic-rule-input" data-rule-id="${rule.id}" data-rule-key="${escapeHtml(rule.attributeKey)}" data-rule-type="dropdown" ${requiredAttr}>
                                 <option value="">Seçiniz...</option>
                                 ${optionsHtml}
                              </select>`;
             } 
+            else if (rule.dataType === 'radio') {
+                inputHtml = `<div class="mt-2 dynamic-rule-input" data-rule-id="${rule.id}" data-rule-key="${escapeHtml(rule.attributeKey)}" data-rule-type="radio">`;
+                options.forEach((opt, idx) => {
+                    inputHtml += `<div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="radio" name="rule_${rule.id}" id="rule_${rule.id}_${idx}" value="${escapeHtml(opt)}" ${requiredAttr}>
+                                    <label class="form-check-label" for="rule_${rule.id}_${idx}">${escapeHtml(opt)}</label>
+                                  </div>`;
+                });
+                inputHtml += `</div>`;
+            }
+            else if (rule.dataType === 'checkbox_group') {
+                inputHtml = `<div class="mt-2 dynamic-rule-input" data-rule-id="${rule.id}" data-rule-key="${escapeHtml(rule.attributeKey)}" data-rule-type="checkbox_group">`;
+                options.forEach((opt, idx) => {
+                    inputHtml += `<div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="checkbox" id="rule_${rule.id}_${idx}" value="${escapeHtml(opt)}">
+                                    <label class="form-check-label" for="rule_${rule.id}_${idx}">${escapeHtml(opt)}</label>
+                                  </div>`;
+                });
+                inputHtml += `</div>`;
+            }
+            else if (rule.dataType === 'range_slider_integer' || rule.dataType === 'range_slider_decimal') {
+                let rMin = 0, rMax = 100, rStep = 1;
+                if (rule.dataType === 'range_slider_decimal') {
+                    rStep = 0.01;
+                }
+                inputHtml = `<div class="d-flex align-items-center dynamic-rule-input" data-rule-id="${rule.id}" data-rule-key="${escapeHtml(rule.attributeKey)}" data-rule-type="range_slider" data-min="${rMin}" data-max="${rMax}">
+                                <input type="range" class="form-range flex-grow-1" min="${rMin}" max="${rMax}" step="${rStep}" id="rule_${rule.id}">
+                                <input type="number" class="form-control form-control-sm ms-2 text-center" style="width: 75px;" id="val_${rule.id}" value="${rMin}" min="${rMin}" max="${rMax}" step="${rStep}">
+                             </div>`;
+            }
+            else if (rule.dataType === 'color_picker') {
+                let defaultColors = ["Siyah", "Beyaz", "Gri", "Gümüş", "Altın", "Kırmızı", "Mavi", "Yeşil", "Sarı", "Turuncu", "Mor", "Pembe", "Lacivert", "Kahverengi", "Bej"];
+                let colors = (options && options.length > 0) ? options : defaultColors;
+                
+                const getColorHex = (cName) => {
+                    const normalized = cName.toLocaleLowerCase('tr-TR').trim();
+                    const map = {
+                        "siyah": "#000000", "beyaz": "#ffffff", "gri": "#9e9e9e", "gümüş": "#c0c0c0", "gumus": "#c0c0c0",
+                        "altın": "#ffd700", "altin": "#ffd700", "kırmızı": "#f44336", "kirmizi": "#f44336",
+                        "mavi": "#2196f3", "yeşil": "#4caf50", "yesil": "#4caf50", "sarı": "#ffeb3b", "sari": "#ffeb3b",
+                        "turuncu": "#ff9800", "mor": "#9c27b0", "pembe": "#e91e63", "lacivert": "#1a237e",
+                        "kahverengi": "#795548", "bej": "#f5f5dc", "bordo": "#800000", "krem": "#ffdab9"
+                    };
+                    if(cName.startsWith('#')) return cName;
+                    return map[normalized] || map[cName.toLowerCase().trim()] || "#cccccc";
+                };
+
+                let liHtml = colors.map((opt, idx) => {
+                    let hex = getColorHex(opt);
+                    return `<div class="form-check mb-1">
+                                <input class="form-check-input color-radio-item" type="radio" name="color_${rule.id}" id="color_${rule.id}_${idx}" value="${escapeHtml(opt)}" data-rule-id="${rule.id}" ${requiredAttr}>
+                                <label class="form-check-label d-flex align-items-center" for="color_${rule.id}_${idx}" style="cursor:pointer;">
+                                    <svg width="18" height="18" style="margin-right:8px;" xmlns="http://www.w3.org/2000/svg">
+                                        <circle cx="9" cy="9" r="8" fill="${hex}" stroke="#aaa" stroke-width="1"/>
+                                    </svg>
+                                    ${escapeHtml(opt)}
+                                </label>
+                            </div>`;
+                }).join('');
+
+                inputHtml = `
+                    <div class="dynamic-rule-input" data-rule-id="${rule.id}" data-rule-key="${escapeHtml(rule.attributeKey)}" data-rule-type="color_picker">
+                        <div class="collapse show" id="collapseColor_${rule.id}">
+                            <div class="card card-body p-2 border-0 shadow-sm" style="max-height:200px; overflow-y:auto; background-color:#f8f9fa;">
+                                ${liHtml}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+            else if (rule.dataType === 'toggle_switch' || rule.dataType === 'boolean') {
+                inputHtml = `<div class="form-check form-switch mt-2 dynamic-rule-input" data-rule-id="${rule.id}" data-rule-key="${escapeHtml(rule.attributeKey)}" data-rule-type="boolean">
+                                <input class="form-check-input" type="checkbox" id="rule_${rule.id}">
+                                <label class="form-check-label text-muted" for="rule_${rule.id}">Evet / Açık</label>
+                             </div>`;
+            }
             else if (rule.dataType === 'number') {
-                inputHtml = `<input type="number" class="form-control dynamic-rule-input" data-rule-id="${rule.id}" data-rule-key="${escapeHtml(rule.attributeKey)}" ${requiredAttr}>`;
+                inputHtml = `<input type="number" class="form-control dynamic-rule-input" data-rule-id="${rule.id}" data-rule-key="${escapeHtml(rule.attributeKey)}" data-rule-type="number" ${requiredAttr}>`;
             } 
             else if (rule.dataType === 'decimal') {
-                inputHtml = `<input type="number" step="0.01" class="form-control dynamic-rule-input" data-rule-id="${rule.id}" data-rule-key="${escapeHtml(rule.attributeKey)}" ${requiredAttr}>`;
+                inputHtml = `<input type="number" step="0.01" class="form-control dynamic-rule-input" data-rule-id="${rule.id}" data-rule-key="${escapeHtml(rule.attributeKey)}" data-rule-type="decimal" ${requiredAttr}>`;
             }
             else { 
-                inputHtml = `<input type="text" class="form-control dynamic-rule-input" data-rule-id="${rule.id}" data-rule-key="${escapeHtml(rule.attributeKey)}" ${requiredAttr}>`;
+                inputHtml = `<input type="text" class="form-control dynamic-rule-input" data-rule-id="${rule.id}" data-rule-key="${escapeHtml(rule.attributeKey)}" data-rule-type="text" ${requiredAttr}>`;
             }
 
             const div = document.createElement('div');
             div.className = 'col-md-6 mb-3';
-            div.innerHTML = `<label class="form-label small fw-bold">${escapeHtml(rule.attributeKey)} ${starHtml}</label>
-                             ${inputHtml}`;
+            if (rule.dataType === 'color_picker') {
+                div.innerHTML = `<a class="text-decoration-none text-dark d-flex align-items-center mb-2" data-bs-toggle="collapse" href="#collapseColor_${rule.id}" role="button" aria-expanded="true">
+                                    <label class="form-label small fw-bold mb-0" style="cursor:pointer;">${escapeHtml(rule.attributeKey)} ${starHtml}</label>
+                                    <i class="bi bi-caret-down-fill text-warning ms-1"></i>
+                                 </a>
+                                 ${inputHtml}`;
+            } else {
+                div.innerHTML = `<label class="form-label small fw-bold">${escapeHtml(rule.attributeKey)} ${starHtml}</label>
+                                 ${inputHtml}`;
+            }
             container.appendChild(div);
         });
+
+        // Event listeners for range sliders
+        const rangeContainers = container.querySelectorAll('.dynamic-rule-input[data-rule-type="range_slider"]');
+        rangeContainers.forEach(div => {
+            const range = div.querySelector('input[type="range"]');
+            const numberInput = div.querySelector('input[type="number"]');
+            const min = parseFloat(div.getAttribute('data-min')) || 0;
+            const max = parseFloat(div.getAttribute('data-max')) || 100;
+            
+            if (range && numberInput) {
+                // Kaydırıcı değiştiğinde input'u güncelle
+                range.addEventListener('input', function() {
+                    numberInput.value = this.value;
+                });
+                
+                // Input değiştiğinde kaydırıcıyı güncelle
+                numberInput.addEventListener('input', function() {
+                    let val = parseFloat(this.value);
+                    if (isNaN(val)) val = min;
+                    if (val < min) val = min;
+                    if (val > max) val = max;
+                    range.value = val;
+                });
+            }
+        });
+
+        // Radyo butonları native olarak tekil seçim sağlar, JS dinleyicisine gerek yok
 
     } catch (error) {
         if (container) container.innerHTML = `<div class="col-12 text-center text-danger-small"><i class="bi bi-exclamation-triangle"></i> Hata: ${error.message}</div>`;
@@ -296,6 +406,12 @@ document.getElementById("paginationContainer").addEventListener("click", (e) => 
 });
 
 document.getElementById("btnUrunKaydet").addEventListener("click", async () => {
+    const form = document.getElementById("urunFormu");
+    if (form && !form.checkValidity()) {
+        form.reportValidity();
+        return;
+    }
+
     const id = document.getElementById("urunId").value;
     const name = document.getElementById("urunAdi").value;
     const barcode = document.getElementById("urunBarkod").value;
@@ -304,11 +420,6 @@ document.getElementById("btnUrunKaydet").addEventListener("click", async () => {
     const targetLocationId = document.getElementById("urunRafId")?.value;
     const initialQuantity = document.getElementById("urunBaslangicStok")?.value;
     const btnKaydet = document.getElementById("btnUrunKaydet");
-
-    if (!name) {
-        alert("Lütfen ürün adı girin!");
-        return;
-    }
 
     const urunVerisi = {
         name: name,
@@ -326,9 +437,28 @@ document.getElementById("btnUrunKaydet").addEventListener("click", async () => {
         dinamikInputlar.forEach(input => {
             const ruleId = parseInt(input.getAttribute('data-rule-id'));
             const key = input.getAttribute('data-rule-key');
-            const val = input.value;
+            const type = input.getAttribute('data-rule-type');
+            let val = "";
             
-            if (ruleId && key && val) {
+            if (type === "radio") {
+                const checked = input.querySelector('input[type="radio"]:checked');
+                if (checked) val = checked.value;
+            } else if (type === "checkbox_group") {
+                const checkedBoxes = Array.from(input.querySelectorAll('input[type="checkbox"]:checked')).map(cb => cb.value);
+                if (checkedBoxes.length > 0) val = checkedBoxes.join(", ");
+            } else if (type === "boolean") {
+                const checkbox = input.querySelector('input[type="checkbox"]');
+                val = checkbox.checked ? "true" : "false";
+            } else if (type === "range_slider") {
+                val = input.querySelector('input[type="range"]').value;
+            } else if (type === "color_picker") {
+                const checkedRb = input.querySelector('.color-radio-item:checked');
+                if (checkedRb) val = checkedRb.value;
+            } else {
+                val = input.value;
+            }
+            
+            if (ruleId && key && val !== "") {
                 urunVerisi.attributes.push({
                     ruleId: ruleId,
                     key: key,
@@ -428,10 +558,19 @@ function urunDetayGoster(id) {
             if (val === "true") val = "Evet";
             if (val === "false") val = "Hayır";
             
+            let valHtml = escapeHtml(val);
+            // Hex renk kodu kontrolü (Örn: #ff0000 veya #fff)
+            if (/^#([0-9A-F]{3}){1,2}$/i.test(val)) {
+                valHtml = `<div class="d-flex align-items-center">
+                                <span class="d-inline-block rounded-circle me-2 shadow-sm" style="width:18px; height:18px; background-color:${escapeHtml(val)}; border:1px solid #ddd;"></span>
+                                <span class="text-muted small">${escapeHtml(val)}</span>
+                           </div>`;
+            }
+
             ozelliklerTablosu.innerHTML += `
                 <tr>
                     <td class="text-muted fw-bold" style="width:40%; border-bottom: 1px solid #eee;">${escapeHtml(attr.key)}</td>
-                    <td class="text-dark fw-semibold" style="border-bottom: 1px solid #eee;">${escapeHtml(val)}</td>
+                    <td class="text-dark fw-semibold" style="border-bottom: 1px solid #eee;">${valHtml}</td>
                 </tr>
             `;
         });
@@ -471,7 +610,32 @@ function urunDuzenle(id) {
             urun.attributes.forEach(attr => {
                 const input = document.querySelector(`.dynamic-rule-input[data-rule-id="${attr.ruleId}"]`);
                 if (input) {
-                    input.value = attr.value;
+                    const type = input.getAttribute('data-rule-type');
+                    if (type === 'radio') {
+                        const radio = input.querySelector(`input[type="radio"][value="${attr.value}"]`);
+                        if (radio) radio.checked = true;
+                    } else if (type === 'checkbox_group') {
+                        const values = attr.value.split(',').map(s => s.trim());
+                        values.forEach(v => {
+                            const cb = input.querySelector(`input[type="checkbox"][value="${v}"]`);
+                            if (cb) cb.checked = true;
+                        });
+                    } else if (type === 'boolean') {
+                        const cb = input.querySelector(`input[type="checkbox"]`);
+                        if (cb) cb.checked = (attr.value === "true");
+                    } else if (type === 'range_slider') {
+                        const range = input.querySelector(`input[type="range"]`);
+                        if (range) {
+                            range.value = attr.value;
+                            const numberInput = document.getElementById(`val_${attr.ruleId}`);
+                            if(numberInput) numberInput.value = attr.value;
+                        }
+                    } else if (type === 'color_picker') {
+                        const rb = input.querySelector(`input[type="radio"][value="${attr.value}"]`);
+                        if (rb) rb.checked = true;
+                    } else {
+                        input.value = attr.value;
+                    }
                 }
             });
         }

@@ -133,14 +133,33 @@
                                     <label class="form-label small fw-bold text-muted">Kural Adı / Özellik</label>
                                     <input type="text" class="form-control form-control-sm" id="kuralAd" placeholder="Örn: RAM_GB">
                                 </div>
-                                <div class="col-md-3">
+                                <div class="col-md-2">
                                     <label class="form-label small fw-bold text-muted">Veri Tipi</label>
                                     <select class="form-select form-select-sm" id="kuralTip">
-                                        <option value="text">Metin (Yazı)</option>
-                                        <option value="number">Tam Sayı (Rakam)</option>
-                                        <option value="decimal">Ondalıklı Sayı (Decimal)</option>
-                                        <option value="boolean">Evet / Hayır (Checkbox)</option>
+                                        <optgroup label="Yazı (Text)">
+                                            <option value="text">Düz Metin (TextBox)</option>
+                                        </optgroup>
+                                        <optgroup label="Sayısal (Number)">
+                                            <option value="number">Tam Sayı (Integer)</option>
+                                            <option value="decimal">Ondalıklı Sayı (Decimal)</option>
+                                            <option value="range_slider_integer">Kaydırıcı (Range Slider - Tam Sayı)</option>
+                                            <option value="range_slider_decimal">Kaydırıcı (Range Slider - Ondalık)</option>
+                                        </optgroup>
+                                        <optgroup label="Seçim (Select)">
+                                            <option value="dropdown">Açılır Liste (Dropdown)</option>
+                                            <option value="radio">Tekli Seçim (Radio Button)</option>
+                                            <option value="checkbox_group">Çoklu Seçim (Checkbox Group)</option>
+                                            <option value="color_picker">Renk Seçici (Color Picker)</option>
+                                        </optgroup>
+                                        <optgroup label="Mantıksal (Boolean)">
+                                            <option value="toggle_switch">Aç-Kapat (Toggle Switch)</option>
+                                            <option value="boolean">Onay Kutusu (Checkbox)</option>
+                                        </optgroup>
                                     </select>
+                                </div>
+                                <div class="col-md-3 d-none" id="kuralSeceneklerDiv">
+                                    <label class="form-label small fw-bold text-muted">Seçenekler (Virgülle)</label>
+                                    <input type="text" class="form-control form-control-sm" id="kuralSecenekler" placeholder="Örn: Siyah, Beyaz, Kırmızı">
                                 </div>
                                 <div class="col-md-2 d-flex align-items-center pb-1">
                                     <div class="form-check form-switch mt-4">
