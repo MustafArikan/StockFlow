@@ -14,11 +14,29 @@ public static class DbInitializer
 
         if (!context.Users.Any())
         {
-            var defaultUsers = new List<User>
+            var hasher = new Microsoft.AspNetCore.Identity.PasswordHasher<User>();
+            var adminUser = new User
             {
-                new User { Email = "admin@godeva.com.tr", PasswordHash = "adminpassword", Role = "admin", IsEmailConfirmed = true },
-                new User { Email = "test@godeva.com.tr", PasswordHash = "adminpassword", Role = "admin", IsEmailConfirmed = true }
+                FirstName = "Sistem",
+                LastName = "Yöneticisi",
+                Email = "admin@godeva.com.tr",
+                Role = "admin",
+                IsEmailConfirmed = true
             };
+            adminUser.PasswordHash = hasher.HashPassword(adminUser, "adminpassword23!");
+
+            var testUser = new User
+            {
+                FirstName = "Test",
+                LastName = "Kullanıcı",
+                Email = "test@godeva.com.tr",
+                Role = "viewer",
+                IsEmailConfirmed = true
+            };
+            testUser.PasswordHash = hasher.HashPassword(testUser, "testpassword23!");
+
+            var defaultUsers = new List<User> { adminUser, testUser };
+
             context.Users.AddRange(defaultUsers);
             context.SaveChanges();
         }

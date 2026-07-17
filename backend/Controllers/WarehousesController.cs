@@ -68,9 +68,9 @@ public class WarehousesController : ControllerBase
     public async Task<IActionResult> GetById(int id)
     {
         var warehouse = await _context.Warehouses.FindAsync(id);
-        if(warehouse == null)
+        if (warehouse == null)
             return NotFound();
-        return Ok(warehouse);
+        return Ok(new WarehouseResponseDto(warehouse.Id, warehouse.Name, warehouse.Address));
     }
 
     // POST /api/warehouses yeni depo ekleme
@@ -94,7 +94,8 @@ public class WarehousesController : ControllerBase
 
         _context.Warehouses.Add(warehouse);
         await _context.SaveChangesAsync();
-        return CreatedAtAction(nameof(GetById), new{id = warehouse.Id}, warehouse);
+
+        return Ok(new WarehouseResponseDto(warehouse.Id, warehouse.Name, warehouse.Address));
     }
 
     //PUT /api/warehouse/5 mecvut depoyu güncelleme
@@ -110,7 +111,7 @@ public class WarehousesController : ControllerBase
         warehouse.Address = dto.Address;
 
         await _context.SaveChangesAsync();
-        return Ok(warehouse);
+        return Ok(new WarehouseResponseDto(warehouse.Id, warehouse.Name, warehouse.Address));
     }
 
     //DELETE /api/warehouses/5 ürünü slime

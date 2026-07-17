@@ -140,6 +140,80 @@ async function dropdownKategorileriniYukle() {
     }
 }
 
+// Kategori dropdown'ı değiştiğinde tetiklenecek olay
+document.getElementById('urunKategoriId').addEventListener('change', async function() {
+    const categoryId = this.value;
+    const container = document.getElementById('dynamicAttributesContainer');
+    const attributeArea = document.getElementById('dynamicAttributesArea');
+    
+    if (!categoryId) {
+        if (attributeArea) attributeArea.classList.add('d-none');
+        if (container) container.innerHTML = '';
+        return;
+    }
+
+    try {
+        if (attributeArea) attributeArea.classList.remove('d-none');
+        if (container) container.innerHTML = '<div class="col-12 text-center"><div class="spinner-border spinner-border-sm text-primary"></div> Kurallar yükleniyor...</div>';        
+        
+        // Backend'den kalıtımla gelen kuralları çekiyoruz
+        const response = await fetch(`${CONFIG.API_BASE_URL}/attribute-rules/category/${categoryId}`, {
+            headers: { "Authorization": `Bearer ${token}` }
+        });
+        
+        if (!response.ok) throw new Error("Kurallar çekilemedi!");
+        
+        const rules = await response.json();
+        
+        // Global'den En Alta doğru göstermek için ters çevir
+        rules.reverse();
+
+        if (container) container.innerHTML = ''; // İçini temizle
+
+        if (rules.length === 0) {
+            if (attributeArea) attributeArea.classList.add('d-none');
+            return;
+        }
+
+        // Gelen her bir kural için DataType'a göre dinamik input çiz
+        rules.forEach(rule => {
+            let inputHtml = '';
+            let requiredAttr = rule.isRequired ? 'required' : '';
+            let starHtml = rule.isRequired ? '<span class="text-danger">*</span>' : '';
+
+            if (rule.dataType === 'dropdown' && rule.allowedValues) {
+                let options = [];
+                try { 
+                    options = JSON.parse(rule.allowedValues);
+                } catch(e) {
+                    options = rule.allowedValues.split(',').map(s => s.trim());
+                }
+                
+                let optionsHtml = options.map(opt => `<option value="${escapeHtml(opt)}">${escapeHtml(opt)}</option>`).join('');
+                inputHtml = `<select class="form-select dynamic-rule-input" data-rule-id="${rule.id}" data-rule-key="${escapeHtml(rule.attributeKey)}" ${requiredAttr}>
+                                <option value="">Seçiniz...</option>
+                                ${optionsHtml}
+                             </select>`;
+            } 
+            else if (rule.dataType === 'number') {
+                inputHtml = `<input type="number" class="form-control dynamic-rule-input" data-rule-id="${rule.id}" data-rule-key="${escapeHtml(rule.attributeKey)}" ${requiredAttr}>`;
+            } 
+            else { 
+                inputHtml = `<input type="text" class="form-control dynamic-rule-input" data-rule-id="${rule.id}" data-rule-key="${escapeHtml(rule.attributeKey)}" ${requiredAttr}>`;
+            }
+
+            const div = document.createElement('div');
+            div.className = 'col-md-6 mb-3';
+            div.innerHTML = `<label class="form-label small fw-bold">${escapeHtml(rule.attributeKey)} ${starHtml}</label>
+                             ${inputHtml}`;
+            container.appendChild(div);
+        });
+
+    } catch (error) {
+        if (container) container.innerHTML = `<div class="col-12 text-center text-danger-small"><i class="bi bi-exclamation-triangle"></i> Hata: ${error.message}</div>`;
+    }
+});
+
 function tabloyuCiz(urunler) {
     tabloGovdesi.innerHTML = "";
 
@@ -241,6 +315,25 @@ document.getElementById("btnUrunKaydet").addEventListener("click", async () => {
         initialQuantity: parseInt(initialQuantity) || 0
     };
 
+    // Dinamik özellikleri topla (Strongly Typed EAV formatı)
+    const dinamikInputlar = document.querySelectorAll('.dynamic-rule-input');
+    if (dinamikInputlar.length > 0) {
+        urunVerisi.attributes = []; // Dizi (Array) olarak başlıyoruz
+        dinamikInputlar.forEach(input => {
+            const ruleId = parseInt(input.getAttribute('data-rule-id'));
+            const key = input.getAttribute('data-rule-key');
+            const val = input.value;
+            
+            if (ruleId && key && val) {
+                urunVerisi.attributes.push({
+                    ruleId: ruleId,
+                    key: key,
+                    value: val
+                });
+            }
+        });
+    }
+
     const metod = id ? "PUT" : "POST";
     const adres = id ? (`${API_URL}/${id}`) : API_URL;
 
@@ -315,9 +408,27 @@ function urunDuzenle(id) {
     document.getElementById("urunKategoriId").value = urun.categoryId || "";
 
     document.getElementById("modalBaslik").innerText = "Ürün Düzenle";
+    const depoSecimi = document.getElementById("depoSecimiAlani");
+    if(depoSecimi) depoSecimi.classList.add("d-none");
     document.getElementById("rafSecimiAlani").classList.add("d-none");
     document.getElementById("baslangicStokAlani").classList.add("d-none");
     document.getElementById("btnUrunKaydet").innerText = "Güncelle";
+
+    // Kategori değişti tetiklemesini manuel yap ki formlar gelsin
+    const event = new Event('change');
+    document.getElementById("urunKategoriId").dispatchEvent(event);
+
+    // Kural formlarının gelmesini bekle ve değerleri doldur
+    setTimeout(() => {
+        if (urun.attributes && Array.isArray(urun.attributes)) {
+            urun.attributes.forEach(attr => {
+                const input = document.querySelector(`.dynamic-rule-input[data-rule-id="${attr.ruleId}"]`);
+                if (input) {
+                    input.value = attr.value;
+                }
+            });
+        }
+    }, 500);
 
     const modalElement = document.getElementById("urunModal");
     const modalInstance = bootstrap.Modal.getOrCreateInstance(modalElement);
@@ -336,8 +447,20 @@ document.querySelector('[data-bs-target="#urunModal"]').addEventListener("click"
     document.getElementById("urunFormu").reset();
     document.getElementById("urunId").value = "";
     document.getElementById("modalBaslik").innerText = "Yeni Ürün Ekle";
+    
+    const depoSecimi = document.getElementById("depoSecimiAlani");
+    if(depoSecimi) depoSecimi.classList.remove("d-none");
     document.getElementById("rafSecimiAlani").classList.remove("d-none");
     document.getElementById("baslangicStokAlani").classList.remove("d-none");
+    
+    document.getElementById("urunRafId").disabled = true;
+    document.getElementById("urunRafId").innerHTML = '<option value="">Depo bekleniyor...</option>';
+    
+    const dynamicAttr = document.getElementById("dynamicAttributesArea");
+    if (dynamicAttr) dynamicAttr.classList.add("d-none");
+    const dynamicContainer = document.getElementById("dynamicAttributesContainer");
+    if (dynamicContainer) dynamicContainer.innerHTML = "";
+    
     document.getElementById("btnUrunKaydet").innerText = "Ekle ve Kaydet";
 });
 
@@ -353,28 +476,68 @@ if (!hasPermission("Product.Edit") && !hasPermission("Product.Delete")) {
 urunleriYukle(currentPage);
 dropdownKategorileriniYukle();
 
-async function dropdownRaflariYukle() {
+async function dropdownDepolariYukle() {
     try {
-        const cevap = await fetch(`${CONFIG.API_BASE_URL}/locations?pageSize=1000`, {
+        const response = await fetch(`${CONFIG.API_BASE_URL}/warehouses?pageSize=1000`, {
             method: "GET",
             headers: { "Authorization": `Bearer ${token}` }
         });
-        if (!cevap.ok) throw new Error("Raflar alınamadı.");
-        const data = await cevap.json();
-        const raflar = data.items || data;
-        const select = document.getElementById("urunRafId");
+        if (!response.ok) throw new Error("Depolar alınamadı.");
+        const data = await response.json();
+        const depolar = data.items || data;
+        const select = document.getElementById("urunDepoId");
         if (select) {
-            select.innerHTML = '<option value="">Raf seçin...</option>';
-            raflar.forEach(raf => {
+            select.innerHTML = '<option value="">Önce depo seçin...</option>';
+            depolar.forEach(depo => {
                 const option = document.createElement("option");
-                option.value = raf.id;
-                option.textContent = raf.code;
+                option.value = depo.id;
+                option.textContent = escapeHtml(depo.name);
                 select.appendChild(option);
             });
         }
     } catch (hata) {
-        console.error("Raf dropdown yükleme hatası:", hata);
+        console.error("Depo dropdown yükleme hatası:", hata);
     }
 }
 
-dropdownRaflariYukle();
+document.getElementById("urunDepoId").addEventListener("change", async function() {
+    const warehouseId = this.value;
+    const rafSelect = document.getElementById("urunRafId");
+    
+    if (!warehouseId) {
+        rafSelect.innerHTML = '<option value="">Depo bekleniyor...</option>';
+        rafSelect.disabled = true;
+        return;
+    }
+    
+    try {
+        rafSelect.disabled = false;
+        rafSelect.innerHTML = '<option value="">Yükleniyor...</option>';
+        const response = await fetch(`${CONFIG.API_BASE_URL}/locations/by-warehouse/${warehouseId}?pageSize=1000`, {
+            method: "GET",
+            headers: { "Authorization": `Bearer ${token}` }
+        });
+        if (!response.ok) throw new Error("Raflar alınamadı.");
+        const data = await response.json();
+        const raflar = data.items || data;
+        
+        rafSelect.innerHTML = '<option value="">Raf seçin...</option>';
+        if (raflar.length === 0) {
+            rafSelect.innerHTML = '<option value="">Bu depoda raf yok</option>';
+            rafSelect.disabled = true;
+            return;
+        }
+        
+        raflar.forEach(raf => {
+            const option = document.createElement("option");
+            option.value = raf.id;
+            option.textContent = escapeHtml(raf.code);
+            rafSelect.appendChild(option);
+        });
+    } catch (hata) {
+        console.error("Raf dropdown yükleme hatası:", hata);
+        rafSelect.innerHTML = '<option value="">Hata oluştu</option>';
+    }
+});
+
+dropdownDepolariYukle();

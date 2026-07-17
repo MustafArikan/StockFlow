@@ -1,4 +1,4 @@
-// Kamerayı başlatma fonksiyonu
+﻿// Kamerayı başlatma fonksiyonu
 function initScanner() {
     document.getElementById('result-box').classList.add('d-none');
     
@@ -42,3 +42,5 @@ document.addEventListener("DOMContentLoaded", () => {
     if (btnStop) btnStop.addEventListener("click", stopScanner); // stopScanner scanner.js'de tanımlıdır
     if (btnCopy) btnCopy.addEventListener("click", copyResult);
 });
+
+

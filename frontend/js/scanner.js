@@ -1,4 +1,4 @@
-/**
+﻿/**
  * StockFlow Hibrit QR ve Barkod Okuyucu Modülü
  */
 
@@ -82,3 +82,4 @@ function stopScanner() {
     }
     return Promise.resolve();
 }
+

@@ -6,9 +6,10 @@ let tumKategoriler = [];
 let filtreliKategoriler = [];
 const tabloGovdesi = document.getElementById("kategoriTablosuGovdesi");
 let currentPage = 1;
-const pageSize = 10;
+const pageSize = 50;
 
 let aktifArama = '';
+let acikKategoriler = new Set();
 let siralamaSutunu = 'id';
 let siralamaYonu = 'asc';
 
@@ -25,10 +26,14 @@ function escapeHtml(text) {
 }
 
 function veriyiGuncelle() {
-    filtreliKategoriler = tumKategoriler.filter(kategori =>
-        (kategori.name && kategori.name.toLowerCase().includes(aktifArama)) ||
-        (kategori.id && kategori.id.toString().includes(aktifArama))
-    );
+    if (aktifArama.trim() === '') {
+        filtreliKategoriler = tumKategoriler.filter(k => k.parentId === null);
+    } else {
+        filtreliKategoriler = tumKategoriler.filter(kategori =>
+            (kategori.name && kategori.name.toLowerCase().includes(aktifArama)) ||
+            (kategori.id && kategori.id.toString().includes(aktifArama))
+        );
+    }
 
     filtreliKategoriler.sort((a, b) => {
         let degerA = a[siralamaSutunu] != null ? a[siralamaSutunu] : '';
@@ -103,6 +108,7 @@ async function kategorileriYukle(page = 1) {
         currentPage = page;
 
         veriyiGuncelle();
+        ustKategoriDropdownDoldur();
     } catch (hata) {
         tabloGovdesi.innerHTML = `<tr><td colspan="3" class="text-center text-danger py-4">Kategori Yüklenemedi. (${hata.message})</td></tr>`;
         const paginationContainer = document.getElementById("paginationContainer");
@@ -110,29 +116,140 @@ async function kategorileriYukle(page = 1) {
     }
 }
 
+function ustKategoriDropdownDoldur(haricTutulacakId = null) {
+    const select = document.getElementById("ustKategoriId");
+    if (!select) return;
+    
+    select.innerHTML = '<option value="">Yok (Ana Kategori Olarak Ekle)</option>';
+    tumKategoriler.forEach(kategori => {
+        if (kategori.id !== haricTutulacakId) { // Kendisini üst kategori seçemesin
+            const option = document.createElement("option");
+            option.value = kategori.id;
+            option.textContent = escapeHtml(kategori.name);
+            select.appendChild(option);
+        }
+    });
+}
+
 function tabloyuCiz(kategoriler) {
-    tabloGovdesi.innerHTML = "";
+    tabloGovdesi.innerHTML = ""; // Temizlik
 
     if (kategoriler.length === 0) {
-        tabloGovdesi.innerHTML = `<tr><td colspan="3" class="text-center text-muted py-4">Kayıt bulunamadı.</td></tr>`;
+        const tr = document.createElement("tr");
+        const td = document.createElement("td");
+        td.colSpan = 3;
+        td.className = "text-center text-muted py-4";
+        td.textContent = "Kayıt bulunamadı."; // XSS korumalı
+        tr.appendChild(td);
+        tabloGovdesi.appendChild(tr);
         return;
     }
 
-    let satirlar = [];
-    kategoriler.forEach(kategori => {
-        let btnDuzenle = hasPermission("Category.Edit") ? `<button class="btn btn-sm btn-outline-primary rounded-pill btn-duzenle" data-id="${kategori.id}">Düzenle</button>` : "";
-        let btnSil = hasPermission("Category.Delete") ? `<button class="btn btn-sm btn-outline-danger rounded-pill btn-sil" data-id="${kategori.id}">Sil</button>` : "";
-        let aksiyonButonlari = (btnDuzenle || btnSil) ? `<td class="text-end">${btnDuzenle} ${btnSil}</td>` : "";
+    const fragment = document.createDocumentFragment();
 
-        const satir = `
-            <tr>
-                <td class="fw-bold">${kategori.id}</td>
-                <td>${escapeHtml(kategori.name)}</td>
-                ${aksiyonButonlari}
-            </tr>`;
-        satirlar.push(satir);
+    function satirOlustur(kategori, level, isVisible) {
+        let cocuklar = tumKategoriler.filter(k => k.parentId === kategori.id);
+        
+        cocuklar.sort((a, b) => {
+            let degerA = a[siralamaSutunu] != null ? a[siralamaSutunu] : '';
+            let degerB = b[siralamaSutunu] != null ? b[siralamaSutunu] : '';
+            if (typeof degerA === 'string') {
+                return siralamaYonu === 'asc' ? degerA.localeCompare(degerB) : degerB.localeCompare(degerA);
+            } else {
+                return siralamaYonu === 'asc' ? degerA - degerB : degerB - degerA;
+            }
+        });
+
+        const hasChildren = cocuklar.length > 0;
+        
+        const tr = document.createElement("tr");
+        if (!isVisible) tr.classList.add("d-none");
+        if (kategori.parentId) tr.classList.add(`child-of-${kategori.parentId}`);
+        tr.dataset.id = kategori.id;
+
+        // ID Sütunu (Gizli)
+        const tdId = document.createElement("td");
+        tdId.className = "d-none";
+        tdId.textContent = kategori.id;
+        tr.appendChild(tdId);
+
+        // Kategori Adı Sütunu
+        const tdAd = document.createElement("td");
+        const dFlex = document.createElement("div");
+        dFlex.className = "d-flex align-items-center";
+
+        // CSS ile Dinamik Spacer
+        if (level > 0) {
+            const spacer = document.createElement("div");
+            spacer.style.width = `${level * 35}px`;
+            spacer.style.flexShrink = "0"; // Esneme koruması
+            dFlex.appendChild(spacer);
+        }
+
+        // Aç/Kapat İkonu
+        if (aktifArama.trim() === '') {
+            if (hasChildren) {
+                const icon = document.createElement("i");
+                icon.className = `bi bi-chevron-${acikKategoriler.has(kategori.id) ? 'down' : 'right'} me-2 btn-expand text-primary`;
+                icon.style.cursor = "pointer";
+                icon.style.width = "16px";
+                icon.dataset.id = kategori.id;
+                dFlex.appendChild(icon);
+            } else {
+                const iconSpacer = document.createElement("span");
+                iconSpacer.className = "me-2";
+                iconSpacer.style.display = "inline-block";
+                iconSpacer.style.width = "16px";
+                dFlex.appendChild(iconSpacer);
+            }
+        }
+
+        // Kategori Adı (Metin)
+        const textSpan = document.createElement("span");
+        if (hasChildren && aktifArama.trim() === '') textSpan.classList.add("fw-bold");
+        textSpan.textContent = kategori.name; 
+        dFlex.appendChild(textSpan);
+        
+        tdAd.appendChild(dFlex);
+        tr.appendChild(tdAd);
+
+        // İşlem Butonları
+        const tdAksiyon = document.createElement("td");
+        tdAksiyon.className = "text-end";
+        
+        if (hasPermission("Category.Edit")) {
+            const btnDuzenle = document.createElement("button");
+            btnDuzenle.className = "btn btn-sm btn-outline-primary rounded-pill btn-duzenle me-1";
+            btnDuzenle.dataset.id = kategori.id;
+            btnDuzenle.textContent = "Düzenle";
+            tdAksiyon.appendChild(btnDuzenle);
+        }
+        if (hasPermission("Category.Delete")) {
+            const btnSil = document.createElement("button");
+            btnSil.className = "btn btn-sm btn-outline-danger rounded-pill btn-sil";
+            btnSil.dataset.id = kategori.id;
+            btnSil.textContent = "Sil";
+            tdAksiyon.appendChild(btnSil);
+        }
+        
+        tr.appendChild(tdAksiyon);
+
+        // Fragment'e ekle
+        fragment.appendChild(tr);
+
+        // Recursive çağrı
+        if (aktifArama.trim() === '') {
+            let cocuklarGorunurMu = isVisible && acikKategoriler.has(kategori.id);
+            cocuklar.forEach(cocuk => satirOlustur(cocuk, level + 1, cocuklarGorunurMu));
+        }
+    }
+
+    kategoriler.forEach(kategori => {
+        satirOlustur(kategori, 0, true);
     });
-    tabloGovdesi.innerHTML = satirlar.join("");
+
+    // Tek seferde DOM'a bas (Performans maksimizasyonu)
+    tabloGovdesi.appendChild(fragment);
 }
 
 function sayfalamayiCiz(totalPages, currentPage) {
@@ -189,7 +306,8 @@ document.getElementById("btnKategoriKaydet").addEventListener("click", async () 
         return;
     }
 
-    const kategoriVerisi = { name: name, parentId: null };
+    const parentId = document.getElementById("ustKategoriId").value;
+    const kategoriVerisi = { name: name, parentId: parentId ? parseInt(parentId) : null };
     const metod = id ? "PUT" : "POST";
     const adres = id ? (`${API_URL}/${id}`) : API_URL;
 
@@ -266,6 +384,8 @@ function kategoriDuzenle(id) {
 
     document.getElementById("kategoriId").value = kategori.id;
     document.getElementById("kategoriAdi").value = kategori.name;
+    ustKategoriDropdownDoldur(kategori.id);
+    document.getElementById("ustKategoriId").value = kategori.parentId || "";
     document.getElementById("modalBaslik").innerText = "Kategori Düzenle";
     document.getElementById("btnKategoriKaydet").innerText = "Güncelle";
 
@@ -275,6 +395,20 @@ function kategoriDuzenle(id) {
 }
 
 tabloGovdesi.addEventListener("click", (e) => {
+    const btnExpand = e.target.closest(".btn-expand");
+    if (btnExpand) {
+        const id = parseInt(btnExpand.getAttribute("data-id"));
+        if (acikKategoriler.has(id)) {
+            acikKategoriler.delete(id);
+        } else {
+            acikKategoriler.add(id);
+        }
+        const baslangic = (currentPage - 1) * pageSize;
+        const bitis = baslangic + pageSize;
+        tabloyuCiz(filtreliKategoriler.slice(baslangic, bitis));
+        return;
+    }
+
     const btnDuzenle = e.target.closest(".btn-duzenle");
     const btnSil = e.target.closest(".btn-sil");
 
@@ -285,6 +419,7 @@ tabloGovdesi.addEventListener("click", (e) => {
 document.querySelector('[data-bs-target="#kategoriModal"]').addEventListener("click", () => {
     document.getElementById("kategoriFormu").reset();
     document.getElementById("kategoriId").value = "";
+    ustKategoriDropdownDoldur();
     document.getElementById("modalBaslik").innerText = "Yeni Kategori Ekle";
     document.getElementById("btnKategoriKaydet").innerText = "Ekle ve Kaydet";
 });
@@ -299,3 +434,4 @@ if (!hasPermission("Category.Edit") && !hasPermission("Category.Delete")) {
 }
 
 kategorileriYukle();
+

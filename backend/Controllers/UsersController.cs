@@ -27,12 +27,37 @@ public class UsersController : ControllerBase
             {
                 u.Id,
                 u.Email,
+                u.FirstName,
+                u.LastName,
                 u.Role,
                 u.IsEmailConfirmed,
                 u.CreatedAt
             })
             .ToListAsync();
         return Ok(users);
+    }
+
+    [HttpGet("{id}")]
+    public async Task<IActionResult> GetUserById(int id)
+    {
+        var user = await _context.Users
+            .AsNoTracking()
+            .Where(u => u.Id == id)
+            .Select(u => new
+            {
+                u.Id,
+                u.Email,
+                u.FirstName,
+                u.LastName,
+                u.Role,
+                u.IsEmailConfirmed,
+                u.CreatedAt
+            })
+            .FirstOrDefaultAsync();
+            
+        if (user == null) return NotFound(new { message = "Kullanıcı bulunamadı." });
+        
+        return Ok(user);
     }
 
     [HttpPut("{id}/role")]
@@ -63,6 +88,6 @@ public class UsersController : ControllerBase
 
         await _context.SaveChangesAsync();
 
-        return Ok(new {message = $"Kullanıcı rolü başarıyla '{dto.Role}'güncellendi ve aktif oturumlar sonlandırıldı."});
+        return Ok(new {message = $"Kullanıcı rolü başarıyla '{dto.Role}' güncellendi ve aktif oturumlar sonlandırıldı."});
     }
 }

@@ -20,12 +20,14 @@
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav me-auto">
+                                <ul class="navbar-nav me-auto">
                     <li class="nav-item"><a class="nav-link" href="index.html">Ana Sayfa</a></li>
                     <li class="nav-item"><a class="nav-link" href="categories.html">Kategoriler</a></li>
                     <li class="nav-item"><a class="nav-link" href="products.html">Ürünler</a></li>
-                    <li class="nav-item"><a class="nav-link active" href="movements.html">Stok Hareketleri</a></li>
+                    <li class="nav-item"><a class="nav-link" href="movements.html">Stok Hareketleri</a></li>
                     <li class="nav-item"><a class="nav-link" href="warehouses.html">Depolar</a></li>
+                    <li class="nav-item"><a class="nav-link" href="suppliers.html">Tedarikçiler</a></li>
+                    <li class="nav-item"><a class="nav-link" href="audit-logs.html">Sistem Logları</a></li>
                     <li class="nav-item"><a class="nav-link" href="test-scanner.html">Barkod Okuyucu</a></li>
                 </ul>
                 <div class="d-flex align-items-center text-white-50">
@@ -161,6 +163,39 @@
                         <button type="submit" id="btnKaydet" class="btn btn-primary w-100 rounded-pill py-2 fw-bold"
                             disabled>Ekle ve Onayla</button>
                     </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Kullanıcı Profili Modalı -->
+    <div class="modal fade" id="userProfileModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header bg-light border-bottom-0">
+                    <h5 class="modal-title text-dark"><i class="bi bi-person-vcard me-2"></i>Kullanıcı Profili</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Kapat"></button>
+                </div>
+                <div class="modal-body p-4" id="userProfileBody">
+                    <div class="text-center mb-4">
+                        <div class="display-1 text-primary mb-3"><i class="bi bi-person-circle"></i></div>
+                        <h3 class="fw-bold" id="upmName">-</h3>
+                        <p class="text-muted" id="upmEmail">-</p>
+                    </div>
+                    <ul class="list-group list-group-flush">
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <span><i class="bi bi-shield-lock me-2 text-warning"></i>Yetki Rolü</span>
+                            <span class="badge bg-dark rounded-pill text-uppercase" id="upmRole">-</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <span><i class="bi bi-calendar-check me-2 text-success"></i>Kayıt Tarihi</span>
+                            <span id="upmDate">-</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <span><i class="bi bi-envelope-check me-2 text-info"></i>E-posta Onayı</span>
+                            <span id="upmEmailStatus"></span>
+                        </li>
+                    </ul>
                 </div>
             </div>
         </div>

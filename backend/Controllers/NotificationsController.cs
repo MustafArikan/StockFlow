@@ -29,7 +29,9 @@ namespace stok_takip.Controllers
                 query = query.Where(n => !n.IsRead);
             }
 
-            var notifications = await query.OrderByDescending(n => n.CreatedAt).ToListAsync();
+            var notifications = await query.OrderByDescending(n => n.CreatedAt)
+                .Select(n => new stok_takip.DTOs.NotificationResponseDto(n.Id, n.Message, n.Type, n.Severity, n.IsRead, n.CreatedAt))
+                .ToListAsync();
             
             return Ok(notifications);
         }

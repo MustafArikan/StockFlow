@@ -17,4 +17,12 @@ public class UpdateProductDto
 
     [Range(1, int.MaxValue, ErrorMessage = "Geçerli bir kategori seçilmelidir.")]
     public int CategoryId { get; set; }
+
+    [Range(0, double.MaxValue, ErrorMessage = "Maliyet fiyatı negatif olamaz.")]
+    public decimal Cost { get; set; } = 0;
+
+    [Range(0, double.MaxValue, ErrorMessage = "Çıkış fiyatı negatif olamaz.")]  
+    public decimal Price { get; set; } = 0;
+
+    public List<ProductAttributeDto>? Attributes { get; set; } // JSON formatında ürün özellikleri (Strongly Typed EAV)
 }

@@ -1,4 +1,4 @@
-const API_URL = `${CONFIG.API_BASE_URL}/warehouses`;
+﻿const API_URL = `${CONFIG.API_BASE_URL}/warehouses`;
 const token = localStorage.getItem('token');
 
 const userRole = typeof getUserRole === "function" ? getUserRole() : "User";
@@ -932,3 +932,5 @@ document.addEventListener("DOMContentLoaded", () => {
         if (e.target.id === "btnHizliRafIptal") hizliRafIptal();
     });
 });
+
+

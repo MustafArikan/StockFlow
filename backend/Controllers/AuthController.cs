@@ -4,6 +4,7 @@ using System.Text;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using stok_takip.Data;
@@ -36,6 +37,7 @@ public class AuthController : ControllerBase
 
 [AllowAnonymous]
 [HttpPost("register")]
+[EnableRateLimiting("AuthLimit")] // Rate limiting for registration
 public async Task<IActionResult> Register([FromBody] RegisterDto dto)
     {
         if(string.IsNullOrWhiteSpace(dto.Email) || string.IsNullOrWhiteSpace(dto.Password))
@@ -53,10 +55,12 @@ public async Task<IActionResult> Register([FromBody] RegisterDto dto)
 
         var newUser = new User
         {
+            FirstName = dto.FirstName,
+            LastName = dto.LastName,
             Email = dto.Email,
             Role = "viewer",  // Varsayılan rol
             IsEmailConfirmed = false,
-            EmailConfirmationCode = verificationCode,
+            EmailConfirmationCode = _passwordHasher.HashPassword(null, verificationCode),
             ConfirmationCodeExpiry = DateTime.UtcNow.AddMinutes(10)  // Kodun geçerlilik süresi 10 dakika
         };
 
@@ -97,7 +101,7 @@ public async Task<IActionResult> VerifyEmail([FromBody] VerifyEmailDto dto)
         {
             return BadRequest(new { message = "Email is already verified." });
         }
-        if (user.EmailConfirmationCode != dto.VerificationCode)
+        if (_passwordHasher.VerifyHashedPassword(user, user.EmailConfirmationCode, dto.VerificationCode) == PasswordVerificationResult.Failed)
         {
             return BadRequest(new { message = "Invalid verification code." });
         }
@@ -117,6 +121,7 @@ public async Task<IActionResult> VerifyEmail([FromBody] VerifyEmailDto dto)
 
 [AllowAnonymous]
 [HttpPost("login")]
+[EnableRateLimiting("AuthLimit")] // Rate limiting for login attempts
 public async Task<IActionResult> Login([FromBody] LoginDto dto)
     {
         if(string.IsNullOrWhiteSpace(dto.Email) || string.IsNullOrWhiteSpace(dto.Password))
@@ -170,12 +175,6 @@ public async Task<IActionResult> Login([FromBody] LoginDto dto)
            email = user.Email,
            role = user.Role 
         });
-    }
-[HttpPost("test-admin")]
-[Authorize(Roles = "admin")]
-public IActionResult TestAdmin()
-    {
-        return Ok(new { message = "Congratulations! You are accessed this endpoint as an admin role." });
     }
 
 [HttpGet("me")]
@@ -274,6 +273,7 @@ public async Task<IActionResult> Logout()
 
     [AllowAnonymous]
     [HttpPost("forgot-password")]
+    [EnableRateLimiting("AuthLimit")] // Rate limiting for forgot password
     public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordDto dto)
     {
         var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == dto.Email);
@@ -284,7 +284,7 @@ public async Task<IActionResult> Logout()
         }
 
         var resetCode = System.Security.Cryptography.RandomNumberGenerator.GetInt32(100000, 1000000).ToString(); // 6 haneli şifre sıfırlama kodu
-        user.PasswordResetCode = resetCode;
+        user.PasswordResetCode = _passwordHasher.HashPassword(user, resetCode);
         user.PasswordResetCodeExpiry = DateTime.UtcNow.AddMinutes(10); 
         await _context.SaveChangesAsync();
 
@@ -304,14 +304,22 @@ public async Task<IActionResult> Logout()
 
     [AllowAnonymous]
     [HttpPost("verify-reset-code")]
+    [EnableRateLimiting("AuthLimit")] // Rate limiting for verify reset code
     public async Task<IActionResult> VerifyResetCode([FromBody] VerifyResetCodeDto dto)
     {
         var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == dto.Email);
 
-        if (user == null || user.PasswordResetCode != dto.ResetCode || user.PasswordResetCodeExpiry < DateTime.UtcNow)
-        {
-            return BadRequest(new {message = "Geçersiz veya süresi dolmuş şifre sıfırlama kodu."});
-        }
+    if (user == null || user.PasswordResetCodeExpiry < DateTime.UtcNow)
+    {
+        return BadRequest(new {message = "Geçersiz veya süresi dolmuş şifre sıfırlama kodu."});
+    }
+
+    // Yeni Hash kontrolü
+    if (_passwordHasher.VerifyHashedPassword(user, user.PasswordResetCode, dto.ResetCode) ==
+  PasswordVerificationResult.Failed)
+    {
+        return BadRequest(new {message = "Geçersiz veya süresi dolmuş şifre sıfırlama kodu."});
+    }
 
         return Ok(new {message = "Sıfırlama kodu doğrulandı. Lütfen yeni şifrenizi belirleyin."});
     }
@@ -322,10 +330,17 @@ public async Task<IActionResult> Logout()
     {
         var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == dto.Email);
 
-        if (user == null || user.PasswordResetCode != dto.ResetCode || user.PasswordResetCodeExpiry < DateTime.UtcNow)
-        {
-            return BadRequest(new {message = "Geçersiz veya süresi dolmuş şifre sıfırlama kodu."});
-        }
+    if (user == null || user.PasswordResetCodeExpiry < DateTime.UtcNow)
+    {
+        return BadRequest(new {message = "Geçersiz veya süresi dolmuş şifre sıfırlama kodu."});
+    }
+
+    // Yeni Hash kontrolü
+    if (_passwordHasher.VerifyHashedPassword(user, user.PasswordResetCode, dto.ResetCode) ==
+  PasswordVerificationResult.Failed)
+    {
+        return BadRequest(new {message = "Geçersiz veya süresi dolmuş şifre sıfırlama kodu."});
+    }
 
         var verificationResult = _passwordHasher.VerifyHashedPassword(user, user.PasswordHash, dto.NewPassword);
         if (verificationResult == PasswordVerificationResult.Success)
