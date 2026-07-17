@@ -32,6 +32,7 @@ public class SuppliersController : ControllerBase
 
     // Yeni Tedarikçi Ekle
     [HttpPost]
+    [Authorize(Roles = "admin")] 
     public async Task<IActionResult> Create([FromBody] stok_takip.DTOs.CreateSupplierDto dto)
     {
         if (string.IsNullOrWhiteSpace(dto.Name))

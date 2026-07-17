@@ -65,6 +65,7 @@ public class ProductsController : ControllerBase
     }
 
     [HttpPost]
+    [Authorize(Roles = "admin")] 
     public async Task<IActionResult> Create(CreateProductDto dto)
     {
         var mevcutUrun = await _context.Products.FirstOrDefaultAsync(p => p.Name == dto.Name || p.Barcode == dto.Barcode);
@@ -127,6 +128,7 @@ public class ProductsController : ControllerBase
 
     // PUT /api/products/5 : mecvut ürünü güncelle 
     [HttpPut("{id}")]
+    [Authorize(Roles = "admin")] 
     public async Task<IActionResult> Update(int id, UpdateProductDto dto)
     {
         var product = await _context.Products.FindAsync(id);
@@ -202,6 +204,7 @@ public class ProductsController : ControllerBase
 
     // DELETE /api/products/5 : ürünü sil
     [HttpDelete("{id}")]
+    [Authorize(Roles = "admin")] 
     public async Task<IActionResult> Delete(int id)
     {
         var product = await _context.Products.FindAsync(id);

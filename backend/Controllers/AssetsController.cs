@@ -21,6 +21,7 @@ public class AssetsController : ControllerBase
     }
 
     [HttpPost]
+    [Authorize(Roles = "admin")] 
     public async Task<IActionResult> CreateAsset([FromBody] CreateAssetDto dto)
     {
         var existingAsset = await _context.Assets
@@ -71,6 +72,7 @@ public class AssetsController : ControllerBase
     } 
 
     [HttpPut("{id}/assign")]
+    [Authorize(Roles = "admin")] 
     public async Task<IActionResult> AssignAsset(int id, [FromBody] AssignAssetDto dto)
     {
         var asset = await _context.Assets.FindAsync(id);

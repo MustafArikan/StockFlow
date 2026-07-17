@@ -68,6 +68,7 @@ public class LocationsController : ControllerBase
 
     // POST /api/locations  yeni raf ekle
     [HttpPost]
+    [Authorize(Roles = "admin")] 
     public async Task<IActionResult> Create(CreateLocationDto dto)
     {
         var warehouseExists = await _context.Warehouses.AnyAsync(w => w.Id == dto.WarehouseId);
@@ -87,6 +88,7 @@ public class LocationsController : ControllerBase
 
     // DELETE /api/locations/5  rafı sil
     [HttpDelete("{id}")]
+    [Authorize(Roles = "admin")] 
     public async Task<IActionResult> Delete(int id)
     {
         var location = await _context.Locations.FindAsync(id);
