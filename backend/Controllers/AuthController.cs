@@ -53,6 +53,8 @@ public async Task<IActionResult> Register([FromBody] RegisterDto dto)
 
         var newUser = new User
         {
+            FirstName = dto.FirstName,
+            LastName = dto.LastName,
             Email = dto.Email,
             Role = "viewer",  // Varsayılan rol
             IsEmailConfirmed = false,

@@ -1,4 +1,7 @@
-ï»¿namespace stok_takip.Models;
+using System.Text.Json.Serialization;
+using System.ComponentModel.DataAnnotations.Schema;
+
+namespace stok_takip.Models;
 
 public class Product : BaseEntity
 {
@@ -7,8 +10,16 @@ public class Product : BaseEntity
     public int MinStockLevel { get; set; }
     public int CategoryId { get; set; }
 
+    [Column(TypeName = "decimal(18,2)")]
+    public decimal Cost { get; set; } = 0; // Maliyet fiyatý
+    [Column(TypeName = "decimal(18,2)")]
+    public decimal Price { get; set; } = 0; // Çýkýþ fiyat
+
+    public string? Attributes { get; set; } // JSON formatýnda ürün özellikleri
+
     public Category Category { get; set; } = null!;
     public ICollection<StockLevel> StockLevels { get; set; } = new List<StockLevel>();
     public ICollection<StockMovement> StockMovements { get; set; } = new List<StockMovement>();
     public ICollection<Asset> Assets { get; set; } = new List<Asset>();
+
 }

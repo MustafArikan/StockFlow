@@ -31,6 +31,10 @@ namespace backend.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<int?>("AssignedToId")
+                        .HasColumnType("int")
+                        .HasColumnName("assigned_to_id");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2")
                         .HasColumnName("created_at");
@@ -39,17 +43,40 @@ namespace backend.Migrations
                         .HasColumnType("bit")
                         .HasColumnName("is_deleted");
 
-                    b.Property<int?>("ProductId")
+                    b.Property<string>("Notes")
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("notes");
+
+                    b.Property<int>("ProductId")
                         .HasColumnType("int")
                         .HasColumnName("product_id");
 
+                    b.Property<string>("SerialNumber")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("serial_number");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("status");
+
                     b.HasKey("Id")
-                        .HasName("pk_asset");
+                        .HasName("pk_assets");
+
+                    b.HasIndex("AssignedToId")
+                        .HasDatabaseName("ix_assets_assigned_to_id");
 
                     b.HasIndex("ProductId")
-                        .HasDatabaseName("ix_asset_product_id");
+                        .HasDatabaseName("ix_assets_product_id");
 
-                    b.ToTable("asset");
+                    b.HasIndex("SerialNumber")
+                        .IsUnique()
+                        .HasDatabaseName("ix_assets_serial_number")
+                        .HasFilter("[is_deleted] = 0");
+
+                    b.ToTable("assets");
                 });
 
             modelBuilder.Entity("stok_takip.Models.AssetHistory", b =>
@@ -61,25 +88,91 @@ namespace backend.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<int>("AssetId")
+                        .HasColumnType("int")
+                        .HasColumnName("asset_id");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2")
                         .HasColumnName("created_at");
 
+                    b.Property<string>("EventType")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("event_type");
+
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("bit")
                         .HasColumnName("is_deleted");
+
+                    b.Property<string>("Notes")
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("notes");
 
                     b.Property<int?>("UserId")
                         .HasColumnType("int")
                         .HasColumnName("user_id");
 
                     b.HasKey("Id")
-                        .HasName("pk_asset_history");
+                        .HasName("pk_asset_histories");
+
+                    b.HasIndex("AssetId")
+                        .HasDatabaseName("ix_asset_histories_asset_id");
 
                     b.HasIndex("UserId")
-                        .HasDatabaseName("ix_asset_history_user_id");
+                        .HasDatabaseName("ix_asset_histories_user_id");
 
-                    b.ToTable("asset_history");
+                    b.ToTable("asset_histories");
+                });
+
+            modelBuilder.Entity("stok_takip.Models.AttributeRule", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("id");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("AllowedValues")
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("allowed_values");
+
+                    b.Property<string>("AttributeKey")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("attribute_key");
+
+                    b.Property<int?>("CategoryId")
+                        .HasColumnType("int")
+                        .HasColumnName("category_id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("DataType")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("data_type");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit")
+                        .HasColumnName("is_deleted");
+
+                    b.Property<bool>("IsRequired")
+                        .HasColumnType("bit")
+                        .HasColumnName("is_required");
+
+                    b.HasKey("Id")
+                        .HasName("pk_attribute_rules");
+
+                    b.HasIndex("CategoryId")
+                        .HasDatabaseName("ix_attribute_rules_category_id");
+
+                    b.ToTable("attribute_rules");
                 });
 
             modelBuilder.Entity("stok_takip.Models.Category", b =>
@@ -207,6 +300,10 @@ namespace backend.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<string>("Attributes")
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("attributes");
+
                     b.Property<string>("Barcode")
                         .IsRequired()
                         .HasColumnType("nvarchar(450)")
@@ -215,6 +312,10 @@ namespace backend.Migrations
                     b.Property<int>("CategoryId")
                         .HasColumnType("int")
                         .HasColumnName("category_id");
+
+                    b.Property<decimal>("Cost")
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("cost");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2")
@@ -232,6 +333,10 @@ namespace backend.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)")
                         .HasColumnName("name");
+
+                    b.Property<decimal>("Price")
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("price");
 
                     b.HasKey("Id")
                         .HasName("pk_products");
@@ -256,25 +361,52 @@ namespace backend.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<string>("ActionType")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("action_type");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2")
                         .HasColumnName("created_at");
 
+                    b.Property<int?>("EntityId")
+                        .HasColumnType("int")
+                        .HasColumnName("entity_id");
+
+                    b.Property<string>("EntityName")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("entity_name");
+
+                    b.Property<string>("IpAddress")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("ip_address");
+
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("bit")
                         .HasColumnName("is_deleted");
+
+                    b.Property<string>("NewValues")
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("new_values");
+
+                    b.Property<string>("OldValues")
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("old_values");
 
                     b.Property<int?>("UserId")
                         .HasColumnType("int")
                         .HasColumnName("user_id");
 
                     b.HasKey("Id")
-                        .HasName("pk_security_audit_log");
+                        .HasName("pk_security_audit_logs");
 
                     b.HasIndex("UserId")
-                        .HasDatabaseName("ix_security_audit_log_user_id");
+                        .HasDatabaseName("ix_security_audit_logs_user_id");
 
-                    b.ToTable("security_audit_log");
+                    b.ToTable("security_audit_logs");
                 });
 
             modelBuilder.Entity("stok_takip.Models.StockLevel", b =>
@@ -343,6 +475,16 @@ namespace backend.Migrations
                         .HasColumnType("nvarchar(max)")
                         .HasColumnName("description");
 
+                    b.Property<string>("Destination")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)")
+                        .HasColumnName("destination");
+
+                    b.Property<string>("DocumentNumber")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("document_number");
+
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("bit")
                         .HasColumnName("is_deleted");
@@ -360,6 +502,18 @@ namespace backend.Migrations
                         .HasColumnType("int")
                         .HasColumnName("quantity");
 
+                    b.Property<int?>("SupplierId")
+                        .HasColumnType("int")
+                        .HasColumnName("supplier_id");
+
+                    b.Property<decimal>("TotalPrice")
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("total_price");
+
+                    b.Property<decimal>("UnitPrice")
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("unit_price");
+
                     b.Property<int?>("UserId")
                         .HasColumnType("int")
                         .HasColumnName("user_id");
@@ -370,10 +524,61 @@ namespace backend.Migrations
                     b.HasIndex("ProductId")
                         .HasDatabaseName("ix_stock_movements_product_id");
 
+                    b.HasIndex("SupplierId")
+                        .HasDatabaseName("ix_stock_movements_supplier_id");
+
                     b.HasIndex("UserId")
                         .HasDatabaseName("ix_stock_movements_user_id");
 
                     b.ToTable("stock_movements");
+                });
+
+            modelBuilder.Entity("stok_takip.Models.Supplier", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("id");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Address")
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("address");
+
+                    b.Property<string>("ContactEmail")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("contact_email");
+
+                    b.Property<string>("ContactName")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("contact_name");
+
+                    b.Property<string>("ContactPhone")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("contact_phone");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("created_at");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit")
+                        .HasColumnName("is_deleted");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("name");
+
+                    b.HasKey("Id")
+                        .HasName("pk_suppliers");
+
+                    b.ToTable("suppliers");
                 });
 
             modelBuilder.Entity("stok_takip.Models.User", b =>
@@ -402,6 +607,11 @@ namespace backend.Migrations
                         .HasColumnType("nvarchar(max)")
                         .HasColumnName("email_confirmation_code");
 
+                    b.Property<string>("FirstName")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("first_name");
+
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("bit")
                         .HasColumnName("is_deleted");
@@ -409,6 +619,11 @@ namespace backend.Migrations
                     b.Property<bool>("IsEmailConfirmed")
                         .HasColumnType("bit")
                         .HasColumnName("is_email_confirmed");
+
+                    b.Property<string>("LastName")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("last_name");
 
                     b.Property<string>("PasswordHash")
                         .IsRequired()
@@ -572,18 +787,51 @@ namespace backend.Migrations
 
             modelBuilder.Entity("stok_takip.Models.Asset", b =>
                 {
-                    b.HasOne("stok_takip.Models.Product", null)
+                    b.HasOne("stok_takip.Models.User", "AssignedTo")
+                        .WithMany()
+                        .HasForeignKey("AssignedToId")
+                        .HasConstraintName("fk_assets_users_assigned_to_id");
+
+                    b.HasOne("stok_takip.Models.Product", "Product")
                         .WithMany("Assets")
                         .HasForeignKey("ProductId")
-                        .HasConstraintName("fk_asset_products_product_id");
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_assets_products_product_id");
+
+                    b.Navigation("AssignedTo");
+
+                    b.Navigation("Product");
                 });
 
             modelBuilder.Entity("stok_takip.Models.AssetHistory", b =>
                 {
-                    b.HasOne("stok_takip.Models.User", null)
+                    b.HasOne("stok_takip.Models.Asset", "Asset")
+                        .WithMany("History")
+                        .HasForeignKey("AssetId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_asset_histories_assets_asset_id");
+
+                    b.HasOne("stok_takip.Models.User", "User")
                         .WithMany("AssetHistories")
                         .HasForeignKey("UserId")
-                        .HasConstraintName("fk_asset_history_users_user_id");
+                        .HasConstraintName("fk_asset_histories_users_user_id");
+
+                    b.Navigation("Asset");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("stok_takip.Models.AttributeRule", b =>
+                {
+                    b.HasOne("stok_takip.Models.Category", "Category")
+                        .WithMany("AttributeRules")
+                        .HasForeignKey("CategoryId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_attribute_rules_categories_category_id");
+
+                    b.Navigation("Category");
                 });
 
             modelBuilder.Entity("stok_takip.Models.Category", b =>
@@ -623,10 +871,12 @@ namespace backend.Migrations
 
             modelBuilder.Entity("stok_takip.Models.SecurityAuditLog", b =>
                 {
-                    b.HasOne("stok_takip.Models.User", null)
+                    b.HasOne("stok_takip.Models.User", "User")
                         .WithMany("SecurityAuditLogs")
                         .HasForeignKey("UserId")
-                        .HasConstraintName("fk_security_audit_log_users_user_id");
+                        .HasConstraintName("fk_security_audit_logs_users_user_id");
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("stok_takip.Models.StockLevel", b =>
@@ -659,12 +909,20 @@ namespace backend.Migrations
                         .IsRequired()
                         .HasConstraintName("fk_stock_movements_products_product_id");
 
+                    b.HasOne("stok_takip.Models.Supplier", "Supplier")
+                        .WithMany("StockMovements")
+                        .HasForeignKey("SupplierId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_stock_movements_suppliers_supplier_id");
+
                     b.HasOne("stok_takip.Models.User", "User")
                         .WithMany()
                         .HasForeignKey("UserId")
                         .HasConstraintName("fk_stock_movements_users_user_id");
 
                     b.Navigation("Product");
+
+                    b.Navigation("Supplier");
 
                     b.Navigation("User");
                 });
@@ -694,8 +952,15 @@ namespace backend.Migrations
                         .HasConstraintName("fk_user_warehouse_warehouses_warehouse_id");
                 });
 
+            modelBuilder.Entity("stok_takip.Models.Asset", b =>
+                {
+                    b.Navigation("History");
+                });
+
             modelBuilder.Entity("stok_takip.Models.Category", b =>
                 {
+                    b.Navigation("AttributeRules");
+
                     b.Navigation("Products");
 
                     b.Navigation("SubCategories");
@@ -712,6 +977,11 @@ namespace backend.Migrations
 
                     b.Navigation("StockLevels");
 
+                    b.Navigation("StockMovements");
+                });
+
+            modelBuilder.Entity("stok_takip.Models.Supplier", b =>
+                {
                     b.Navigation("StockMovements");
                 });
 

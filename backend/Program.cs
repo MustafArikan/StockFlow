@@ -17,6 +17,7 @@ builder.Services.AddControllers()
     {
         options.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
     });
+builder.Services.AddHttpContextAccessor();
 builder.Services.AddOpenApi();
 builder.Services.AddDbContextPool<AppDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));

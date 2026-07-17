@@ -1,4 +1,4 @@
-document.addEventListener("DOMContentLoaded", () => {
+﻿document.addEventListener("DOMContentLoaded", () => {
     
     let registeredEmail = ""; // Kayıt olunan e-postayı tutacağız ki verify ederken tekrar yazmasın
 
@@ -12,6 +12,8 @@ document.addEventListener("DOMContentLoaded", () => {
     registerForm.addEventListener("submit", async (e) => {
         e.preventDefault();
         
+        const firstName = document.getElementById("regFirstName").value.trim();
+        const lastName = document.getElementById("regLastName").value.trim();
         const email = document.getElementById("regEmail").value.trim();
         const password = document.getElementById("regPassword").value;
         const confirmPassword = document.getElementById("regPasswordConfirm").value;
@@ -34,7 +36,7 @@ document.addEventListener("DOMContentLoaded", () => {
             const response = await fetch(apiUrl, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ email, password })
+                body: JSON.stringify({ firstName, lastName, email, password })
             });
 
             const data = await response.json();
@@ -113,3 +115,5 @@ function hideAlert() {
     const alertEl = document.getElementById("alertMessage");
     alertEl.className = "alert d-none small py-2";
 }
+
+

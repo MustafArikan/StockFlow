@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Text.Json;
 using stok_takip.Data;
 using stok_takip.DTOs;
 using stok_takip.Models;
@@ -60,10 +61,11 @@ public class ProductsController : ControllerBase
         var product = await _context.Products.FindAsync(id);
         if (product == null)
             return NotFound();
-        return Ok(product);
+        return Ok(new ProductResponseDto(product.Id, product.Name, product.Barcode, product.MinStockLevel, product.CategoryId, product.Attributes));
     }
 
     [HttpPost]
+    [Authorize(Roles = "admin")] 
     public async Task<IActionResult> Create(CreateProductDto dto)
     {
         var mevcutUrun = await _context.Products.FirstOrDefaultAsync(p => p.Name == dto.Name || p.Barcode == dto.Barcode);
@@ -84,7 +86,8 @@ public class ProductsController : ControllerBase
             Name = dto.Name,
             Barcode = dto.Barcode,
             MinStockLevel = dto.MinStockLevel,
-            CategoryId = dto.CategoryId
+            CategoryId = dto.CategoryId,
+            Attributes = dto.Attributes != null ? System.Text.Json.JsonSerializer.Serialize(dto.Attributes) : "[]"
         };
         _context.Products.Add(product);
         await _context.SaveChangesAsync(); // Önce ürünü kaydet ki ID oluşsun
@@ -120,11 +123,12 @@ public class ProductsController : ControllerBase
 
         await _context.SaveChangesAsync();
 
-        return CreatedAtAction(nameof(GetById), new { id = product.Id }, product);
+        return Ok(new ProductResponseDto(product.Id, product.Name, product.Barcode, product.MinStockLevel, product.CategoryId, product.Attributes));
     }
 
     // PUT /api/products/5 : mecvut ürünü güncelle 
     [HttpPut("{id}")]
+    [Authorize(Roles = "admin")] 
     public async Task<IActionResult> Update(int id, UpdateProductDto dto)
     {
         var product = await _context.Products.FindAsync(id);
@@ -141,6 +145,7 @@ public class ProductsController : ControllerBase
         product.Barcode = dto.Barcode;
         product.MinStockLevel = dto.MinStockLevel;
         product.CategoryId = dto.CategoryId;
+        product.Attributes = dto.Attributes != null ? System.Text.Json.JsonSerializer.Serialize(dto.Attributes) : "[]";
 
         await _context.SaveChangesAsync();
 
@@ -194,11 +199,12 @@ public class ProductsController : ControllerBase
             }
         }
 
-        return Ok(product);
+        return Ok(new ProductResponseDto(product.Id, product.Name, product.Barcode, product.MinStockLevel, product.CategoryId, product.Attributes));
     } 
 
     // DELETE /api/products/5 : ürünü sil
     [HttpDelete("{id}")]
+    [Authorize(Roles = "admin")] 
     public async Task<IActionResult> Delete(int id)
     {
         var product = await _context.Products.FindAsync(id);

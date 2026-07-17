@@ -10,4 +10,9 @@ public class ProductDto
     public string CategoryName { get; set;} = string.Empty;
     public int StockQuantity { get; set;}
     public int LocationId { get; set; }
+
+    public decimal Cost { get; set; } = 0; // Maliyet fiyatı
+    public decimal Price { get; set; } = 0; // Çıkış fiyatı
+
+    public List<ProductAttributeDto>? Attributes { get; set; } // JSON formatında ürün özellikleri (Strongly Typed EAV)
 }

@@ -1,4 +1,4 @@
-const API_URL = `${CONFIG.API_BASE_URL}/stock/movements`;
+﻿const API_URL = `${CONFIG.API_BASE_URL}/stock/movements`;
 const token = localStorage.getItem('token');
 
 if (!token) window.location.href = 'login.html';
@@ -143,6 +143,14 @@ async function hareketleriYukle() {
 // ==========================================
 // 3. TABLO ÇİZİMİ VE SAYFALAMA 
 // ==========================================
+function parseJwt(t) {
+    try {
+        return JSON.parse(decodeURIComponent(atob(t.split('.')[1]).split('').map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join('')));
+    } catch (e) { return null; }
+}
+const currentPayload = parseJwt(token);
+const isAdmin = currentPayload && currentPayload["http://schemas.microsoft.com/ws/2008/06/identity/claims/role"] === "admin";
+
 function tabloyuCiz(veriListesi) {
     tabloGovdesi.innerHTML = "";
     if (veriListesi.length === 0) {
@@ -167,6 +175,15 @@ function tabloyuCiz(veriListesi) {
         const formatliTarih = new Date(hareket.tarih).toLocaleString('tr-TR');
         let pName = hareket.urunAdı || hareket.urunAdi || hareket.productName || '';
 
+        let kisiIsmi = hareket.personelName || hareket.personel;
+        let finalKisiHtml = "";
+        
+        if (isAdmin && hareket.userId) {
+            finalKisiHtml = `<a href="#" onclick="kullaniciProfiliGoster(${hareket.userId}); return false;" class="text-decoration-none fw-bold text-primary"><i class="bi bi-person-badge me-1"></i>${escapeHtml(kisiIsmi)}</a><br><small class="text-muted">${escapeHtml(hareket.personel)}</small>`;
+        } else {
+            finalKisiHtml = `<span>${escapeHtml(kisiIsmi)}</span><br><small class="text-muted">${escapeHtml(hareket.personel)}</small>`;
+        }
+
         const satir = `
             <tr>
                 <td class="text-muted small align-middle fw-bold text-center">${escapeHtml(formatliTarih)}</td>
@@ -174,7 +191,7 @@ function tabloyuCiz(veriListesi) {
                 <td class="align-middle">${escapeHtml(pName)}</td>
                 <td class="text-center align-middle">${tipEtiketi}</td>
                 <td class="fw-bold text-center align-middle ${adetRengi}">${adetIsareti}${hareket.quantity}</td>
-                <td class="text-center align-middle">${escapeHtml(hareket.personel)}</td>
+                <td class="text-center align-middle">${finalKisiHtml}</td>
             </tr>`;
         satirlar.push(satir);
     });
@@ -336,14 +353,20 @@ document.getElementById("islemTipi").addEventListener("change", (e) => {
     const sourceGroup = document.getElementById("sourceLocationGroup");
     const targetGroup = document.getElementById("targetLocationGroup");
 
+    const tGroup = document.getElementById("tedarikciGroup");
+    const cGroup = document.getElementById("cikisNoktasiGroup");
+
     if (tip === "GIRIS") {
         targetGroup.classList.remove("d-none"); sourceGroup.classList.add("d-none");
+        tGroup.classList.remove("d-none"); cGroup.classList.add("d-none");
         document.getElementById("sourceLocationId").value = "";
     } else if (tip === "CIKIS") {
         sourceGroup.classList.remove("d-none"); targetGroup.classList.add("d-none");
+        cGroup.classList.remove("d-none"); tGroup.classList.add("d-none");
         document.getElementById("targetLocationId").value = "";
     } else if (tip === "TRANSFER") {
         sourceGroup.classList.remove("d-none"); targetGroup.classList.remove("d-none");
+        tGroup.classList.add("d-none"); cGroup.classList.add("d-none");
     }
     formuDenetle();
 });
@@ -363,13 +386,22 @@ document.getElementById("stokIslemFormu").addEventListener("submit", async (e) =
     const targetLocVal = document.getElementById("targetLocationId").value;
     const kaydetButonu = document.getElementById("btnKaydet");
 
+    const bFiyat = parseFloat(document.getElementById("birimFiyat").value) || 0;
+    const fNo = document.getElementById("faturaNo").value;
+    const tId = document.getElementById("tedarikciSecimi").value;
+    const cNoktasi = document.getElementById("cikisNoktasi").value;
+
     const payload = {
         productBarcode: barcode,
         movementType: tip === "GIRIS" ? "IN" : tip === "CIKIS" ? "OUT" : "TRANSFER",
         quantity: qty,
         sourceLocationId: ((tip === "CIKIS" || tip === "TRANSFER") && sourceLocVal) ? parseInt(sourceLocVal) : null,
         targetLocationId: ((tip === "GIRIS" || tip === "TRANSFER") && targetLocVal) ? parseInt(targetLocVal) : null,
-        description: tip === "GIRIS" ? "Stok Girişi" : tip === "CIKIS" ? "Stok Çıkışı" : "Raf Arası Transfer"
+        description: tip === "GIRIS" ? "Stok Girişi" : tip === "CIKIS" ? "Stok Çıkışı" : "Raf Arası Transfer",
+        unitPrice: bFiyat,
+        documentNumber: fNo ? fNo : null,
+        supplierId: (tip === "GIRIS" && tId) ? parseInt(tId) : null,
+        destinationId: (tip === "CIKIS" && cNoktasi) ? cNoktasi : null
     };
 
     try {
@@ -446,9 +478,60 @@ function closeCamera() {
 }
 
 // BAŞLATICI
+async function dropdownTedarikcileriYukle() {
+    const tedarikciSelect = document.getElementById("tedarikciSecimi");
+    try {
+        const cevap = await fetch(`${CONFIG.API_BASE_URL}/suppliers`, {
+            method: 'GET',
+            headers: { "Authorization": `Bearer ${token}` }
+        });
+        if (!cevap.ok) throw new Error("Tedarikçiler alınamadı.");
+        const data = await cevap.json();
+        tedarikciSelect.innerHTML = '<option value="" selected disabled>Tedarikçi seçiniz (Opsiyonel)</option>';
+        data.forEach(t => {
+            const option = document.createElement("option");
+            option.value = t.id;
+            option.textContent = t.name;
+            tedarikciSelect.appendChild(option);
+        });
+    } catch (hata) {
+        if(tedarikciSelect) tedarikciSelect.innerHTML = '<option value="" selected disabled>Yüklenemedi!</option>';
+    }
+}
+
 async function baslat() {
+    await dropdownTedarikcileriYukle();
     await dropdownUrunleriYukle();
     await dropdownLokasyonlariYukle();
     await hareketleriYukle();
 }
 baslat();
+
+async function kullaniciProfiliGoster(userId) {
+    try {
+        const yanit = await fetch(`${CONFIG.API_BASE_URL}/users/${userId}`, {
+            headers: {
+                "Authorization": `Bearer ${localStorage.getItem("token")}`
+            }
+        });
+        if (!yanit.ok) throw new Error("Kullanıcı bilgileri alınamadı.");
+        const user = await yanit.json();
+        
+        document.getElementById('upmName').textContent = `${user.firstName || ''} ${user.lastName || ''}`;
+        document.getElementById('upmEmail').textContent = user.email || '';
+        document.getElementById('upmRole').textContent = user.role || 'viewer';
+        document.getElementById('upmDate').textContent = new Date(user.createdAt).toLocaleDateString("tr-TR");
+        
+        const emailStatusSpan = document.getElementById('upmEmailStatus');
+        if (user.isEmailConfirmed) {
+            emailStatusSpan.innerHTML = '<span class="badge bg-success rounded-pill"><i class="bi bi-check-lg"></i> Onaylı</span>';
+        } else {
+            emailStatusSpan.innerHTML = '<span class="badge bg-danger rounded-pill">Onaysız</span>';
+        }
+        
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('userProfileModal')).show();
+    } catch (hata) {
+        alert("Profil yüklenirken bir hata oluştu: " + hata.message);
+    }
+}
+
