@@ -17,7 +17,8 @@ public static class DbInitializer
             var hasher = new Microsoft.AspNetCore.Identity.PasswordHasher<User>();
             var adminUser = new User
             {
-                Username = "admin",
+                FirstName = "Sistem",
+                LastName = "Yöneticisi",
                 Email = "admin@godeva.com.tr",
                 Role = "admin",
                 IsEmailConfirmed = true
@@ -26,7 +27,8 @@ public static class DbInitializer
 
             var testUser = new User
             {
-                Username = "testuser",
+                FirstName = "Test",
+                LastName = "Kullanıcı",
                 Email = "test@godeva.com.tr",
                 Role = "viewer",
                 IsEmailConfirmed = true

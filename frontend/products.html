@@ -28,6 +28,8 @@
                     <li class="nav-item"><a class="nav-link active" href="products.html">Ürünler</a></li>
                     <li class="nav-item"><a class="nav-link" href="movements.html">Stok Hareketleri</a></li>
                     <li class="nav-item"><a class="nav-link" href="warehouses.html">Depolar</a></li>
+                    <li class="nav-item"><a class="nav-link" href="suppliers.html">Tedarikçiler</a></li>
+                    <li class="nav-item"><a class="nav-link" href="audit-logs.html">Sistem Logları</a></li>
                     <li class="nav-item"><a class="nav-link" href="test-scanner.html">Barkod Okuyucu</a></li>
                 </ul>
                 <div class="d-flex align-items-center text-white-50">
@@ -114,11 +116,20 @@
                                 <option value="">Kategori seçin...</option>
                             </select>
                         </div>
-                        
+                        <div class="row bg-light rounded-3 p-3 mx-0 mb-4 border d-none" id="dynamicAttributesArea">
+                           <div class="row p-0 m-0" id="dynamicAttributesContainer">
+                           </div>
+                        </div>
+                        <div class="mb-3" id="depoSecimiAlani">
+                            <label class="form-label text-muted small fw-bold">Yerleştirilecek Depo</label>
+                            <select class="form-select" id="urunDepoId">
+                                <option value="">Önce depo seçin...</option>
+                            </select>
+                        </div>
                         <div class="mb-3" id="rafSecimiAlani">
                             <label class="form-label text-muted small fw-bold">Yerleştirilecek Raf (Zorunlu)</label>
-                            <select class="form-select" id="urunRafId">
-                                <option value="">Yükleniyor...</option>
+                            <select class="form-select" id="urunRafId" disabled>
+                                <option value="">Depo bekleniyor...</option>
                             </select>
                         </div>
                         <div class="mb-4" id="baslangicStokAlani">

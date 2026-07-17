@@ -66,7 +66,7 @@
                     <table class="table table-hover align-middle mb-0">
                         <thead>
                             <tr class="text-muted small text-uppercase">
-                                <th id="thId" style="cursor: pointer;" class="user-select-none">ID ↕</th>
+                                <th id="thId" class="d-none">ID ↕</th>
                                 <th id="thAd" style="cursor: pointer;" class="user-select-none">Kategori Adı ↕</th>
                                 <th class="text-end" id="islemSutunuBasligi">İşlemler</th>
                             </tr>
@@ -97,6 +97,12 @@
                             <label class="form-label text-muted small fw-bold">Kategori Adı</label>
                             <input type="text" class="form-control" id="kategoriAdi" placeholder="Örn: Elektronik">
                         </div>
+                        <div class="mb-4">
+                            <label class="form-label text-muted small fw-bold">Üst Kategori (Opsiyonel)</label>
+                            <select class="form-select" id="ustKategoriId">
+                                <option value="">Yok (Ana Kategori Olarak Ekle)</option>
+                            </select>
+                        </div>
                         <button type="button" id="btnKategoriKaydet"
                             class="btn btn-primary w-100 rounded-pill py-2 fw-bold">Ekle ve Kaydet</button>
                     </form>
@@ -107,7 +113,7 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="js/config.js"></script>
-    <script src="js/categories.js"></script>
+    <script src="js/categories.js?v=2"></script>
     <script src="js/auth.js"></script>
 </body>
 
