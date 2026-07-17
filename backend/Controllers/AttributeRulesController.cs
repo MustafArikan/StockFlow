@@ -22,13 +22,39 @@ public class AttributeRulesController : ControllerBase
     [HttpGet("category/{categoryId}")]
     public async Task<IActionResult> GetByCategory(int categoryId)
     {
-        var rules = await _context.AttributeRules
-            .AsNoTracking()
-            .Where(a => a.CategoryId == categoryId && !a.IsDeleted)
-            .Select(rule => new stok_takip.DTOs.AttributeRuleResponseDto(rule.Id, rule.CategoryId, rule.AttributeKey, rule.DataType, rule.IsRequired, rule.AllowedValues))
-            .ToListAsync();
+        var targetCategoryIds = new List<int?>();
 
-        return Ok(rules);
+        targetCategoryIds.Add(null);
+
+        int? currentId = categoryId;
+
+        while (currentId.HasValue)
+        {
+            targetCategoryIds.Add(currentId.Value);
+            var category = await _context.Categories
+                .AsNoTracking()
+                .FirstOrDefaultAsync(c => c.Id == currentId.Value);
+
+            if (category == null)
+            {
+                break; // Kategori bulunamazsa döngüyü kır
+            } 
+
+            currentId = category.ParentId;
+        }
+            var rules = await _context.AttributeRules
+                .AsNoTracking()
+                .Where(a => targetCategoryIds.Contains(a.CategoryId) && !a.IsDeleted)
+                .Select(rule => new stok_takip.DTOs.AttributeRuleResponseDto(
+                    rule.Id,
+                    rule.CategoryId,
+                    rule.AttributeKey,
+                    rule.DataType,
+                    rule.IsRequired,
+                    rule.AllowedValues))
+                .ToListAsync();
+
+                return Ok(rules);
     }
 
     // Kategoriye yeni bir kural ekle

@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Text.Json;
 using stok_takip.Data;
 using stok_takip.DTOs;
 using stok_takip.Models;
@@ -84,7 +85,8 @@ public class ProductsController : ControllerBase
             Name = dto.Name,
             Barcode = dto.Barcode,
             MinStockLevel = dto.MinStockLevel,
-            CategoryId = dto.CategoryId
+            CategoryId = dto.CategoryId,
+            Attributes = dto.Attributes != null ? System.Text.Json.JsonSerializer.Serialize(dto.Attributes) : "[]"
         };
         _context.Products.Add(product);
         await _context.SaveChangesAsync(); // Önce ürünü kaydet ki ID oluşsun
@@ -141,6 +143,7 @@ public class ProductsController : ControllerBase
         product.Barcode = dto.Barcode;
         product.MinStockLevel = dto.MinStockLevel;
         product.CategoryId = dto.CategoryId;
+        product.Attributes = dto.Attributes != null ? System.Text.Json.JsonSerializer.Serialize(dto.Attributes) : "[]";
 
         await _context.SaveChangesAsync();
 
