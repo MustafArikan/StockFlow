@@ -217,4 +217,32 @@ public class ProductsController : ControllerBase
         return NoContent();
     }
 
+    [HttpGet("search")]
+    public async Task<IActionResult> SearchProducts([FromQuery] string q)
+    {
+        if (string.IsNullOrWhiteSpace(q) || q.Length < 2)
+        {
+            return Ok(new List<object>()); // Boş veya kısa sorgular için boş liste döndür
+        }
+
+        var searchTerm = q.ToLower();
+
+        var products = await _context.Products
+            .AsNoTracking()
+            .Where(p => !p.IsDeleted && 
+                        (p.Name.ToLower().Contains(searchTerm) || 
+                        p.Barcode.ToLower().Contains(searchTerm) ||
+                        (p.Attributes != null && p.Attributes.ToLower().Contains(searchTerm))))
+            .Take(5)
+            .Select(p => new 
+            {
+                id = p.Id,
+                name = p.Name,
+                barcode = p.Barcode
+            })
+            .ToListAsync();    
+
+        return Ok(products);    
+    }
+
 }
