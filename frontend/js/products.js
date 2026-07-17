@@ -198,6 +198,9 @@ document.getElementById('urunKategoriId').addEventListener('change', async funct
             else if (rule.dataType === 'number') {
                 inputHtml = `<input type="number" class="form-control dynamic-rule-input" data-rule-id="${rule.id}" data-rule-key="${escapeHtml(rule.attributeKey)}" ${requiredAttr}>`;
             } 
+            else if (rule.dataType === 'decimal') {
+                inputHtml = `<input type="number" step="0.01" class="form-control dynamic-rule-input" data-rule-id="${rule.id}" data-rule-key="${escapeHtml(rule.attributeKey)}" ${requiredAttr}>`;
+            }
             else { 
                 inputHtml = `<input type="text" class="form-control dynamic-rule-input" data-rule-id="${rule.id}" data-rule-key="${escapeHtml(rule.attributeKey)}" ${requiredAttr}>`;
             }
@@ -224,9 +227,10 @@ function tabloyuCiz(urunler) {
 
     let satirlar = [];
     urunler.forEach(urun => {
-        let btnDuzenle = hasPermission("Product.Edit") ? `<button class="btn btn-sm btn-outline-primary rounded-pill btn-duzenle" data-id="${urun.id}">Düzenle</button>` : "";
+        let btnIncele = `<button class="btn btn-sm btn-outline-info rounded-pill btn-incele me-1" title="Detayları Gör" data-id="${urun.id}"><i class="bi bi-eye"></i> Görüntüle</button>`;
+        let btnDuzenle = hasPermission("Product.Edit") ? `<button class="btn btn-sm btn-outline-primary rounded-pill btn-duzenle me-1" data-id="${urun.id}">Düzenle</button>` : "";
         let btnSil = hasPermission("Product.Delete") ? `<button class="btn btn-sm btn-outline-danger rounded-pill btn-sil" data-id="${urun.id}">Sil</button>` : "";
-        let aksiyonButonlari = (btnDuzenle || btnSil) ? `<td class="text-end">${btnDuzenle} ${btnSil}</td>` : "";
+        let aksiyonButonlari = `<td class="text-end">${btnIncele} ${btnDuzenle} ${btnSil}</td>`;
 
         const satir = `
             <tr>
@@ -397,6 +401,49 @@ async function urunSil(id) {
     }
 }
 
+function urunDetayGoster(id) {
+    const urun = tumUrunler.find(u => u.id === id);
+    if (!urun) return;
+
+    document.getElementById("detayUrunAdi").textContent = urun.name || "-";
+    document.getElementById("detayUrunKategori").textContent = urun.categoryName || "Kategori Yok";
+    document.getElementById("detayUrunBarkod").textContent = urun.barcode || "-";
+    document.getElementById("detayUrunId").textContent = urun.id;
+    document.getElementById("detayUrunMinStok").textContent = urun.minStockLevel || "0";
+    
+    const stokEl = document.getElementById("detayUrunStok");
+    stokEl.textContent = `${urun.stockQuantity} Adet`;
+    if (urun.stockQuantity <= urun.minStockLevel) {
+        stokEl.className = "fw-bold fs-5 mt-1 text-danger";
+    } else {
+        stokEl.className = "fw-bold fs-5 mt-1 text-success";
+    }
+
+    const ozelliklerTablosu = document.getElementById("detayUrunOzellikler");
+    ozelliklerTablosu.innerHTML = "";
+    
+    if (urun.attributes && Array.isArray(urun.attributes) && urun.attributes.length > 0) {
+        urun.attributes.forEach(attr => {
+            let val = attr.value;
+            if (val === "true") val = "Evet";
+            if (val === "false") val = "Hayır";
+            
+            ozelliklerTablosu.innerHTML += `
+                <tr>
+                    <td class="text-muted fw-bold" style="width:40%; border-bottom: 1px solid #eee;">${escapeHtml(attr.key)}</td>
+                    <td class="text-dark fw-semibold" style="border-bottom: 1px solid #eee;">${escapeHtml(val)}</td>
+                </tr>
+            `;
+        });
+    } else {
+        ozelliklerTablosu.innerHTML = `<tr><td class="text-muted fst-italic">Özel nitelik (kural) bulunamadı.</td></tr>`;
+    }
+
+    const modalElement = document.getElementById("urunDetayModal");
+    const modalInstance = bootstrap.Modal.getOrCreateInstance(modalElement);
+    modalInstance.show();
+}
+
 function urunDuzenle(id) {
     const urun = tumUrunler.find(u => u.id === id);
     if (!urun) return;
@@ -438,8 +485,10 @@ function urunDuzenle(id) {
 tabloGovdesi.addEventListener("click", (e) => {
     const btnDuzenle = e.target.closest(".btn-duzenle");
     const btnSil = e.target.closest(".btn-sil");
+    const btnIncele = e.target.closest(".btn-incele");
 
-    if (btnDuzenle) urunDuzenle(parseInt(btnDuzenle.getAttribute("data-id")));
+    if (btnIncele) urunDetayGoster(parseInt(btnIncele.getAttribute("data-id")));
+    else if (btnDuzenle) urunDuzenle(parseInt(btnDuzenle.getAttribute("data-id")));
     else if (btnSil) urunSil(parseInt(btnSil.getAttribute("data-id")));
 });
 

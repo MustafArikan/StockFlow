@@ -79,6 +79,50 @@ public class CategoriesController : ControllerBase
         return Ok(new CategoryResponseDto(category.Id, category.Name, category.ParentId));
     }
 
+    [HttpGet("{id}/check-dependencies")]
+    public async Task<IActionResult> CheckDependencies(int id)
+    {
+        var category = await _context.Categories.FindAsync(id);
+        if (category == null) return NotFound();
+
+        // Tüm aktif kategorileri belleğe alıp hiyerarşik alt kategorileri (recursive) bulalım
+        var allCategories = await _context.Categories.Where(c => !c.IsDeleted).ToListAsync();
+        var descendantIds = new HashSet<int> { id };
+        
+        bool addedNew;
+        do
+        {
+            addedNew = false;
+            foreach (var c in allCategories)
+            {
+                if (c.ParentId.HasValue && descendantIds.Contains(c.ParentId.Value) && !descendantIds.Contains(c.Id))
+                {
+                    descendantIds.Add(c.Id);
+                    addedNew = true;
+                }
+            }
+        } while (addedNew);
+
+        var subCategoryCount = descendantIds.Count - 1; // Kendisi hariç
+
+        var products = await _context.Products
+            .AsNoTracking()
+            .Where(p => descendantIds.Contains(p.CategoryId) && !p.IsDeleted)
+            .Select(p => new {
+                Name = p.Name,
+                Stock = p.StockLevels.Where(sl => !sl.IsDeleted).Sum(sl => (int?)sl.Quantity) ?? 0
+            })
+            .ToListAsync();
+
+        return Ok(new {
+            hasDependencies = products.Any() || subCategoryCount > 0,
+            hasProducts = products.Any(),
+            productCount = products.Count,
+            subCategoryCount = subCategoryCount,
+            products = products
+        });
+    }
+
     [HttpDelete("{id}")]
     [Authorize(Roles = "admin")] // Sadece Admin rolüne sahip kullanıcılar kategori silebilir
     public async Task<IActionResult> Delete(int id)

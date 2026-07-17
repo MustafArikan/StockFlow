@@ -81,4 +81,17 @@ public class AttributeRulesController : ControllerBase
         await _context.SaveChangesAsync();
         return Ok(new stok_takip.DTOs.AttributeRuleResponseDto(rule.Id, rule.CategoryId, rule.AttributeKey, rule.DataType, rule.IsRequired, rule.AllowedValues));
     }
+
+    // Kural silme (Soft Delete)
+    [HttpDelete("{id}")]
+    public async Task<IActionResult> Delete(int id)
+    {
+        var rule = await _context.AttributeRules.FindAsync(id);
+        if (rule == null)
+            return NotFound(new { message = "Kural bulunamadı." });
+
+        rule.IsDeleted = true;
+        await _context.SaveChangesAsync();
+        return Ok(new { message = "Kural başarıyla silindi." });
+    }
 }

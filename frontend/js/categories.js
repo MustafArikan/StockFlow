@@ -218,6 +218,13 @@ function tabloyuCiz(kategoriler) {
         tdAksiyon.className = "text-end";
         
         if (hasPermission("Category.Edit")) {
+            const btnKurallar = document.createElement("button");
+            btnKurallar.className = "btn btn-sm btn-outline-info rounded-pill btn-kurallar me-1";
+            btnKurallar.dataset.id = kategori.id;
+            btnKurallar.dataset.name = kategori.name;
+            btnKurallar.innerHTML = `<i class="bi bi-gear-fill"></i> Kurallar`;
+            tdAksiyon.appendChild(btnKurallar);
+
             const btnDuzenle = document.createElement("button");
             btnDuzenle.className = "btn btn-sm btn-outline-primary rounded-pill btn-duzenle me-1";
             btnDuzenle.dataset.id = kategori.id;
@@ -356,10 +363,41 @@ document.getElementById("btnKategoriKaydet").addEventListener("click", async () 
 });
 
 async function kategoriSil(id) {
-    const onay = confirm("Bu kategoriyi silmek istediğinize emin misiniz?");
-    if (!onay) return;
-
     try {
+        const checkRes = await fetch(`${API_URL}/${id}/check-dependencies`, {
+            method: "GET",
+            headers: { "Authorization": `Bearer ${token}` }
+        });
+
+        if (!checkRes.ok) throw new Error("Bağımlılıklar kontrol edilemedi.");
+        const depData = await checkRes.json();
+
+        if (depData.hasDependencies) {
+            let msg = `DİKKAT! Bu kategoriyi silmek üzeresiniz.\n\n`;
+            
+            if (depData.subCategoryCount > 0) {
+                msg += `- Bu kategorinin altında ${depData.subCategoryCount} adet ALT KATEGORİ var.\n`;
+            }
+            if (depData.productCount > 0) {
+                msg += `- İçinde (veya alt kategorilerinde) toplam ${depData.productCount} adet ÜRÜN var:\n`;
+                depData.products.slice(0, 5).forEach(p => {
+                    msg += `  • ${p.name} (Stok: ${p.stock})\n`;
+                });
+                if (depData.productCount > 5) msg += `  ...ve ${depData.productCount - 5} ürün daha.\n`;
+            }
+            
+            msg += `\nÜst kategoriyi silerseniz alt kategoriler ve bağlı ürünler de silinmiş gibi gizlenebilir!\nSilme işlemini ONAYLAMAK için alttaki kutucuğa ONAY yazın:`;
+            
+            const promptGiris = prompt(msg);
+            if (promptGiris !== "ONAY") {
+                alert("İşlem iptal edildi.");
+                return;
+            }
+        } else {
+            const onay = confirm("Bu kategoriyi silmek istediğinize emin misiniz?");
+            if (!onay) return;
+        }
+
         const cevap = await fetch(`${API_URL}/${id}`, {
             method: "DELETE",
             headers: { "Authorization": `Bearer ${token}` }
@@ -411,9 +449,23 @@ tabloGovdesi.addEventListener("click", (e) => {
 
     const btnDuzenle = e.target.closest(".btn-duzenle");
     const btnSil = e.target.closest(".btn-sil");
+    const btnKurallar = e.target.closest(".btn-kurallar");
 
     if (btnDuzenle) kategoriDuzenle(parseInt(btnDuzenle.getAttribute("data-id")));
     else if (btnSil) kategoriSil(parseInt(btnSil.getAttribute("data-id")));
+    else if (btnKurallar) {
+        const id = btnKurallar.getAttribute("data-id");
+        const name = btnKurallar.getAttribute("data-name");
+        
+        document.getElementById("aktifKuralKategoriId").value = id;
+        document.getElementById("kuralModalKategoriAdi").textContent = `${name} Kuralları`;
+        
+        kurallariYukle(id);
+        
+        const modalElement = document.getElementById("kurallarModal");
+        const modalInstance = bootstrap.Modal.getOrCreateInstance(modalElement);
+        modalInstance.show();
+    }
 });
 
 document.querySelector('[data-bs-target="#kategoriModal"]').addEventListener("click", () => {
@@ -428,10 +480,127 @@ if (!hasPermission("Category.Add")) {
     const btnEkle = document.querySelector('[data-bs-target="#kategoriModal"]');
     if (btnEkle) btnEkle.classList.add('d-none');
 }
+
 if (!hasPermission("Category.Edit") && !hasPermission("Category.Delete")) {
     const islemSutunuBasligi = document.getElementById("islemSutunuBasligi");
     if (islemSutunuBasligi) islemSutunuBasligi.classList.add('d-none');
 }
 
 kategorileriYukle();
+// ==========================================
+// DİNAMİK KATEGORİ KURALLARI (EAV) YÖNETİMİ
+// ==========================================
 
+async function kurallariYukle(categoryId) {
+    const kuralTabloGovdesi = document.getElementById("kurallarTabloGovdesi");
+    kuralTabloGovdesi.innerHTML = `<tr><td colspan="4" class="text-center text-muted py-3">Yükleniyor...</td></tr>`;
+    
+    try {
+        const cevap = await fetch(`${CONFIG.API_BASE_URL}/attribute-rules/category/${categoryId}`, {
+            method: 'GET',
+            headers: { "Authorization": `Bearer ${token}` }
+        });
+        
+        if (!cevap.ok) throw new Error("Kurallar alınamadı.");
+        
+        const kurallar = await cevap.json();
+        kuralTabloGovdesi.innerHTML = ""; 
+        
+        if (kurallar.length === 0) {
+            kuralTabloGovdesi.innerHTML = `<tr><td colspan="4" class="text-center text-muted py-3">Bu kategoriye ait özel bir kural henüz tanımlanmamış.</td></tr>`;
+            return;
+        }
+
+        kurallar.forEach(kural => {
+            const tr = document.createElement("tr");
+            tr.innerHTML = `
+                <td class="fw-bold text-dark">${escapeHtml(kural.attributeKey)}</td>
+                <td><span class="badge bg-secondary">${kural.dataType}</span></td>
+                <td>
+                    ${kural.isRequired 
+                        ? '<span class="badge bg-danger">Zorunlu</span>' 
+                        : '<span class="badge bg-light text-dark border">Opsiyonel</span>'}
+                </td>
+                <td class="text-end">
+                    <button class="btn btn-sm btn-outline-danger rounded-pill btn-kural-sil" data-id="${kural.id}">Sil</button>
+                </td>
+            `;
+            kuralTabloGovdesi.appendChild(tr);
+        });
+
+    } catch (hata) {
+        kuralTabloGovdesi.innerHTML = `<tr><td colspan="4" class="text-center text-danger py-3">Hata: ${hata.message}</td></tr>`;
+    }
+}
+
+document.getElementById("btnKuralEkle").addEventListener("click", async () => {
+    const categoryId = document.getElementById("aktifKuralKategoriId").value;
+    const attributeKey = document.getElementById("kuralAd").value.trim();
+    const dataType = document.getElementById("kuralTip").value;
+    const isRequired = document.getElementById("kuralZorunlu").checked;
+    
+    if (!attributeKey) {
+        alert("Lütfen kural (özellik) adını giriniz.");
+        return;
+    }
+    
+    const kuralVerisi = {
+        categoryId: parseInt(categoryId),
+        attributeKey: attributeKey,
+        dataType: dataType,
+        isRequired: isRequired,
+        allowedValues: "[]"
+    };
+    
+    const btnEkle = document.getElementById("btnKuralEkle");
+    btnEkle.disabled = true;
+    btnEkle.innerText = "Ekleniyor...";
+    
+    try {
+        const cevap = await fetch(`${CONFIG.API_BASE_URL}/attribute-rules`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${token}`
+            },
+            body: JSON.stringify(kuralVerisi)
+        });
+        
+        if (!cevap.ok) throw new Error(await cevap.text());
+        
+        document.getElementById("yeniKuralFormu").reset();
+        kurallariYukle(categoryId);
+        
+    } catch (hata) {
+        alert("Kural eklenemedi: " + hata.message);
+    } finally {
+        btnEkle.disabled = false;
+        btnEkle.innerText = "+ Kuralı Ekle";
+    }
+});
+
+document.getElementById("kurallarTabloGovdesi").addEventListener("click", async (e) => {
+    const btnSil = e.target.closest(".btn-kural-sil");
+    if (btnSil) {
+        if (!confirm("Bu kuralı silmek istediğinize emin misiniz? (Ürünlerdeki veriler silinmez, sadece formdan kalkar)")) return;
+        
+        const kuralId = btnSil.getAttribute("data-id");
+        btnSil.disabled = true;
+        
+        try {
+            const cevap = await fetch(`${CONFIG.API_BASE_URL}/attribute-rules/${kuralId}`, {
+                method: "DELETE",
+                headers: { "Authorization": `Bearer ${token}` }
+            });
+            
+            if (!cevap.ok) throw new Error("Silme işlemi başarısız.");
+            
+            const categoryId = document.getElementById("aktifKuralKategoriId").value;
+            kurallariYukle(categoryId);
+            
+        } catch (hata) {
+            alert(hata.message);
+            btnSil.disabled = false;
+        }
+    }
+});
