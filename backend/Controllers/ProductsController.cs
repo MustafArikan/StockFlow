@@ -27,13 +27,13 @@ public class ProductsController : ControllerBase
     {
         var totalRecords = await _context.Products.CountAsync(p => !p.IsDeleted);
 
-        var products = await _context.Products
+        var productsRaw = await _context.Products
             .AsNoTracking()
             .Where(p => !p.IsDeleted)
             .Include(p => p.Category)
             .Skip((pageNumber - 1) * pageSize)
             .Take(pageSize)
-            .Select(p => new ProductDto
+            .Select(p => new 
             {
                 Id = p.Id,
                 Name = p.Name,
@@ -41,9 +41,22 @@ public class ProductsController : ControllerBase
                 MinStockLevel = p.MinStockLevel,
                 CategoryId = p.CategoryId,
                 CategoryName = p.Category.Name,
-                StockQuantity = p.StockLevels.Sum(sl => sl.Quantity)
+                StockQuantity = p.StockLevels.Sum(sl => sl.Quantity),
+                AttributesStr = p.Attributes
             })
             .ToListAsync();
+
+        var products = productsRaw.Select(p => new ProductDto
+        {
+            Id = p.Id,
+            Name = p.Name,
+            Barcode = p.Barcode,
+            MinStockLevel = p.MinStockLevel,
+            CategoryId = p.CategoryId,
+            CategoryName = p.CategoryName,
+            StockQuantity = p.StockQuantity,
+            Attributes = string.IsNullOrEmpty(p.AttributesStr) ? new List<ProductAttributeDto>() : System.Text.Json.JsonSerializer.Deserialize<List<ProductAttributeDto>>(p.AttributesStr)
+        }).ToList();
 
         return Ok(new 
         {
