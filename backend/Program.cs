@@ -141,6 +141,8 @@ if (app.Environment.IsDevelopment())
     app.MapScalarApiReference().AllowAnonymous();
 }
 
+app.MapGet("/api/health", () => Results.Ok(new { status = "ok" })).AllowAnonymous();
+
 app.UseHttpsRedirection();
 
 app.UseCors("AllowFrontend");
