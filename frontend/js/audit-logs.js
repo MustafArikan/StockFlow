@@ -1,4 +1,4 @@
-﻿const API_URL = `${CONFIG.API_BASE_URL}/audit-logs`;
+const API_URL = `${CONFIG.API_BASE_URL}/audit-logs`;
 const token = localStorage.getItem('token');
 if (!token) {
     window.location.href = 'login.html';
@@ -136,13 +136,13 @@ function detayGoster(log) {
     } else if (log.actionType === "Added") {
         html += `<h5>Eklenen Veri:</h5><div class="bg-light p-3 rounded mt-2 border"><table class="table table-sm table-borderless mb-0"><tbody>`;
         Object.keys(newData).forEach(key => {
-            html += `<tr><td class="fw-bold" style="width:150px">${escapeHtml(key)}</td><td>${escapeHtml(newData[key] !== null ? newData[key] : 'null')}</td></tr>`;
+            html += `<tr><td class="fw-bold w-150px">${escapeHtml(key)}</td><td>${escapeHtml(newData[key] !== null ? newData[key] : 'null')}</td></tr>`;
         });
         html += `</tbody></table></div>`;
     } else if (log.actionType === "Deleted") {
         html += `<h5>Silinen Veri (Eski Durum):</h5><div class="bg-light p-3 rounded mt-2 border"><table class="table table-sm table-borderless mb-0"><tbody>`;
         Object.keys(oldData).forEach(key => {
-            html += `<tr><td class="fw-bold" style="width:150px">${escapeHtml(key)}</td><td class="text-danger">${escapeHtml(oldData[key] !== null ? oldData[key] : 'null')}</td></tr>`;
+            html += `<tr><td class="fw-bold w-150px">${escapeHtml(key)}</td><td class="text-danger">${escapeHtml(oldData[key] !== null ? oldData[key] : 'null')}</td></tr>`;
         });
         html += `</tbody></table></div>`;
     }

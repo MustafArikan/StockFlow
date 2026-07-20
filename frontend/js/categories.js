@@ -537,7 +537,7 @@ async function kurallariYukle(categoryId) {
             if (kural.allowedValues && kural.allowedValues !== "[]") {
                 try {
                     const parsed = JSON.parse(kural.allowedValues);
-                    opts = `<br><small class="text-muted" style="font-size:0.75rem;">Seçenekler: ${parsed.join(', ')}</small>`;
+                    opts = `<br><small class="text-muted text-xs">Seçenekler: ${parsed.join(', ')}</small>`;
                 } catch(e){}
             }
 

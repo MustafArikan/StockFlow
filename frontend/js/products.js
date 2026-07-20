@@ -221,7 +221,7 @@ document.getElementById('urunKategoriId').addEventListener('change', async funct
                 }
                 inputHtml = `<div class="d-flex align-items-center dynamic-rule-input" data-rule-id="${rule.id}" data-rule-key="${escapeHtml(rule.attributeKey)}" data-rule-type="range_slider" data-min="${rMin}" data-max="${rMax}">
                                 <input type="range" class="form-range flex-grow-1" min="${rMin}" max="${rMax}" step="${rStep}" id="rule_${rule.id}">
-                                <input type="number" class="form-control form-control-sm ms-2 text-center" style="width: 75px;" id="val_${rule.id}" value="${rMin}" min="${rMin}" max="${rMax}" step="${rStep}">
+                                <input type="number" class="form-control form-control-sm ms-2 text-center w-75px" id="val_${rule.id}" value="${rMin}" min="${rMin}" max="${rMax}" step="${rStep}">
                              </div>`;
             }
             else if (rule.dataType === 'color_picker') {
@@ -245,8 +245,8 @@ document.getElementById('urunKategoriId').addEventListener('change', async funct
                     let hex = getColorHex(opt);
                     return `<div class="form-check mb-1">
                                 <input class="form-check-input color-radio-item" type="radio" name="color_${rule.id}" id="color_${rule.id}_${idx}" value="${escapeHtml(opt)}" data-rule-id="${rule.id}" ${requiredAttr}>
-                                <label class="form-check-label d-flex align-items-center" for="color_${rule.id}_${idx}" style="cursor:pointer;">
-                                    <svg width="18" height="18" style="margin-right:8px;" xmlns="http://www.w3.org/2000/svg">
+                                <label class="form-check-label d-flex align-items-center cursor-pointer" for="color_${rule.id}_${idx}">
+                                    <svg width="18" height="18" class="svg-color-circle" xmlns="http://www.w3.org/2000/svg">
                                         <circle cx="9" cy="9" r="8" fill="${hex}" stroke="#aaa" stroke-width="1"/>
                                     </svg>
                                     ${escapeHtml(opt)}
@@ -257,7 +257,7 @@ document.getElementById('urunKategoriId').addEventListener('change', async funct
                 inputHtml = `
                     <div class="dynamic-rule-input" data-rule-id="${rule.id}" data-rule-key="${escapeHtml(rule.attributeKey)}" data-rule-type="color_picker">
                         <div class="collapse show" id="collapseColor_${rule.id}">
-                            <div class="card card-body p-2 border-0 shadow-sm" style="max-height:200px; overflow-y:auto; background-color:#f8f9fa;">
+                            <div class="card card-body p-2 border-0 shadow-sm scrollable-card">
                                 ${liHtml}
                             </div>
                         </div>
@@ -284,7 +284,7 @@ document.getElementById('urunKategoriId').addEventListener('change', async funct
             div.className = 'col-md-6 mb-3';
             if (rule.dataType === 'color_picker') {
                 div.innerHTML = `<a class="text-decoration-none text-dark d-flex align-items-center mb-2" data-bs-toggle="collapse" href="#collapseColor_${rule.id}" role="button" aria-expanded="true">
-                                    <label class="form-label small fw-bold mb-0" style="cursor:pointer;">${escapeHtml(rule.attributeKey)} ${starHtml}</label>
+                                    <label class="form-label small fw-bold mb-0 cursor-pointer">${escapeHtml(rule.attributeKey)} ${starHtml}</label>
                                     <i class="bi bi-caret-down-fill text-warning ms-1"></i>
                                  </a>
                                  ${inputHtml}`;
@@ -562,21 +562,26 @@ function urunDetayGoster(id) {
             // Hex renk kodu kontrolü (Örn: #ff0000 veya #fff)
             if (/^#([0-9A-F]{3}){1,2}$/i.test(val)) {
                 valHtml = `<div class="d-flex align-items-center">
-                                <span class="d-inline-block rounded-circle me-2 shadow-sm" style="width:18px; height:18px; background-color:${escapeHtml(val)}; border:1px solid #ddd;"></span>
+                                <span class="color-dot me-2 shadow-sm" data-bg-color="${escapeHtml(val)}"></span>
                                 <span class="text-muted small">${escapeHtml(val)}</span>
                            </div>`;
             }
 
             ozelliklerTablosu.innerHTML += `
                 <tr>
-                    <td class="text-muted fw-bold" style="width:40%; border-bottom: 1px solid #eee;">${escapeHtml(attr.key)}</td>
-                    <td class="text-dark fw-semibold" style="border-bottom: 1px solid #eee;">${valHtml}</td>
+                    <td class="text-muted fw-bold w-40 border-b-eee">${escapeHtml(attr.key)}</td>
+                    <td class="text-dark fw-semibold border-b-eee">${valHtml}</td>
                 </tr>
             `;
         });
     } else {
         ozelliklerTablosu.innerHTML = `<tr><td class="text-muted fst-italic">Özel nitelik (kural) bulunamadı.</td></tr>`;
     }
+
+    document.querySelectorAll('#detayUrunOzellikler [data-bg-color]').forEach(el => {
+        el.style.backgroundColor = el.getAttribute('data-bg-color');
+        el.removeAttribute('data-bg-color');
+    });
 
     const modalElement = document.getElementById("urunDetayModal");
     const modalInstance = bootstrap.Modal.getOrCreateInstance(modalElement);
