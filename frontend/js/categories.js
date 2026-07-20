@@ -186,14 +186,19 @@ function tabloyuCiz(kategoriler) {
             dFlex.appendChild(spacer);
         }
 
-        // Aç/Kapat İkonu
+        // Aç/Kapat İkonu ve Tıklanabilir Alan Ayarı
+        if (hasChildren && aktifArama.trim() === '') {
+            dFlex.classList.add("btn-expand");
+            dFlex.dataset.id = kategori.id;
+            dFlex.style.cursor = "pointer";
+            dFlex.classList.add("user-select-none"); // Metin seçilmesini engelle
+        }
+
         if (aktifArama.trim() === '') {
             if (hasChildren) {
                 const icon = document.createElement("i");
-                icon.className = `bi bi-chevron-${acikKategoriler.has(kategori.id) ? 'down' : 'right'} me-2 btn-expand text-primary`;
-                icon.style.cursor = "pointer";
+                icon.className = `bi bi-chevron-${acikKategoriler.has(kategori.id) ? 'down' : 'right'} me-2 text-primary`;
                 icon.style.width = "16px";
-                icon.dataset.id = kategori.id;
                 dFlex.appendChild(icon);
             } else {
                 const iconSpacer = document.createElement("span");
@@ -493,7 +498,7 @@ kategorileriYukle();
 
 async function kurallariYukle(categoryId) {
     const kuralTabloGovdesi = document.getElementById("kurallarTabloGovdesi");
-    kuralTabloGovdesi.innerHTML = `<tr><td colspan="4" class="text-center text-muted py-3">Yükleniyor...</td></tr>`;
+    kuralTabloGovdesi.innerHTML = `<tr><td colspan="6" class="text-center text-muted py-3">Yükleniyor...</td></tr>`;
     
     try {
         const cevap = await fetch(`${CONFIG.API_BASE_URL}/attribute-rules/category/${categoryId}`, {
@@ -508,7 +513,7 @@ async function kurallariYukle(categoryId) {
         kuralTabloGovdesi.innerHTML = ""; 
         
         if (kurallar.length === 0) {
-            kuralTabloGovdesi.innerHTML = `<tr><td colspan="4" class="text-center text-muted py-3">Bu kategoriye ait özel bir kural henüz tanımlanmamış.</td></tr>`;
+            kuralTabloGovdesi.innerHTML = `<tr><td colspan="6" class="text-center text-muted py-3">Bu kategoriye ait özel bir kural henüz tanımlanmamış.</td></tr>`;
             return;
         }
 
@@ -559,7 +564,10 @@ async function kurallariYukle(categoryId) {
             }
 
             const tr = document.createElement("tr");
+            tr.setAttribute("data-id", kural.id);
+            // Sürüklerken düzgün dursun diye arkaplan verebiliriz ama Sortable ghostClass hallediyor
             tr.innerHTML = `
+                <td class="text-center" style="cursor: grab;"><i class="bi bi-grip-vertical text-muted fs-5 handle"></i></td>
                 <td>${targetBadge}</td>
                 <td class="fw-bold text-dark">${escapeHtml(kural.attributeKey)} ${opts}</td>
                 <td>${tipBadge}</td>
@@ -572,8 +580,39 @@ async function kurallariYukle(categoryId) {
             kuralTabloGovdesi.appendChild(tr);
         });
 
+        // SortableJS Entegrasyonu
+        if (window.Sortable) {
+            new Sortable(kuralTabloGovdesi, {
+                handle: '.handle',
+                animation: 200,
+                ghostClass: 'bg-light',
+                dragClass: 'shadow-lg',
+                onEnd: async function (evt) {
+                    const rows = Array.from(kuralTabloGovdesi.querySelectorAll('tr[data-id]'));
+                    const reorderData = rows.map((row, index) => ({
+                        id: parseInt(row.getAttribute('data-id')),
+                        displayOrder: index
+                    }));
+
+                    try {
+                        const res = await fetch(`${CONFIG.API_BASE_URL}/attribute-rules/reorder`, {
+                            method: 'PUT',
+                            headers: {
+                                "Content-Type": "application/json",
+                                "Authorization": `Bearer ${token}`
+                            },
+                            body: JSON.stringify(reorderData)
+                        });
+                        if (!res.ok) throw new Error("Sıralama güncellenemedi.");
+                    } catch (e) {
+                        console.error(e);
+                        alert("Sıralama kaydedilirken hata oluştu.");
+                    }
+                }
+            });
+        }
     } catch (hata) {
-        kuralTabloGovdesi.innerHTML = `<tr><td colspan="4" class="text-center text-danger py-3">Hata: ${hata.message}</td></tr>`;
+        kuralTabloGovdesi.innerHTML = `<tr><td colspan="6" class="text-center text-danger py-3">Hata: ${hata.message}</td></tr>`;
     }
 }
 
@@ -781,4 +820,149 @@ document.getElementById('kuralTip').addEventListener('change', (e) => {
         document.getElementById('kuralMin').value = "";
         document.getElementById('kuralMax').value = "";
     }
+    
+    if (typeof updateKuralPreview === 'function') updateKuralPreview();
 });
+
+// ==========================================
+// INLINE CANLI ÖNİZLEME (LIVE PREVIEW) MANTIĞI
+// ==========================================
+function updateKuralPreview() {
+    const uiType = document.getElementById("kuralTip").value;
+    const secenekler = document.getElementById("kuralSecenekler").value.split(',').map(s => s.trim()).filter(s => s);
+    const minVal = document.getElementById("kuralMin").value || 0;
+    const maxVal = document.getElementById("kuralMax").value || 100;
+
+    const previewBox = document.getElementById("inlinePreviewBox");
+    const icerik = document.getElementById("inlinePreviewContent");
+    
+    // Eğer hiçbir şey seçilmemişse gizle
+    if (!uiType) {
+        if(previewBox) previewBox.classList.add('d-none');
+        return;
+    }
+    if(previewBox) previewBox.classList.remove('d-none');
+
+    let inputHtml = "";
+    const escapeHTML = (str) => String(str).replace(/[&<>'"]/g, tag => ({'&': '&amp;','<': '&lt;','>': '&gt;',"'": '&#39;','"': '&quot;'}[tag]));
+
+    if (uiType === 'searchable_dropdown' || uiType === 'autocomplete') {
+        inputHtml = `<input list="dl_preview" class="form-control form-control-sm" placeholder="Seçiniz veya yazınız...">
+                     <datalist id="dl_preview">
+                        ${secenekler.map(opt => `<option value="${escapeHTML(opt)}">`).join('')}
+                     </datalist>`;
+    }
+    else if (uiType === 'dropdown' || uiType === 'icon_dropdown') {
+        inputHtml = `<select class="form-select form-select-sm">
+                        <option value="">Seçiniz...</option>
+                        ${secenekler.map(opt => `<option value="${escapeHTML(opt)}">${escapeHTML(opt)}</option>`).join('')}
+                     </select>`;
+    } 
+    else if (uiType === 'radio' || uiType === 'segmented_button') {
+        inputHtml = `<div class="d-flex flex-wrap gap-2">`;
+        const defaultOpts = secenekler.length > 0 ? secenekler : ["Örn 1", "Örn 2"];
+        defaultOpts.forEach((opt, idx) => {
+            let isSeg = uiType === 'segmented_button';
+            let btnCls = isSeg ? 'btn-check' : 'form-check-input';
+            let lblCls = isSeg ? 'btn btn-outline-primary btn-sm' : 'form-check-label small';
+            if (isSeg) {
+                inputHtml += `<div><input class="${btnCls}" type="radio" name="prev_rad" id="pr_${idx}">
+                              <label class="${lblCls}" for="pr_${idx}">${escapeHTML(opt)}</label></div>`;
+            } else {
+                inputHtml += `<div class="form-check form-check-inline m-0">
+                                <input class="${btnCls}" type="radio" name="prev_rad" id="pr_${idx}">
+                                <label class="${lblCls}" for="pr_${idx}">${escapeHTML(opt)}</label>
+                              </div>`;
+            }
+        });
+        inputHtml += `</div>`;
+    }
+    else if (uiType === 'checkbox_group') {
+        inputHtml = `<div class="d-flex flex-wrap gap-2">`;
+        const defaultOpts = secenekler.length > 0 ? secenekler : ["Örn 1", "Örn 2"];
+        defaultOpts.forEach((opt, idx) => {
+            inputHtml += `<div class="form-check form-check-inline m-0">
+                            <input class="form-check-input" type="checkbox" id="pc_${idx}">
+                            <label class="form-check-label small" for="pc_${idx}">${escapeHTML(opt)}</label>
+                          </div>`;
+        });
+        inputHtml += `</div>`;
+    }
+    else if (uiType === 'range_slider_integer' || uiType === 'range_slider_decimal' || uiType === 'slider') {
+        let step = (uiType === 'range_slider_decimal') ? 0.01 : 1;
+        inputHtml = `<div class="d-flex align-items-center w-100">
+                        <span class="small text-muted me-2">${minVal}</span>
+                        <input type="range" class="form-range flex-grow-1" min="${minVal}" max="${maxVal}" step="${step}" value="${minVal}" oninput="document.getElementById('prev_num').value=this.value">
+                        <span class="small text-muted ms-2 me-2">${maxVal}</span>
+                        <input type="number" class="form-control form-control-sm text-center w-75px" id="prev_num" value="${minVal}" min="${minVal}" max="${maxVal}" step="${step}" oninput="this.previousElementSibling.previousElementSibling.value=this.value">
+                     </div>`;
+    }
+    else if (uiType === 'color_picker') {
+        let defaultColors = ["Siyah", "Beyaz", "Kırmızı", "Yeşil", "Mavi"];
+        let colors = secenekler.length > 0 ? secenekler : defaultColors;
+        
+        const getColorHex = (cName) => {
+            const normalized = cName.toLocaleLowerCase('tr-TR').trim();
+            const map = {
+                "siyah": "#000000", "beyaz": "#ffffff", "gri": "#9e9e9e", "gümüş": "#c0c0c0", "gumus": "#c0c0c0",
+                "altın": "#ffd700", "altin": "#ffd700", "kırmızı": "#f44336", "kirmizi": "#f44336",
+                "mavi": "#2196f3", "yeşil": "#4caf50", "yesil": "#4caf50", "sarı": "#ffeb3b", "sari": "#ffeb3b",
+                "turuncu": "#ff9800", "mor": "#9c27b0", "pembe": "#e91e63", "lacivert": "#1a237e",
+                "kahverengi": "#795548", "bej": "#f5f5dc", "bordo": "#800000", "krem": "#ffdab9"
+            };
+            if(cName.startsWith('#')) return cName;
+            return map[normalized] || map[cName.toLowerCase().trim()] || "#cccccc";
+        };
+
+        let liHtml = colors.map((opt, idx) => {
+            let hex = getColorHex(opt);
+            return `<div class="form-check form-check-inline m-0 me-2">
+                        <input class="form-check-input" type="radio" name="prev_col" id="pcl_${idx}">
+                        <label class="form-check-label d-flex align-items-center cursor-pointer small" for="pcl_${idx}">
+                            <svg width="14" height="14" class="svg-color-circle me-1" xmlns="http://www.w3.org/2000/svg">
+                                <circle cx="7" cy="7" r="6" fill="${hex}" stroke="#aaa" stroke-width="1"/>
+                            </svg>
+                            ${escapeHTML(opt)}
+                        </label>
+                    </div>`;
+        }).join('');
+        inputHtml = `<div class="d-flex flex-wrap gap-2">${liHtml}</div>`;
+    }
+    else if (uiType === 'toggle_switch') {
+        inputHtml = `<div class="form-check form-switch m-0">
+                        <input class="form-check-input" type="checkbox" id="prev_sw">
+                        <label class="form-check-label text-muted small" for="prev_sw">Evet / Açık</label>
+                     </div>`;
+    }
+    else if (uiType === 'checkbox' || uiType === 'boolean') {
+        inputHtml = `<div class="form-check m-0">
+                        <input class="form-check-input" type="checkbox" id="prev_cb">
+                        <label class="form-check-label text-muted small" for="prev_cb">Evet / Doğru</label>
+                     </div>`;
+    }
+    else if (uiType === 'masked_textbox') {
+        inputHtml = `<input type="text" class="form-control form-control-sm" placeholder="Örn: XXXX-XXXX">`;
+    }
+    else if (uiType === 'number' || uiType === 'decimal') {
+        inputHtml = `<input type="number" class="form-control form-control-sm" placeholder="Sayı giriniz...">`;
+    } 
+    else { 
+        inputHtml = `<input type="text" class="form-control form-control-sm" placeholder="Metin giriniz...">`;
+    }
+
+    if(icerik) {
+        icerik.innerHTML = inputHtml;
+    }
+}
+
+// Olay dinleyicilerini bağla (Her tuşa basıldığında veya seçim değiştiğinde)
+['kuralTip', 'kuralSecenekler', 'kuralMin', 'kuralMax'].forEach(id => {
+    const el = document.getElementById(id);
+    if(el) {
+        el.addEventListener('input', updateKuralPreview);
+        el.addEventListener('change', updateKuralPreview);
+    }
+});
+
+// Sayfa yüklendiğinde ilk önizlemeyi tetikle
+setTimeout(updateKuralPreview, 500);

@@ -31,4 +31,6 @@ public class AttributeRule : BaseEntity
     [MaxLength(20)]
     public string TargetLevel { get; set; } = "Product"; // "Product" or "Asset"
 
+    public int DisplayOrder { get; set; } = 0;
+
 }

@@ -163,6 +163,165 @@ async function urunleriYukle(page = 1) {
     }
 }
 
+function buildCategoryCascader(containerId, hiddenInputId, selectedCategoryId = null, isFilter = false) {
+    const container = document.getElementById(containerId);
+    const hiddenInput = document.getElementById(hiddenInputId);
+    if (!container || !hiddenInput) return;
+
+    let finalizedCategoryId = selectedCategoryId;
+    let expandedCategories = new Set();
+
+    function updateExpandedCategories(id) {
+        expandedCategories.clear();
+        if (!id) return;
+        
+        expandedCategories.add(id);
+        let current = window.tumKategoriler.find(k => k.id == id);
+        while (current && current.parentId) {
+            expandedCategories.add(current.parentId);
+            current = window.tumKategoriler.find(k => k.id == current.parentId);
+        }
+    }
+
+    if (finalizedCategoryId) {
+        updateExpandedCategories(finalizedCategoryId);
+    }
+
+    container.innerHTML = '';
+    
+    // Bootstrap Dropdown Container
+    const dropdownDiv = document.createElement('div');
+    dropdownDiv.className = 'dropdown w-100';
+    
+    // Toggle Button
+    const button = document.createElement('button');
+    let btnClasses = isFilter ? 'btn form-control rounded-pill text-start bg-white border d-flex justify-content-between align-items-center' : 'btn form-control text-start bg-white border d-flex justify-content-between align-items-center';
+    button.className = btnClasses;
+    button.type = 'button';
+    button.dataset.bsToggle = 'dropdown';
+    button.dataset.bsAutoClose = 'outside'; // Menü dışına tıklanana kadar kapanmasın
+    
+    const spanText = document.createElement('span');
+    spanText.className = 'text-truncate pe-2';
+    
+    const caretIcon = document.createElement('i');
+    caretIcon.className = 'bi bi-chevron-down text-muted';
+    caretIcon.style.fontSize = '0.8rem';
+    
+    button.appendChild(spanText);
+    button.appendChild(caretIcon);
+    
+    // Dropdown Menu
+    const menu = document.createElement('ul');
+    menu.className = 'dropdown-menu w-100 shadow-sm';
+    menu.style.maxHeight = '300px';
+    menu.style.overflowY = 'auto';
+
+    dropdownDiv.appendChild(button);
+    dropdownDiv.appendChild(menu);
+    container.appendChild(dropdownDiv);
+
+    hiddenInput.value = finalizedCategoryId || '';
+
+    function renderOptions() {
+        menu.innerHTML = '';
+        
+        // Seçili Kategoriyi Buton Metnine Yaz
+        if (finalizedCategoryId) {
+            const cat = window.tumKategoriler.find(k => k.id == finalizedCategoryId);
+            spanText.textContent = cat ? cat.name : (isFilter ? 'Tüm Kategoriler' : 'Kategori Seçin...');
+        } else {
+            spanText.textContent = isFilter ? 'Tüm Kategoriler' : 'Kategori Seçin...';
+        }
+        
+        // Temizle Butonu
+        const clearLi = document.createElement('li');
+        const clearA = document.createElement('a');
+        clearA.className = 'dropdown-item text-muted fst-italic border-bottom mb-1 pb-2';
+        clearA.href = '#';
+        if (finalizedCategoryId) {
+            clearA.innerHTML = '<i class="bi bi-x-circle me-1"></i> Temizle / Başa Dön';
+            clearA.addEventListener('click', (e) => {
+                e.preventDefault();
+                finalizedCategoryId = null;
+                expandedCategories.clear();
+                hiddenInput.value = '';
+                hiddenInput.dispatchEvent(new Event('change'));
+                renderOptions();
+            });
+        } else {
+            clearA.textContent = isFilter ? 'Tüm Kategoriler (Seçili)' : 'Kategori Seçin...';
+            clearA.classList.add('disabled');
+        }
+        clearLi.appendChild(clearA);
+        menu.appendChild(clearLi);
+
+        function buildTree(parentId, level) {
+            const children = window.tumKategoriler.filter(k => k.parentId == parentId);
+            
+            children.forEach(c => {
+                const isInPath = expandedCategories.has(c.id);
+                const isChildOfFinal = (c.parentId === finalizedCategoryId);
+                const isRootWhenEmpty = (finalizedCategoryId === null && c.parentId === null);
+
+                if (!isInPath && !isChildOfFinal && !isRootWhenEmpty) {
+                    return; 
+                }
+
+                const hasChildren = window.tumKategoriler.some(k => k.parentId == c.id);
+                
+                const li = document.createElement('li');
+                const a = document.createElement('a');
+                a.className = 'dropdown-item';
+                if (finalizedCategoryId === c.id) {
+                    a.classList.add('active'); // Bootstrap active blue styling
+                }
+                a.href = '#';
+                
+                const prefix = '\u00A0\u00A0\u00A0'.repeat(level); 
+                
+                if (hasChildren) {
+                    a.innerHTML = prefix + (isInPath ? '▾ ' : '▸ ') + escapeHtml(c.name);
+                    a.classList.add('fw-bold'); // Parent node highlight
+                } else {
+                    a.innerHTML = prefix + '• ' + escapeHtml(c.name);
+                }
+                
+                a.addEventListener('click', (e) => {
+                    e.preventDefault(); // Don't jump to top of page
+                    
+                    finalizedCategoryId = c.id;
+                    updateExpandedCategories(c.id);
+                    hiddenInput.value = c.id;
+                    hiddenInput.dispatchEvent(new Event('change'));
+                    
+                    renderOptions(); // Re-render tree inside the still-open dropdown
+                    
+                    // SADECE LEAF İSE (çocuğu yoksa) KAPANMASINA İZİN VER!
+                    if (!hasChildren) {
+                        const dropdownInstance = bootstrap.Dropdown.getInstance(button) || new bootstrap.Dropdown(button);
+                        dropdownInstance.hide();
+                    }
+                });
+
+                li.appendChild(a);
+                menu.appendChild(li);
+
+                if (isInPath) {
+                    buildTree(c.id, level + 1);
+                }
+            });
+        }
+        
+        buildTree(null, 0);
+    }
+    
+    // Custom logic replaced the 'change' event on the <select>.
+    // The hiddenInput.dispatchEvent('change') handles notifying the rest of the app.
+    
+    renderOptions();
+}
+
 async function dropdownKategorileriniYukle() {
     try {
         const cevap = await fetch(`${CONFIG.API_BASE_URL}/categories?pageSize=1000`, {
@@ -173,39 +332,43 @@ async function dropdownKategorileriniYukle() {
         if (!cevap.ok) throw new Error("Kategoriler alınamadı.");
 
         const data = await cevap.json();
-        const kategoriler = data.items || data;
-        window.tumKategoriler = kategoriler; // Global olarak sakla
+        window.tumKategoriler = data.items || data;
         
-        const select = document.getElementById("urunKategoriId");
-        const filterSelect = document.getElementById("filtreKategoriId");
-
-        if (select) {
-            select.innerHTML = '<option value="">Kategori seçin...</option>';
-            kategoriler.forEach(kategori => {
-                const option = document.createElement("option");
-                option.value = kategori.id;
-                option.textContent = kategori.name;
-                select.appendChild(option);
-            });
-        }
+        buildCategoryCascader('urunKategoriContainer', 'urunKategoriId', null, false);
+        buildCategoryCascader('filtreKategoriContainer', 'filtreKategoriId', null, true);
         
-        if (filterSelect) {
-            filterSelect.innerHTML = '<option value="">Tüm Kategoriler</option>';
-            kategoriler.forEach(kategori => {
-                const option = document.createElement("option");
-                option.value = kategori.id;
-                option.textContent = kategori.name;
-                filterSelect.appendChild(option);
-            });
-        }
     } catch (hata) {
         console.error("Kategori dropdown yükleme hatası:", hata);
     }
 }
 
+const filtreKategoriIdEl = document.getElementById('filtreKategoriId');
+if (filtreKategoriIdEl) {
+    filtreKategoriIdEl.addEventListener('change', () => {
+        currentPage = 1;
+        veriyiGuncelle();
+    });
+}
+
+const btnFiltreleriTemizle = document.getElementById("btnFiltreleriTemizle");
+if (btnFiltreleriTemizle) {
+    btnFiltreleriTemizle.addEventListener("click", () => {
+        document.getElementById("aramaKutusu").value = "";
+        aktifArama = "";
+        
+        buildCategoryCascader('filtreKategoriContainer', 'filtreKategoriId', null, true);
+        
+        document.querySelectorAll('.kural-filtresi').forEach(input => {
+            input.value = "";
+        });
+        currentPage = 1;
+        veriyiGuncelle();
+    });
+}
+
 // Kategori dropdown'ı değiştiğinde tetiklenecek olay
-document.getElementById('urunKategoriId').addEventListener('change', async function() {
-    const categoryId = this.value;
+document.getElementById('urunKategoriId').addEventListener('change', async function(e) {
+    const categoryId = e.target.value || this.value;
     const container = document.getElementById('dynamicAttributesContainer');
     const attributeArea = document.getElementById('dynamicAttributesArea');
     
@@ -228,9 +391,7 @@ document.getElementById('urunKategoriId').addEventListener('change', async funct
         
         const rules = await response.json();
         
-        // Global'den En Alta doğru göstermek için ters çevir
-        rules.reverse();
-
+        // Backend'den gelen kurallar artık DisplayOrder değerine göre sıralanmış durumdadır.
         if (container) container.innerHTML = ''; // İçini temizle
 
         if (rules.length === 0) {
@@ -239,12 +400,14 @@ document.getElementById('urunKategoriId').addEventListener('change', async funct
         }
 
         // Gelen her bir kural için DataType ve UI Component'e göre dinamik input çiz
+        let validRuleIndex = 0;
         rules.forEach(rule => {
             if (rule.targetLevel === "Asset") return; // Demirbaş özellikleri ürün formunda çizilmez!
 
             let inputHtml = '';
             let requiredAttr = rule.isRequired ? 'required' : '';
             let starHtml = rule.isRequired ? '<span class="text-danger">*</span>' : '';
+            let skipHtml = !rule.isRequired ? `<a href="#" class="text-primary text-decoration-none ms-3 small fw-normal btn-skip border rounded px-2 py-1 bg-white shadow-sm" title="Zorunlu değil, atla">Atla <i class="bi bi-arrow-right"></i></a>` : '';
 
             let options = [];
             if (rule.allowedValues && rule.allowedValues !== "[]") {
@@ -345,10 +508,16 @@ document.getElementById('urunKategoriId').addEventListener('change', async funct
                     </div>
                 `;
             }
-            else if (uiType === 'toggle_switch' || uiType === 'checkbox' || uiType === 'boolean') {
+            else if (uiType === 'toggle_switch') {
                 inputHtml = `<div class="form-check form-switch mt-2 dynamic-rule-input" data-rule-id="${rule.id}" data-rule-key="${escapeHtml(rule.attributeKey)}" data-rule-type="boolean">
                                 <input class="form-check-input" type="checkbox" id="rule_${rule.id}">
                                 <label class="form-check-label text-muted" for="rule_${rule.id}">Evet / Açık</label>
+                             </div>`;
+            }
+            else if (uiType === 'checkbox' || uiType === 'boolean') {
+                inputHtml = `<div class="form-check mt-2 dynamic-rule-input" data-rule-id="${rule.id}" data-rule-key="${escapeHtml(rule.attributeKey)}" data-rule-type="boolean">
+                                <input class="form-check-input" type="checkbox" id="rule_${rule.id}">
+                                <label class="form-check-label text-muted" for="rule_${rule.id}">Evet / Doğru</label>
                              </div>`;
             }
             else if (uiType === 'masked_textbox') {
@@ -365,19 +534,48 @@ document.getElementById('urunKategoriId').addEventListener('change', async funct
             }
 
             const div = document.createElement('div');
-            div.className = 'col-md-6 mb-3';
+            div.className = `col-md-6 mb-4 dynamic-rule-wrapper ${validRuleIndex > 0 ? 'd-none' : ''}`;
+            div.dataset.index = validRuleIndex;
+            
             if (rule.dataType === 'color_picker') {
                 div.innerHTML = `<a class="text-decoration-none text-dark d-flex align-items-center mb-2" data-bs-toggle="collapse" href="#collapseColor_${rule.id}" role="button" aria-expanded="true">
                                     <label class="form-label small fw-bold mb-0 cursor-pointer">${escapeHtml(rule.attributeKey)} ${starHtml}</label>
                                     <i class="bi bi-caret-down-fill text-warning ms-1"></i>
+                                    ${skipHtml}
                                  </a>
                                  ${inputHtml}`;
             } else {
-                div.innerHTML = `<label class="form-label small fw-bold">${escapeHtml(rule.attributeKey)} ${starHtml}</label>
+                div.innerHTML = `<label class="form-label small fw-bold d-flex align-items-center mb-2">${escapeHtml(rule.attributeKey)} ${starHtml} ${skipHtml}</label>
                                  ${inputHtml}`;
             }
             container.appendChild(div);
+            validRuleIndex++;
         });
+
+        // PIM - Sırayla Gösterme Mantığı (Event Listener'ları 1 kez ekle)
+        if (!container.dataset.pimListenersAttached) {
+            container.dataset.pimListenersAttached = 'true';
+            
+            const revealNext = (wrapper) => {
+                if (!wrapper) return;
+                const nextIndex = parseInt(wrapper.dataset.index) + 1;
+                const nextDiv = container.querySelector(`.dynamic-rule-wrapper[data-index="${nextIndex}"]`);
+                if (nextDiv && nextDiv.classList.contains('d-none')) {
+                    nextDiv.classList.remove('d-none');
+                    nextDiv.classList.add('animate__animated', 'animate__fadeIn');
+                }
+            };
+
+            container.addEventListener('input', (e) => revealNext(e.target.closest('.dynamic-rule-wrapper')));
+            container.addEventListener('change', (e) => revealNext(e.target.closest('.dynamic-rule-wrapper')));
+            container.addEventListener('click', (e) => {
+                const btnSkip = e.target.closest('.btn-skip');
+                if (btnSkip) {
+                    e.preventDefault();
+                    revealNext(btnSkip.closest('.dynamic-rule-wrapper'));
+                }
+            });
+        }
 
         // Event listeners for range sliders
         const rangeContainers = container.querySelectorAll('.dynamic-rule-input[data-rule-type="range_slider"]');
@@ -680,7 +878,8 @@ function urunDuzenle(id) {
     document.getElementById("urunAdi").value = urun.name;
     document.getElementById("urunBarkod").value = urun.barcode;
     document.getElementById("urunMinStok").value = urun.minStockLevel;
-    document.getElementById("urunKategoriId").value = urun.categoryId || "";
+    
+    buildCategoryCascader('urunKategoriContainer', 'urunKategoriId', urun.categoryId || null, false);
 
     document.getElementById("modalBaslik").innerText = "Ürün Düzenle";
     const depoSecimi = document.getElementById("depoSecimiAlani");
@@ -722,12 +921,19 @@ function urunDuzenle(id) {
                     } else if (type === 'color_picker') {
                         const rb = input.querySelector(`input[type="radio"][value="${attr.value}"]`);
                         if (rb) rb.checked = true;
-                    } else {
+                        } else {
                         input.value = attr.value;
                     }
                 }
             });
         }
+
+        // PIM DÜZELTMESİ: Düzenleme modundayken, daha önce doldurulmuş formlar
+        // gizli (d-none) kalmasın. Kullanıcı hepsini tek seferde görebilsin.
+        document.querySelectorAll('.dynamic-rule-wrapper').forEach(wrapper => {
+            wrapper.classList.remove('d-none');
+        });
+
     }, 500);
 
     const modalElement = document.getElementById("urunModal");
@@ -749,6 +955,8 @@ document.querySelector('[data-bs-target="#urunModal"]').addEventListener("click"
     document.getElementById("urunFormu").reset();
     document.getElementById("urunId").value = "";
     document.getElementById("modalBaslik").innerText = "Yeni Ürün Ekle";
+    
+    buildCategoryCascader('urunKategoriContainer', 'urunKategoriId', null, false);
     
     const depoSecimi = document.getElementById("depoSecimiAlani");
     if(depoSecimi) depoSecimi.classList.remove("d-none");

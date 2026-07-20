@@ -326,3 +326,23 @@ th[style*="cursor: pointer"],
     border: 1px solid var(--border-color, #dee2e6);
     box-shadow: 0 2px 4px rgba(0,0,0,0.05);
 }
+
+/* RANGE SLIDER (ÇUBUK) GÖRÜNÜRLÜĞÜ */
+/* Beyaz/Açık Tema İçin Daha Belirgin Çubuk */
+.form-range::-webkit-slider-runnable-track {
+    background-color: #adb5bd !important; 
+    height: 6px;
+    border-radius: 1rem;
+}
+.form-range::-moz-range-track {
+    background-color: #adb5bd !important;
+    height: 6px;
+    border-radius: 1rem;
+}
+/* Karanlık Tema İçin Belirgin Çubuk */
+[data-theme="dark"] .form-range::-webkit-slider-runnable-track {
+    background-color: #555658 !important;
+}
+[data-theme="dark"] .form-range::-moz-range-track {
+    background-color: #555658 !important;
+}

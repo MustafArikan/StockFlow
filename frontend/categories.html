@@ -188,6 +188,13 @@
                                         <label class="form-check-label small fw-bold text-muted" for="kuralZorunlu">Zorunlu</label>
                                     </div>
                                 </div>
+                                
+                                <!-- BAĞLAMSAL (INLINE) ÖNİZLEME -->
+                                <div class="col-md-10 mt-3 d-flex align-items-center justify-content-start d-none" id="inlinePreviewBox">
+                                    <span class="badge bg-info text-dark me-3"><i class="bi bi-eye"></i>Örnek UI Görünümü</span>
+                                    <div id="inlinePreviewContent" class="w-100"></div>
+                                </div>
+
                                 <div class="col-md-12 text-end mt-3">
                                     <button type="button" id="btnKuralEkle" class="btn btn-sm btn-primary rounded-pill px-4 fw-bold">
                                         + Kuralı Ekle
@@ -203,6 +210,7 @@
                         <table class="table table-hover align-middle mb-0 border rounded">
                             <thead class="table-light text-muted small">
                                 <tr>
+                                    <th style="width: 40px;" class="text-center"></th>
                                     <th>Ait Olduğu Yer</th>
                                     <th>Özellik Adı</th>
                                     <th>UI & Tip</th>
@@ -221,6 +229,7 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
     <script src="js/config.js"></script>
     <script src="js/categories.js?v=2"></script>
     <script src="js/auth.js"></script>

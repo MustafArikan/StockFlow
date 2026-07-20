@@ -45,6 +45,7 @@ public class AttributeRulesController : ControllerBase
             var rules = await _context.AttributeRules
                 .AsNoTracking()
                 .Where(a => targetCategoryIds.Contains(a.CategoryId) && !a.IsDeleted)
+                .OrderBy(a => a.DisplayOrder)
                 .Select(rule => new stok_takip.DTOs.AttributeRuleResponseDto(
                     rule.Id,
                     rule.CategoryId,
@@ -55,7 +56,8 @@ public class AttributeRulesController : ControllerBase
                     rule.UiComponent,
                     rule.MinValue,
                     rule.MaxValue,
-                    rule.TargetLevel))
+                    rule.TargetLevel,
+                    rule.DisplayOrder))
                 .ToListAsync();
 
                 return Ok(rules);
@@ -87,7 +89,7 @@ public class AttributeRulesController : ControllerBase
 
         _context.AttributeRules.Add(rule);
         await _context.SaveChangesAsync();
-        return Ok(new stok_takip.DTOs.AttributeRuleResponseDto(rule.Id, rule.CategoryId, rule.AttributeKey, rule.DataType, rule.IsRequired, rule.AllowedValues, rule.UiComponent, rule.MinValue, rule.MaxValue, rule.TargetLevel));
+        return Ok(new stok_takip.DTOs.AttributeRuleResponseDto(rule.Id, rule.CategoryId, rule.AttributeKey, rule.DataType, rule.IsRequired, rule.AllowedValues, rule.UiComponent, rule.MinValue, rule.MaxValue, rule.TargetLevel, rule.DisplayOrder));
     }
 
     // Kural güncelleme
@@ -108,7 +110,7 @@ public class AttributeRulesController : ControllerBase
         rule.TargetLevel = dto.TargetLevel;
 
         await _context.SaveChangesAsync();
-        return Ok(new stok_takip.DTOs.AttributeRuleResponseDto(rule.Id, rule.CategoryId, rule.AttributeKey, rule.DataType, rule.IsRequired, rule.AllowedValues, rule.UiComponent, rule.MinValue, rule.MaxValue, rule.TargetLevel));
+        return Ok(new stok_takip.DTOs.AttributeRuleResponseDto(rule.Id, rule.CategoryId, rule.AttributeKey, rule.DataType, rule.IsRequired, rule.AllowedValues, rule.UiComponent, rule.MinValue, rule.MaxValue, rule.TargetLevel, rule.DisplayOrder));
     }
 
     // Kural silme (Soft Delete)
@@ -122,5 +124,27 @@ public class AttributeRulesController : ControllerBase
         rule.IsDeleted = true;
         await _context.SaveChangesAsync();
         return Ok(new { message = "Kural başarıyla silindi." });
+    }
+
+    // Kural sıralamasını güncelleme
+    [HttpPut("reorder")]
+    public async Task<IActionResult> Reorder([FromBody] List<stok_takip.DTOs.UpdateRuleOrderDto> dtos)
+    {
+        if (dtos == null || !dtos.Any()) return BadRequest(new { message = "Geçersiz sıralama verisi." });
+
+        var ruleIds = dtos.Select(d => d.Id).ToList();
+        var rules = await _context.AttributeRules.Where(r => ruleIds.Contains(r.Id)).ToListAsync();
+
+        foreach (var rule in rules)
+        {
+            var dto = dtos.FirstOrDefault(d => d.Id == rule.Id);
+            if (dto != null)
+            {
+                rule.DisplayOrder = dto.DisplayOrder;
+            }
+        }
+
+        await _context.SaveChangesAsync();
+        return Ok(new { message = "Sıralama başarıyla güncellendi." });
     }
 }
