@@ -21,6 +21,7 @@
 
         .notification-card {
             transition: all 0.2s ease;
+            background-color: var(--bs-body-bg); /* Temaya göre otomatik arkaplan alır */
         }
         .notification-card:hover {
             transform: translateY(-2px);
@@ -28,8 +29,8 @@
         }
     </style>
 </head>
-<body>
-    <!-- Navigasyon Barı (Orjinal menü yapımızla uyumlu)-->
+<body>  
+
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm">
         <div class="container">
             <a class="navbar-brand fw-bold text-primary" href="index.html">
@@ -51,29 +52,29 @@
                 </ul>
                 <!-- Sağ tarafa kullanıcı profil bilgilerini göstereceğimiz bir alan -->
                 <div class="d-flex align-items-center text-white-50">
-                    <span id="userProfile" class="me-3 small fw-bold"></span>
+                    <button id="themeToggleBtn" class="theme-toggle-btn border-0 me-3 text-white-50" title="Temayı Değiştir"></button>
+                    <span id="userProfile" class="me-3 small fw-bold text-white-50"></span>
                     <button id="btnNavbarLogout" class="btn btn-sm btn-outline-danger rounded-pill px-3">Çıkış Yap</button>
-                    <a href="login.html" class="btn btn-outline-light btn-sm rounded-pill px-3">Giriş Yap</a>
                 </div>
             </div>
         </div>
     </nav>
     
     <div class="container my-5">
-        <div class="card border-0 shadow-sm rounded-3 bg-white">
-            <div class="card-header bg-white border-bottom-0 pt-4 pb-2 px-4 d-flex justify-content-between align-items-center flex-wrap gap-3">
+        <div class="card border-0 shadow-sm rounded-3">
+            <div class="card-header border-bottom-0 pt-4 pb-2 px-4 d-flex justify-content-between align-items-center flex-wrap gap-3" style="background: transparent;">
                 <div>
-                    <h2 class="fw-bold  mb-0">Bildirim Paneli</h2>
+                    <h2 class="fw-bold mb-0">Bildirim Paneli</h2>
                     <p class="text-muted small mb-0">Sistem uyarıları ve kritik stok seviyeleri</p>
                 </div>
                 <button id="btnMarkAllAsRead" class="btn btn-outline-primary rounded-pill px-4 shadow-sm fw-bold btn-sm">
-                    <i class="bi bi-check-all"></i>
+                    <i class="bi bi-check-all"></i> Tümünü Okundu İşaretle
                 </button>
             </div>
 
             <div class="card-body p-4">
                 <div class="mb-4 d-flex gap-2">
-                    <button id="btnFilterAll" class="btn btn-dark btn-sm rounded-pill px-3">Tümü</button>
+                    <button id="btnFilterAll" class="btn btn-primary btn-sm rounded-pill px-3">Tümü</button>
                     <button id="btnFilterUnread" class="btn btn-outline-secondary btn-sm rounded-pill px-3">Sadece Okunmamış</button>
                 </div> 
 
@@ -87,4 +88,6 @@
     <script src="js/config.js"></script>
     <script src="js/auth.js"></script>
     <script src="js/notifications.js"></script>
+
 </body>
+</html>

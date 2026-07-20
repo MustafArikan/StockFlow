@@ -95,6 +95,12 @@ public class LocationsController : ControllerBase
         if (location == null)
             return NotFound();
 
+var stokVarMi = await _context.StockLevels.AnyAsync(sl => sl.LocationId == id);
+        if (stokVarMi)
+        {
+            return BadRequest("Bu rafta ürün (stok) var. Önce stokları boşaltmalısınız.");
+        }
+
         location.IsDeleted = true; // Soft delete
         await _context.SaveChangesAsync();
         return NoContent();

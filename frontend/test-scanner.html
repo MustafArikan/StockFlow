@@ -18,7 +18,8 @@
     <style>
         body {
             font-family: 'Inter', sans-serif;
-            background-color: #f4f6f9;
+            background-color: var(--bg-primary);
+            
         }
 
         .scanner-card {
@@ -34,6 +35,12 @@
             background-color: #fafafa;
             position: relative;
             min-height: 250px;
+        }
+
+        
+        [data-theme="dark"] #reader {
+            background-color: var(--card-bg) !important;
+            border-color: var(--border-color) !important;
         }
 
         /* html5-qrcode video elementini ortala */
