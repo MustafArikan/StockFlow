@@ -156,6 +156,24 @@
                                 <option value="" selected disabled>Hedef raf seçiniz...</option>
                             </select>
                         </div>
+                        <div class="mb-3 d-none" id="tedarikciGroup">
+                            <label class="form-label text-muted small fw-bold">Tedarikçi (Opsiyonel)</label>
+                            <select class="form-select" id="tedarikciSecimi">
+                                <option value="" selected disabled>Tedarikçi yükleniyor...</option>
+                            </select>
+                        </div>
+                        <div class="mb-3 d-none" id="cikisNoktasiGroup">
+                            <label class="form-label text-muted small fw-bold">Çıkış/Teslim Noktası (Opsiyonel)</label>
+                            <input type="text" class="form-control" id="cikisNoktasi" placeholder="Örn: Müşteri Adı, Şantiye vb.">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label text-muted small fw-bold">Birim Fiyat (Opsiyonel)</label>
+                            <input type="number" step="0.01" class="form-control" id="birimFiyat" placeholder="Örn: 150.50">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label text-muted small fw-bold">Fatura/İrsaliye No (Opsiyonel)</label>
+                            <input type="text" class="form-control" id="faturaNo" placeholder="Örn: FAT-2023-001">
+                        </div>
                         <div class="mb-4">
                             <label class="form-label text-muted small fw-bold">İşlem Adedi (Max: 100.000)</label>
                             <input type="number" class="form-control" id="islemAdedi" placeholder="Örn: 10" min="1"
