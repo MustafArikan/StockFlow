@@ -10,6 +10,10 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
     <link href="css/style.css" rel="stylesheet">
     <script src="js/theme.js"></script>
+    <!-- 🎯 İstemci Taraflı Export Kütüphaneleri -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
 </head>
 
 <body>
@@ -51,15 +55,41 @@
                 <h1 class="fw-bold">Ürünler</h1>
                 <p class="text-muted mb-0">Ürün kataloğu ve stok bilgileri</p>
             </div>
-            <button class="btn btn-primary rounded-pill px-4 shadow-sm" data-bs-toggle="modal"
-                data-bs-target="#urunModal">+ Yeni Ürün Ekle</button>
+            <div class="d-flex gap-2">
+                <!-- 🎯 TOPLU VERİ İÇE AKTARMA (EXCEL IMPORT) ALANI -->
+                <div class="input-group">
+                    <input type="file" class="form-control form-control-sm rounded-start-pill" id="excelImportFile" accept=".xlsx">
+                    <button class="btn btn-sm btn-outline-success px-3 rounded-end-pill" type="button" id="btnExcelImport" onclick="handleExcelImport()">
+                        <i class="bi bi-file-earmark-excel-fill"></i> Yükle
+                    </button>
+                </div>
+                <button class="btn btn-primary rounded-pill px-4 shadow-sm text-nowrap" data-bs-toggle="modal"
+                    data-bs-target="#urunModal">+ Yeni Ürün Ekle</button>
+            </div>
         </div>
+
+        <!-- 🎯 İÇE AKTARMA HATALARI VE RAPORLARI İÇ Weber ALANI -->
+        <div id="importReportAlert" class="mt-3"></div>
 
         <div class="card border-0 shadow-sm rounded-3">
             <div class="card-body p-4">
-                <div class="mb-4">
-                    <input type="text" id="aramaKutusu" class="form-control rounded-pill"
-                        placeholder="Ürün Adı veya Barkod ile Ara...">
+                <div class="d-flex justify-content-between align-items-center mb-4 gap-3">
+                    <div class="flex-grow-1">
+                        <input type="text" id="aramaKutusu" class="form-control rounded-pill"
+                            placeholder="Ürün Adı veya Barkod ile Ara...">
+                    </div>
+                    <!-- 🎯 ÇEŞİTLİ FORMATLARDA DIŞA AKTARMA (EXPORT) BUTONLARI -->
+                    <div class="d-flex gap-2">
+                        <button onclick="exportProductsToExcel()" class="btn btn-success btn-sm rounded-pill px-3 shadow-sm text-nowrap" title="Excel Olarak İndir">
+                            <i class="bi bi-file-earmark-excel"></i> Excel
+                        </button>
+                        <button onclick="exportProductsToPDF()" class="btn btn-danger btn-sm rounded-pill px-3 shadow-sm text-nowrap" title="PDF Olarak İndir">
+                            <i class="bi bi-file-earmark-pdf"></i> PDF
+                        </button>
+                        <button onclick="exportProductsToCSV()" class="btn btn-secondary btn-sm rounded-pill px-3 shadow-sm text-nowrap" title="CSV Olarak İndir">
+                            <i class="bi bi-file-earmark-spreadsheet"></i> CSV
+                        </button>
+                    </div>
                 </div>
 
                 <div class="table-responsive">
@@ -193,7 +223,6 @@
                     <h6 class="fw-bold text-secondary text-uppercase small mb-3 border-bottom pb-2">Ürün Özellikleri (Kurallar)</h6>
                     <div class="bg-white p-3 rounded-3 shadow-sm border border-light">
                         <table class="table table-sm table-borderless mb-0" id="detayUrunOzellikler">
-                            <!-- JS ile doldurulacak -->
                             <tr><td class="text-muted fst-italic">Özel nitelik bulunamadı.</td></tr>
                         </table>
                     </div>
