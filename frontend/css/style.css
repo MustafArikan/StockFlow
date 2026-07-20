@@ -384,3 +384,7 @@ button:disabled,
 }
 .w-40px { width: 40px !important; }
 .cursor-pointer { cursor: pointer !important; }
+
+.w-60px { width: 60px !important; }
+.h-60px { height: 60px !important; }
+.fs-24px { font-size: 24px !important; }
