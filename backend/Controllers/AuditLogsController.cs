@@ -20,13 +20,16 @@ namespace stok_takip.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetAll()
+        public async Task<IActionResult> GetAll([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 50)
         {
-            var logs = await _context.SecurityAuditLogs
-                .AsNoTracking()
+            var query = _context.SecurityAuditLogs.AsNoTracking();
+            var totalRecords = await query.CountAsync();
+
+            var logs = await query
                 .Include(l => l.User)
                 .OrderByDescending(l => l.CreatedAt)
-                .Take(200)
+                .Skip((pageNumber - 1) * pageSize)
+                .Take(pageSize)
                 .Select(l => new {
                     l.Id,
                     l.EntityName,
@@ -42,7 +45,13 @@ namespace stok_takip.Controllers
                 })
                 .ToListAsync();
 
-            return Ok(logs);
+            return Ok(new 
+            {
+                items = logs,
+                totalRecords = totalRecords,
+                currentPage = pageNumber,
+                totalPages = (int)Math.Ceiling((double)totalRecords / pageSize)
+            });
         }
     }
 }

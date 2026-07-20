@@ -514,20 +514,33 @@ async function kurallariYukle(categoryId) {
 
         kurallar.forEach(kural => {
             let tipBadge = "";
-            switch (kural.dataType) {
-                case "text": tipBadge = '<span class="badge bg-secondary">Metin</span>'; break;
-                case "number": tipBadge = '<span class="badge bg-primary">Sayı (Int)</span>'; break;
-                case "decimal": tipBadge = '<span class="badge bg-info text-dark">Sayı (Ondalık)</span>'; break;
-                case "boolean": tipBadge = '<span class="badge bg-success">Evet/Hayır</span>'; break;
-                case "range_slider_integer": tipBadge = '<span class="badge bg-primary">Kaydırıcı (Tam Sayı)</span>'; break;
-                case "range_slider_decimal": tipBadge = '<span class="badge bg-primary">Kaydırıcı (Ondalık)</span>'; break;
+            let uiValue = (kural.uiComponent && kural.uiComponent !== "textbox") ? kural.uiComponent : kural.dataType;
+            switch (uiValue) {
+                case "text": tipBadge = '<span class="badge bg-secondary">Düz Metin</span>'; break;
+                case "autocomplete": tipBadge = '<span class="badge bg-secondary">Autocomplete</span>'; break;
+                case "masked_textbox": tipBadge = '<span class="badge bg-secondary">Maskeli Metin</span>'; break;
+                case "number": tipBadge = '<span class="badge bg-primary">Tam Sayı</span>'; break;
+                case "decimal": tipBadge = '<span class="badge bg-info text-dark">Ondalık</span>'; break;
+                case "slider": 
+                    if(kural.dataType === "number") tipBadge = '<span class="badge bg-primary">Slider (Int)</span>';
+                    else tipBadge = '<span class="badge bg-info text-dark">Slider (Ondalık)</span>';
+                    break;
                 case "dropdown": tipBadge = '<span class="badge bg-warning text-dark">Açılır Liste</span>'; break;
+                case "icon_dropdown": tipBadge = '<span class="badge bg-warning text-dark">İkonlu Liste</span>'; break;
+                case "searchable_dropdown": tipBadge = '<span class="badge bg-warning text-dark">Aramalı Liste</span>'; break;
                 case "radio": tipBadge = '<span class="badge bg-warning text-dark">Tekli Seçim</span>'; break;
+                case "segmented_button": tipBadge = '<span class="badge bg-warning text-dark">Segmentli Buton</span>'; break;
                 case "checkbox_group": tipBadge = '<span class="badge bg-warning text-dark">Çoklu Seçim</span>'; break;
                 case "color_picker": tipBadge = '<span class="badge bg-danger">Renk Seçici</span>'; break;
                 case "toggle_switch": tipBadge = '<span class="badge bg-success">Aç-Kapat</span>'; break;
-                default: tipBadge = `<span class="badge bg-light text-dark">${kural.dataType}</span>`; break;
+                case "checkbox":
+                case "boolean": tipBadge = '<span class="badge bg-success">Onay Kutusu</span>'; break;
+                default: tipBadge = `<span class="badge bg-light text-dark">${uiValue}</span>`; break;
             }
+
+            let targetBadge = kural.targetLevel === "Asset" 
+                ? '<span class="badge bg-dark"><i class="bi bi-phone"></i> Demirbaş</span>' 
+                : '<span class="badge bg-light text-dark border"><i class="bi bi-box"></i> Katalog</span>';
 
             let zorunluBadge = kural.isRequired 
                 ? '<span class="badge bg-danger">Zorunlu</span>' 
@@ -541,8 +554,13 @@ async function kurallariYukle(categoryId) {
                 } catch(e){}
             }
 
+            if (kural.uiComponent === "slider" && (kural.minValue !== null || kural.maxValue !== null)) {
+                opts += `<br><small class="text-muted text-xs">Aralık: ${kural.minValue ?? '*'} - ${kural.maxValue ?? '*'}</small>`;
+            }
+
             const tr = document.createElement("tr");
             tr.innerHTML = `
+                <td>${targetBadge}</td>
                 <td class="fw-bold text-dark">${escapeHtml(kural.attributeKey)} ${opts}</td>
                 <td>${tipBadge}</td>
                 <td>${zorunluBadge}</td>
@@ -562,9 +580,34 @@ async function kurallariYukle(categoryId) {
 document.getElementById("btnKuralEkle").addEventListener("click", async () => {
     const categoryId = document.getElementById("aktifKuralKategoriId").value;
     const attributeKey = document.getElementById("kuralAd").value.trim();
-    const dataType = document.getElementById("kuralTip").value;
+    const uiSelection = document.getElementById("kuralTip").value;
+    const targetLevel = document.getElementById("kuralTargetLevel").value;
     const isRequired = document.getElementById("kuralZorunlu").checked;
     const allowedValues = document.getElementById("kuralSecenekler").value;
+    const minVal = document.getElementById("kuralMin").value;
+    const maxVal = document.getElementById("kuralMax").value;
+    
+    let dataType = "text";
+    let uiComponent = "textbox";
+    
+    switch (uiSelection) {
+        case "text": dataType = "text"; uiComponent = "textbox"; break;
+        case "autocomplete": dataType = "text"; uiComponent = "autocomplete"; break;
+        case "masked_textbox": dataType = "text"; uiComponent = "masked_textbox"; break;
+        case "number": dataType = "number"; uiComponent = "textbox"; break;
+        case "decimal": dataType = "decimal"; uiComponent = "textbox"; break;
+        case "range_slider_integer": dataType = "number"; uiComponent = "slider"; break;
+        case "range_slider_decimal": dataType = "decimal"; uiComponent = "slider"; break;
+        case "dropdown": dataType = "select"; uiComponent = "dropdown"; break;
+        case "icon_dropdown": dataType = "select"; uiComponent = "icon_dropdown"; break;
+        case "searchable_dropdown": dataType = "select"; uiComponent = "searchable_dropdown"; break;
+        case "radio": dataType = "select"; uiComponent = "radio"; break;
+        case "segmented_button": dataType = "select"; uiComponent = "segmented_button"; break;
+        case "checkbox_group": dataType = "select"; uiComponent = "checkbox_group"; break;
+        case "color_picker": dataType = "select"; uiComponent = "color_picker"; break;
+        case "toggle_switch": dataType = "boolean"; uiComponent = "toggle_switch"; break;
+        case "boolean": dataType = "boolean"; uiComponent = "checkbox"; break;
+    }
     
     if (!attributeKey) {
         alert("Lütfen kural (özellik) adını giriniz.");
@@ -572,7 +615,7 @@ document.getElementById("btnKuralEkle").addEventListener("click", async () => {
     }
 
     let parsedAllowedValues = "[]";
-    if (["dropdown", "radio", "checkbox_group"].includes(dataType)) {
+    if (["dropdown", "icon_dropdown", "searchable_dropdown", "radio", "segmented_button", "checkbox_group", "color_picker"].includes(uiComponent)) {
         if (!allowedValues || allowedValues.trim() === "") {
             alert("Bu tip için seçenekler zorunludur (virgülle ayırarak girin).");
             return;
@@ -588,7 +631,11 @@ document.getElementById("btnKuralEkle").addEventListener("click", async () => {
         attributeKey: attributeKey,
         dataType: dataType,
         isRequired: isRequired,
-        allowedValues: parsedAllowedValues
+        allowedValues: parsedAllowedValues,
+        uiComponent: uiComponent,
+        minValue: minVal !== "" ? parseFloat(minVal) : null,
+        maxValue: maxVal !== "" ? parseFloat(maxVal) : null,
+        targetLevel: targetLevel
     };
     
     const btnEkle = document.getElementById("btnKuralEkle");
@@ -614,8 +661,13 @@ document.getElementById("btnKuralEkle").addEventListener("click", async () => {
         // Başarılı ise formu temizle
         document.getElementById("kuralAd").value = "";
         document.getElementById("kuralTip").value = "text";
+        document.getElementById("kuralTargetLevel").value = "Product";
         document.getElementById("kuralZorunlu").checked = false;
         document.getElementById("kuralSecenekler").value = "";
+        document.getElementById("kuralMin").value = "";
+        document.getElementById("kuralMax").value = "";
+        
+        document.getElementById("kuralTip").dispatchEvent(new Event('change'));
         
         btnEkle.removeAttribute("data-rule-id");
         btnEkle.innerText = "+ Kuralı Ekle";
@@ -638,8 +690,31 @@ document.getElementById("kurallarTabloGovdesi").addEventListener("click", async 
         const kural = window.mevcutKurallar.find(k => k.id === id);
         if (kural) {
             document.getElementById("kuralAd").value = kural.attributeKey;
-            document.getElementById("kuralTip").value = kural.dataType;
+            document.getElementById("kuralTargetLevel").value = kural.targetLevel || "Product";
+            
+            let reverseUi = kural.uiComponent;
+            
+            if (!reverseUi || reverseUi === "") {
+                // Eski kayıt (Migration öncesi eklenmiş, uiComponent null/empty)
+                // Eski kayıtların dataType'ı formdaki option value'suyla birebir aynıydı.
+                reverseUi = kural.dataType; 
+            } else {
+                // Yeni kayıt (uiComponent dolu)
+                if (kural.uiComponent === "slider") {
+                    reverseUi = kural.dataType === "number" ? "range_slider_integer" : "range_slider_decimal";
+                } else if (kural.uiComponent === "checkbox") {
+                    reverseUi = "boolean";
+                } else if (kural.uiComponent === "textbox") {
+                    reverseUi = kural.dataType; // "text", "number", "decimal"
+                } else {
+                    reverseUi = kural.uiComponent; // "dropdown", "radio", "masked_textbox", vb.
+                }
+            }
+            
+            document.getElementById("kuralTip").value = reverseUi || "text";
             document.getElementById("kuralZorunlu").checked = kural.isRequired;
+            document.getElementById("kuralMin").value = kural.minValue ?? "";
+            document.getElementById("kuralMax").value = kural.maxValue ?? "";
             
             // Seçenekler kutusunun görünürlüğünü tetikle
             document.getElementById("kuralTip").dispatchEvent(new Event('change'));
@@ -686,12 +761,24 @@ document.getElementById('kuralTip').addEventListener('change', (e) => {
     const tip = e.target.value;
     const secDiv = document.getElementById('kuralSeceneklerDiv');
     const secInput = document.getElementById('kuralSecenekler');
+    const minDiv = document.getElementById('kuralMinDiv');
+    const maxDiv = document.getElementById('kuralMaxDiv');
     
-    if (['dropdown', 'radio', 'checkbox_group'].includes(tip)) {
+    if (['dropdown', 'icon_dropdown', 'searchable_dropdown', 'radio', 'segmented_button', 'checkbox_group', 'color_picker'].includes(tip)) {
         secDiv.classList.remove('d-none');
         secInput.placeholder = "Örn: Siyah, Beyaz, Kırmızı";
     } else {
         secDiv.classList.add('d-none');
         secInput.value = "";
+    }
+
+    if (['range_slider_integer', 'range_slider_decimal'].includes(tip)) {
+        minDiv.classList.remove('d-none');
+        maxDiv.classList.remove('d-none');
+    } else {
+        minDiv.classList.add('d-none');
+        maxDiv.classList.add('d-none');
+        document.getElementById('kuralMin').value = "";
+        document.getElementById('kuralMax').value = "";
     }
 });

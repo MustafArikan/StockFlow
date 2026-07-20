@@ -175,8 +175,10 @@ document.getElementById('urunKategoriId').addEventListener('change', async funct
             return;
         }
 
-        // Gelen her bir kural için DataType'a göre dinamik input çiz
+        // Gelen her bir kural için DataType ve UI Component'e göre dinamik input çiz
         rules.forEach(rule => {
+            if (rule.targetLevel === "Asset") return; // Demirbaş özellikleri ürün formunda çizilmez!
+
             let inputHtml = '';
             let requiredAttr = rule.isRequired ? 'required' : '';
             let starHtml = rule.isRequired ? '<span class="text-danger">*</span>' : '';
@@ -186,25 +188,35 @@ document.getElementById('urunKategoriId').addEventListener('change', async funct
                 try { options = JSON.parse(rule.allowedValues); } 
                 catch(e) { options = rule.allowedValues.split(',').map(s => s.trim()); }
             }
+            
+            let uiType = rule.uiComponent || rule.dataType; // Eski kurallar için dataType'a düş
 
-            if (rule.dataType === 'dropdown') {
+            if (uiType === 'dropdown' || uiType === 'icon_dropdown' || uiType === 'searchable_dropdown') {
                 let optionsHtml = options.map(opt => `<option value="${escapeHtml(opt)}">${escapeHtml(opt)}</option>`).join('');
                 inputHtml = `<select class="form-select dynamic-rule-input" data-rule-id="${rule.id}" data-rule-key="${escapeHtml(rule.attributeKey)}" data-rule-type="dropdown" ${requiredAttr}>
                                 <option value="">Seçiniz...</option>
                                 ${optionsHtml}
                              </select>`;
             } 
-            else if (rule.dataType === 'radio') {
+            else if (uiType === 'radio' || uiType === 'segmented_button') {
                 inputHtml = `<div class="mt-2 dynamic-rule-input" data-rule-id="${rule.id}" data-rule-key="${escapeHtml(rule.attributeKey)}" data-rule-type="radio">`;
                 options.forEach((opt, idx) => {
-                    inputHtml += `<div class="form-check form-check-inline">
-                                    <input class="form-check-input" type="radio" name="rule_${rule.id}" id="rule_${rule.id}_${idx}" value="${escapeHtml(opt)}" ${requiredAttr}>
-                                    <label class="form-check-label" for="rule_${rule.id}_${idx}">${escapeHtml(opt)}</label>
-                                  </div>`;
+                    let isSeg = uiType === 'segmented_button';
+                    let btnCls = isSeg ? 'btn-check' : 'form-check-input';
+                    let lblCls = isSeg ? 'btn btn-outline-primary btn-sm' : 'form-check-label';
+                    if (isSeg) {
+                        inputHtml += `<input class="${btnCls}" type="radio" name="rule_${rule.id}" id="rule_${rule.id}_${idx}" value="${escapeHtml(opt)}" ${requiredAttr}>
+                                      <label class="${lblCls} me-1 mb-1" for="rule_${rule.id}_${idx}">${escapeHtml(opt)}</label>`;
+                    } else {
+                        inputHtml += `<div class="form-check form-check-inline">
+                                        <input class="${btnCls}" type="radio" name="rule_${rule.id}" id="rule_${rule.id}_${idx}" value="${escapeHtml(opt)}" ${requiredAttr}>
+                                        <label class="${lblCls}" for="rule_${rule.id}_${idx}">${escapeHtml(opt)}</label>
+                                      </div>`;
+                    }
                 });
                 inputHtml += `</div>`;
             }
-            else if (rule.dataType === 'checkbox_group') {
+            else if (uiType === 'checkbox_group') {
                 inputHtml = `<div class="mt-2 dynamic-rule-input" data-rule-id="${rule.id}" data-rule-key="${escapeHtml(rule.attributeKey)}" data-rule-type="checkbox_group">`;
                 options.forEach((opt, idx) => {
                     inputHtml += `<div class="form-check form-check-inline">
@@ -214,17 +226,16 @@ document.getElementById('urunKategoriId').addEventListener('change', async funct
                 });
                 inputHtml += `</div>`;
             }
-            else if (rule.dataType === 'range_slider_integer' || rule.dataType === 'range_slider_decimal') {
-                let rMin = 0, rMax = 100, rStep = 1;
-                if (rule.dataType === 'range_slider_decimal') {
-                    rStep = 0.01;
-                }
+            else if (uiType === 'slider' || uiType === 'range_slider_integer' || uiType === 'range_slider_decimal') {
+                let rMin = rule.minValue !== null ? rule.minValue : 0;
+                let rMax = rule.maxValue !== null ? rule.maxValue : 100;
+                let rStep = (rule.dataType === 'decimal' || uiType === 'range_slider_decimal') ? 0.01 : 1;
                 inputHtml = `<div class="d-flex align-items-center dynamic-rule-input" data-rule-id="${rule.id}" data-rule-key="${escapeHtml(rule.attributeKey)}" data-rule-type="range_slider" data-min="${rMin}" data-max="${rMax}">
-                                <input type="range" class="form-range flex-grow-1" min="${rMin}" max="${rMax}" step="${rStep}" id="rule_${rule.id}">
+                                <input type="range" class="form-range flex-grow-1" min="${rMin}" max="${rMax}" step="${rStep}" value="${rMin}" id="rule_${rule.id}">
                                 <input type="number" class="form-control form-control-sm ms-2 text-center w-75px" id="val_${rule.id}" value="${rMin}" min="${rMin}" max="${rMax}" step="${rStep}">
                              </div>`;
             }
-            else if (rule.dataType === 'color_picker') {
+            else if (uiType === 'color_picker') {
                 let defaultColors = ["Siyah", "Beyaz", "Gri", "Gümüş", "Altın", "Kırmızı", "Mavi", "Yeşil", "Sarı", "Turuncu", "Mor", "Pembe", "Lacivert", "Kahverengi", "Bej"];
                 let colors = (options && options.length > 0) ? options : defaultColors;
                 
@@ -264,11 +275,14 @@ document.getElementById('urunKategoriId').addEventListener('change', async funct
                     </div>
                 `;
             }
-            else if (rule.dataType === 'toggle_switch' || rule.dataType === 'boolean') {
+            else if (uiType === 'toggle_switch' || uiType === 'checkbox' || uiType === 'boolean') {
                 inputHtml = `<div class="form-check form-switch mt-2 dynamic-rule-input" data-rule-id="${rule.id}" data-rule-key="${escapeHtml(rule.attributeKey)}" data-rule-type="boolean">
                                 <input class="form-check-input" type="checkbox" id="rule_${rule.id}">
                                 <label class="form-check-label text-muted" for="rule_${rule.id}">Evet / Açık</label>
                              </div>`;
+            }
+            else if (uiType === 'autocomplete' || uiType === 'masked_textbox') {
+                inputHtml = `<input type="text" class="form-control dynamic-rule-input" data-rule-id="${rule.id}" data-rule-key="${escapeHtml(rule.attributeKey)}" data-rule-type="text" ${requiredAttr} placeholder="${uiType === 'masked_textbox' ? 'Örn: XXXX-XXXX' : ''}">`;
             }
             else if (rule.dataType === 'number') {
                 inputHtml = `<input type="number" class="form-control dynamic-rule-input" data-rule-id="${rule.id}" data-rule-key="${escapeHtml(rule.attributeKey)}" data-rule-type="number" ${requiredAttr}>`;

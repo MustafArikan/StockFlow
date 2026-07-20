@@ -51,7 +51,11 @@ public class AttributeRulesController : ControllerBase
                     rule.AttributeKey,
                     rule.DataType,
                     rule.IsRequired,
-                    rule.AllowedValues))
+                    rule.AllowedValues,
+                    rule.UiComponent,
+                    rule.MinValue,
+                    rule.MaxValue,
+                    rule.TargetLevel))
                 .ToListAsync();
 
                 return Ok(rules);
@@ -74,12 +78,16 @@ public class AttributeRulesController : ControllerBase
             AttributeKey = dto.AttributeKey,
             DataType = dto.DataType,
             IsRequired = dto.IsRequired,
-            AllowedValues = dto.AllowedValues
+            AllowedValues = dto.AllowedValues,
+            UiComponent = dto.UiComponent,
+            MinValue = dto.MinValue,
+            MaxValue = dto.MaxValue,
+            TargetLevel = dto.TargetLevel
         };
 
         _context.AttributeRules.Add(rule);
         await _context.SaveChangesAsync();
-        return Ok(new stok_takip.DTOs.AttributeRuleResponseDto(rule.Id, rule.CategoryId, rule.AttributeKey, rule.DataType, rule.IsRequired, rule.AllowedValues));
+        return Ok(new stok_takip.DTOs.AttributeRuleResponseDto(rule.Id, rule.CategoryId, rule.AttributeKey, rule.DataType, rule.IsRequired, rule.AllowedValues, rule.UiComponent, rule.MinValue, rule.MaxValue, rule.TargetLevel));
     }
 
     // Kural güncelleme
@@ -94,9 +102,13 @@ public class AttributeRulesController : ControllerBase
         rule.DataType = dto.DataType;
         rule.IsRequired = dto.IsRequired;
         rule.AllowedValues = dto.AllowedValues;
+        rule.UiComponent = dto.UiComponent;
+        rule.MinValue = dto.MinValue;
+        rule.MaxValue = dto.MaxValue;
+        rule.TargetLevel = dto.TargetLevel;
 
         await _context.SaveChangesAsync();
-        return Ok(new stok_takip.DTOs.AttributeRuleResponseDto(rule.Id, rule.CategoryId, rule.AttributeKey, rule.DataType, rule.IsRequired, rule.AllowedValues));
+        return Ok(new stok_takip.DTOs.AttributeRuleResponseDto(rule.Id, rule.CategoryId, rule.AttributeKey, rule.DataType, rule.IsRequired, rule.AllowedValues, rule.UiComponent, rule.MinValue, rule.MaxValue, rule.TargetLevel));
     }
 
     // Kural silme (Soft Delete)
