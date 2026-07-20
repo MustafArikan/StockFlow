@@ -104,6 +104,155 @@ function veriyiGuncelle() {
     sayfalamayiCiz(yeniToplamSayfa, currentPage);
 }
 
+// =========================================================================
+// 🎯 DIŞA AKTARMA (EXPORT) FONKSİYONLARI (Filtrelenmiş veriyi baz alır)
+// =========================================================================
+
+// EXCEL (.xlsx) OLARAK İNDİRME FONKSİYONU
+function exportProductsToExcel() {
+    const productData = filtreliUrunler;
+    if (!productData || productData.length === 0) return alert("Dışa aktarılacak ürün bulunamadı.");
+
+    const flattenedData = productData.map(p => ({
+        "Sistem ID": p.id,
+        "Ürün Adı": p.name,
+        "Barkod": p.barcode,
+        "Kategori": p.categoryName || "-",
+        "Kritik Stok": p.minStockLevel,
+        "Mevcut Stok": p.stockQuantity
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(flattenedData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Ürünler");
+    
+    XLSX.writeFile(workbook, `StockFlow_Urunler_${new Date().toISOString().slice(0,10)}.xlsx`);
+}
+
+// PDF OLARAK İNDİRME FONKSİYONU
+function exportProductsToPDF() {
+    const productData = filtreliUrunler;
+    if (!productData || productData.length === 0) return alert("Dışa aktarılacak ürün bulunamadı.");
+
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+
+    const tableColumn = ["ID", "Ürün Adı", "Barkod", "Kategori", "Mevcut Stok"];
+    const tableRows = [];
+
+    productData.forEach(p => {
+        tableRows.push([
+            p.id,
+            p.name,
+            p.barcode,
+            p.categoryName || "-",
+            p.stockQuantity
+        ]);
+    });
+
+    doc.text("Stok Takip - Ürün Envanter Raporu", 14, 15);
+    
+    doc.autoTable({
+        head: [tableColumn],
+        body: tableRows,
+        startY: 20,
+    });
+
+    doc.save(`StockFlow_Urunler_${new Date().toISOString().slice(0,10)}.pdf`);
+}
+
+// CSV OLARAK İNDİRME FONKSİYONU
+function exportProductsToCSV() {
+    const productData = filtreliUrunler;
+    if (!productData || productData.length === 0) return alert("Dışa aktarılacak ürün bulunamadı.");
+
+    let csvContent = "\uFEFF"; // Türkçe karakterlerin düzgün görünmesi için BOM
+    csvContent += "ID;Ürün Adı;Barkod;Kritik Stok;Kategori;Mevcut Stok\n";
+
+    productData.forEach(p => {
+        csvContent += `${p.id};"${p.name}";"${p.barcode}";${p.minStockLevel};"${p.categoryName || "-"}";${p.stockQuantity}\n`;
+    });
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.setAttribute("download", `StockFlow_Urunler_${new Date().toISOString().slice(0,10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+
+// =========================================================================
+// 🎯 TOPLU İÇE AKTARMA (EXCEL IMPORT) FONKSİYONU
+// =========================================================================
+async function handleExcelImport() {
+    const fileInput = document.getElementById('excelImportFile');
+    const alertContainer = document.getElementById('importReportAlert');
+    
+    if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
+        if(alertContainer) alertContainer.innerHTML = `<div class="alert alert-warning rounded-3">Lütfen yüklenecek bir Excel (.xlsx) dosyası seçin.</div>`;
+        return;
+    }
+
+    const file = fileInput.files[0];
+    const formData = new FormData();
+    formData.append("file", file);
+
+    if(alertContainer) alertContainer.innerHTML = `<div class="alert alert-info rounded-3">Dosya satır satır denetleniyor, lütfen bekleyin...</div>`;
+
+    try {
+        const response = await fetch(`${API_URL}/import`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`
+            },
+            body: formData
+        });
+
+        if (!response.ok) {
+            const errData = await response.json();
+            throw new Error(errData.message || "İçe aktarma sırasında sunucu hatası oluştu.");
+        }
+
+        const report = await response.json();
+        
+        if(alertContainer) {
+            let reportHtml = `
+                <div class="alert ${report.errorCount > 0 ? 'alert-warning' : 'alert-success'} rounded-3 p-4 border shadow-sm">
+                    <h5 class="fw-bold mb-3"><i class="bi bi-clipboard-data-fill"></i> İçe Aktarma Sonuç Raporu</h5>
+                    <p class="mb-1"><strong>Toplam İşlenen Satır:</strong> ${report.totalRows}</p>
+                    <p class="mb-1 text-success"><strong>Sisteme Eklenen Ürün:</strong> ${report.successCount}</p>
+                    <p class="mb-3 text-danger"><strong>Hatalı/Engellenen Satır:</strong> ${report.errorCount}</p>
+            `;
+
+            if (report.errors && report.errors.length > 0) {
+                reportHtml += `<h6 class="fw-bold text-muted mt-3 mb-2">Hata Detayları:</h6><ul class="list-group small mb-0">`;
+                report.errors.forEach(err => {
+                    reportHtml += `
+                        <li class="list-group-item list-group-item-danger d-flex justify-content-between align-items-start mb-1 rounded-2">
+                            <div class="ms-2 me-auto">
+                                <div class="fw-bold text-dark">Satır ${err.rowNumber}</div>
+                                ${err.errors.join('<br>')}
+                            </div>
+                        </li>`;
+                });
+                reportHtml += `</ul>`;
+            }
+            reportHtml += `</div>`;
+            alertContainer.innerHTML = reportHtml;
+        }
+        
+        urunleriYukle(currentPage);
+
+    } catch (error) {
+        if(alertContainer) alertContainer.innerHTML = `<div class="alert alert-danger rounded-3"><strong>Sistem Hatası:</strong> ${error.message}</div>`;
+    }
+}
+
+// =========================================================================
+// MEVCUT SİSTEM VE CRUD FONKSİYONLARI
+// =========================================================================
+
 function sirala(sutun) {
     if (siralamaSutunu === sutun) {
         siralamaYonu = siralamaYonu === 'asc' ? 'desc' : 'asc';
@@ -342,6 +491,7 @@ async function dropdownKategorileriniYukle() {
     }
 }
 
+<<<<<<< HEAD
 const filtreKategoriIdEl = document.getElementById('filtreKategoriId');
 if (filtreKategoriIdEl) {
     filtreKategoriIdEl.addEventListener('change', () => {
@@ -369,6 +519,10 @@ if (btnFiltreleriTemizle) {
 // Kategori dropdown'ı değiştiğinde tetiklenecek olay
 document.getElementById('urunKategoriId').addEventListener('change', async function(e) {
     const categoryId = e.target.value || this.value;
+=======
+document.getElementById('urunKategoriId').addEventListener('change', async function() {
+    const categoryId = this.value;
+>>>>>>> origin/feature/excel-import-export
     const container = document.getElementById('dynamicAttributesContainer');
     const attributeArea = document.getElementById('dynamicAttributesArea');
     
@@ -382,7 +536,6 @@ document.getElementById('urunKategoriId').addEventListener('change', async funct
         if (attributeArea) attributeArea.classList.remove('d-none');
         if (container) container.innerHTML = '<div class="col-12 text-center"><div class="spinner-border spinner-border-sm text-primary"></div> Kurallar yükleniyor...</div>';        
         
-        // Backend'den kalıtımla gelen kuralları çekiyoruz
         const response = await fetch(`${CONFIG.API_BASE_URL}/attribute-rules/category/${categoryId}`, {
             headers: { "Authorization": `Bearer ${token}` }
         });
@@ -390,9 +543,15 @@ document.getElementById('urunKategoriId').addEventListener('change', async funct
         if (!response.ok) throw new Error("Kurallar çekilemedi!");
         
         const rules = await response.json();
+<<<<<<< HEAD
         
         // Backend'den gelen kurallar artık DisplayOrder değerine göre sıralanmış durumdadır.
         if (container) container.innerHTML = ''; // İçini temizle
+=======
+        rules.reverse();
+
+        if (container) container.innerHTML = '';
+>>>>>>> origin/feature/excel-import-export
 
         if (rules.length === 0) {
             if (attributeArea) attributeArea.classList.add('d-none');
@@ -586,12 +745,10 @@ document.getElementById('urunKategoriId').addEventListener('change', async funct
             const max = parseFloat(div.getAttribute('data-max')) || 100;
             
             if (range && numberInput) {
-                // Kaydırıcı değiştiğinde input'u güncelle
                 range.addEventListener('input', function() {
                     numberInput.value = this.value;
                 });
                 
-                // Input değiştiğinde kaydırıcıyı güncelle
                 numberInput.addEventListener('input', function() {
                     let val = parseFloat(this.value);
                     if (isNaN(val)) val = min;
@@ -601,8 +758,6 @@ document.getElementById('urunKategoriId').addEventListener('change', async funct
                 });
             }
         });
-
-        // Radyo butonları native olarak tekil seçim sağlar, JS dinleyicisine gerek yok
 
     } catch (error) {
         if (container) container.innerHTML = `<div class="col-12 text-center text-danger-small"><i class="bi bi-exclamation-triangle"></i> Hata: ${error.message}</div>`;
@@ -712,10 +867,9 @@ document.getElementById("btnUrunKaydet").addEventListener("click", async () => {
         initialQuantity: parseInt(initialQuantity) || 0
     };
 
-    // Dinamik özellikleri topla (Strongly Typed EAV formatı)
     const dinamikInputlar = document.querySelectorAll('.dynamic-rule-input');
     if (dinamikInputlar.length > 0) {
-        urunVerisi.attributes = []; // Dizi (Array) olarak başlıyoruz
+        urunVerisi.attributes = []; 
         dinamikInputlar.forEach(input => {
             const ruleId = parseInt(input.getAttribute('data-rule-id'));
             const key = input.getAttribute('data-rule-key');
@@ -841,7 +995,6 @@ function urunDetayGoster(id) {
             if (val === "false") val = "Hayır";
             
             let valHtml = escapeHtml(val);
-            // Hex renk kodu kontrolü (Örn: #ff0000 veya #fff)
             if (/^#([0-9A-F]{3}){1,2}$/i.test(val)) {
                 valHtml = `<div class="d-flex align-items-center">
                                 <span class="color-dot me-2 shadow-sm" data-bg-color="${escapeHtml(val)}"></span>
@@ -888,11 +1041,9 @@ function urunDuzenle(id) {
     document.getElementById("baslangicStokAlani").classList.add("d-none");
     document.getElementById("btnUrunKaydet").innerText = "Güncelle";
 
-    // Kategori değişti tetiklemesini manuel yap ki formlar gelsin
     const event = new Event('change');
     document.getElementById("urunKategoriId").dispatchEvent(event);
 
-    // Kural formlarının gelmesini bekle ve değerleri doldur
     setTimeout(() => {
         if (urun.attributes && Array.isArray(urun.attributes)) {
             urun.attributes.forEach(attr => {
@@ -1083,7 +1234,7 @@ document.getElementById('filtreKategoriId')?.addEventListener('change', async fu
         if (!response.ok) throw new Error("Kurallar çekilemedi!");
         
         const rules = await response.json();
-        rules.reverse(); // Yukarıdan aşağıya
+        // rules.reverse(); KALDIRILDI çünkü DisplayOrder kullanılıyor
 
         filterContainer.innerHTML = '';
 
