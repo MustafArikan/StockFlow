@@ -491,7 +491,6 @@ async function dropdownKategorileriniYukle() {
     }
 }
 
-<<<<<<< HEAD
 const filtreKategoriIdEl = document.getElementById('filtreKategoriId');
 if (filtreKategoriIdEl) {
     filtreKategoriIdEl.addEventListener('change', () => {
@@ -519,10 +518,6 @@ if (btnFiltreleriTemizle) {
 // Kategori dropdown'ı değiştiğinde tetiklenecek olay
 document.getElementById('urunKategoriId').addEventListener('change', async function(e) {
     const categoryId = e.target.value || this.value;
-=======
-document.getElementById('urunKategoriId').addEventListener('change', async function() {
-    const categoryId = this.value;
->>>>>>> origin/feature/excel-import-export
     const container = document.getElementById('dynamicAttributesContainer');
     const attributeArea = document.getElementById('dynamicAttributesArea');
     
@@ -543,15 +538,8 @@ document.getElementById('urunKategoriId').addEventListener('change', async funct
         if (!response.ok) throw new Error("Kurallar çekilemedi!");
         
         const rules = await response.json();
-<<<<<<< HEAD
-        
         // Backend'den gelen kurallar artık DisplayOrder değerine göre sıralanmış durumdadır.
         if (container) container.innerHTML = ''; // İçini temizle
-=======
-        rules.reverse();
-
-        if (container) container.innerHTML = '';
->>>>>>> origin/feature/excel-import-export
 
         if (rules.length === 0) {
             if (attributeArea) attributeArea.classList.add('d-none');
