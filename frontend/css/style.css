@@ -243,3 +243,106 @@ th[style*="cursor: pointer"],
 .filtre-elemani {
     cursor: pointer !important;
 }
+
+/* CSP Uyumluluğu İçin Yardımcı Sınıflar (Inline Style Yerine) */
+.w-150px { width: 150px; }
+.w-75px { width: 75px; }
+.w-40 { width: 40%; }
+.text-xs { font-size: 0.75rem; }
+.cursor-pointer { cursor: pointer; }
+.border-b-eee { border-bottom: 1px solid #eee; }
+.emoji-icon-lg { font-size: 3rem; }
+
+/* products.js Dinamik Renk Noktası İçin */
+.color-dot {
+    display: inline-block;
+    width: 18px;
+    height: 18px;
+    border: 1px solid #ddd;
+    border-radius: 50%;
+}
+.svg-color-circle {
+    margin-right: 8px;
+}
+
+/* products.js Kaydırılabilir Kart İçin */
+.scrollable-card {
+    max-height: 200px; 
+    overflow-y: auto; 
+    background-color: #f8f9fa;
+}
+
+/* DEMİRBAŞ ZAMAN ÇİZELGESİ (TIMELINE) TASARIMI */
+.sticky-offset { top: 80px; }
+.timeline {
+    position: relative;
+    padding-left: 30px;
+    margin-top: 20px;
+    list-style-type: none;
+}
+
+/* Dikey Çizgi */
+.timeline::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 10px;
+    width: 2px;
+    background-color: #dee2e6; /* Çizgi rengi */
+}
+
+/* Her Bir Çizelge Elemanı */
+.timeline-item {
+    position: relative;
+    margin-bottom: 25px;
+}
+
+/* Çizgi Üzerindeki Noktalar (Dot) */
+.timeline-item::before {
+    content: '';
+    position: absolute;
+    top: 5px;
+    left: -26px; /* Noktayı çizginin üzerine oturtur */
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background-color: #0d6efd; /* Varsayılan Mavi */
+    border: 3px solid #fff;
+    box-shadow: 0 0 0 2px #0d6efd;
+    z-index: 1;
+}
+
+/* İşlem Tipine Göre Nokta Renkleri (JS'den dinamik ekleyeceğiz) */
+.timeline-item.dot-success::before { background-color: #198754; box-shadow: 0 0 0 2px #198754; }
+.timeline-item.dot-warning::before { background-color: #ffc107; box-shadow: 0 0 0 2px #ffc107; }
+.timeline-item.dot-danger::before { background-color: #dc3545; box-shadow: 0 0 0 2px #dc3545; }
+
+/* İçerik Kutusu */
+.timeline-content {
+    background-color: var(--card-bg, #ffffff);
+    padding: 15px;
+    border-radius: 8px;
+    border: 1px solid var(--border-color, #dee2e6);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+/* RANGE SLIDER (ÇUBUK) GÖRÜNÜRLÜĞÜ */
+/* Beyaz/Açık Tema İçin Daha Belirgin Çubuk */
+.form-range::-webkit-slider-runnable-track {
+    background-color: #adb5bd !important; 
+    height: 6px;
+    border-radius: 1rem;
+}
+.form-range::-moz-range-track {
+    background-color: #adb5bd !important;
+    height: 6px;
+    border-radius: 1rem;
+}
+/* Karanlık Tema İçin Belirgin Çubuk */
+[data-theme="dark"] .form-range::-webkit-slider-runnable-track {
+    background-color: #555658 !important;
+}
+[data-theme="dark"] .form-range::-moz-range-track {
+    background-color: #555658 !important;
+}
