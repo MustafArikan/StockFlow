@@ -24,13 +24,63 @@ function escapeHtml(text) {
         .replace(/'/g, "&#039;");
 }
 
+function getAltKategoriIdleri(parentId) {
+    let ids = [parseInt(parentId)];
+    if (!window.tumKategoriler) return ids;
+    let children = window.tumKategoriler.filter(c => c.parentId === parseInt(parentId));
+    children.forEach(c => {
+        ids = ids.concat(getAltKategoriIdleri(c.id));
+    });
+    return ids;
+}
+
 function veriyiGuncelle() {
-    filtreliUrunler = tumUrunler.filter(urun =>
-        (urun.name && urun.name.toLowerCase().includes(aktifArama)) ||
-        (urun.barcode && urun.barcode.toLowerCase().includes(aktifArama)) ||
-        (urun.categoryName && urun.categoryName.toLowerCase().includes(aktifArama)) ||
-        (urun.id && urun.id.toString().includes(aktifArama))
-    );
+    const seciliKategoriId = document.getElementById("filtreKategoriId")?.value;
+    
+    // Aktif dinamik filtreleri topla
+    const dynamicFilters = [];
+    document.querySelectorAll('.kural-filtresi').forEach(input => {
+        if (input.value && input.value.trim() !== '') {
+            dynamicFilters.push({
+                key: input.getAttribute('data-rule-key'),
+                value: input.value.toLowerCase().trim()
+            });
+        }
+    });
+
+    filtreliUrunler = tumUrunler.filter(urun => {
+        // 1. Genel Metin Araması
+        const textMatch = 
+            (urun.name && urun.name.toLowerCase().includes(aktifArama)) ||
+            (urun.barcode && urun.barcode.toLowerCase().includes(aktifArama)) ||
+            (urun.categoryName && urun.categoryName.toLowerCase().includes(aktifArama)) ||
+            (urun.id && urun.id.toString().includes(aktifArama));
+        if (!textMatch) return false;
+
+        // 2. Kategori Filtresi (Alt kategorileri de kapsar)
+        if (seciliKategoriId) {
+            const gecerliIdler = getAltKategoriIdleri(seciliKategoriId);
+            if (!gecerliIdler.includes(urun.categoryId)) {
+                return false;
+            }
+        }
+
+        // 3. Dinamik Özellik Filtreleri
+        if (dynamicFilters.length > 0) {
+            // urun.attributes JSON'dan parse edilmiş bir objedir (array of objects)
+            if (!urun.attributes || !Array.isArray(urun.attributes)) return false;
+            
+            // Tüm dinamik filtrelere uymalı (AND mantığı)
+            for (let filter of dynamicFilters) {
+                const attr = urun.attributes.find(a => a.key === filter.key);
+                if (!attr || !(attr.value ?? '').toString().toLowerCase().includes(filter.value)) {
+                    return false;
+                }
+            }
+        }
+
+        return true;
+    });
 
     filtreliUrunler.sort((a, b) => {
         let degerA = a[siralamaSutunu] != null ? a[siralamaSutunu] : '';
@@ -124,7 +174,10 @@ async function dropdownKategorileriniYukle() {
 
         const data = await cevap.json();
         const kategoriler = data.items || data;
+        window.tumKategoriler = kategoriler; // Global olarak sakla
+        
         const select = document.getElementById("urunKategoriId");
+        const filterSelect = document.getElementById("filtreKategoriId");
 
         if (select) {
             select.innerHTML = '<option value="">Kategori seçin...</option>';
@@ -133,6 +186,16 @@ async function dropdownKategorileriniYukle() {
                 option.value = kategori.id;
                 option.textContent = kategori.name;
                 select.appendChild(option);
+            });
+        }
+        
+        if (filterSelect) {
+            filterSelect.innerHTML = '<option value="">Tüm Kategoriler</option>';
+            kategoriler.forEach(kategori => {
+                const option = document.createElement("option");
+                option.value = kategori.id;
+                option.textContent = kategori.name;
+                filterSelect.appendChild(option);
             });
         }
     } catch (hata) {
@@ -189,9 +252,16 @@ document.getElementById('urunKategoriId').addEventListener('change', async funct
                 catch(e) { options = rule.allowedValues.split(',').map(s => s.trim()); }
             }
             
-            let uiType = rule.uiComponent || rule.dataType; // Eski kurallar için dataType'a düş
+            let uiType = rule.uiComponent || rule.dataType; 
 
-            if (uiType === 'dropdown' || uiType === 'icon_dropdown' || uiType === 'searchable_dropdown') {
+            if (uiType === 'searchable_dropdown' || uiType === 'autocomplete') {
+                let optionsHtml = options.map(opt => `<option value="${escapeHtml(opt)}">`).join('');
+                inputHtml = `<input list="datalist_${rule.id}" class="form-control dynamic-rule-input" data-rule-id="${rule.id}" data-rule-key="${escapeHtml(rule.attributeKey)}" data-rule-type="text" placeholder="Seçiniz veya yazınız..." ${requiredAttr}>
+                             <datalist id="datalist_${rule.id}">
+                                ${optionsHtml}
+                             </datalist>`;
+            }
+            else if (uiType === 'dropdown' || uiType === 'icon_dropdown') {
                 let optionsHtml = options.map(opt => `<option value="${escapeHtml(opt)}">${escapeHtml(opt)}</option>`).join('');
                 inputHtml = `<select class="form-select dynamic-rule-input" data-rule-id="${rule.id}" data-rule-key="${escapeHtml(rule.attributeKey)}" data-rule-type="dropdown" ${requiredAttr}>
                                 <option value="">Seçiniz...</option>
@@ -281,8 +351,8 @@ document.getElementById('urunKategoriId').addEventListener('change', async funct
                                 <label class="form-check-label text-muted" for="rule_${rule.id}">Evet / Açık</label>
                              </div>`;
             }
-            else if (uiType === 'autocomplete' || uiType === 'masked_textbox') {
-                inputHtml = `<input type="text" class="form-control dynamic-rule-input" data-rule-id="${rule.id}" data-rule-key="${escapeHtml(rule.attributeKey)}" data-rule-type="text" ${requiredAttr} placeholder="${uiType === 'masked_textbox' ? 'Örn: XXXX-XXXX' : ''}">`;
+            else if (uiType === 'masked_textbox') {
+                inputHtml = `<input type="text" class="form-control dynamic-rule-input" data-rule-id="${rule.id}" data-rule-key="${escapeHtml(rule.attributeKey)}" data-rule-type="text" ${requiredAttr} placeholder="Örn: XXXX-XXXX">`;
             }
             else if (rule.dataType === 'number') {
                 inputHtml = `<input type="number" class="form-control dynamic-rule-input" data-rule-id="${rule.id}" data-rule-key="${escapeHtml(rule.attributeKey)}" data-rule-type="number" ${requiredAttr}>`;
@@ -773,3 +843,117 @@ document.getElementById("urunDepoId").addEventListener("change", async function(
 });
 
 dropdownDepolariYukle();
+
+
+// --- FİLTRELEME İŞLEMLERİ ---
+document.getElementById('filtreKategoriId')?.addEventListener('change', async function() {
+    const categoryId = this.value;
+    const filterArea = document.getElementById('dynamicFilterArea');
+    const filterContainer = document.getElementById('dynamicFilterContainer');
+
+    if (!categoryId) {
+        filterArea.classList.add('d-none');
+        filterContainer.innerHTML = '';
+        currentPage = 1;
+        veriyiGuncelle();
+        return;
+    }
+
+    try {
+        filterArea.classList.remove('d-none');
+        // Önce filtreleri temizle ki eski filtreler yeni kategoriye etki etmesin
+        filterContainer.innerHTML = '<div class="col-12 text-center text-muted"><div class="spinner-border spinner-border-sm me-2"></div>Özellikler yükleniyor...</div>';
+        
+        // Şimdi listeyi güncelle (dinamik filtreler temizlendiği için sadece kategoriye göre günceller)
+        currentPage = 1;
+        veriyiGuncelle();
+        
+        const response = await fetch(`${CONFIG.API_BASE_URL}/attribute-rules/category/${categoryId}`, {
+            headers: { "Authorization": `Bearer ${token}` }
+        });
+        
+        if (!response.ok) throw new Error("Kurallar çekilemedi!");
+        
+        const rules = await response.json();
+        rules.reverse(); // Yukarıdan aşağıya
+
+        filterContainer.innerHTML = '';
+
+        const validRules = rules.filter(r => r.targetLevel !== "Asset");
+        
+        if (validRules.length === 0) {
+            filterContainer.innerHTML = '<div class="col-12 text-muted fst-italic">Bu kategoriye ait filtrelenebilir özellik bulunamadı.</div>';
+            return;
+        }
+
+        validRules.forEach(rule => {
+            let options = [];
+            if (rule.allowedValues && rule.allowedValues !== "[]") {
+                try { options = JSON.parse(rule.allowedValues); } 
+                catch(e) { options = rule.allowedValues.split(',').map(s => s.trim()); }
+            }
+
+            let uiType = rule.uiComponent || rule.dataType;
+            let inputHtml = '';
+
+            if (uiType === 'searchable_dropdown' || uiType === 'autocomplete') {
+                let optionsHtml = options.map(opt => `<option value="${escapeHtml(opt)}">`).join('');
+                inputHtml = `<input list="datalist_filter_${rule.id}" class="form-control form-control-sm kural-filtresi" data-rule-key="${escapeHtml(rule.attributeKey)}" placeholder="Ara veya Seç...">
+                             <datalist id="datalist_filter_${rule.id}">
+                                ${optionsHtml}
+                             </datalist>`;
+            }
+            else if (uiType === 'dropdown' || uiType === 'icon_dropdown' || uiType === 'radio' || uiType === 'segmented_button' || uiType === 'color_picker') {
+                let optionsHtml = options.map(opt => `<option value="${escapeHtml(opt)}">${escapeHtml(opt)}</option>`).join('');
+                inputHtml = `<select class="form-select form-select-sm kural-filtresi" data-rule-key="${escapeHtml(rule.attributeKey)}">
+                                <option value="">Tümü</option>
+                                ${optionsHtml}
+                             </select>`;
+            } 
+            else if (uiType === 'toggle_switch' || uiType === 'checkbox' || uiType === 'boolean') {
+                inputHtml = `<select class="form-select form-select-sm kural-filtresi" data-rule-key="${escapeHtml(rule.attributeKey)}">
+                                <option value="">Tümü</option>
+                                <option value="true">Evet/Açık</option>
+                                <option value="false">Hayır/Kapalı</option>
+                             </select>`;
+            }
+            else { 
+                inputHtml = `<input type="text" class="form-control form-control-sm kural-filtresi" data-rule-key="${escapeHtml(rule.attributeKey)}" placeholder="Ara...">`;
+            }
+
+            const div = document.createElement('div');
+            div.className = 'col-md-3 mb-2';
+            div.innerHTML = `<label class="form-label small fw-bold mb-1">${escapeHtml(rule.attributeKey)}</label>
+                             ${inputHtml}`;
+            filterContainer.appendChild(div);
+        });
+
+        // Dinamik filtrelere event listener ekle
+        document.querySelectorAll('.kural-filtresi').forEach(el => {
+            el.addEventListener('input', () => {
+                currentPage = 1;
+                veriyiGuncelle();
+            });
+            el.addEventListener('change', () => {
+                currentPage = 1;
+                veriyiGuncelle();
+            });
+        });
+
+    } catch(e) {
+        console.error("Filtre kuralları yüklenirken hata:", e);
+        filterContainer.innerHTML = '<div class="col-12 text-danger">Özellikler yüklenemedi.</div>';
+    }
+});
+
+document.getElementById('btnFiltreleriTemizle')?.addEventListener('click', () => {
+    document.getElementById('aramaKutusu').value = '';
+    aktifArama = '';
+    
+    const catSelect = document.getElementById('filtreKategoriId');
+    if (catSelect) {
+        catSelect.value = '';
+        const event = new Event('change');
+        catSelect.dispatchEvent(event);
+    }
+});

@@ -58,9 +58,30 @@
 
         <div class="card border-0 shadow-sm rounded-3">
             <div class="card-body p-4">
-                <div class="mb-4">
-                    <input type="text" id="aramaKutusu" class="form-control rounded-pill"
-                        placeholder="Ürün Adı veya Barkod ile Ara...">
+                <!-- Arama ve Filtreleme Alanı -->
+                <div class="row g-3 mb-4">
+                    <div class="col-md-5">
+                        <input type="text" id="aramaKutusu" class="form-control rounded-pill"
+                            placeholder="Ürün Adı veya Barkod ile Ara...">
+                    </div>
+                    <div class="col-md-4">
+                        <select id="filtreKategoriId" class="form-select rounded-pill">
+                            <option value="">Tüm Kategoriler</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <button type="button" id="btnFiltreleriTemizle" class="btn btn-outline-secondary rounded-pill w-100">Filtreleri Temizle</button>
+                    </div>
+                </div>
+
+                <!-- Dinamik Özellik Filtreleme Alanı -->
+                <div class="row g-3 mb-4 d-none bg-light p-3 rounded-3 mx-0 border" id="dynamicFilterArea">
+                    <div class="col-12 mb-2 border-bottom pb-2">
+                        <h6 class="small fw-bold text-muted mb-0"><i class="bi bi-funnel-fill me-1"></i> Kategori Özelliklerine Göre Filtrele</h6>
+                    </div>
+                    <div class="row m-0 p-0" id="dynamicFilterContainer">
+                        <!-- JS ile kural filter inputları buraya gelecek -->
+                    </div>
                 </div>
 
                 <div class="table-responsive">
