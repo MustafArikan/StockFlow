@@ -808,7 +808,9 @@ document.getElementById("btnDepoIciUrunKaydet")?.addEventListener("click", async
         if (aktifRafId) {
             raftakiUrunleriGoruntule(aktifRafId, document.getElementById("seciliRafKoduUrunlerIcin").innerText);
         }
+
     } catch (hata) { alert("Ürün Eklenemedi:\n" + hata.message); }
+
 });
 
 // ============================================================================

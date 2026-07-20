@@ -83,3 +83,26 @@ document.addEventListener('click', function(e) {
         }
     }
 });
+
+// Modal İçinde Enter İle Kaydetme (Event Delegation / Tüm Sayfalarda Ortak)
+// Form etiketiyle sarılı olsun ya da olmasın, bir modal içindeki metin kutusunda
+// Enter'a basılınca o modalın birincil (kaydet/oluştur) butonunu tetikler.
+document.addEventListener('keydown', function(e) {
+    if (e.key !== 'Enter') return;
+
+    const aktifEleman = document.activeElement;
+    if (!aktifEleman || aktifEleman.tagName !== 'INPUT') return;
+
+    const gecersizTipler = ['button', 'submit', 'checkbox', 'radio', 'file'];
+    if (gecersizTipler.includes(aktifEleman.type)) return;
+
+    const modal = aktifEleman.closest('.modal');
+    if (!modal) return;
+
+    e.preventDefault(); // Form varsa sayfanın yenilenmesini engelle
+
+    const kaydetButonu = modal.querySelector('.btn-primary:not(.btn-close), .btn-success:not(.btn-close)');
+    if (kaydetButonu && !kaydetButonu.disabled) {
+        kaydetButonu.click();
+    }
+});

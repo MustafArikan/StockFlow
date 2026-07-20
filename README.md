@@ -91,12 +91,12 @@ Bu proje, geleneksel kişi bazlı rol atamaları yerine tamamen **görev (task) 
 
 ### 📊 Modül 6: Dashboard, Raporlama & Analiz
 - [x] **Arayüz:** Ana Dashboard Sayfası (`index.html` - Özet kartları, Chart.js grafik entegrasyonları)
-- [ ] **Arayüz Entegrasyonu:** Raporları PDF formatında dışa aktarma (`jsPDF` + `html2canvas`)
-- [ ] **Arayüz Entegrasyonu:** Raporları Excel/CSV formatında dışa aktarma
+- [X] **Arayüz Entegrasyonu:** Raporları PDF formatında dışa aktarma (`jsPDF` + `html2canvas`)
+- [X] **Arayüz Entegrasyonu:** Raporları Excel/CSV formatında dışa aktarma
 - [x] **API:** `GET /api/reports/dashboard-summary` (Toplam ürün, toplam depo değeri, kritik ürün sayısı kart verileri endpoint'i)
-- [ ] **API:** `GET /api/reports/trend` (Son 30 günlük günlük stok giriş/çıkış trend verileri endpoint'i)
-- [ ] **API:** `GET /api/reports/by-category` (Kategori bazlı stok miktarları dağılım verileri endpoint'i)
-- [ ] **API:** `GET /api/reports/top-products` (İşlem hacmi en yüksek ilk 5 ürün verisi endpoint'i)
+- [X] **API:** `GET /api/reports/trend` (Son 30 günlük günlük stok giriş/çıkış trend verileri endpoint'i)
+- [X] **API:** `GET /api/reports/by-category` (Kategori bazlı stok miktarları dağılım verileri endpoint'i)
+- [X] **API:** `GET /api/reports/top-products` (İşlem hacmi en yüksek ilk 5 ürün verisi endpoint'i)
 
 ### 🛠️ Modül 7: Altyapı, Yapılandırma & DevOps
 - [x] **Kurulum:** Docker Compose ortamının kurulması (MSSQL + Backend + Frontend servisleri)

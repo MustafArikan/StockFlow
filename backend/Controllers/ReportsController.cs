@@ -7,7 +7,7 @@ namespace stok_takip.Controllers
 {
     [ApiController]
     [Route("api/reports")]
-
+    [Authorize]
     public class ReportsController : ControllerBase
     {
         private readonly AppDbContext _context;
@@ -18,7 +18,7 @@ namespace stok_takip.Controllers
         }
 
         [HttpGet("dashboard-summary")]
-        public async Task<IActionResult> GetDasboardSummary()
+        public async Task<IActionResult> GetDashboardSummary()
         {
             var totalProducts = await _context.Products.AsNoTracking().Where(p => !p.IsDeleted).CountAsync();
             var totalWarehouses = await _context.Warehouses.AsNoTracking().Where(w => !w.IsDeleted).CountAsync();
@@ -40,6 +40,7 @@ namespace stok_takip.Controllers
             return Ok(new
             {
                 totalProducts = totalProducts,
+                totalStockQuantity = totalStockQuantity, 
                 totalWarehouses = totalWarehouses,
                 criticalAlertsCount = criticalAlertsCount,
                 totalWarehouseValue = totalWarehouseValue,
