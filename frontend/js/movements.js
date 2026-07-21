@@ -1,10 +1,12 @@
-﻿const API_URL = `${CONFIG.API_BASE_URL}/stock/movements`;
+﻿// API adresi ve yetkilendirme token bilgisini ayarlar
+const API_URL = `${CONFIG.API_BASE_URL}/stock/movements`;
 const token = localStorage.getItem('token');
 
 if (!token) window.location.href = 'login.html';
 
 const MAX_ISLEM_ADEDI = 100000;
 
+// XSS koruması için özel HTML karakterlerini güvenli formata dönüştürür
 function escapeHtml(text) {
     if (!text) return "";
     return text.toString()
@@ -14,6 +16,10 @@ function escapeHtml(text) {
         .replace(/"/g, "&quot;")
         .replace(/'/g, "&#039;");
 }
+
+// URL'den gelen filtre parametresini yakalar 
+const urlParams = new URLSearchParams(window.location.search);
+const urlFilter = urlParams.get('filter');
 
 // GLOBAL DEĞİŞKENLER
 let stokHareketleri = [];
@@ -26,7 +32,7 @@ const aramaKutusu = document.getElementById("aramaKutusu");
 // Sayfalama, Arama ve Sıralama Durumları
 let currentPage = 1;
 const pageSize = 10;
-let aktifFiltre = 'TUMU';
+let aktifFiltre = urlFilter ? urlFilter : 'TUMU';
 let aktifArama = '';
 let siralamaSutunu = 'tarih';
 let siralamaYonu = 'desc';
@@ -34,12 +40,19 @@ let siralamaYonu = 'desc';
 // ==========================================
 // 1. ARAMA, FİLTRELEME VE KUSURSUZ SIRALAMA
 // ==========================================
+
+// Tablo verilerini arama, filtreleme ve sıralama durumuna göre günceller
 function veriyiGuncelle() {
-    // 1. Buton Filtresi
+    // 1. Buton Filtresi 
     let islenmisVeri = stokHareketleri;
     if (aktifFiltre !== 'TUMU') {
-        const fTipi = aktifFiltre === 'GIRIS' ? 'IN' : 'OUT';
-        islenmisVeri = islenmisVeri.filter(h => (h.movementType || h.islemTipi) === fTipi || (h.movementType || h.islemTipi) === aktifFiltre);
+        if (aktifFiltre === 'GIRIS') {
+            islenmisVeri = islenmisVeri.filter(h => (h.movementType || h.islemTipi) === 'IN' || (h.movementType || h.islemTipi) === 'GIRIS');
+        } else if (aktifFiltre === 'CIKIS') {
+            islenmisVeri = islenmisVeri.filter(h => (h.movementType || h.islemTipi) === 'OUT' || (h.movementType || h.islemTipi) === 'CIKIS');
+        } else if (aktifFiltre === 'TRANSFER') {
+            islenmisVeri = islenmisVeri.filter(h => (h.movementType || h.islemTipi) === 'TRANSFER');
+        }
     }
 
     // 2. Arama Çubuğu
@@ -94,6 +107,7 @@ function veriyiGuncelle() {
     sayfalamayiCiz(toplamSayfa, currentPage);
 }
 
+// Sütun başlığına tıklandığında sıralama yönünü belirler ve veriyi günceller
 function sirala(sutun) {
     if (siralamaSutunu === sutun) {
         siralamaYonu = siralamaYonu === 'asc' ? 'desc' : 'asc';
@@ -118,6 +132,8 @@ function sirala(sutun) {
 // ==========================================
 // 2. API'DEN TÜM VERİYİ ÇEKME
 // ==========================================
+
+// API üzerinden tüm stok hareketlerini çeker ve global diziye aktarır
 async function hareketleriYukle() {
     try {
         const adres = `${API_URL}?pageNumber=1&pageSize=10000`;
@@ -143,6 +159,7 @@ async function hareketleriYukle() {
 // ==========================================
 // 3. TABLO ÇİZİMİ VE SAYFALAMA 
 // ==========================================
+// JWT token içindeki payload kısmını çözer
 function parseJwt(t) {
     try {
         return JSON.parse(decodeURIComponent(atob(t.split('.')[1]).split('').map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join('')));
@@ -151,6 +168,7 @@ function parseJwt(t) {
 const currentPayload = parseJwt(token);
 const isAdmin = currentPayload && currentPayload["http://schemas.microsoft.com/ws/2008/06/identity/claims/role"] === "admin";
 
+// Gelen verileri HTML tablosuna satır satır ekler
 function tabloyuCiz(veriListesi) {
     tabloGovdesi.innerHTML = "";
     if (veriListesi.length === 0) {
@@ -177,7 +195,7 @@ function tabloyuCiz(veriListesi) {
 
         let kisiIsmi = hareket.personelName || hareket.personel;
         let finalKisiHtml = "";
-        
+
         if (isAdmin && hareket.userId) {
             finalKisiHtml = `<a href="#" onclick="kullaniciProfiliGoster(${hareket.userId}); return false;" class="text-decoration-none fw-bold text-primary"><i class="bi bi-person-badge me-1"></i>${escapeHtml(kisiIsmi)}</a><br><small class="text-muted">${escapeHtml(hareket.personel)}</small>`;
         } else {
@@ -198,6 +216,7 @@ function tabloyuCiz(veriListesi) {
     tabloGovdesi.innerHTML = satirlar.join("");
 }
 
+// Sayfalama butonlarını oluşturur
 function sayfalamayiCiz(totalPages, curPage) {
     const container = document.getElementById("paginationContainer");
     if (!container) return;
@@ -241,19 +260,22 @@ document.getElementById("paginationContainer").addEventListener("click", (e) => 
     }
 });
 
+// Aktif olan filtre butonunun rengini günceller
 function aktifButonuGuncelle(aktifId) {
-    const butonlar = ["btnTumu", "btnGirisler", "btnCikislar"];
+    const butonlar = ["btnTumu", "btnGirisler", "btnCikislar", "btnTransferler"];
     butonlar.forEach(id => {
         const btn = document.getElementById(id);
         if (!btn) return;
         if (id === aktifId) {
-            btn.className = (id === "btnTumu") ? "btn btn-secondary btn-sm rounded-pill px-3 shadow-sm text-white filtre-elemani" :
-                (id === "btnGirisler") ? "btn btn-success btn-sm rounded-pill px-3 shadow-sm text-white filtre-elemani" :
-                    "btn btn-danger btn-sm rounded-pill px-3 shadow-sm text-white filtre-elemani";
+            if (id === "btnTumu") btn.className = "btn btn-secondary btn-sm rounded-pill px-3 shadow-sm text-white filtre-elemani";
+            else if (id === "btnGirisler") btn.className = "btn btn-success btn-sm rounded-pill px-3 shadow-sm text-white filtre-elemani";
+            else if (id === "btnCikislar") btn.className = "btn btn-danger btn-sm rounded-pill px-3 shadow-sm text-white filtre-elemani";
+            else if (id === "btnTransferler") btn.className = "btn btn-info btn-sm rounded-pill px-3 shadow-sm text-white filtre-elemani";
         } else {
-            btn.className = (id === "btnTumu") ? "btn btn-outline-secondary btn-sm rounded-pill px-3 shadow-sm filtre-elemani" :
-                (id === "btnGirisler") ? "btn btn-outline-success btn-sm rounded-pill px-3 shadow-sm filtre-elemani" :
-                    "btn btn-outline-danger btn-sm rounded-pill px-3 shadow-sm filtre-elemani";
+            if (id === "btnTumu") btn.className = "btn btn-outline-secondary btn-sm rounded-pill px-3 shadow-sm filtre-elemani";
+            else if (id === "btnGirisler") btn.className = "btn btn-outline-success btn-sm rounded-pill px-3 shadow-sm filtre-elemani";
+            else if (id === "btnCikislar") btn.className = "btn btn-outline-danger btn-sm rounded-pill px-3 shadow-sm filtre-elemani";
+            else if (id === "btnTransferler") btn.className = "btn btn-outline-info btn-sm rounded-pill px-3 shadow-sm filtre-elemani";
         }
     });
 }
@@ -261,6 +283,7 @@ function aktifButonuGuncelle(aktifId) {
 document.getElementById("btnTumu").addEventListener("click", () => { aktifFiltre = 'TUMU'; aktifButonuGuncelle("btnTumu"); currentPage = 1; veriyiGuncelle(); });
 document.getElementById("btnGirisler").addEventListener("click", () => { aktifFiltre = 'GIRIS'; aktifButonuGuncelle("btnGirisler"); currentPage = 1; veriyiGuncelle(); });
 document.getElementById("btnCikislar").addEventListener("click", () => { aktifFiltre = 'CIKIS'; aktifButonuGuncelle("btnCikislar"); currentPage = 1; veriyiGuncelle(); });
+document.getElementById("btnTransferler").addEventListener("click", () => { aktifFiltre = 'TRANSFER'; aktifButonuGuncelle("btnTransferler"); currentPage = 1; veriyiGuncelle(); });
 
 document.getElementById("aramaKutusu").addEventListener("keyup", (event) => {
     aktifArama = event.target.value.toLowerCase();
@@ -268,7 +291,7 @@ document.getElementById("aramaKutusu").addEventListener("keyup", (event) => {
     veriyiGuncelle();
 });
 
-// Başlıklara Tıklama Olayları
+// Sütun başlıklarına tıklama olaylarını dinler
 if (document.getElementById("tarihBaslik")) document.getElementById("tarihBaslik").addEventListener("click", () => sirala("tarih"));
 if (document.getElementById("thUrunKodu")) document.getElementById("thUrunKodu").addEventListener("click", () => sirala("urunKodu"));
 if (document.getElementById("thUrunAdi")) document.getElementById("thUrunAdi").addEventListener("click", () => sirala("urunAdi"));
@@ -277,8 +300,10 @@ if (document.getElementById("thAdet")) document.getElementById("thAdet").addEven
 if (document.getElementById("thPersonel")) document.getElementById("thPersonel").addEventListener("click", () => sirala("personel"));
 
 // ==========================================
-// 5. DROPDOWNS VE YENİ KAYIT FORMU 
+// 5. DROPDOWNS VE YENİ KAYIT FORMU (DEPO/RAF HİYERARŞİSİ)
 // ==========================================
+
+// Ürünleri API'den çekip seçim kutusuna ekler
 async function dropdownUrunleriYukle() {
     const urunSelect = document.getElementById("urunSecimi");
     try {
@@ -299,44 +324,92 @@ async function dropdownUrunleriYukle() {
             urunSelect.appendChild(option);
         });
     } catch (hata) {
-        urunSelect.innerHTML = '<option value="" selected disabled>Ürünler yüklenemedi!</option>';
+        if (urunSelect) urunSelect.innerHTML = '<option value="" selected disabled>Ürünler yüklenemedi!</option>';
     }
 }
 
-async function dropdownLokasyonlariYukle() {
-    const sourceSelect = document.getElementById("sourceLocationId");
-    const targetSelect = document.getElementById("targetLocationId");
+// Depoları API'den çekip kaynak ve hedef depo seçim kutularına ekler
+async function dropdownIslemDepolariYukle() {
+    const sourceSelect = document.getElementById("sourceWarehouseId");
+    const targetSelect = document.getElementById("targetWarehouseId");
+
     try {
-        const cevap = await fetch(`${CONFIG.API_BASE_URL}/locations?pageSize=1000`, {
+        const cevap = await fetch(`${CONFIG.API_BASE_URL}/warehouses?pageSize=1000`, {
             method: 'GET',
             headers: { "Authorization": `Bearer ${token}` }
         });
-        if (!cevap.ok) throw new Error("Lokasyonlar alınamadı.");
+        if (!cevap.ok) throw new Error("Depolar alınamadı.");
 
         const data = await cevap.json();
-        tumLokasyonlar = data.items || data;
+        const depolar = data.items || data;
 
-        sourceSelect.innerHTML = '<option value="" selected disabled>Kaynak raf seçiniz...</option>';
-        targetSelect.innerHTML = '<option value="" selected disabled>Hedef raf seçiniz...</option>';
+        if (sourceSelect) sourceSelect.innerHTML = '<option value="" selected disabled>Önce depo seçiniz...</option>';
+        if (targetSelect) targetSelect.innerHTML = '<option value="" selected disabled>Önce depo seçiniz...</option>';
 
-        tumLokasyonlar.forEach(lok => {
-            const optSource = document.createElement("option"); optSource.value = lok.id; optSource.textContent = lok.code;
-            const optTarget = document.createElement("option"); optTarget.value = lok.id; optTarget.textContent = lok.code;
-            sourceSelect.appendChild(optSource);
-            targetSelect.appendChild(optTarget);
+        depolar.forEach(d => {
+            if (sourceSelect) sourceSelect.innerHTML += `<option value="${d.id}">${escapeHtml(d.name)}</option>`;
+            if (targetSelect) targetSelect.innerHTML += `<option value="${d.id}">${escapeHtml(d.name)}</option>`;
         });
     } catch (hata) {
-        console.error("Lokasyon yükleme hatası:", hata);
+        console.error("Depo yükleme hatası:", hata);
     }
 }
 
+// Seçilen depoya ait rafları getirir ve ilgili seçim kutusuna ekler
+async function loadLocationsForWarehouse(warehouseId, targetDropdownId) {
+    const select = document.getElementById(targetDropdownId);
+    if (!select) return;
+
+    if (!warehouseId) {
+        select.innerHTML = '<option value="">Önce depo seçin...</option>';
+        select.disabled = true;
+        return;
+    }
+
+    select.innerHTML = '<option value="">Yükleniyor...</option>';
+    select.disabled = false;
+
+    try {
+        const cevap = await fetch(`${CONFIG.API_BASE_URL}/locations/by-warehouse/${warehouseId}?pageSize=1000`, {
+            method: 'GET',
+            headers: { "Authorization": `Bearer ${token}` }
+        });
+        if (!cevap.ok) throw new Error("Raflar alınamadı.");
+
+        const data = await cevap.json();
+        const raflar = data.items || data;
+
+        select.innerHTML = '<option value="" selected disabled>Raf seçiniz...</option>';
+        raflar.forEach(r => {
+            select.innerHTML += `<option value="${r.id}">${escapeHtml(r.code)}</option>`;
+        });
+    } catch (hata) {
+        select.innerHTML = '<option value="">Hata oluştu!</option>';
+    }
+}
+
+// Depo değişim olaylarını dinler ve ilgili raf listesini günceller
+const sWarehouseDropdown = document.getElementById("sourceWarehouseId");
+const tWarehouseDropdown = document.getElementById("targetWarehouseId");
+if (sWarehouseDropdown) sWarehouseDropdown.addEventListener("change", function () { loadLocationsForWarehouse(this.value, "sourceLocationId"); });
+if (tWarehouseDropdown) tWarehouseDropdown.addEventListener("change", function () { loadLocationsForWarehouse(this.value, "targetLocationId"); });
+
+// Formdaki zorunlu alanların doluluğunu kontrol eder ve kaydet butonunu aktif/pasif yapar
 function formuDenetle() {
-    const tip = document.getElementById("islemTipi").value;
-    const urun = document.getElementById("urunSecimi").value;
-    const adet = document.getElementById("islemAdedi").value;
-    const sourceLoc = document.getElementById("sourceLocationId").value;
-    const targetLoc = document.getElementById("targetLocationId").value;
+    const tipElement = document.getElementById("islemTipi");
+    const urunElement = document.getElementById("urunSecimi");
+    const adetElement = document.getElementById("islemAdedi");
+    const sourceLocElement = document.getElementById("sourceLocationId");
+    const targetLocElement = document.getElementById("targetLocationId");
     const kaydetButonu = document.getElementById("btnKaydet");
+
+    if (!kaydetButonu) return;
+
+    const tip = tipElement ? tipElement.value : "";
+    const urun = urunElement ? urunElement.value : "";
+    const adet = adetElement ? adetElement.value : "";
+    const sourceLoc = sourceLocElement ? sourceLocElement.value : "";
+    const targetLoc = targetLocElement ? targetLocElement.value : "";
 
     let gecerli = (tip !== "" && urun !== "" && adet && parseInt(adet) > 0 && parseInt(adet) <= MAX_ISLEM_ADEDI);
 
@@ -348,115 +421,174 @@ function formuDenetle() {
     kaydetButonu.disabled = !gecerli;
 }
 
-document.getElementById("islemTipi").addEventListener("change", (e) => {
-    const tip = e.target.value;
-    const sourceGroup = document.getElementById("sourceLocationGroup");
-    const targetGroup = document.getElementById("targetLocationGroup");
+// İşlem tipine göre kaynak veya hedef lokasyon alanlarını gösterir/gizler
+const islemTipiDropdown = document.getElementById("islemTipi");
+if (islemTipiDropdown) {
+    islemTipiDropdown.addEventListener("change", (e) => {
+        const tip = e.target.value;
+        const sourceGroup = document.getElementById("sourceLocationGroup");
+        const targetGroup = document.getElementById("targetLocationGroup");
 
-    const tGroup = document.getElementById("tedarikciGroup");
-    const cGroup = document.getElementById("cikisNoktasiGroup");
+        // Senin orijinal kodundaki ekstra grupları (varsa) bozmadan gizle/göster yapar
+        const tGroup = document.getElementById("tedarikciGroup");
+        const cGroup = document.getElementById("cikisNoktasiGroup");
 
-    if (tip === "GIRIS") {
-        targetGroup.classList.remove("d-none"); sourceGroup.classList.add("d-none");
-        tGroup.classList.remove("d-none"); cGroup.classList.add("d-none");
-        document.getElementById("sourceLocationId").value = "";
-    } else if (tip === "CIKIS") {
-        sourceGroup.classList.remove("d-none"); targetGroup.classList.add("d-none");
-        cGroup.classList.remove("d-none"); tGroup.classList.add("d-none");
-        document.getElementById("targetLocationId").value = "";
-    } else if (tip === "TRANSFER") {
-        sourceGroup.classList.remove("d-none"); targetGroup.classList.remove("d-none");
-        tGroup.classList.add("d-none"); cGroup.classList.add("d-none");
-    }
-    formuDenetle();
+        if (tip === "GIRIS") {
+            if (targetGroup) targetGroup.classList.remove("d-none");
+            if (sourceGroup) sourceGroup.classList.add("d-none");
+            if (tGroup) tGroup.classList.remove("d-none");
+            if (cGroup) cGroup.classList.add("d-none");
+
+            const sLoc = document.getElementById("sourceLocationId");
+            if (sLoc) sLoc.value = "";
+        } else if (tip === "CIKIS") {
+            if (sourceGroup) sourceGroup.classList.remove("d-none");
+            if (targetGroup) targetGroup.classList.add("d-none");
+            if (cGroup) cGroup.classList.remove("d-none");
+            if (tGroup) tGroup.classList.add("d-none");
+
+            const tLoc = document.getElementById("targetLocationId");
+            if (tLoc) tLoc.value = "";
+        } else if (tip === "TRANSFER") {
+            if (sourceGroup) sourceGroup.classList.remove("d-none");
+            if (targetGroup) targetGroup.classList.remove("d-none");
+            if (tGroup) tGroup.classList.add("d-none");
+            if (cGroup) cGroup.classList.add("d-none");
+        }
+        formuDenetle();
+    });
+}
+
+// Alanlardaki değişiklikleri dinler
+["urunSecimi", "islemAdedi", "sourceLocationId", "targetLocationId"].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener("change", formuDenetle);
 });
+const islemAdediInput = document.getElementById("islemAdedi");
+if (islemAdediInput) islemAdediInput.addEventListener("input", formuDenetle);
 
-document.getElementById("urunSecimi").addEventListener("change", formuDenetle);
-document.getElementById("islemAdedi").addEventListener("input", formuDenetle);
-document.getElementById("sourceLocationId").addEventListener("change", formuDenetle);
-document.getElementById("targetLocationId").addEventListener("change", formuDenetle);
+// Form gönderildiğinde verileri toplayıp API'ye POST isteği atar
+const stokIslemFormu = document.getElementById("stokIslemFormu");
+if (stokIslemFormu) {
+    stokIslemFormu.addEventListener("submit", async (e) => {
+        e.preventDefault();
 
-document.getElementById("stokIslemFormu").addEventListener("submit", async (e) => {
-    e.preventDefault();
+        const tip = document.getElementById("islemTipi").value;
+        const barcode = document.getElementById("urunSecimi").value;
+        const qty = parseInt(document.getElementById("islemAdedi").value);
 
-    const tip = document.getElementById("islemTipi").value;
-    const barcode = document.getElementById("urunSecimi").value;
-    const qty = parseInt(document.getElementById("islemAdedi").value);
-    const sourceLocVal = document.getElementById("sourceLocationId").value;
-    const targetLocVal = document.getElementById("targetLocationId").value;
-    const kaydetButonu = document.getElementById("btnKaydet");
+        const sourceLocElement = document.getElementById("sourceLocationId");
+        const targetLocElement = document.getElementById("targetLocationId");
+        const sourceLocVal = sourceLocElement ? sourceLocElement.value : null;
+        const targetLocVal = targetLocElement ? targetLocElement.value : null;
 
-    const bFiyat = parseFloat(document.getElementById("birimFiyat").value) || 0;
-    const fNo = document.getElementById("faturaNo").value;
-    const tId = document.getElementById("tedarikciSecimi").value;
-    const cNoktasi = document.getElementById("cikisNoktasi").value;
+        const kaydetButonu = document.getElementById("btnKaydet");
 
-    const payload = {
-        productBarcode: barcode,
-        movementType: tip === "GIRIS" ? "IN" : tip === "CIKIS" ? "OUT" : "TRANSFER",
-        quantity: qty,
-        sourceLocationId: ((tip === "CIKIS" || tip === "TRANSFER") && sourceLocVal) ? parseInt(sourceLocVal) : null,
-        targetLocationId: ((tip === "GIRIS" || tip === "TRANSFER") && targetLocVal) ? parseInt(targetLocVal) : null,
-        description: tip === "GIRIS" ? "Stok Girişi" : tip === "CIKIS" ? "Stok Çıkışı" : "Raf Arası Transfer",
-        unitPrice: bFiyat,
-        documentNumber: fNo ? fNo : null,
-        supplierId: (tip === "GIRIS" && tId) ? parseInt(tId) : null,
-        destinationId: (tip === "CIKIS" && cNoktasi) ? cNoktasi : null
-    };
+        // Orijinal değişkenlerini korur, HTML'de yoksa null atanır
+        const bFiyatElement = document.getElementById("birimFiyat");
+        const fNoElement = document.getElementById("faturaNo");
+        const tIdElement = document.getElementById("tedarikciSecimi");
+        const cNoktasiElement = document.getElementById("cikisNoktasi");
 
-    try {
-        const orjinalMetin = kaydetButonu.innerText;
-        kaydetButonu.disabled = true;
-        kaydetButonu.innerText = "İşleniyor...";
+        const bFiyat = bFiyatElement ? parseFloat(bFiyatElement.value) || 0 : 0;
+        const fNo = fNoElement ? fNoElement.value : null;
+        const tId = tIdElement ? tIdElement.value : null;
+        const cNoktasi = cNoktasiElement ? cNoktasiElement.value : null;
 
-        const cevap = await fetch(API_URL, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${token}`
-            },
-            body: JSON.stringify(payload)
-        });
+        const payload = {
+            productBarcode: barcode,
+            movementType: tip === "GIRIS" ? "IN" : tip === "CIKIS" ? "OUT" : "TRANSFER",
+            quantity: qty,
+            sourceLocationId: ((tip === "CIKIS" || tip === "TRANSFER") && sourceLocVal) ? parseInt(sourceLocVal) : null,
+            targetLocationId: ((tip === "GIRIS" || tip === "TRANSFER") && targetLocVal) ? parseInt(targetLocVal) : null,
+            description: tip === "GIRIS" ? "Stok Girişi" : tip === "CIKIS" ? "Stok Çıkışı" : "Raf Arası Transfer",
+            unitPrice: bFiyat,
+            documentNumber: fNo ? fNo : null,
+            supplierId: (tip === "GIRIS" && tId) ? parseInt(tId) : null,
+            destinationId: (tip === "CIKIS" && cNoktasi) ? cNoktasi : null
+        };
 
-        if (cevap.status === 401) { localStorage.removeItem('token'); window.location.href = 'login.html'; return; }
-        if (cevap.status === 409) throw new Error("Stok çakışması hatası! Lütfen tekrar deneyin.");
-        if (!cevap.ok) throw new Error(await cevap.text() || "İşlem kaydedilemedi.");
+        try {
+            const orjinalMetin = kaydetButonu.innerText;
+            kaydetButonu.disabled = true;
+            kaydetButonu.innerText = "İşleniyor...";
 
-        const modalElement = document.getElementById("stokIslemModal");
-        const modalInstance = bootstrap.Modal.getInstance(modalElement);
-        if (modalInstance) modalInstance.hide();
+            const cevap = await fetch(API_URL, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${token}`
+                },
+                body: JSON.stringify(payload)
+            });
 
-        document.getElementById("stokIslemFormu").reset();
-        document.getElementById("sourceLocationGroup").classList.add("d-none");
-        document.getElementById("targetLocationGroup").classList.add("d-none");
+            if (cevap.status === 401) { localStorage.removeItem('token'); window.location.href = 'login.html'; return; }
+            if (cevap.status === 409) throw new Error("Stok çakışması hatası! Lütfen tekrar deneyin.");
+            if (!cevap.ok) throw new Error(await cevap.text() || "İşlem kaydedilemedi.");
 
-        await hareketleriYukle();
-        kaydetButonu.innerText = orjinalMetin;
-    } catch (hata) {
-        alert("Hata: " + hata.message);
-        kaydetButonu.disabled = false;
-        kaydetButonu.innerText = "Ekle ve Onayla";
-    }
-});
+            const modalElement = document.getElementById("stokIslemModal");
+            const modalInstance = bootstrap.Modal.getInstance(modalElement);
+            if (modalInstance) modalInstance.hide();
+
+            document.getElementById("stokIslemFormu").reset();
+
+            const sourceGroup = document.getElementById("sourceLocationGroup");
+            const targetGroup = document.getElementById("targetLocationGroup");
+            if (sourceGroup) sourceGroup.classList.add("d-none");
+            if (targetGroup) targetGroup.classList.add("d-none");
+
+            await hareketleriYukle();
+            kaydetButonu.innerText = orjinalMetin;
+        } catch (hata) {
+            alert("Hata: " + hata.message);
+            kaydetButonu.disabled = false;
+            kaydetButonu.innerText = "Ekle ve Onayla";
+        }
+    });
+}
+
+// Modal açıldığında alanları temizler ve verileri günceller
+const modalTrigger = document.querySelector('[data-bs-target="#stokIslemModal"]');
+if (modalTrigger) {
+    modalTrigger.addEventListener("click", () => {
+        const form = document.getElementById("stokIslemFormu");
+        if (form) form.reset();
+
+        const sourceGroup = document.getElementById("sourceLocationGroup");
+        const targetGroup = document.getElementById("targetLocationGroup");
+        if (sourceGroup) sourceGroup.classList.add("d-none");
+        if (targetGroup) targetGroup.classList.add("d-none");
+
+        const btn = document.getElementById("btnKaydet");
+        if (btn) btn.disabled = true;
+
+        dropdownIslemDepolariYukle();
+        dropdownUrunleriYukle();
+    });
+}
 
 // ==========================================
 // 6. KAMERA BARKOD OKUYUCU MANTIĞI
 // ==========================================
+
 const cameraArea = document.getElementById("kameraAlani");
 const btnOpenCamera = document.getElementById("btnKameraAc");
 const btnCloseCamera = document.getElementById("btnKameraKapat");
 const productSelect = document.getElementById("urunSecimi");
 
+// Kamera okuyucusunu başlatır ve taranan barkodu ürün listesinde arar
 if (btnOpenCamera) {
     btnOpenCamera.addEventListener("click", () => {
         cameraArea.classList.remove("d-none");
         startScanner("reader", (scannedText) => {
             let isProductFound = false;
-            for (let i = 0; i < productSelect.options.length; i++) {
-                if (productSelect.options[i].value === scannedText) {
-                    productSelect.selectedIndex = i;
-                    isProductFound = true;
-                    break;
+            if (productSelect) {
+                for (let i = 0; i < productSelect.options.length; i++) {
+                    if (productSelect.options[i].value === scannedText) {
+                        productSelect.selectedIndex = i;
+                        isProductFound = true;
+                        break;
+                    }
                 }
             }
             if (isProductFound) {
@@ -472,12 +604,17 @@ if (btnOpenCamera) {
 }
 
 if (btnCloseCamera) btnCloseCamera.addEventListener("click", closeCamera);
+
 function closeCamera() {
     if (cameraArea) cameraArea.classList.add("d-none");
     stopScanner();
 }
 
-// BAŞLATICI
+// ==========================================
+// BAŞLATICI VE PROFİL
+// ==========================================
+
+// Tedarikçileri API'den çeker ve listeye ekler
 async function dropdownTedarikcileriYukle() {
     const tedarikciSelect = document.getElementById("tedarikciSecimi");
     try {
@@ -487,26 +624,38 @@ async function dropdownTedarikcileriYukle() {
         });
         if (!cevap.ok) throw new Error("Tedarikçiler alınamadı.");
         const data = await cevap.json();
-        tedarikciSelect.innerHTML = '<option value="" selected disabled>Tedarikçi seçiniz (Opsiyonel)</option>';
-        data.forEach(t => {
-            const option = document.createElement("option");
-            option.value = t.id;
-            option.textContent = t.name;
-            tedarikciSelect.appendChild(option);
-        });
+
+        if (tedarikciSelect) {
+            tedarikciSelect.innerHTML = '<option value="" selected disabled>Tedarikçi seçiniz (Opsiyonel)</option>';
+            data.forEach(t => {
+                const option = document.createElement("option");
+                option.value = t.id;
+                option.textContent = t.name;
+                tedarikciSelect.appendChild(option);
+            });
+        }
     } catch (hata) {
-        if(tedarikciSelect) tedarikciSelect.innerHTML = '<option value="" selected disabled>Yüklenemedi!</option>';
+        if (tedarikciSelect) tedarikciSelect.innerHTML = '<option value="" selected disabled>Yüklenemedi!</option>';
     }
 }
 
+// Sayfa yüklendiğinde gerekli dropdown ve tablo verilerini başlatır
 async function baslat() {
     await dropdownTedarikcileriYukle();
-    await dropdownUrunleriYukle();
-    await dropdownLokasyonlariYukle();
     await hareketleriYukle();
+
+    // URL'den gelen filtreye göre ilgili butonun rengini aktif yapar
+    if (aktifFiltre === 'GIRIS') {
+        aktifButonuGuncelle("btnGirisler");
+    } else if (aktifFiltre === 'CIKIS') {
+        aktifButonuGuncelle("btnCikislar");
+    } else if (aktifFiltre === 'TRANSFER') {
+        aktifButonuGuncelle("btnTransferler");
+    }
 }
 baslat();
 
+// Seçilen kullanıcının detaylı profil bilgisini modal içinde gösterir
 async function kullaniciProfiliGoster(userId) {
     try {
         const yanit = await fetch(`${CONFIG.API_BASE_URL}/users/${userId}`, {
@@ -516,22 +665,21 @@ async function kullaniciProfiliGoster(userId) {
         });
         if (!yanit.ok) throw new Error("Kullanıcı bilgileri alınamadı.");
         const user = await yanit.json();
-        
+
         document.getElementById('upmName').textContent = `${user.firstName || ''} ${user.lastName || ''}`;
         document.getElementById('upmEmail').textContent = user.email || '';
         document.getElementById('upmRole').textContent = user.role || 'viewer';
         document.getElementById('upmDate').textContent = new Date(user.createdAt).toLocaleDateString("tr-TR");
-        
+
         const emailStatusSpan = document.getElementById('upmEmailStatus');
         if (user.isEmailConfirmed) {
             emailStatusSpan.innerHTML = '<span class="badge bg-success rounded-pill"><i class="bi bi-check-lg"></i> Onaylı</span>';
         } else {
             emailStatusSpan.innerHTML = '<span class="badge bg-danger rounded-pill">Onaysız</span>';
         }
-        
+
         bootstrap.Modal.getOrCreateInstance(document.getElementById('userProfileModal')).show();
     } catch (hata) {
         alert("Profil yüklenirken bir hata oluştu: " + hata.message);
     }
 }
-
