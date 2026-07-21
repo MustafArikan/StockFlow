@@ -1,4 +1,4 @@
-﻿const API_URL = `${CONFIG.API_BASE_URL}/audit-logs`;
+const API_URL = `${CONFIG.API_BASE_URL}/audit-logs`;
 const token = localStorage.getItem('token');
 if (!token) {
     window.location.href = 'login.html';
@@ -6,13 +6,20 @@ if (!token) {
 }
 
 let logsData = [];
+let currentPage = 1;
+const pageSize = 50;
 
-async function loglariYukle() {
+async function loglariYukle(page = 1) {
+    currentPage = page;
     try {
-        const cevap = await fetch(API_URL, { headers: { "Authorization": `Bearer ${token}` } });
+        const cevap = await fetch(`${API_URL}?pageNumber=${page}&pageSize=${pageSize}`, { 
+            headers: { "Authorization": `Bearer ${token}` } 
+        });
         if (!cevap.ok) throw new Error("Loglar alınamadı");
-        logsData = await cevap.json();
+        const responseData = await cevap.json();
+        logsData = responseData.items || responseData; // Geriye dönük uyumluluk
         tabloyuCiz(logsData);
+        sayfalamaCiz(responseData.currentPage || 1, responseData.totalPages || 1);
     } catch (e) {
         console.error(e);
     }
@@ -54,6 +61,42 @@ function tabloyuCiz(veriler) {
         </tr>`;
     }).join("");
     govde.innerHTML = mHtml;
+}
+
+function sayfalamaCiz(current, total) {
+    const container = document.getElementById("paginationContainer");
+    if (!container) return;
+    
+    if (total <= 1) {
+        container.innerHTML = "";
+        return;
+    }
+
+    let html = `<nav><ul class="pagination justify-content-center">`;
+    
+    // Geri Butonu
+    html += `<li class="page-item ${current === 1 ? 'disabled' : ''}">
+                <a class="page-link" href="#" data-page="${current - 1}">&laquo;</a>
+             </li>`;
+             
+    for (let i = 1; i <= total; i++) {
+        // Çok sayfa varsa sadece etraftakileri göster (opsiyonel basit mantık)
+        if(i === 1 || i === total || (i >= current - 2 && i <= current + 2)) {
+            html += `<li class="page-item ${i === current ? 'active' : ''}">
+                        <a class="page-link" href="#" data-page="${i}">${i}</a>
+                     </li>`;
+        } else if (i === current - 3 || i === current + 3) {
+            html += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
+        }
+    }
+    
+    // İleri Butonu
+    html += `<li class="page-item ${current === total ? 'disabled' : ''}">
+                <a class="page-link" href="#" data-page="${current + 1}">&raquo;</a>
+             </li>`;
+             
+    html += `</ul></nav>`;
+    container.innerHTML = html;
 }
 
 async function kullaniciProfiliGoster(userId) {
@@ -136,13 +179,13 @@ function detayGoster(log) {
     } else if (log.actionType === "Added") {
         html += `<h5>Eklenen Veri:</h5><div class="bg-light p-3 rounded mt-2 border"><table class="table table-sm table-borderless mb-0"><tbody>`;
         Object.keys(newData).forEach(key => {
-            html += `<tr><td class="fw-bold" style="width:150px">${escapeHtml(key)}</td><td>${escapeHtml(newData[key] !== null ? newData[key] : 'null')}</td></tr>`;
+            html += `<tr><td class="fw-bold w-150px">${escapeHtml(key)}</td><td>${escapeHtml(newData[key] !== null ? newData[key] : 'null')}</td></tr>`;
         });
         html += `</tbody></table></div>`;
     } else if (log.actionType === "Deleted") {
         html += `<h5>Silinen Veri (Eski Durum):</h5><div class="bg-light p-3 rounded mt-2 border"><table class="table table-sm table-borderless mb-0"><tbody>`;
         Object.keys(oldData).forEach(key => {
-            html += `<tr><td class="fw-bold" style="width:150px">${escapeHtml(key)}</td><td class="text-danger">${escapeHtml(oldData[key] !== null ? oldData[key] : 'null')}</td></tr>`;
+            html += `<tr><td class="fw-bold w-150px">${escapeHtml(key)}</td><td class="text-danger">${escapeHtml(oldData[key] !== null ? oldData[key] : 'null')}</td></tr>`;
         });
         html += `</tbody></table></div>`;
     }
@@ -173,6 +216,21 @@ document.addEventListener('DOMContentLoaded', () => {
                 const userId = profileLink.getAttribute('data-user-id');
                 if (userId) {
                     kullaniciProfiliGoster(userId);
+                }
+            }
+        });
+    }
+
+    // Pagination Click Listener
+    const paginationContainer = document.getElementById("paginationContainer");
+    if (paginationContainer) {
+        paginationContainer.addEventListener('click', (e) => {
+            e.preventDefault();
+            const pageLink = e.target.closest('a.page-link');
+            if (pageLink) {
+                const page = parseInt(pageLink.getAttribute('data-page'), 10);
+                if (!isNaN(page) && page > 0) {
+                    loglariYukle(page);
                 }
             }
         });

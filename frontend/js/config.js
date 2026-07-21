@@ -10,7 +10,7 @@ if (!activePort) {
     try {
         const xhr = new XMLHttpRequest();
         // senkron istek
-        xhr.open('OPTIONS', 'http://localhost:5000/api/auth/login', false);
+        xhr.open('GET', 'http://localhost:5000/api/health', false);
         xhr.send(null);
         // Hata yoksa 5000 portu ayaktadır ve cevap veriyordur
         activePort = '5000';

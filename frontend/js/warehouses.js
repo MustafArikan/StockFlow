@@ -1,4 +1,4 @@
-﻿const API_URL = `${CONFIG.API_BASE_URL}/warehouses`;
+const API_URL = `${CONFIG.API_BASE_URL}/warehouses`;
 const token = localStorage.getItem('token');
 
 const userRole = typeof getUserRole === "function" ? getUserRole() : "User";
@@ -146,7 +146,7 @@ function depolariFiltreleVeCiz() {
                     <div class="position-absolute top-0 end-0 m-3 d-flex">
                         ${silİkonu} ${duzenleİkonu}
                     </div>
-                    <div class="emoji-icon mb-2" style="font-size: 3rem;">${icon}</div>
+                    <div class="emoji-icon mb-2 emoji-icon-lg">${icon}</div>
                     <h5 class="fw-bold text-dark mt-2">${escapeHtml(depo.name)}</h5>
                     <p class="text-muted small mb-1">${escapeHtml(depo.address)}</p>
                     <span class="badge bg-light text-secondary border mt-2">ID: ${depo.id}</span>
