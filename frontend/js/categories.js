@@ -503,9 +503,7 @@ tabloGovdesi.addEventListener("click", (e) => {
         } else {
             acikKategoriler.add(id);
         }
-        const baslangic = (currentPage - 1) * pageSize;
-        const bitis = baslangic + pageSize;
-        tabloyuCiz(filtreliKategoriler.slice(baslangic, bitis));
+        tabloyuCiz(filtreliKategoriler);
         return;
     }
 
