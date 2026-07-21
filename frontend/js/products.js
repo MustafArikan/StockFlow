@@ -37,18 +37,52 @@ function escapeHtml(text) {
         .replace(/'/g, "&#039;");
 }
 
-// 2. Veri Güncelleme, Filtreleme ve Sıralama Motoru
 function veriyiGuncelle() {
+    const seciliKategoriId = document.getElementById("filtreKategoriId")?.value;
+    
+    // Aktif dinamik filtreleri topla
+    const dynamicFilters = [];
+    document.querySelectorAll('.kural-filtresi').forEach(input => {
+        if (input.value && input.value.trim() !== '') {
+            dynamicFilters.push({
+                key: input.getAttribute('data-rule-key'),
+                value: input.value.toLowerCase().trim()
+            });
+        }
+    });
+
     filtreliUrunler = tumUrunler.filter(urun => {
-        const query = aktifArama.trim();
-        if (!query) return true;
+        // 1. Genel Metin Araması
+        const textMatch = 
+            (urun.name && urun.name.toLowerCase().includes(aktifArama)) ||
+            (urun.barcode && urun.barcode.toLowerCase().includes(aktifArama)) ||
+            (urun.categoryName && urun.categoryName.toLowerCase().includes(aktifArama)) ||
+            (urun.id && urun.id.toString().includes(aktifArama));
+        if (!textMatch) return false;
 
-        const nameMatch = urun.name && urun.name.toLowerCase().includes(query);
-        const barcodeMatch = urun.barcode && urun.barcode.toLowerCase().includes(query);
-        const idMatch = urun.id && urun.id.toString().includes(query);
-        const categoryMatch = urun.categoryName && urun.categoryName.toLowerCase() === query;
+        // 2. Kategori Filtresi (Alt kategorileri de kapsar)
+        if (seciliKategoriId) {
+            const gecerliIdler = getAltKategoriIdleri(seciliKategoriId);
+            if (!gecerliIdler.includes(urun.categoryId)) {
+                return false;
+            }
+        }
 
-        return nameMatch || barcodeMatch || idMatch || categoryMatch;
+        // 3. Dinamik Özellik Filtreleri
+        if (dynamicFilters.length > 0) {
+            // urun.attributes JSON'dan parse edilmiş bir objedir (array of objects)
+            if (!urun.attributes || !Array.isArray(urun.attributes)) return false;
+            
+            // Tüm dinamik filtrelere uymalı (AND mantığı)
+            for (let filter of dynamicFilters) {
+                const attr = urun.attributes.find(a => a.key === filter.key);
+                if (!attr || !(attr.value ?? '').toString().toLowerCase().includes(filter.value)) {
+                    return false;
+                }
+            }
+        }
+
+        return true;
     });
 
     filtreliUrunler.sort((a, b) => {
@@ -73,6 +107,155 @@ function veriyiGuncelle() {
     sayfalamayiCiz(yeniToplamSayfa, currentPage);
     kategoriOzetiniGuncelle(filtreliUrunler);
 }
+
+// =========================================================================
+// 🎯 DIŞA AKTARMA (EXPORT) FONKSİYONLARI (Filtrelenmiş veriyi baz alır)
+// =========================================================================
+
+// EXCEL (.xlsx) OLARAK İNDİRME FONKSİYONU
+function exportProductsToExcel() {
+    const productData = filtreliUrunler;
+    if (!productData || productData.length === 0) return alert("Dışa aktarılacak ürün bulunamadı.");
+
+    const flattenedData = productData.map(p => ({
+        "Sistem ID": p.id,
+        "Ürün Adı": p.name,
+        "Barkod": p.barcode,
+        "Kategori": p.categoryName || "-",
+        "Kritik Stok": p.minStockLevel,
+        "Mevcut Stok": p.stockQuantity
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(flattenedData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Ürünler");
+    
+    XLSX.writeFile(workbook, `StockFlow_Urunler_${new Date().toISOString().slice(0,10)}.xlsx`);
+}
+
+// PDF OLARAK İNDİRME FONKSİYONU
+function exportProductsToPDF() {
+    const productData = filtreliUrunler;
+    if (!productData || productData.length === 0) return alert("Dışa aktarılacak ürün bulunamadı.");
+
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+
+    const tableColumn = ["ID", "Ürün Adı", "Barkod", "Kategori", "Mevcut Stok"];
+    const tableRows = [];
+
+    productData.forEach(p => {
+        tableRows.push([
+            p.id,
+            p.name,
+            p.barcode,
+            p.categoryName || "-",
+            p.stockQuantity
+        ]);
+    });
+
+    doc.text("Stok Takip - Ürün Envanter Raporu", 14, 15);
+    
+    doc.autoTable({
+        head: [tableColumn],
+        body: tableRows,
+        startY: 20,
+    });
+
+    doc.save(`StockFlow_Urunler_${new Date().toISOString().slice(0,10)}.pdf`);
+}
+
+// CSV OLARAK İNDİRME FONKSİYONU
+function exportProductsToCSV() {
+    const productData = filtreliUrunler;
+    if (!productData || productData.length === 0) return alert("Dışa aktarılacak ürün bulunamadı.");
+
+    let csvContent = "\uFEFF"; // Türkçe karakterlerin düzgün görünmesi için BOM
+    csvContent += "ID;Ürün Adı;Barkod;Kritik Stok;Kategori;Mevcut Stok\n";
+
+    productData.forEach(p => {
+        csvContent += `${p.id};"${p.name}";"${p.barcode}";${p.minStockLevel};"${p.categoryName || "-"}";${p.stockQuantity}\n`;
+    });
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.setAttribute("download", `StockFlow_Urunler_${new Date().toISOString().slice(0,10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+
+// =========================================================================
+// 🎯 TOPLU İÇE AKTARMA (EXCEL IMPORT) FONKSİYONU
+// =========================================================================
+async function handleExcelImport() {
+    const fileInput = document.getElementById('excelImportFile');
+    const alertContainer = document.getElementById('importReportAlert');
+    
+    if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
+        if(alertContainer) alertContainer.innerHTML = `<div class="alert alert-warning rounded-3">Lütfen yüklenecek bir Excel (.xlsx) dosyası seçin.</div>`;
+        return;
+    }
+
+    const file = fileInput.files[0];
+    const formData = new FormData();
+    formData.append("file", file);
+
+    if(alertContainer) alertContainer.innerHTML = `<div class="alert alert-info rounded-3">Dosya satır satır denetleniyor, lütfen bekleyin...</div>`;
+
+    try {
+        const response = await fetch(`${API_URL}/import`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`
+            },
+            body: formData
+        });
+
+        if (!response.ok) {
+            const errData = await response.json();
+            throw new Error(errData.message || "İçe aktarma sırasında sunucu hatası oluştu.");
+        }
+
+        const report = await response.json();
+        
+        if(alertContainer) {
+            let reportHtml = `
+                <div class="alert ${report.errorCount > 0 ? 'alert-warning' : 'alert-success'} rounded-3 p-4 border shadow-sm">
+                    <h5 class="fw-bold mb-3"><i class="bi bi-clipboard-data-fill"></i> İçe Aktarma Sonuç Raporu</h5>
+                    <p class="mb-1"><strong>Toplam İşlenen Satır:</strong> ${report.totalRows}</p>
+                    <p class="mb-1 text-success"><strong>Sisteme Eklenen Ürün:</strong> ${report.successCount}</p>
+                    <p class="mb-3 text-danger"><strong>Hatalı/Engellenen Satır:</strong> ${report.errorCount}</p>
+            `;
+
+            if (report.errors && report.errors.length > 0) {
+                reportHtml += `<h6 class="fw-bold text-muted mt-3 mb-2">Hata Detayları:</h6><ul class="list-group small mb-0">`;
+                report.errors.forEach(err => {
+                    reportHtml += `
+                        <li class="list-group-item list-group-item-danger d-flex justify-content-between align-items-start mb-1 rounded-2">
+                            <div class="ms-2 me-auto">
+                                <div class="fw-bold text-dark">Satır ${err.rowNumber}</div>
+                                ${err.errors.join('<br>')}
+                            </div>
+                        </li>`;
+                });
+                reportHtml += `</ul>`;
+            }
+            reportHtml += `</div>`;
+            alertContainer.innerHTML = reportHtml;
+        }
+        
+        urunleriYukle(currentPage);
+
+    } catch (error) {
+        if(alertContainer) alertContainer.innerHTML = `<div class="alert alert-danger rounded-3"><strong>Sistem Hatası:</strong> ${error.message}</div>`;
+    }
+}
+
+// =========================================================================
+// MEVCUT SİSTEM VE CRUD FONKSİYONLARI
+// =========================================================================
 
 function sirala(sutun) {
     if (siralamaSutunu === sutun) {
@@ -140,9 +323,7 @@ async function urunleriYukle(page = 1) {
 
         veriyiGuncelle();
     } catch (hata) {
-        if (tabloGovdesi) {
-            tabloGovdesi.innerHTML = `<tr><td colspan="7" class="text-center text-danger py-4">Ürünler yüklenemedi. (${hata.message})</td></tr>`;
-        }
+        tabloGovdesi.innerHTML = `<tr><td colspan="7" class="text-center text-danger py-4">Ürünler yüklenemedi. (${hata.message})</td></tr>`;
     }
 }
 
@@ -156,28 +337,45 @@ async function dropdownKategorileriniYukle() {
         if (!cevap.ok) throw new Error("Kategoriler alınamadı.");
 
         const data = await cevap.json();
-        const kategoriler = data.items || data;
-        const select = document.getElementById("urunKategoriId");
-
-        if (select) {
-            select.innerHTML = '<option value="">Kategori seçin...</option>';
-            kategoriler.forEach(kategori => {
-                const option = document.createElement("option");
-                option.value = kategori.id;
-                option.textContent = kategori.name;
-                select.appendChild(option);
-            });
-        }
+        window.tumKategoriler = data.items || data;
+        
+        buildCategoryCascader('urunKategoriContainer', 'urunKategoriId', null, false);
+        buildCategoryCascader('filtreKategoriContainer', 'filtreKategoriId', null, true);
+        
     } catch (hata) {
         console.error("Kategori dropdown yükleme hatası:", hata);
     }
 }
 
+const filtreKategoriIdEl = document.getElementById('filtreKategoriId');
+if (filtreKategoriIdEl) {
+    filtreKategoriIdEl.addEventListener('change', () => {
+        currentPage = 1;
+        veriyiGuncelle();
+    });
+}
+
+const btnFiltreleriTemizle = document.getElementById("btnFiltreleriTemizle");
+if (btnFiltreleriTemizle) {
+    btnFiltreleriTemizle.addEventListener("click", () => {
+        document.getElementById("aramaKutusu").value = "";
+        aktifArama = "";
+        
+        buildCategoryCascader('filtreKategoriContainer', 'filtreKategoriId', null, true);
+        
+        document.querySelectorAll('.kural-filtresi').forEach(input => {
+            input.value = "";
+        });
+        currentPage = 1;
+        veriyiGuncelle();
+    });
+}
+
 // Kategori dropdown'ı değiştiğinde dinamik kuralları yükler
 const urunKategoriSelect = document.getElementById('urunKategoriId');
 if (urunKategoriSelect) {
-    urunKategoriSelect.addEventListener('change', async function () {
-        const categoryId = this.value;
+    urunKategoriSelect.addEventListener('change', async function (e) {
+        const categoryId = e.target.value || this.value;
         const container = document.getElementById('dynamicAttributesContainer');
         const attributeArea = document.getElementById('dynamicAttributesArea');
 
@@ -201,17 +399,114 @@ if (urunKategoriSelect) {
             rules.reverse();
 
             if (container) container.innerHTML = '';
+    try {
+        if (attributeArea) attributeArea.classList.remove('d-none');
+        if (container) container.innerHTML = '<div class="col-12 text-center"><div class="spinner-border spinner-border-sm text-primary"></div> Kurallar yükleniyor...</div>';        
+        
+        const response = await fetch(`${CONFIG.API_BASE_URL}/attribute-rules/category/${categoryId}`, {
+            headers: { "Authorization": `Bearer ${token}` }
+        });
+        
+        if (!response.ok) throw new Error("Kurallar çekilemedi!");
+        
+        const rules = await response.json();
+        // Backend'den gelen kurallar artık DisplayOrder değerine göre sıralanmış durumdadır.
+        if (container) container.innerHTML = ''; // İçini temizle
 
             if (rules.length === 0) {
                 if (attributeArea) attributeArea.classList.add('d-none');
                 return;
             }
 
+        // Gelen her bir kural için DataType ve UI Component'e göre dinamik input çiz
+        let validRuleIndex = 0;
+        rules.forEach(rule => {
+            if (rule.targetLevel === "Asset") return; // Demirbaş özellikleri ürün formunda çizilmez!
+
+            let inputHtml = '';
+            let requiredAttr = rule.isRequired ? 'required' : '';
+            let starHtml = rule.isRequired ? '<span class="text-danger">*</span>' : '';
+            let skipHtml = !rule.isRequired ? `<a href="#" class="text-primary text-decoration-none ms-3 small fw-normal btn-skip border rounded px-2 py-1 bg-white shadow-sm" title="Zorunlu değil, atla">Atla <i class="bi bi-arrow-right"></i></a>` : '';
             rules.forEach(rule => {
                 let inputHtml = '';
                 let requiredAttr = rule.isRequired ? 'required' : '';
                 let starHtml = rule.isRequired ? '<span class="text-danger">*</span>' : '';
 
+            let options = [];
+            if (rule.allowedValues && rule.allowedValues !== "[]") {
+                try { options = JSON.parse(rule.allowedValues); } 
+                catch(e) { options = rule.allowedValues.split(',').map(s => s.trim()); }
+            }
+            
+            let uiType = rule.uiComponent || rule.dataType; 
+
+            if (uiType === 'searchable_dropdown' || uiType === 'autocomplete') {
+                let optionsHtml = options.map(opt => `<option value="${escapeHtml(opt)}">`).join('');
+                inputHtml = `<input list="datalist_${rule.id}" class="form-control dynamic-rule-input" data-rule-id="${rule.id}" data-rule-key="${escapeHtml(rule.attributeKey)}" data-rule-type="text" placeholder="Seçiniz veya yazınız..." ${requiredAttr}>
+                             <datalist id="datalist_${rule.id}">
+                                ${optionsHtml}
+                             </datalist>`;
+            }
+            else if (uiType === 'dropdown' || uiType === 'icon_dropdown') {
+                let optionsHtml = options.map(opt => `<option value="${escapeHtml(opt)}">${escapeHtml(opt)}</option>`).join('');
+                inputHtml = `<select class="form-select dynamic-rule-input" data-rule-id="${rule.id}" data-rule-key="${escapeHtml(rule.attributeKey)}" data-rule-type="dropdown" ${requiredAttr}>
+                                <option value="">Seçiniz...</option>
+                                ${optionsHtml}
+                             </select>`;
+            } 
+            else if (uiType === 'radio' || uiType === 'segmented_button') {
+                inputHtml = `<div class="mt-2 dynamic-rule-input" data-rule-id="${rule.id}" data-rule-key="${escapeHtml(rule.attributeKey)}" data-rule-type="radio">`;
+                options.forEach((opt, idx) => {
+                    let isSeg = uiType === 'segmented_button';
+                    let btnCls = isSeg ? 'btn-check' : 'form-check-input';
+                    let lblCls = isSeg ? 'btn btn-outline-primary btn-sm' : 'form-check-label';
+                    if (isSeg) {
+                        inputHtml += `<input class="${btnCls}" type="radio" name="rule_${rule.id}" id="rule_${rule.id}_${idx}" value="${escapeHtml(opt)}" ${requiredAttr}>
+                                      <label class="${lblCls} me-1 mb-1" for="rule_${rule.id}_${idx}">${escapeHtml(opt)}</label>`;
+                    } else {
+                        inputHtml += `<div class="form-check form-check-inline">
+                                        <input class="${btnCls}" type="radio" name="rule_${rule.id}" id="rule_${rule.id}_${idx}" value="${escapeHtml(opt)}" ${requiredAttr}>
+                                        <label class="${lblCls}" for="rule_${rule.id}_${idx}">${escapeHtml(opt)}</label>
+                                      </div>`;
+                    }
+                });
+                inputHtml += `</div>`;
+            }
+            else if (uiType === 'checkbox_group') {
+                inputHtml = `<div class="mt-2 dynamic-rule-input" data-rule-id="${rule.id}" data-rule-key="${escapeHtml(rule.attributeKey)}" data-rule-type="checkbox_group">`;
+                options.forEach((opt, idx) => {
+                    inputHtml += `<div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="checkbox" id="rule_${rule.id}_${idx}" value="${escapeHtml(opt)}">
+                                    <label class="form-check-label" for="rule_${rule.id}_${idx}">${escapeHtml(opt)}</label>
+                                  </div>`;
+                });
+                inputHtml += `</div>`;
+            }
+            else if (uiType === 'slider' || uiType === 'range_slider_integer' || uiType === 'range_slider_decimal') {
+                let rMin = rule.minValue !== null ? rule.minValue : 0;
+                let rMax = rule.maxValue !== null ? rule.maxValue : 100;
+                let rStep = (rule.dataType === 'decimal' || uiType === 'range_slider_decimal') ? 0.01 : 1;
+                inputHtml = `<div class="d-flex align-items-center dynamic-rule-input" data-rule-id="${rule.id}" data-rule-key="${escapeHtml(rule.attributeKey)}" data-rule-type="range_slider" data-min="${rMin}" data-max="${rMax}">
+                                <input type="range" class="form-range flex-grow-1" min="${rMin}" max="${rMax}" step="${rStep}" value="${rMin}" id="rule_${rule.id}">
+                                <input type="number" class="form-control form-control-sm ms-2 text-center w-75px" id="val_${rule.id}" value="${rMin}" min="${rMin}" max="${rMax}" step="${rStep}">
+                             </div>`;
+            }
+            else if (uiType === 'color_picker') {
+                let defaultColors = ["Siyah", "Beyaz", "Gri", "Gümüş", "Altın", "Kırmızı", "Mavi", "Yeşil", "Sarı", "Turuncu", "Mor", "Pembe", "Lacivert", "Kahverengi", "Bej"];
+                let colors = (options && options.length > 0) ? options : defaultColors;
+                
+                const getColorHex = (cName) => {
+                    const normalized = cName.toLocaleLowerCase('tr-TR').trim();
+                    const map = {
+                        "siyah": "#000000", "beyaz": "#ffffff", "gri": "#9e9e9e", "gümüş": "#c0c0c0", "gumus": "#c0c0c0",
+                        "altın": "#ffd700", "altin": "#ffd700", "kırmızı": "#f44336", "kirmizi": "#f44336",
+                        "mavi": "#2196f3", "yeşil": "#4caf50", "yesil": "#4caf50", "sarı": "#ffeb3b", "sari": "#ffeb3b",
+                        "turuncu": "#ff9800", "mor": "#9c27b0", "pembe": "#e91e63", "lacivert": "#1a237e",
+                        "kahverengi": "#795548", "bej": "#f5f5dc", "bordo": "#800000", "krem": "#ffdab9"
+                    };
+                    if(cName.startsWith('#')) return cName;
+                    return map[normalized] || map[cName.toLowerCase().trim()] || "#cccccc";
+                };
                 let options = [];
                 if (rule.allowedValues && rule.allowedValues !== "[]") {
                     try { options = JSON.parse(rule.allowedValues); }
@@ -273,8 +568,8 @@ if (urunKategoriSelect) {
                         let hex = getColorHex(opt);
                         return `<div class="form-check mb-1">
                                     <input class="form-check-input color-radio-item" type="radio" name="color_${rule.id}" id="color_${rule.id}_${idx}" value="${escapeHtml(opt)}" data-rule-id="${rule.id}" ${requiredAttr}>
-                                    <label class="form-check-label d-flex align-items-center" for="color_${rule.id}_${idx}" style="cursor:pointer;">
-                                        <svg width="18" height="18" style="margin-right:8px;" xmlns="http://www.w3.org/2000/svg">
+                                    <label class="form-check-label d-flex align-items-center cursor-pointer" for="color_${rule.id}_${idx}">
+                                        <svg width="18" height="18" class="svg-color-circle" xmlns="http://www.w3.org/2000/svg">
                                             <circle cx="9" cy="9" r="8" fill="${hex}" stroke="#aaa" stroke-width="1"/>
                                         </svg>
                                         ${escapeHtml(opt)}
@@ -285,19 +580,28 @@ if (urunKategoriSelect) {
                     inputHtml = `
                         <div class="dynamic-rule-input" data-rule-id="${rule.id}" data-rule-key="${escapeHtml(rule.attributeKey)}" data-rule-type="color_picker">
                             <div class="collapse show" id="collapseColor_${rule.id}">
-                                <div class="card card-body p-2 border-0 shadow-sm" style="max-height:200px; overflow-y:auto; background-color:#f8f9fa;">
+                                <div class="card card-body p-2 border-0 shadow-sm scrollable-card">
                                     ${liHtml}
                                 </div>
                             </div>
                         </div>
                     `;
                 }
-                else if (rule.dataType === 'toggle_switch' || rule.dataType === 'boolean') {
+                else if (uiType === 'toggle_switch') {
                     inputHtml = `<div class="form-check form-switch mt-2 dynamic-rule-input" data-rule-id="${rule.id}" data-rule-key="${escapeHtml(rule.attributeKey)}" data-rule-type="boolean">
                                     <input class="form-check-input" type="checkbox" id="rule_${rule.id}">
                                     <label class="form-check-label text-muted" for="rule_${rule.id}">Evet / Açık</label>
                                  </div>`;
                 }
+            else if (uiType === 'checkbox' || uiType === 'boolean') {
+                inputHtml = `<div class="form-check mt-2 dynamic-rule-input" data-rule-id="${rule.id}" data-rule-key="${escapeHtml(rule.attributeKey)}" data-rule-type="boolean">
+                                <input class="form-check-input" type="checkbox" id="rule_${rule.id}">
+                                <label class="form-check-label text-muted" for="rule_${rule.id}">Evet / Doğru</label>
+                             </div>`;
+            }
+            else if (uiType === 'masked_textbox') {
+                inputHtml = `<input type="text" class="form-control dynamic-rule-input" data-rule-id="${rule.id}" data-rule-key="${escapeHtml(rule.attributeKey)}" data-rule-type="text" ${requiredAttr} placeholder="Örn: XXXX-XXXX">`;
+            }
                 else if (rule.dataType === 'number') {
                     inputHtml = `<input type="number" class="form-control dynamic-rule-input" data-rule-id="${rule.id}" data-rule-key="${escapeHtml(rule.attributeKey)}" data-rule-type="number" ${requiredAttr}>`;
                 }
@@ -309,20 +613,76 @@ if (urunKategoriSelect) {
                 }
 
                 const div = document.createElement('div');
-                div.className = 'col-md-6 mb-3';
+                div.className = `col-md-6 mb-4 dynamic-rule-wrapper ${validRuleIndex > 0 ? 'd-none' : ''}`;
+            div.dataset.index = validRuleIndex;
+            
                 if (rule.dataType === 'color_picker') {
                     div.innerHTML = `<a class="text-decoration-none text-dark d-flex align-items-center mb-2" data-bs-toggle="collapse" href="#collapseColor_${rule.id}" role="button" aria-expanded="true">
-                                        <label class="form-label small fw-bold mb-0" style="cursor:pointer;">${escapeHtml(rule.attributeKey)} ${starHtml}</label>
+                                        <label class="form-label small fw-bold mb-0 cursor-pointer">${escapeHtml(rule.attributeKey)} ${starHtml}</label>
                                         <i class="bi bi-caret-down-fill text-warning ms-1"></i>
+                                    ${skipHtml}
                                      </a>
                                      ${inputHtml}`;
                 } else {
-                    div.innerHTML = `<label class="form-label small fw-bold">${escapeHtml(rule.attributeKey)} ${starHtml}</label>
+                    div.innerHTML = `<label class="form-label small fw-bold d-flex align-items-center mb-2">${escapeHtml(rule.attributeKey)} ${starHtml} ${skipHtml}</label>
                                      ${inputHtml}`;
                 }
                 container.appendChild(div);
+            validRuleIndex++;
             });
 
+        // PIM - Sırayla Gösterme Mantığı (Event Listener'ları 1 kez ekle)
+        if (!container.dataset.pimListenersAttached) {
+            container.dataset.pimListenersAttached = 'true';
+            
+            const revealNext = (wrapper) => {
+                if (!wrapper) return;
+                const nextIndex = parseInt(wrapper.dataset.index) + 1;
+                const nextDiv = container.querySelector(`.dynamic-rule-wrapper[data-index="${nextIndex}"]`);
+                if (nextDiv && nextDiv.classList.contains('d-none')) {
+                    nextDiv.classList.remove('d-none');
+                    nextDiv.classList.add('animate__animated', 'animate__fadeIn');
+                }
+            };
+
+            container.addEventListener('input', (e) => revealNext(e.target.closest('.dynamic-rule-wrapper')));
+            container.addEventListener('change', (e) => revealNext(e.target.closest('.dynamic-rule-wrapper')));
+            container.addEventListener('click', (e) => {
+                const btnSkip = e.target.closest('.btn-skip');
+                if (btnSkip) {
+                    e.preventDefault();
+                    revealNext(btnSkip.closest('.dynamic-rule-wrapper'));
+                }
+            });
+        }
+
+        // Event listeners for range sliders
+        const rangeContainers = container.querySelectorAll('.dynamic-rule-input[data-rule-type="range_slider"]');
+        rangeContainers.forEach(div => {
+            const range = div.querySelector('input[type="range"]');
+            const numberInput = div.querySelector('input[type="number"]');
+            const min = parseFloat(div.getAttribute('data-min')) || 0;
+            const max = parseFloat(div.getAttribute('data-max')) || 100;
+            
+            if (range && numberInput) {
+                range.addEventListener('input', function() {
+                    numberInput.value = this.value;
+                });
+                
+                numberInput.addEventListener('input', function() {
+                    let val = parseFloat(this.value);
+                    if (isNaN(val)) val = min;
+                    if (val < min) val = min;
+                    if (val > max) val = max;
+                    range.value = val;
+                });
+            }
+        });
+
+    } catch (error) {
+        if (container) container.innerHTML = `<div class="col-12 text-center text-danger-small"><i class="bi bi-exclamation-triangle"></i> Hata: ${error.message}</div>`;
+    }
+});
             const rangeContainers = container.querySelectorAll('.dynamic-rule-input[data-rule-type="range_slider"]');
             rangeContainers.forEach(div => {
                 const range = div.querySelector('input[type="range"]');
@@ -456,6 +816,42 @@ if (btnUrunKaydetEl) {
             initialQuantity: parseInt(initialQuantity) || 0
         };
 
+    const dinamikInputlar = document.querySelectorAll('.dynamic-rule-input');
+    if (dinamikInputlar.length > 0) {
+        urunVerisi.attributes = []; 
+        dinamikInputlar.forEach(input => {
+            const ruleId = parseInt(input.getAttribute('data-rule-id'));
+            const key = input.getAttribute('data-rule-key');
+            const type = input.getAttribute('data-rule-type');
+            let val = "";
+            
+            if (type === "radio") {
+                const checked = input.querySelector('input[type="radio"]:checked');
+                if (checked) val = checked.value;
+            } else if (type === "checkbox_group") {
+                const checkedBoxes = Array.from(input.querySelectorAll('input[type="checkbox"]:checked')).map(cb => cb.value);
+                if (checkedBoxes.length > 0) val = checkedBoxes.join(", ");
+            } else if (type === "boolean") {
+                const checkbox = input.querySelector('input[type="checkbox"]');
+                val = checkbox.checked ? "true" : "false";
+            } else if (type === "range_slider") {
+                val = input.querySelector('input[type="range"]').value;
+            } else if (type === "color_picker") {
+                const checkedRb = input.querySelector('.color-radio-item:checked');
+                if (checkedRb) val = checkedRb.value;
+            } else {
+                val = input.value;
+            }
+            
+            if (ruleId && key && val !== "") {
+                urunVerisi.attributes.push({
+                    ruleId: ruleId,
+                    key: key,
+                    value: val
+                });
+            }
+        });
+    }
         const dinamikInputlar = document.querySelectorAll('.dynamic-rule-input');
         if (dinamikInputlar.length > 0) {
             urunVerisi.attributes = [];
@@ -584,21 +980,26 @@ function urunDetayGoster(id) {
             let valHtml = escapeHtml(val);
             if (/^#([0-9A-F]{3}){1,2}$/i.test(val)) {
                 valHtml = `<div class="d-flex align-items-center">
-                                <span class="d-inline-block rounded-circle me-2 shadow-sm" style="width:18px; height:18px; background-color:${escapeHtml(val)}; border:1px solid #ddd;"></span>
+                                <span class="color-dot me-2 shadow-sm" data-bg-color="${escapeHtml(val)}"></span>
                                 <span class="text-muted small">${escapeHtml(val)}</span>
                            </div>`;
             }
 
             ozelliklerTablosu.innerHTML += `
                 <tr>
-                    <td class="text-muted fw-bold" style="width:40%; border-bottom: 1px solid #eee;">${escapeHtml(attr.key)}</td>
-                    <td class="text-dark fw-semibold" style="border-bottom: 1px solid #eee;">${valHtml}</td>
+                    <td class="text-muted fw-bold w-40 border-b-eee">${escapeHtml(attr.key)}</td>
+                    <td class="text-dark fw-semibold border-b-eee">${valHtml}</td>
                 </tr>
             `;
         });
     } else {
         ozelliklerTablosu.innerHTML = `<tr><td class="text-muted fst-italic">Özel nitelik (kural) bulunamadı.</td></tr>`;
     }
+
+    document.querySelectorAll('#detayUrunOzellikler [data-bg-color]').forEach(el => {
+        el.style.backgroundColor = el.getAttribute('data-bg-color');
+        el.removeAttribute('data-bg-color');
+    });
 
     const modalElement = document.getElementById("urunDetayModal");
     const modalInstance = bootstrap.Modal.getOrCreateInstance(modalElement);
@@ -613,7 +1014,8 @@ function urunDuzenle(id) {
     document.getElementById("urunAdi").value = urun.name;
     document.getElementById("urunBarkod").value = urun.barcode;
     document.getElementById("urunMinStok").value = urun.minStockLevel;
-    document.getElementById("urunKategoriId").value = urun.categoryId || "";
+    
+    buildCategoryCascader('urunKategoriContainer', 'urunKategoriId', urun.categoryId || null, false);
 
     document.getElementById("modalBaslik").innerText = "Ürün Düzenle";
     const depoSecimi = document.getElementById("depoSecimiAlani");
@@ -653,12 +1055,19 @@ function urunDuzenle(id) {
                     } else if (type === 'color_picker') {
                         const rb = input.querySelector(`input[type="radio"][value="${attr.value}"]`);
                         if (rb) rb.checked = true;
-                    } else {
+                        } else {
                         input.value = attr.value;
                     }
                 }
             });
         }
+
+        // PIM DÜZELTMESİ: Düzenleme modundayken, daha önce doldurulmuş formlar
+        // gizli (d-none) kalmasın. Kullanıcı hepsini tek seferde görebilsin.
+        document.querySelectorAll('.dynamic-rule-wrapper').forEach(wrapper => {
+            wrapper.classList.remove('d-none');
+        });
+
     }, 500);
 
     const modalElement = document.getElementById("urunModal");
@@ -684,6 +1093,8 @@ if (btnYeniUrunModal) {
         document.getElementById("urunFormu").reset();
         document.getElementById("urunId").value = "";
         document.getElementById("modalBaslik").innerText = "Yeni Ürün Ekle";
+    
+    buildCategoryCascader('urunKategoriContainer', 'urunKategoriId', null, false);
 
         const depoSecimi = document.getElementById("depoSecimiAlani");
         if (depoSecimi) depoSecimi.classList.remove("d-none");
@@ -782,23 +1193,3 @@ if (urunDepoSelect) {
 }
 
 dropdownDepolariYukle();
-
-// Tablonun altına filtrelenen ürün çeşidini ve TOPLAM STOK ADEDİNİ yazar
-function kategoriOzetiniGuncelle(filtreliListe) {
-    let ozetContainer = document.getElementById("kategoriOzetBilgisi");
-    if (!ozetContainer) {
-        ozetContainer = document.createElement("div");
-        ozetContainer.id = "kategoriOzetBilgisi";
-        ozetContainer.className = "mt-3 text-muted small fw-bold text-end px-3";
-        const paginationContainer = document.getElementById("paginationContainer");
-        if (paginationContainer) {
-            paginationContainer.parentNode.insertBefore(ozetContainer, paginationContainer);
-        }
-    }
-    const aramaTerimi = document.getElementById("aramaKutusu")?.value || "Tümü";
-
-    const urunCesidi = filtreliListe.length;
-    const toplamFizikselStok = filtreliListe.reduce((toplam, urun) => toplam + (urun.stockQuantity || 0), 0);
-
-    ozetContainer.innerHTML = `<i class="bi bi-info-circle me-1"></i> Görüntülenen Kriter / Kategori ("${aramaTerimi}") için toplam <span class="text-primary">${urunCesidi}</span> ürün çeşidi, Toplam Stok: <span class="text-success">${toplamFizikselStok} Adet</span> listeleniyor.`;
-}

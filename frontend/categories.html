@@ -29,12 +29,13 @@
                     <li class="nav-item"><a class="nav-link" href="movements.html">Stok Hareketleri</a></li>
                     <li class="nav-item"><a class="nav-link" href="warehouses.html">Depolar</a></li>
                     <li class="nav-item"><a class="nav-link" href="suppliers.html">Tedarikçiler</a></li>
+                    <li class="nav-item"><a class="nav-link" href="assets.html">Demirbaşlar</a></li>
                     <li class="nav-item"><a class="nav-link" href="audit-logs.html">Sistem Logları</a></li>
                     <li class="nav-item"><a class="nav-link" href="test-scanner.html">Barkod Okuyucu</a></li>
                 </ul>
                 <div class="d-flex align-items-center text-white-50">
-                    <button id="themeToggleBtn" class="theme-toggle-btn border-0 me-3 text-white-50"
-                        title="Temayı Değiştir" style="background: transparent; font-size: 1.2rem;">
+                    <button id="themeToggleBtn" class="theme-toggle-btn border-0 me-3 text-white-50 bg-transparent fs-5"
+                        title="Temayı Değiştir">
                         <i class="bi bi-moon-fill" id="themeIcon"></i>
                     </button>
                     <span id="userProfile" class="me-3 small fw-bold text-white-50"></span>
@@ -67,7 +68,7 @@
                         <thead>
                             <tr class="text-muted small text-uppercase">
                                 <th id="thId" class="d-none">ID ↕</th>
-                                <th id="thAd" style="cursor: pointer;" class="user-select-none">Kategori Adı ↕</th>
+                                <th id="thAd" class="cursor-pointer user-select-none">Kategori Adı ↕</th>
                                 <th class="text-end" id="islemSutunuBasligi">İşlemler</th>
                             </tr>
                         </thead>
@@ -134,10 +135,19 @@
                                     <input type="text" class="form-control form-control-sm" id="kuralAd" placeholder="Örn: RAM_GB">
                                 </div>
                                 <div class="col-md-2">
-                                    <label class="form-label small fw-bold text-muted">Veri Tipi</label>
+                                    <label class="form-label small fw-bold text-muted">Ait Olduğu Yer</label>
+                                    <select class="form-select form-select-sm" id="kuralTargetLevel">
+                                        <option value="Product">Katalog (Ürün)</option>
+                                        <option value="Asset">Demirbaş (Cihaz)</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label small fw-bold text-muted">Veri Tipi & Görsel</label>
                                     <select class="form-select form-select-sm" id="kuralTip">
                                         <optgroup label="Yazı (Text)">
                                             <option value="text">Düz Metin (TextBox)</option>
+                                            <option value="autocomplete">Otomatik Tamamlama (Autocomplete)</option>
+                                            <option value="masked_textbox">Maskeli Metin (IMEI vb.)</option>
                                         </optgroup>
                                         <optgroup label="Sayısal (Number)">
                                             <option value="number">Tam Sayı (Integer)</option>
@@ -147,9 +157,12 @@
                                         </optgroup>
                                         <optgroup label="Seçim (Select)">
                                             <option value="dropdown">Açılır Liste (Dropdown)</option>
+                                            <option value="icon_dropdown">İkonlu Liste (Icon + Dropdown)</option>
+                                            <option value="searchable_dropdown">Aramalı Liste (Searchable Dropdown)</option>
                                             <option value="radio">Tekli Seçim (Radio Button)</option>
+                                            <option value="segmented_button">Segmentli Buton (Segmented Button)</option>
                                             <option value="checkbox_group">Çoklu Seçim (Checkbox Group)</option>
-                                            <option value="color_picker">Renk Seçici (Color Picker)</option>
+                                            <option value="color_picker">Renk Seçici (Color Picker + Etiket)</option>
                                         </optgroup>
                                         <optgroup label="Mantıksal (Boolean)">
                                             <option value="toggle_switch">Aç-Kapat (Toggle Switch)</option>
@@ -157,9 +170,17 @@
                                         </optgroup>
                                     </select>
                                 </div>
-                                <div class="col-md-3 d-none" id="kuralSeceneklerDiv">
+                                <div class="col-md-4 d-none" id="kuralSeceneklerDiv">
                                     <label class="form-label small fw-bold text-muted">Seçenekler (Virgülle)</label>
                                     <input type="text" class="form-control form-control-sm" id="kuralSecenekler" placeholder="Örn: Siyah, Beyaz, Kırmızı">
+                                </div>
+                                <div class="col-md-2 d-none" id="kuralMinDiv">
+                                    <label class="form-label small fw-bold text-muted">Min. Değer</label>
+                                    <input type="number" class="form-control form-control-sm" id="kuralMin" step="any">
+                                </div>
+                                <div class="col-md-2 d-none" id="kuralMaxDiv">
+                                    <label class="form-label small fw-bold text-muted">Max. Değer</label>
+                                    <input type="number" class="form-control form-control-sm" id="kuralMax" step="any">
                                 </div>
                                 <div class="col-md-2 d-flex align-items-center pb-1">
                                     <div class="form-check form-switch mt-4">
@@ -167,8 +188,15 @@
                                         <label class="form-check-label small fw-bold text-muted" for="kuralZorunlu">Zorunlu</label>
                                     </div>
                                 </div>
-                                <div class="col-md-4 text-end">
-                                    <button type="button" id="btnKuralEkle" class="btn btn-sm btn-primary rounded-pill px-3 fw-bold w-100">
+                                
+                                <!-- BAĞLAMSAL (INLINE) ÖNİZLEME -->
+                                <div class="col-md-10 mt-3 d-flex align-items-center justify-content-start d-none" id="inlinePreviewBox">
+                                    <span class="badge bg-info text-dark me-3"><i class="bi bi-eye"></i>Örnek UI Görünümü</span>
+                                    <div id="inlinePreviewContent" class="w-100"></div>
+                                </div>
+
+                                <div class="col-md-12 text-end mt-3">
+                                    <button type="button" id="btnKuralEkle" class="btn btn-sm btn-primary rounded-pill px-4 fw-bold">
                                         + Kuralı Ekle
                                     </button>
                                 </div>
@@ -182,8 +210,10 @@
                         <table class="table table-hover align-middle mb-0 border rounded">
                             <thead class="table-light text-muted small">
                                 <tr>
+                                    <th class="w-40px text-center"></th>
+                                    <th>Ait Olduğu Yer</th>
                                     <th>Özellik Adı</th>
-                                    <th>Tipi</th>
+                                    <th>UI & Tip</th>
                                     <th>Zorunluluk</th>
                                     <th class="text-end">İşlem</th>
                                 </tr>
@@ -199,6 +229,7 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
     <script src="js/config.js"></script>
     <script src="js/categories.js?v=2"></script>
     <script src="js/auth.js"></script>

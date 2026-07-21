@@ -1,0 +1,302 @@
+let currentAssetId = null;
+const userRole = typeof getUserRole === "function" ? getUserRole() : "User";
+const token = localStorage.getItem('token');
+if (!token) window.location.href = 'login.html';
+
+document.getElementById('btnSearchAsset').addEventListener('click', searchAsset);
+document.getElementById('serialSearchInput').addEventListener('keyup', function(e) {
+    if (e.key === 'Enter') searchAsset();
+});
+
+// Sayfa açıldığında dropdown için ürünleri yükle
+loadProductsForDropdown();
+loadUsersForDropdown();
+
+// Buton dinleyicilerini ekle (CSP Uyumlu)
+document.getElementById('btnSubmitCreateAsset').addEventListener('click', submitCreateAsset);
+document.getElementById('btnSubmitAssign').addEventListener('click', submitAssignAsset);
+document.getElementById('btnSubmitReturn').addEventListener('click', submitReturnAsset);
+document.getElementById('btnSubmitBreakdown').addEventListener('click', submitBreakdown);
+document.getElementById('btnSubmitResolve').addEventListener('click', submitResolve);
+document.getElementById('btnSubmitMaintenance').addEventListener('click', submitMaintenance);
+
+async function loadProductsForDropdown() {
+    const token = localStorage.getItem('token');
+    try {
+        const response = await fetch(`${CONFIG.API_BASE_URL}/products?pageNumber=1&pageSize=1000`, {
+            headers: { "Authorization": `Bearer ${token}` }
+        });
+        if (!response.ok) return;
+        const data = await response.json();
+        
+        const select = document.getElementById('newAssetProduct');
+        select.innerHTML = '<option value="">-- Bir Ürün Seçin --</option>';
+        
+        if (data.items && data.items.length > 0) {
+            data.items.forEach(p => {
+                select.innerHTML += `<option value="${p.id}">${escapeHtml(p.name)} (Stok: ${p.stockQuantity})</option>`;
+            });
+        } else {
+            select.innerHTML = '<option value="">Kayıtlı ürün bulunamadı!</option>';
+        }
+    } catch(e) {
+        console.error("Ürünler yüklenirken hata:", e);
+    }
+}
+
+async function loadUsersForDropdown() {
+    const token = localStorage.getItem('token');
+    try {
+        const response = await fetch(`${CONFIG.API_BASE_URL}/users`, {
+            headers: { "Authorization": `Bearer ${token}` }
+        });
+        if (!response.ok) return;
+        const users = await response.json();
+        
+        const select = document.getElementById('assignUserSelect');
+        select.innerHTML = '<option value="">-- Personel Seçin --</option>';
+        
+        if (users && users.length > 0) {
+            users.forEach(u => {
+                const fname = u.firstName || u.FirstName || "";
+                const lname = u.lastName || u.LastName || "";
+                const email = u.email || u.Email || "Bilinmiyor";
+                let displayName = `${fname} ${lname}`.trim();
+                if (!displayName) displayName = email; // İsim yoksa E-posta göster
+                
+                const id = u.id || u.Id;
+                select.innerHTML += `<option value="${id}">${escapeHtml(displayName)}</option>`;
+            });
+        } else {
+            select.innerHTML = '<option value="">Personel bulunamadı!</option>';
+        }
+    } catch(e) {
+        console.error("Personeller yüklenirken hata:", e);
+    }
+}
+
+async function searchAsset() {
+    const serial = document.getElementById('serialSearchInput').value.trim();
+    if (!serial) return;
+
+    try {
+        const token = localStorage.getItem('token');
+        const response = await fetch(`${CONFIG.API_BASE_URL}/assets/${encodeURIComponent(serial)}/timeline`, {
+            method: 'GET',
+            headers: { "Authorization": `Bearer ${token}` }
+        });
+
+        if (!response.ok) {
+            let errorMsg = "Cihaz bulunamadı veya yetkiniz yok!";
+            try {
+                const errData = await response.json();
+                if (errData && errData.message) errorMsg = errData.message;
+            } catch(e) {}
+            throw new Error(errorMsg);
+        }
+
+        const data = await response.json();
+        currentAssetId = data.assetInfo.id;
+        
+        document.getElementById('assetResultContainer').classList.remove('d-none');
+        // 1. Cihaz Profilini Doldur
+        document.getElementById('resProductName').textContent = data.assetInfo.productName;
+        document.getElementById('resSerialNumber').textContent = data.assetInfo.serialNumber;
+        document.getElementById('resStatus').textContent = data.assetInfo.status;
+        if (data.assetInfo.nextMaintenanceDate) {
+            document.getElementById('resStatus').innerHTML += `<br><small class="text-info"><i class="bi bi-calendar-event"></i> Sonraki Bakım: ${new Date(data.assetInfo.nextMaintenanceDate).toLocaleDateString('tr-TR')}</small>`;
+        }
+        
+        document.getElementById('resAssignedTo').textContent = data.assetInfo.assignedTo;
+
+        // 2. Timeline (Zaman Çizelgesini) Çiz
+        const timelineUl = document.getElementById('assetTimelineList');
+        timelineUl.innerHTML = ''; // Önce temizle
+
+        if (data.timeline && data.timeline.length > 0) {
+            data.timeline.forEach(event => {
+                // Etkinlik tipine göre timeline nokta rengini ve ikonunu belirle
+                let dotClass = "dot-primary";
+                let iconHtml = '<i class="bi bi-info-circle text-primary"></i>';
+                
+                if (event.eventType === "Sisteme Giriş") {
+                    dotClass = "dot-success";
+                    iconHtml = '<i class="bi bi-box-arrow-in-right text-success"></i>';
+                } else if (event.eventType === "Zimmetlendi") {
+                    dotClass = "dot-warning";
+                    iconHtml = '<i class="bi bi-person-check text-warning"></i>';
+                } else if (event.eventType === "Arıza" || event.eventType === "Servis") {
+                    dotClass = "dot-danger";
+                    iconHtml = '<i class="bi bi-tools text-danger"></i>';
+                }
+
+                // Tarihi formatla
+                const dateString = event.date ? new Date(event.date).toLocaleString('tr-TR') : "Tarih Yok";
+
+                const li = document.createElement('li');
+                li.className = `timeline-item ${dotClass}`;
+                li.innerHTML = `
+                    <div class="timeline-content">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="fw-bold fs-6">${iconHtml} ${escapeHtml(event.eventType)}</span>
+                            <span class="text-muted small"><i class="bi bi-calendar3"></i> ${dateString}</span>
+                        </div>
+                        <p class="mb-0 text-secondary">${escapeHtml(event.notes || "Açıklama bulunmuyor.")}</p>
+                        <div class="mt-2 text-end">
+                            <small class="text-muted fst-italic"><i class="bi bi-person-fill"></i> İşlem: ${escapeHtml(event.userName)}</small>
+                        </div>
+                    </div>
+                `;
+                timelineUl.appendChild(li);
+            });
+        } else {
+            timelineUl.innerHTML = '<li class="text-muted fst-italic">Geçmiş kaydı bulunamadı.</li>';
+        }
+
+        // Sonuç alanını göster, input'u temizle
+        document.getElementById('assetResultContainer').classList.remove('d-none');
+        document.getElementById('serialSearchInput').value = '';
+        
+    } catch (error) {
+        alert(error.message);
+        document.getElementById('assetResultContainer').classList.add('d-none');
+    }
+}
+
+// XSS Koruması için yardımcı fonksiyon
+function escapeHtml(text) {
+    if (!text) return "";
+    return text.toString().replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+async function submitAssignAsset() {
+    if(!currentAssetId) return;
+    const userId = document.getElementById('assignUserSelect').value;
+    const notes = document.getElementById('assignNotes').value;
+    if(!userId) return alert("Lütfen zimmetlenecek personeli seçin!");
+    
+    await sendAssetAction(`${CONFIG.API_BASE_URL}/assets/${currentAssetId}/assign`, 'PUT', { 
+        userId: parseInt(userId), 
+        notes: notes 
+    });
+}
+
+async function submitReturnAsset() {
+    if(!currentAssetId) return;
+    const notes = document.getElementById('returnNotes').value;
+    await sendAssetAction(`${CONFIG.API_BASE_URL}/assets/${currentAssetId}/return`, 'PUT', { notes });
+}
+
+async function submitBreakdown() {
+    if(!currentAssetId) return;
+    const description = document.getElementById('breakdownDesc').value;
+    if(!description) return alert("Lütfen arıza açıklamasını yazın!");
+    await sendAssetAction(`${CONFIG.API_BASE_URL}/assets/${currentAssetId}/breakdown`, 'POST', { description });
+}
+
+async function submitResolve() {
+    if(!currentAssetId) return;
+    const solution = document.getElementById('resolveSolution').value;
+    if(!solution) return alert("Lütfen çözüm detaylarını yazın!");
+    await sendAssetAction(`${CONFIG.API_BASE_URL}/assets/${currentAssetId}/resolve`, 'POST', { solution });
+}
+
+async function submitMaintenance() {
+    if(!currentAssetId) return;
+    const details = document.getElementById('maintenanceDetails').value;
+    const nextDate = document.getElementById('maintenanceNextDate').value;
+    if(!details) return alert("Lütfen yapılan bakımın detaylarını girin!");
+    
+    const payload = { details };
+    if(nextDate) payload.nextMaintenanceDate = new Date(nextDate).toISOString();
+    
+    await sendAssetAction(`${CONFIG.API_BASE_URL}/assets/${currentAssetId}/maintenance`, 'POST', payload);
+}
+
+// Tüm Butonlar İçin Ortak Backend İletişim Fonksiyonu
+async function sendAssetAction(url, method, body) {
+    const token = localStorage.getItem('token');
+    try {
+        const response = await fetch(url, {
+            method: method,
+            headers: {
+                "Authorization": `Bearer ${token}`,
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(body)
+        });
+
+        const result = await response.json().catch(()=>({}));
+        if (!response.ok) {
+            alert("Hata: " + (result.message || "İşlem başarısız!"));
+            return;
+        }
+
+        // Açık olan modal penceresini kapat
+        document.querySelectorAll('.modal').forEach(m => {
+            const modalInstance = bootstrap.Modal.getInstance(m);
+            if(modalInstance) modalInstance.hide();
+        });
+        
+        // Form alanlarını temizle
+        document.querySelectorAll('textarea, input[type="date"]').forEach(el => el.value = '');
+        
+        // Ekrana başarı mesajı ver ve Timeline'ı (Zaman çizelgesini) güncelle!
+        alert("Harika! " + (result.message || "İşlem başarıyla tamamlandı."));
+        searchAsset(); 
+        
+    } catch (e) {
+        alert("Bağlantı hatası: " + e.message);
+    }
+}
+
+// YENİ DEMİRBAŞ OLUŞTURMA FONKSİYONU
+async function submitCreateAsset() {
+    const productId = document.getElementById('newAssetProduct').value;
+    const serialNumber = document.getElementById('newAssetSerial').value.trim();
+    const notes = document.getElementById('newAssetNotes').value.trim();
+    
+    if (!productId || !serialNumber) {
+        return alert("Lütfen Ürün seçin ve Seri Numarası girin!");
+    }
+    
+    const token = localStorage.getItem('token');
+    try {
+        const response = await fetch(`${CONFIG.API_BASE_URL}/assets`, {
+            method: 'POST',
+            headers: {
+                "Authorization": `Bearer ${token}`,
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                productId: parseInt(productId),
+                serialNumber: serialNumber,
+                notes: notes
+            })
+        });
+        
+        const result = await response.json().catch(()=>({}));
+        if (!response.ok) {
+            alert("Hata: " + (result.message || "Cihaz eklenemedi!"));
+            return;
+        }
+        
+        alert("Harika! Yeni Demirbaş başarıyla sisteme kaydedildi.");
+        
+        // Modalı kapat
+        const modalInstance = bootstrap.Modal.getInstance(document.getElementById('createAssetModal'));
+        if (modalInstance) modalInstance.hide();
+        
+        // Formu temizle
+        document.getElementById('newAssetProduct').value = '';
+        document.getElementById('newAssetSerial').value = '';
+        document.getElementById('newAssetNotes').value = '';
+        
+        // Cihazı otomatik olarak ara ve ekranda göster!
+        document.getElementById('serialSearchInput').value = serialNumber;
+        searchAsset();
+        
+    } catch (e) {
+        alert("Bağlantı hatası: " + e.message);
+    }
+}

@@ -10,6 +10,10 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
     <link href="css/style.css" rel="stylesheet">
     <script src="js/theme.js"></script>
+    <!-- 🎯 İstemci Taraflı Export Kütüphaneleri -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
 </head>
 
 <body>
@@ -29,12 +33,13 @@
                     <li class="nav-item"><a class="nav-link" href="movements.html">Stok Hareketleri</a></li>
                     <li class="nav-item"><a class="nav-link" href="warehouses.html">Depolar</a></li>
                     <li class="nav-item"><a class="nav-link" href="suppliers.html">Tedarikçiler</a></li>
+                    <li class="nav-item"><a class="nav-link" href="assets.html">Demirbaşlar</a></li>
                     <li class="nav-item"><a class="nav-link" href="audit-logs.html">Sistem Logları</a></li>
                     <li class="nav-item"><a class="nav-link" href="test-scanner.html">Barkod Okuyucu</a></li>
                 </ul>
                 <div class="d-flex align-items-center text-white-50">
-                    <button id="themeToggleBtn" class="theme-toggle-btn border-0 me-3 text-white-50"
-                        title="Temayı Değiştir" style="background: transparent; font-size: 1.2rem;">
+                    <button id="themeToggleBtn" class="theme-toggle-btn border-0 me-3 text-white-50 bg-transparent fs-5"
+                        title="Temayı Değiştir">
                         <i class="bi bi-moon-fill" id="themeIcon"></i>
                     </button>
                     <span id="userProfile" class="me-3 small fw-bold text-white-50"></span>
@@ -51,15 +56,59 @@
                 <h1 class="fw-bold">Ürünler</h1>
                 <p class="text-muted mb-0">Ürün kataloğu ve stok bilgileri</p>
             </div>
-            <button class="btn btn-primary rounded-pill px-4 shadow-sm" data-bs-toggle="modal"
-                data-bs-target="#urunModal">+ Yeni Ürün Ekle</button>
+            <div class="d-flex gap-2">
+                <!-- 🎯 TOPLU VERİ İÇE AKTARMA (EXCEL IMPORT) ALANI -->
+                <div class="input-group">
+                    <input type="file" class="form-control form-control-sm rounded-start-pill" id="excelImportFile" accept=".xlsx">
+                    <button class="btn btn-sm btn-outline-success px-3 rounded-end-pill" type="button" id="btnExcelImport" onclick="handleExcelImport()">
+                        <i class="bi bi-file-earmark-excel-fill"></i> Yükle
+                    </button>
+                </div>
+                <button class="btn btn-primary rounded-pill px-4 shadow-sm text-nowrap" data-bs-toggle="modal"
+                    data-bs-target="#urunModal">+ Yeni Ürün Ekle</button>
+            </div>
         </div>
+
+        <!-- 🎯 İÇE AKTARMA HATALARI VE RAPORLARI İÇ Weber ALANI -->
+        <div id="importReportAlert" class="mt-3"></div>
 
         <div class="card border-0 shadow-sm rounded-3">
             <div class="card-body p-4">
-                <div class="mb-4">
-                    <input type="text" id="aramaKutusu" class="form-control rounded-pill"
-                        placeholder="Ürün Adı veya Barkod ile Ara...">
+                <!-- Arama ve Filtreleme Alanı -->
+                <div class="row g-3 mb-4 align-items-center">
+                    <div class="col-md-4">
+                        <input type="text" id="aramaKutusu" class="form-control rounded-pill"
+                            placeholder="Ürün Adı veya Barkod ile Ara...">
+                    </div>
+                    <div class="col-md-3">
+                        <div id="filtreKategoriContainer" class="d-flex flex-column gap-2"></div>
+                        <input type="hidden" id="filtreKategoriId" value="">
+                    </div>
+                    <div class="col-md-2">
+                        <button type="button" id="btnFiltreleriTemizle" class="btn btn-outline-secondary rounded-pill w-100">Temizle</button>
+                    </div>
+                    <!-- 🎯 ÇEŞİTLİ FORMATLARDA DIŞA AKTARMA (EXPORT) BUTONLARI -->
+                    <div class="col-md-3 d-flex justify-content-end gap-1">
+                        <button onclick="exportProductsToExcel()" class="btn btn-success btn-sm rounded-pill px-3 shadow-sm text-nowrap" title="Excel Olarak İndir">
+                            <i class="bi bi-file-earmark-excel"></i> Excel
+                        </button>
+                        <button onclick="exportProductsToPDF()" class="btn btn-danger btn-sm rounded-pill px-3 shadow-sm text-nowrap" title="PDF Olarak İndir">
+                            <i class="bi bi-file-earmark-pdf"></i> PDF
+                        </button>
+                        <button onclick="exportProductsToCSV()" class="btn btn-secondary btn-sm rounded-pill px-3 shadow-sm text-nowrap" title="CSV Olarak İndir">
+                            <i class="bi bi-file-earmark-spreadsheet"></i> CSV
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Dinamik Özellik Filtreleme Alanı -->
+                <div class="row g-3 mb-4 d-none bg-light p-3 rounded-3 mx-0 border" id="dynamicFilterArea">
+                    <div class="col-12 mb-2 border-bottom pb-2">
+                        <h6 class="small fw-bold text-muted mb-0"><i class="bi bi-funnel-fill me-1"></i> Kategori Özelliklerine Göre Filtrele</h6>
+                    </div>
+                    <div class="row m-0 p-0" id="dynamicFilterContainer">
+                        <!-- JS ile kural filter inputları buraya gelecek -->
+                    </div>
                 </div>
 
                 <div class="table-responsive">
@@ -89,55 +138,105 @@
     </div>
 
     <div class="modal fade" id="urunModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content border-0 shadow rounded-3">
-                <div class="modal-header border-bottom-0 rounded-top-3">
-                    <h5 class="modal-title fw-bold" id="modalBaslik">Yeni Ürün Ekle</h5>
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content border-0 shadow-lg rounded-4">
+                <div class="modal-header bg-light border-bottom-0 rounded-top-4 py-3">
+                    <h5 class="modal-title fw-bold text-dark" id="modalBaslik">
+                        <i class="bi bi-box-seam me-2 text-primary"></i> Yeni Ürün Ekle
+                    </h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Kapat"></button>
                 </div>
-                <div class="modal-body p-4">
+                <div class="modal-body p-4 p-md-5">
                     <form id="urunFormu">
                         <input type="hidden" id="urunId">
-                        <div class="mb-3">
-                            <label class="form-label text-muted small fw-bold">Ürün Adı</label>
-                            <input type="text" class="form-control" id="urunAdi" placeholder="Örn: M5 Vida">
+                        
+                        <div class="row g-4">
+                            <!-- Sol Kolon: Temel Bilgiler -->
+                            <div class="col-lg-6">
+                                <div class="bg-white p-4 rounded-3 shadow-sm border h-100">
+                                    <h6 class="fw-bold text-primary mb-4 border-bottom pb-2">
+                                        <i class="bi bi-info-circle me-1"></i> Temel Bilgiler
+                                    </h6>
+                                    
+                                    <div class="mb-4">
+                                        <label class="form-label text-muted small fw-bold">Ürün Adı <span class="text-danger">*</span></label>
+                                        <input type="text" class="form-control" id="urunAdi" placeholder="Örn: M5 Vida" required>
+                                    </div>
+                                    
+                                    <div class="mb-4">
+                                        <label class="form-label text-muted small fw-bold">Barkod</label>
+                                        <div class="input-group">
+                                            <span class="input-group-text bg-light"><i class="bi bi-upc-scan"></i></span>
+                                            <input type="text" class="form-control" id="urunBarkod" placeholder="Örn: 123456">
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="mb-2">
+                                        <label class="form-label text-muted small fw-bold">Kategori <span class="text-danger">*</span></label>
+                                        <div id="urunKategoriContainer" class="d-flex flex-column gap-2"></div>
+                                        <input type="hidden" id="urunKategoriId" value="">
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Sağ Kolon: Stok ve Yerleşim -->
+                            <div class="col-lg-6">
+                                <div class="bg-white p-4 rounded-3 shadow-sm border h-100">
+                                    <h6 class="fw-bold text-success mb-4 border-bottom pb-2">
+                                        <i class="bi bi-box me-1"></i> Stok ve Yerleşim Bilgileri
+                                    </h6>
+                                    
+                                    <div class="mb-4">
+                                        <label class="form-label text-muted small fw-bold">Minimum Stok Seviyesi</label>
+                                        <input type="number" class="form-control" id="urunMinStok" placeholder="Örn: 10" min="0">
+                                    </div>
+                                    
+                                    <div class="mb-4" id="depoSecimiAlani">
+                                        <label class="form-label text-muted small fw-bold">Yerleştirilecek Depo</label>
+                                        <div class="input-group">
+                                            <span class="input-group-text bg-light"><i class="bi bi-building"></i></span>
+                                            <select class="form-select" id="urunDepoId">
+                                                <option value="">Önce depo seçin...</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="mb-4" id="rafSecimiAlani">
+                                        <label class="form-label text-muted small fw-bold">Yerleştirilecek Raf (Zorunlu)</label>
+                                        <div class="input-group">
+                                            <span class="input-group-text bg-light"><i class="bi bi-layers"></i></span>
+                                            <select class="form-select" id="urunRafId" disabled>
+                                                <option value="">Depo bekleniyor...</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="mb-2" id="baslangicStokAlani">
+                                        <label class="form-label text-muted small fw-bold">Başlangıç Stok Adedi</label>
+                                        <input type="number" class="form-control" id="urunBaslangicStok" placeholder="Örn: 10" min="0" value="0">
+                                    </div>
+                                </div>
+                            </div>
                         </div>
-                        <div class="mb-3">
-                            <label class="form-label text-muted small fw-bold">Barkod</label>
-                            <input type="text" class="form-control" id="urunBarkod" placeholder="Örn: 123456">
+
+                        <!-- Dinamik Nitelikler (Kural Formu) -->
+                        <div class="row bg-light rounded-3 p-4 mx-0 mt-4 border shadow-sm d-none" id="dynamicAttributesArea">
+                            <div class="col-12 mb-3 border-bottom pb-2">
+                                <h6 class="fw-bold text-secondary mb-0">
+                                    <i class="bi bi-funnel-fill me-1"></i> Kategoriye Özel Nitelikler
+                                </h6>
+                                <small class="text-muted">Seçtiğiniz kategoriye göre doldurmanız gereken ek özellikler.</small>
+                            </div>
+                            <div class="row p-0 m-0 w-100" id="dynamicAttributesContainer">
+                            </div>
                         </div>
-                        <div class="mb-3">
-                            <label class="form-label text-muted small fw-bold">Minimum Stok Seviyesi</label>
-                            <input type="number" class="form-control" id="urunMinStok" placeholder="Örn: 10" min="0">
+                        
+                        <div class="d-flex justify-content-end align-items-center mt-5 pt-3 border-top">
+                            <button type="button" class="btn btn-outline-secondary rounded-pill px-4 me-3 fw-bold" data-bs-dismiss="modal">İptal</button>
+                            <button type="button" id="btnUrunKaydet" class="btn btn-primary rounded-pill px-5 py-2 fw-bold shadow">
+                                <i class="bi bi-check-lg me-1"></i> Ekle ve Kaydet
+                            </button>
                         </div>
-                        <div class="mb-4">
-                            <label class="form-label text-muted small fw-bold">Kategori</label>
-                            <select class="form-select" id="urunKategoriId">
-                                <option value="">Kategori seçin...</option>
-                            </select>
-                        </div>
-                        <div class="row bg-light rounded-3 p-3 mx-0 mb-4 border d-none" id="dynamicAttributesArea">
-                           <div class="row p-0 m-0" id="dynamicAttributesContainer">
-                           </div>
-                        </div>
-                        <div class="mb-3" id="depoSecimiAlani">
-                            <label class="form-label text-muted small fw-bold">Yerleştirilecek Depo</label>
-                            <select class="form-select" id="urunDepoId">
-                                <option value="">Önce depo seçin...</option>
-                            </select>
-                        </div>
-                        <div class="mb-3" id="rafSecimiAlani">
-                            <label class="form-label text-muted small fw-bold">Yerleştirilecek Raf (Zorunlu)</label>
-                            <select class="form-select" id="urunRafId" disabled>
-                                <option value="">Depo bekleniyor...</option>
-                            </select>
-                        </div>
-                        <div class="mb-4" id="baslangicStokAlani">
-                            <label class="form-label text-muted small fw-bold">Başlangıç Stok Adedi</label>
-                            <input type="number" class="form-control" id="urunBaslangicStok" placeholder="Örn: 10" min="0" value="0">
-                        </div>
-                        <button type="button" id="btnUrunKaydet"
-                            class="btn btn-primary w-100 rounded-pill py-2 fw-bold">Ekle ve Kaydet</button>
                     </form>
                 </div>
             </div>
@@ -153,7 +252,7 @@
                         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Kapat"></button>
                     </div>
                     <div class="d-flex align-items-center w-100 mt-2">
-                        <div class="bg-white text-primary rounded-circle d-flex align-items-center justify-content-center shadow" style="width: 60px; height: 60px; font-size: 24px;">
+                        <div class="bg-white text-primary rounded-circle d-flex align-items-center justify-content-center shadow w-60px h-60px fs-24px">
                             <i class="bi bi-box-seam"></i>
                         </div>
                         <div class="ms-3">
@@ -166,25 +265,25 @@
                     <div class="row g-3 mb-4">
                         <div class="col-6">
                             <div class="bg-white p-3 rounded-3 shadow-sm border border-light">
-                                <small class="text-muted text-uppercase fw-bold" style="font-size: 0.7rem;">Barkod</small>
+                                <small class="text-muted text-uppercase fw-bold text-xs">Barkod</small>
                                 <div class="fw-bold fs-6 mt-1 text-dark" id="detayUrunBarkod">-</div>
                             </div>
                         </div>
                         <div class="col-6">
                             <div class="bg-white p-3 rounded-3 shadow-sm border border-light">
-                                <small class="text-muted text-uppercase fw-bold" style="font-size: 0.7rem;">Sistem ID</small>
+                                <small class="text-muted text-uppercase fw-bold text-xs">Sistem ID</small>
                                 <div class="fw-bold fs-6 mt-1 text-dark">#<span id="detayUrunId">-</span></div>
                             </div>
                         </div>
                         <div class="col-6">
                             <div class="bg-white p-3 rounded-3 shadow-sm border border-light">
-                                <small class="text-muted text-uppercase fw-bold" style="font-size: 0.7rem;">Mevcut Stok</small>
+                                <small class="text-muted text-uppercase fw-bold text-xs">Mevcut Stok</small>
                                 <div class="fw-bold fs-5 mt-1" id="detayUrunStok">-</div>
                             </div>
                         </div>
                         <div class="col-6">
                             <div class="bg-white p-3 rounded-3 shadow-sm border border-light">
-                                <small class="text-muted text-uppercase fw-bold" style="font-size: 0.7rem;">Min. Stok</small>
+                                <small class="text-muted text-uppercase fw-bold text-xs">Min. Stok</small>
                                 <div class="fw-bold fs-6 mt-1 text-dark" id="detayUrunMinStok">-</div>
                             </div>
                         </div>
@@ -193,7 +292,6 @@
                     <h6 class="fw-bold text-secondary text-uppercase small mb-3 border-bottom pb-2">Ürün Özellikleri (Kurallar)</h6>
                     <div class="bg-white p-3 rounded-3 shadow-sm border border-light">
                         <table class="table table-sm table-borderless mb-0" id="detayUrunOzellikler">
-                            <!-- JS ile doldurulacak -->
                             <tr><td class="text-muted fst-italic">Özel nitelik bulunamadı.</td></tr>
                         </table>
                     </div>
