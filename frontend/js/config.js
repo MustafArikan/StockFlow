@@ -55,6 +55,7 @@ const PERMISSIONS = {
 
 function hasPermission(action) {
     const role = getUserRole();
+    if (role === "superadmin") return true; // Süper admin her şeye yetkilidir
     return PERMISSIONS[role] && PERMISSIONS[role].includes(action);
 }
 

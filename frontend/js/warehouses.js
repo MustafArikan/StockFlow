@@ -135,7 +135,7 @@ function depolariFiltreleVeCiz() {
 
         const cardHtml = `
             <div class="col-md-4">
-                <div class="card h-100 border border-light-subtle shadow-sm rounded-4 text-center p-4 position-relative depo-karti" data-id="${depo.id}" data-name="${escapeHtml(depo.name)}">
+                <div class="card h-100 border border-light-subtle shadow-sm rounded-4 text-center p-4 position-relative depo-karti cursor-pointer" data-id="${depo.id}" data-name="${escapeHtml(depo.name)}">
                     <div class="position-absolute top-0 end-0 m-3 d-flex">
                         ${silİkonu} ${duzenleİkonu}
                     </div>

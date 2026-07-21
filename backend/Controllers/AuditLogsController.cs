@@ -9,7 +9,7 @@ namespace stok_takip.Controllers
 {
     [ApiController]
     [Route("api/audit-logs")]
-    [Authorize(Roles = "admin")]
+    [Authorize(Roles = "admin,superadmin")]
     public class AuditLogsController : ControllerBase
     {
         private readonly AppDbContext _context;
@@ -46,6 +46,49 @@ namespace stok_takip.Controllers
                 })
                 .ToListAsync();
 
+            return Ok(new 
+            {
+                items = logs,
+                totalRecords = totalRecords,
+                currentPage = pageNumber,
+                totalPages = (int)Math.Ceiling((double)totalRecords / pageSize)
+            });
+        }
+
+        [HttpGet("user/{userId}")]
+        [Authorize(Roles = "superadmin")] // Sadece Super Admin rolüne sahip kullanıcılar erişebilir
+        public async Task<IActionResult> GetByUserId(int userId, [FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 50)
+        {
+            var query = _context.SecurityAuditLogs.AsNoTracking().Where(l => l.UserId == userId);
+
+            var totalRecords = await query.CountAsync();
+
+            var logs = await query
+                .Include(l => l.User)
+                .OrderByDescending(l => l.CreatedAt)
+                .Skip((pageNumber - 1) * pageSize)
+                .Take(pageSize)
+                .Select(l => new {
+                    l.Id,
+                    l.EntityName,
+                    l.ActionType,
+                    l.EntityId,
+                    Timestamp = l.CreatedAt,
+                    UserId = l.UserId,
+                    UserName = l.User != null ? (l.User.FirstName + " " + l.User.LastName).Trim() : "Sistem/Bilinmeyen",
+                    UserEmail = l.User != null ? l.User.Email : "",
+                    UserPhone = l.User != null ? l.User.PhoneNumber : "",
+                    l.IpAddress,
+                    OldValues = l.OldValues,
+                    NewValues = l.NewValues
+                })
+                .ToListAsync();
+
+            if (!logs.Any() && pageNumber == 1)
+            {
+                return NotFound(new { message = "Kullanıcıya ait log bulunamadı." });
+            }
+           
             return Ok(new 
             {
                 items = logs,
