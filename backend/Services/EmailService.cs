@@ -3,7 +3,7 @@ using MimeKit;
 using MimeKit.Text;
 
 namespace stok_takip.Services;
-
+    
 public class EmailService : IEmailService
 {
     private readonly IConfiguration _config;
@@ -22,8 +22,8 @@ public class EmailService : IEmailService
         email.Body = new TextPart(TextFormat.Html) { Text = htmlMessage };
 
         using var smtp = new SmtpClient();
-        await smtp.ConnectAsync("sandbox.smtp.mailtrap.io", 2525, MailKit.Security.SecureSocketOptions.StartTls);
-        await smtp.AuthenticateAsync("58b4c5bbeee1d6", "84563d751b5b0a");
+        await smtp.ConnectAsync(_config["EmailSettings:SmtpHost"]!, int.Parse(_config["EmailSettings:SmtpPort"]!), MailKit.Security.SecureSocketOptions.StartTls);
+        await smtp.AuthenticateAsync(_config["EmailSettings:SmtpUser"]!, _config["EmailSettings:SmtpPass"]!);
 
         await smtp.SendAsync(email);
         await smtp.DisconnectAsync(true);

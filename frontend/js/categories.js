@@ -5,8 +5,7 @@ const userRole = getUserRole();
 let tumKategoriler = [];
 let filtreliKategoriler = [];
 const tabloGovdesi = document.getElementById("kategoriTablosuGovdesi");
-let currentPage = 1;
-const pageSize = 50;
+
 
 let aktifArama = '';
 let acikKategoriler = new Set();
@@ -48,15 +47,7 @@ function veriyiGuncelle() {
         }
     });
 
-    const yeniToplamSayfa = Math.ceil(filtreliKategoriler.length / pageSize) || 1;
-    if (currentPage > yeniToplamSayfa) currentPage = yeniToplamSayfa;
-
-    const baslangic = (currentPage - 1) * pageSize;
-    const bitis = baslangic + pageSize;
-    const sayfadakiVeriler = filtreliKategoriler.slice(baslangic, bitis);
-
-    tabloyuCiz(sayfadakiVeriler);
-    sayfalamayiCiz(yeniToplamSayfa, currentPage);
+    tabloyuCiz(filtreliKategoriler);
 }
 
 function sirala(sutun) {
@@ -83,29 +74,13 @@ if (thAdEl) thAdEl.addEventListener("click", () => sirala("name"));
 
 document.getElementById("aramaKutusu").addEventListener("keyup", (event) => {
     aktifArama = event.target.value.toLowerCase();
-    currentPage = 1;
     veriyiGuncelle();
 });
 
 async function kategorileriYukle(page = 1) {
     try {
-        const adres = `${API_URL}?pageNumber=1&pageSize=1000`;
-        const cevap = await fetch(adres, {
-            method: 'GET',
-            headers: { "Authorization": `Bearer ${token}` }
-        });
-
-        if (cevap.status === 401) {
-            localStorage.removeItem('token');
-            window.location.href = 'login.html';
-            return;
-        }
-
-        if (!cevap.ok) throw new Error("Sunucu hatası: " + cevap.status);
-
-        const sonuc = await cevap.json();
+        const sonuc = await apiRequest('/categories?pageNumber=1&pageSize=1000', 'GET');
         tumKategoriler = sonuc.items || sonuc;
-        currentPage = page;
 
         veriyiGuncelle();
         ustKategoriDropdownDoldur();
@@ -117,18 +92,174 @@ async function kategorileriYukle(page = 1) {
 }
 
 function ustKategoriDropdownDoldur(haricTutulacakId = null) {
-    const select = document.getElementById("ustKategoriId");
-    if (!select) return;
-    
-    select.innerHTML = '<option value="">Yok (Ana Kategori Olarak Ekle)</option>';
-    tumKategoriler.forEach(kategori => {
-        if (kategori.id !== haricTutulacakId) { // Kendisini üst kategori seçemesin
-            const option = document.createElement("option");
-            option.value = kategori.id;
-            option.textContent = escapeHtml(kategori.name);
-            select.appendChild(option);
+    const currentVal = document.getElementById('ustKategoriId').value;
+    buildCategoryCascader('ustKategoriContainer', 'ustKategoriId', currentVal || null, false, haricTutulacakId);
+}
+
+function buildCategoryCascader(containerId, hiddenInputId, selectedCategoryId = null, isFilter = false, excludeId = null) {
+    const container = document.getElementById(containerId);
+    const hiddenInput = document.getElementById(hiddenInputId);
+    if (!container || !hiddenInput) return;
+
+    let finalizedCategoryId = selectedCategoryId ? parseInt(selectedCategoryId) : null;
+    let expandedCategories = new Set();
+
+    function updateExpandedCategories(id) {
+        expandedCategories.clear();
+        if (!id) return;
+        
+        expandedCategories.add(id);
+        let current = tumKategoriler.find(k => k.id == id);
+        while (current && current.parentId) {
+            expandedCategories.add(current.parentId);
+            current = tumKategoriler.find(k => k.id == current.parentId);
         }
-    });
+    }
+
+    if (finalizedCategoryId) {
+        updateExpandedCategories(finalizedCategoryId);
+    }
+
+    container.innerHTML = '';
+    
+    // Bootstrap Dropdown Container
+    const dropdownDiv = document.createElement('div');
+    dropdownDiv.className = 'dropdown w-100';
+    
+    // Toggle Button
+    const button = document.createElement('button');
+    let btnClasses = isFilter ? 'btn form-control rounded-pill text-start bg-white border d-flex justify-content-between align-items-center' : 'btn form-control text-start bg-white border d-flex justify-content-between align-items-center';
+    button.className = btnClasses;
+    button.type = 'button';
+    button.dataset.bsToggle = 'dropdown';
+    button.dataset.bsAutoClose = 'outside'; // Menü dışına tıklanana kadar kapanmasın
+    
+    const spanText = document.createElement('span');
+    spanText.className = 'text-truncate pe-2';
+    
+    const caretIcon = document.createElement('i');
+    caretIcon.className = 'bi bi-chevron-down text-muted';
+    caretIcon.style.fontSize = '0.8rem';
+    
+    button.appendChild(spanText);
+    button.appendChild(caretIcon);
+    
+    // Dropdown Menu
+    const menu = document.createElement('ul');
+    menu.className = 'dropdown-menu w-100 shadow-sm';
+    menu.style.maxHeight = '300px';
+    menu.style.overflowY = 'auto';
+
+    dropdownDiv.appendChild(button);
+    dropdownDiv.appendChild(menu);
+    container.appendChild(dropdownDiv);
+
+    hiddenInput.value = finalizedCategoryId || '';
+
+    function renderOptions() {
+        menu.innerHTML = '';
+        
+        // Seçili Kategoriyi Buton Metnine Yaz
+        if (finalizedCategoryId) {
+            const cat = tumKategoriler.find(k => k.id == finalizedCategoryId);
+            spanText.textContent = cat ? cat.name : (isFilter ? 'Tüm Kategoriler' : 'Yok (Ana Kategori Olarak Ekle)');
+        } else {
+            spanText.textContent = isFilter ? 'Tüm Kategoriler' : 'Yok (Ana Kategori Olarak Ekle)';
+        }
+        
+        // Temizle Butonu
+        const clearLi = document.createElement('li');
+        const clearA = document.createElement('a');
+        clearA.className = 'dropdown-item text-muted fst-italic border-bottom mb-1 pb-2';
+        clearA.href = '#';
+        if (finalizedCategoryId) {
+            clearA.innerHTML = '<i class="bi bi-x-circle me-1"></i> Temizle / Ana Kategori Yap';
+            clearA.addEventListener('click', (e) => {
+                e.preventDefault();
+                finalizedCategoryId = null;
+                expandedCategories.clear();
+                hiddenInput.value = '';
+                hiddenInput.dispatchEvent(new Event('change'));
+                renderOptions();
+            });
+        } else {
+            clearA.textContent = isFilter ? 'Tüm Kategoriler (Seçili)' : 'Yok (Ana Kategori Olarak Ekle) (Seçili)';
+            clearA.classList.add('disabled');
+        }
+        clearLi.appendChild(clearA);
+        menu.appendChild(clearLi);
+
+        // Bir kategorinin kendisi veya altından birini kontrol etmek için helper
+        function isSelfOrDescendantOfExcluded(catId) {
+            if (!excludeId) return false;
+            let curr = tumKategoriler.find(k => k.id == catId);
+            while (curr) {
+                if (curr.id == excludeId) return true;
+                curr = tumKategoriler.find(k => k.id == curr.parentId);
+            }
+            return false;
+        }
+
+        function buildTree(parentId, level) {
+            const children = tumKategoriler.filter(k => k.parentId == parentId && !isSelfOrDescendantOfExcluded(k.id));
+            
+            children.forEach(c => {
+                const isInPath = expandedCategories.has(c.id);
+                const isChildOfFinal = (c.parentId === finalizedCategoryId);
+                const isRootWhenEmpty = (finalizedCategoryId === null && c.parentId === null);
+
+                if (!isInPath && !isChildOfFinal && !isRootWhenEmpty) {
+                    return; 
+                }
+
+                const hasChildren = tumKategoriler.some(k => k.parentId == c.id && !isSelfOrDescendantOfExcluded(k.id));
+                
+                const li = document.createElement('li');
+                const a = document.createElement('a');
+                a.className = 'dropdown-item';
+                if (finalizedCategoryId === c.id) {
+                    a.classList.add('active'); // Bootstrap active blue styling
+                }
+                a.href = '#';
+                
+                const prefix = '\u00A0\u00A0\u00A0'.repeat(level); 
+                
+                if (hasChildren) {
+                    a.innerHTML = prefix + (isInPath ? '▾ ' : '▸ ') + escapeHtml(c.name);
+                    a.classList.add('fw-bold'); // Parent node highlight
+                } else {
+                    a.innerHTML = prefix + '• ' + escapeHtml(c.name);
+                }
+                
+                a.addEventListener('click', (e) => {
+                    e.preventDefault(); 
+                    
+                    finalizedCategoryId = c.id;
+                    updateExpandedCategories(c.id);
+                    hiddenInput.value = c.id;
+                    hiddenInput.dispatchEvent(new Event('change'));
+                    
+                    renderOptions(); 
+                    
+                    if (!hasChildren) {
+                        const dropdownInstance = bootstrap.Dropdown.getInstance(button) || new bootstrap.Dropdown(button);
+                        dropdownInstance.hide();
+                    }
+                });
+
+                li.appendChild(a);
+                menu.appendChild(li);
+
+                if (isInPath) {
+                    buildTree(c.id, level + 1);
+                }
+            });
+        }
+        
+        buildTree(null, 0);
+    }
+    
+    renderOptions();
 }
 
 function tabloyuCiz(kategoriler) {
@@ -264,49 +395,7 @@ function tabloyuCiz(kategoriler) {
     tabloGovdesi.appendChild(fragment);
 }
 
-function sayfalamayiCiz(totalPages, currentPage) {
-    const container = document.getElementById("paginationContainer");
-    if (!container) return;
 
-    if (totalPages <= 1) {
-        container.innerHTML = "";
-        return;
-    }
-
-    let html = `<nav><ul class="pagination pagination-sm mb-0 shadow-sm justify-content-center mt-3">`;
-    html += `<li class="page-item ${currentPage === 1 ? 'disabled' : ''}"><a class="page-link page-action" href="#" data-page="${currentPage - 1}">« Önceki</a></li>`;
-
-    for (let i = 1; i <= totalPages; i++) {
-        if (totalPages > 7) {
-            if (i === 1 || i === totalPages || (i >= currentPage - 1 && i <= currentPage + 1)) {
-                html += `<li class="page-item ${currentPage === i ? 'active' : ''}"><a class="page-link page-action" href="#" data-page="${i}">${i}</a></li>`;
-            } else if (i === 2 || i === totalPages - 1) {
-                html += `<li class="page-item disabled"><span class="page-link text-muted">...</span></li>`;
-            }
-        } else {
-            html += `<li class="page-item ${currentPage === i ? 'active' : ''}"><a class="page-link page-action" href="#" data-page="${i}">${i}</a></li>`;
-        }
-    }
-
-    html += `<li class="page-item ${currentPage === totalPages ? 'disabled' : ''}"><a class="page-link page-action" href="#" data-page="${currentPage + 1}">Sonraki »</a></li>`;
-    html += `</ul></nav>`;
-    container.innerHTML = html;
-}
-
-document.getElementById("paginationContainer").addEventListener("click", (e) => {
-    e.preventDefault();
-    const btn = e.target.closest(".page-action");
-    if (btn) {
-        const parentLi = btn.closest(".page-item");
-        if (parentLi && (parentLi.classList.contains("disabled") || parentLi.classList.contains("active"))) return;
-
-        const page = parseInt(btn.getAttribute("data-page"));
-        if (!isNaN(page)) {
-            currentPage = page;
-            veriyiGuncelle();
-        }
-    }
-});
 
 document.getElementById("btnKategoriKaydet").addEventListener("click", async () => {
     const id = document.getElementById("kategoriId").value;
@@ -321,29 +410,14 @@ document.getElementById("btnKategoriKaydet").addEventListener("click", async () 
     const parentId = document.getElementById("ustKategoriId").value;
     const kategoriVerisi = { name: name, parentId: parentId ? parseInt(parentId) : null };
     const metod = id ? "PUT" : "POST";
-    const adres = id ? (`${API_URL}/${id}`) : API_URL;
+    const endpoint = id ? `/categories/${id}` : '/categories';
 
     try {
         const orjinalMetin = btnKaydet.innerText;
         btnKaydet.disabled = true;
         btnKaydet.innerText = "Kaydediliyor...";
 
-        const cevap = await fetch(adres, {
-            method: metod,
-            headers: {
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${token}`
-            },
-            body: JSON.stringify(kategoriVerisi)
-        });
-
-        if (cevap.status === 401) {
-            localStorage.removeItem('token');
-            window.location.href = 'login.html';
-            return;
-        }
-
-        if (!cevap.ok) throw new Error(await cevap.text() || "İşlem başarısız.");
+        await apiRequest(endpoint, metod, kategoriVerisi);
 
         const modalElement = document.getElementById("kategoriModal");
         const modalInstance = bootstrap.Modal.getOrCreateInstance(modalElement);
@@ -369,13 +443,7 @@ document.getElementById("btnKategoriKaydet").addEventListener("click", async () 
 
 async function kategoriSil(id) {
     try {
-        const checkRes = await fetch(`${API_URL}/${id}/check-dependencies`, {
-            method: "GET",
-            headers: { "Authorization": `Bearer ${token}` }
-        });
-
-        if (!checkRes.ok) throw new Error("Bağımlılıklar kontrol edilemedi.");
-        const depData = await checkRes.json();
+        const depData = await apiRequest(`/categories/${id}/check-dependencies`, 'GET');
 
         if (depData.hasDependencies) {
             let msg = `DİKKAT! Bu kategoriyi silmek üzeresiniz.\n\n`;
@@ -403,18 +471,7 @@ async function kategoriSil(id) {
             if (!onay) return;
         }
 
-        const cevap = await fetch(`${API_URL}/${id}`, {
-            method: "DELETE",
-            headers: { "Authorization": `Bearer ${token}` }
-        });
-
-        if (cevap.status === 401) {
-            localStorage.removeItem('token');
-            window.location.href = 'login.html';
-            return;
-        }
-
-        if (!cevap.ok) throw new Error("Silme başarısız (Bağlı ürünler olabilir).");
+        await apiRequest(`/categories/${id}`, 'DELETE');
         kategorileriYukle();
     } catch (hata) {
         alert("Kategori silinemedi: " + hata.message);
@@ -501,14 +558,7 @@ async function kurallariYukle(categoryId) {
     kuralTabloGovdesi.innerHTML = `<tr><td colspan="6" class="text-center text-muted py-3">Yükleniyor...</td></tr>`;
     
     try {
-        const cevap = await fetch(`${CONFIG.API_BASE_URL}/attribute-rules/category/${categoryId}`, {
-            method: 'GET',
-            headers: { "Authorization": `Bearer ${token}` }
-        });
-        
-        if (!cevap.ok) throw new Error("Kurallar alınamadı.");
-        
-        const kurallar = await cevap.json();
+        const kurallar = await apiRequest(`/attribute-rules/category/${categoryId}`, 'GET');
         window.mevcutKurallar = kurallar; // Düzenleme için sakla
         kuralTabloGovdesi.innerHTML = ""; 
         
@@ -595,15 +645,7 @@ async function kurallariYukle(categoryId) {
                     }));
 
                     try {
-                        const res = await fetch(`${CONFIG.API_BASE_URL}/attribute-rules/reorder`, {
-                            method: 'PUT',
-                            headers: {
-                                "Content-Type": "application/json",
-                                "Authorization": `Bearer ${token}`
-                            },
-                            body: JSON.stringify(reorderData)
-                        });
-                        if (!res.ok) throw new Error("Sıralama güncellenemedi.");
+                        await apiRequest('/attribute-rules/reorder', 'PUT', reorderData);
                     } catch (e) {
                         console.error(e);
                         alert("Sıralama kaydedilirken hata oluştu.");
@@ -680,22 +722,13 @@ document.getElementById("btnKuralEkle").addEventListener("click", async () => {
     const btnEkle = document.getElementById("btnKuralEkle");
     const ruleId = btnEkle.getAttribute("data-rule-id");
     const method = ruleId ? "PUT" : "POST";
-    const url = ruleId ? `${CONFIG.API_BASE_URL}/attribute-rules/${ruleId}` : `${CONFIG.API_BASE_URL}/attribute-rules`;
+    const endpoint = ruleId ? `/attribute-rules/${ruleId}` : `/attribute-rules`;
 
     btnEkle.disabled = true;
     btnEkle.innerText = ruleId ? "Güncelleniyor..." : "Ekleniyor...";
     
     try {
-        const cevap = await fetch(url, {
-            method: method,
-            headers: {
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${token}`
-            },
-            body: JSON.stringify(kuralVerisi)
-        });
-        
-        if (!cevap.ok) throw new Error(await cevap.text());
+        await apiRequest(endpoint, method, kuralVerisi);
         
         // Başarılı ise formu temizle
         document.getElementById("kuralAd").value = "";
@@ -778,12 +811,7 @@ document.getElementById("kurallarTabloGovdesi").addEventListener("click", async 
         btnSil.disabled = true;
         
         try {
-            const cevap = await fetch(`${CONFIG.API_BASE_URL}/attribute-rules/${kuralId}`, {
-                method: "DELETE",
-                headers: { "Authorization": `Bearer ${token}` }
-            });
-            
-            if (!cevap.ok) throw new Error("Silme işlemi başarısız.");
+            await apiRequest(`/attribute-rules/${kuralId}`, 'DELETE');
             
             const categoryId = document.getElementById("aktifKuralKategoriId").value;
             kurallariYukle(categoryId);

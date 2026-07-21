@@ -129,7 +129,7 @@ public async Task<IActionResult> Login([FromBody] LoginDto dto)
             return BadRequest(new { message = "Email and Password cannot be empty." });
         }
 
-        var user = await _context.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Email == dto.Email);
+        var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == dto.Email);
         if (user == null)
         {
             return Unauthorized(new { message = "Invalid email or password." });
@@ -141,10 +141,39 @@ public async Task<IActionResult> Login([FromBody] LoginDto dto)
             return Unauthorized(new { message = "Email is not verified. Please verify your email before logging in. Verification code sent to your email." });
         }
 
+        if (user.LastFailedLoginAttempt.HasValue && user.FailedLoginAttempts >= 5 )
+        {
+            var lockoutEndTime = user.LastFailedLoginAttempt.Value.AddMinutes(15);
+            if (lockoutEndTime > DateTime.UtcNow)
+            {
+                var remainingMinutes = (int)(lockoutEndTime - DateTime.UtcNow).TotalMinutes;
+                return Unauthorized(new { message = $"Çok fazla hatalı giriş yaptınız. Hesabınız geçici olarak kilitlendi. Lütfen {remainingMinutes} dakika sonra tekrar deneyin." });
+            }
+        }
+
         var verificationResult = _passwordHasher.VerifyHashedPassword(user, user.PasswordHash, dto.Password);
         if (verificationResult == PasswordVerificationResult.Failed)
         {
-            return Unauthorized(new { message = "Invalid email or password." });
+            user.FailedLoginAttempts++;
+            user.LastFailedLoginAttempt = DateTime.UtcNow;  
+
+            await _context.SaveChangesAsync();
+            int remainingAttempts = 5 - user.FailedLoginAttempts;
+            if (remainingAttempts > 0)
+            {
+                return Unauthorized(new { message = $"Invalid email or password. Kalan deneme hakkınız: {remainingAttempts}" });
+            }
+            else
+            {
+                return Unauthorized(new { message = "Çok fazla hatalı giriş yaptınız. Hesabınız geçici olarak kilitlendi. Lütfen 15 dakika sonra tekrar deneyin." });
+            }
+        }
+
+        if (user.FailedLoginAttempts > 0)
+        {
+            user.FailedLoginAttempts = 0;
+            user.LastFailedLoginAttempt = null;
+            await _context.SaveChangesAsync();
         }
 
         var sessionToken = Guid.NewGuid().ToString(); // Yeni bir oturum token'ı oluştur
@@ -196,9 +225,52 @@ public async Task<IActionResult> GetMe()
         {
             id = user.Id,
             email = user.Email,
+            firstName = user.FirstName,
+            lastName = user.LastName,
+            phoneNumber = user.PhoneNumber,
             role = user.Role,
             createdAt = user.CreatedAt,
         });
+    }
+
+    [Authorize]
+    [HttpPut("profile")]
+    public async Task<IActionResult> UpdateProfile([FromBody] UpdateProfileDto dto)
+    {
+        var userIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int userId))
+        {
+            return Unauthorized(new { message = "Geçersiz token bilgileri." });
+        }
+
+        var user = await _context.Users.FindAsync(userId);
+        if (user == null)
+        {
+            return NotFound(new { message = "Kullanıcı bulunamadı." });
+        }
+
+        if (user.Email != dto.Email)
+        {
+            var emailExists = await _context.Users.AsNoTracking().AnyAsync(u => u.Email == dto.Email && u.Id != userId);
+            if (emailExists)
+            {
+                return BadRequest(new { message = "Bu e-posta adresi başka bir kullanıcı tarafından kullanılıyor." });
+            }
+            user.Email = dto.Email;
+        }
+
+        user.FirstName = dto.FirstName;
+        user.LastName = dto.LastName;
+        user.PhoneNumber = dto.PhoneNumber;
+
+        await _context.SaveChangesAsync();
+
+        return Ok(new { message = "Profil başarıyla güncellendi.",
+            firstName = user.FirstName,
+            lastName = user.LastName,  
+            email = user.Email,
+            phoneNumber = user.PhoneNumber
+            });
     }
 
 [HttpPost("logout")]
@@ -393,6 +465,18 @@ public async Task<IActionResult> Logout()
 
         user.PasswordHash = _passwordHasher.HashPassword(user, dto.NewPassword);
         await _context.SaveChangesAsync();
+
+        // Güvenlik Bilgilendirme E-postası Gönder
+        string subject = "Güvenlik Uyarısı: Şifreniz Değiştirildi";
+        string body = $@"
+                <div style='font-family: Arial; padding: 20px; background: #f4f4f4; text-align: center;'>
+                    <h2 style='color: #dc2626;'>Şifre Değişikliği Başarılı</h2>
+                    <p>Merhaba {user.FirstName},</p>
+                    <p>StockFlow hesabınızın şifresi az önce başarıyla değiştirildi.</p>
+                    <p style='font-weight: bold;'>Eğer bu işlemi siz yapmadıysanız, hesabınız tehlikede olabilir. Lütfen derhal sistem yöneticiniz ile iletişime geçin!</p>
+                </div>";
+
+        await _emailService.SendEmailAsync(user.Email, subject, body);
 
         return Ok(new { message = "Şifreniz başarıyla güncellendi." });
     }

@@ -1,4 +1,4 @@
-﻿const API_URL = `${CONFIG.API_BASE_URL}/stock/movements`;
+const API_URL = `${CONFIG.API_BASE_URL}/stock/movements`;
 const token = localStorage.getItem('token');
 
 if (!token) window.location.href = 'login.html';
@@ -25,7 +25,7 @@ const aramaKutusu = document.getElementById("aramaKutusu");
 
 // Sayfalama, Arama ve Sıralama Durumları
 let currentPage = 1;
-const pageSize = 10;
+let pageSize = 10;
 let aktifFiltre = 'TUMU';
 let aktifArama = '';
 let siralamaSutunu = 'tarih';
@@ -91,7 +91,7 @@ function veriyiGuncelle() {
     const sayfadakiVeriler = islenmisVeri.slice(baslangic, bitis);
 
     tabloyuCiz(sayfadakiVeriler);
-    sayfalamayiCiz(toplamSayfa, currentPage);
+    sayfalamayiCiz(islenmisVeri.length, currentPage);
 }
 
 function sirala(sutun) {
@@ -120,16 +120,7 @@ function sirala(sutun) {
 // ==========================================
 async function hareketleriYukle() {
     try {
-        const adres = `${API_URL}?pageNumber=1&pageSize=10000`;
-        const cevap = await fetch(adres, {
-            method: 'GET',
-            headers: { "Authorization": `Bearer ${token}` }
-        });
-
-        if (cevap.status === 401) { localStorage.removeItem('token'); window.location.href = 'login.html'; return; }
-        if (!cevap.ok) throw new Error("Stok hareketleri yüklenemedi");
-
-        const sonuc = await cevap.json();
+        const sonuc = await apiRequest('/stock/movements?pageNumber=1&pageSize=10000', 'GET');
         stokHareketleri = sonuc.items || sonuc || [];
 
         veriyiGuncelle();
@@ -148,8 +139,7 @@ function parseJwt(t) {
         return JSON.parse(decodeURIComponent(atob(t.split('.')[1]).split('').map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join('')));
     } catch (e) { return null; }
 }
-const currentPayload = parseJwt(token);
-const isAdmin = currentPayload && currentPayload["http://schemas.microsoft.com/ws/2008/06/identity/claims/role"] === "admin";
+const isAdmin = getUserRole() === "admin";
 
 function tabloyuCiz(veriListesi) {
     tabloGovdesi.innerHTML = "";
@@ -179,7 +169,7 @@ function tabloyuCiz(veriListesi) {
         let finalKisiHtml = "";
         
         if (isAdmin && hareket.userId) {
-            finalKisiHtml = `<a href="#" onclick="kullaniciProfiliGoster(${hareket.userId}); return false;" class="text-decoration-none fw-bold text-primary"><i class="bi bi-person-badge me-1"></i>${escapeHtml(kisiIsmi)}</a><br><small class="text-muted">${escapeHtml(hareket.personel)}</small>`;
+            finalKisiHtml = `<a href="#" data-action="view-profile" data-user-id="${hareket.userId}" class="text-decoration-none fw-bold text-primary"><i class="bi bi-person-badge me-1"></i>${escapeHtml(kisiIsmi)}</a><br><small class="text-muted">${escapeHtml(hareket.personel)}</small>`;
         } else {
             finalKisiHtml = `<span>${escapeHtml(kisiIsmi)}</span><br><small class="text-muted">${escapeHtml(hareket.personel)}</small>`;
         }
@@ -198,45 +188,31 @@ function tabloyuCiz(veriListesi) {
     tabloGovdesi.innerHTML = satirlar.join("");
 }
 
-function sayfalamayiCiz(totalPages, curPage) {
-    const container = document.getElementById("paginationContainer");
-    if (!container) return;
-    if (totalPages <= 1) { container.innerHTML = ""; return; }
-
-    let html = `<nav><ul class="pagination pagination-sm mb-0 shadow-sm justify-content-center mt-4">`;
-    html += `<li class="page-item ${curPage === 1 ? 'disabled' : ''}"><a class="page-link page-action" href="#" data-page="${curPage - 1}">« Önceki</a></li>`;
-
-    for (let i = 1; i <= totalPages; i++) {
-        if (totalPages > 7) {
-            if (i === 1 || i === totalPages || (i >= curPage - 1 && i <= curPage + 1)) {
-                html += `<li class="page-item ${i === curPage ? 'active' : ''}"><a class="page-link page-action" href="#" data-page="${i}">${i}</a></li>`;
-            } else if (i === 2 || i === totalPages - 1) {
-                html += `<li class="page-item disabled"><span class="page-link text-muted">...</span></li>`;
-            }
-        } else {
-            html += `<li class="page-item ${i === curPage ? 'active' : ''}"><a class="page-link page-action" href="#" data-page="${i}">${i}</a></li>`;
+function sayfalamayiCiz(totalItems, currentPage) {
+    buildPagination(
+        "paginationContainer", 
+        totalItems, 
+        currentPage, 
+        pageSize, 
+        (newPage) => {
+            currentPage = newPage;
+            veriyiGuncelle();
+        },
+        (newSize) => {
+            pageSize = newSize;
+            currentPage = 1;
+            veriyiGuncelle();
         }
-    }
-
-    html += `<li class="page-item ${curPage === totalPages ? 'disabled' : ''}"><a class="page-link page-action" href="#" data-page="${curPage + 1}">Sonraki »</a></li>`;
-    html += `</ul></nav>`;
-    container.innerHTML = html;
+    );
 }
 
-// ==========================================
-// 4. EVENT LISTENER (DİNLEYİCİLER)
-// ==========================================
-document.getElementById("paginationContainer").addEventListener("click", (e) => {
-    e.preventDefault();
-    const btn = e.target.closest(".page-action");
-    if (btn) {
-        const parentLi = btn.closest(".page-item");
-        if (parentLi && (parentLi.classList.contains("disabled") || parentLi.classList.contains("active"))) return;
-
-        const page = parseInt(btn.getAttribute("data-page"));
-        if (!isNaN(page)) {
-            currentPage = page;
-            veriyiGuncelle();
+tabloGovdesi.addEventListener('click', (e) => {
+    const profileLink = e.target.closest('[data-action="view-profile"]');
+    if (profileLink) {
+        e.preventDefault();
+        const userId = profileLink.getAttribute('data-user-id');
+        if (userId) {
+            kullaniciProfiliGoster(userId);
         }
     }
 });
@@ -282,13 +258,7 @@ if (document.getElementById("thPersonel")) document.getElementById("thPersonel")
 async function dropdownUrunleriYukle() {
     const urunSelect = document.getElementById("urunSecimi");
     try {
-        const cevap = await fetch(`${CONFIG.API_BASE_URL}/products?pageSize=1000`, {
-            method: 'GET',
-            headers: { "Authorization": `Bearer ${token}` }
-        });
-        if (!cevap.ok) throw new Error("Ürünler alınamadı.");
-
-        const data = await cevap.json();
+        const data = await apiRequest('/products?pageSize=1000', 'GET');
         tumUrunler = data.items || data;
 
         urunSelect.innerHTML = '<option value="" selected disabled>Lütfen bir ürün seçiniz...</option>';
@@ -307,13 +277,7 @@ async function dropdownLokasyonlariYukle() {
     const sourceSelect = document.getElementById("sourceLocationId");
     const targetSelect = document.getElementById("targetLocationId");
     try {
-        const cevap = await fetch(`${CONFIG.API_BASE_URL}/locations?pageSize=1000`, {
-            method: 'GET',
-            headers: { "Authorization": `Bearer ${token}` }
-        });
-        if (!cevap.ok) throw new Error("Lokasyonlar alınamadı.");
-
-        const data = await cevap.json();
+        const data = await apiRequest('/locations?pageSize=1000', 'GET');
         tumLokasyonlar = data.items || data;
 
         sourceSelect.innerHTML = '<option value="" selected disabled>Kaynak raf seçiniz...</option>';
@@ -409,18 +373,7 @@ document.getElementById("stokIslemFormu").addEventListener("submit", async (e) =
         kaydetButonu.disabled = true;
         kaydetButonu.innerText = "İşleniyor...";
 
-        const cevap = await fetch(API_URL, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${token}`
-            },
-            body: JSON.stringify(payload)
-        });
-
-        if (cevap.status === 401) { localStorage.removeItem('token'); window.location.href = 'login.html'; return; }
-        if (cevap.status === 409) throw new Error("Stok çakışması hatası! Lütfen tekrar deneyin.");
-        if (!cevap.ok) throw new Error(await cevap.text() || "İşlem kaydedilemedi.");
+        await apiRequest('/stock/movements', 'POST', payload);
 
         const modalElement = document.getElementById("stokIslemModal");
         const modalInstance = bootstrap.Modal.getInstance(modalElement);
@@ -481,12 +434,7 @@ function closeCamera() {
 async function dropdownTedarikcileriYukle() {
     const tedarikciSelect = document.getElementById("tedarikciSecimi");
     try {
-        const cevap = await fetch(`${CONFIG.API_BASE_URL}/suppliers`, {
-            method: 'GET',
-            headers: { "Authorization": `Bearer ${token}` }
-        });
-        if (!cevap.ok) throw new Error("Tedarikçiler alınamadı.");
-        const data = await cevap.json();
+        const data = await apiRequest('/suppliers', 'GET');
         tedarikciSelect.innerHTML = '<option value="" selected disabled>Tedarikçi seçiniz (Opsiyonel)</option>';
         data.forEach(t => {
             const option = document.createElement("option");
@@ -509,16 +457,10 @@ baslat();
 
 async function kullaniciProfiliGoster(userId) {
     try {
-        const yanit = await fetch(`${CONFIG.API_BASE_URL}/users/${userId}`, {
-            headers: {
-                "Authorization": `Bearer ${localStorage.getItem("token")}`
-            }
-        });
-        if (!yanit.ok) throw new Error("Kullanıcı bilgileri alınamadı.");
-        const user = await yanit.json();
+        const user = await apiRequest(`/users/${userId}`, 'GET');
         
         document.getElementById('upmName').textContent = `${user.firstName || ''} ${user.lastName || ''}`;
-        document.getElementById('upmEmail').textContent = user.email || '';
+        document.getElementById('upmEmail').textContent = (user.email || '') + (user.phoneNumber ? ' | 📞 ' + user.phoneNumber : '');
         document.getElementById('upmRole').textContent = user.role || 'viewer';
         document.getElementById('upmDate').textContent = new Date(user.createdAt).toLocaleDateString("tr-TR");
         

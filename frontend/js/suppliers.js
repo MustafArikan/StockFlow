@@ -1,12 +1,10 @@
-﻿const API_URL = `${CONFIG.API_BASE_URL}/suppliers`;
+const API_URL = `${CONFIG.API_BASE_URL}/suppliers`;
 const token = localStorage.getItem('token');
 if (!token) window.location.href = 'login.html';
 
 async function tedarikcileriYukle() {
     try {
-        const cevap = await fetch(API_URL, { headers: { "Authorization": `Bearer ${token}` } });
-        if (!cevap.ok) throw new Error("Tedarikçiler alınamadı");
-        const data = await cevap.json();
+        const data = await apiRequest('/suppliers', 'GET');
         
         const govde = document.getElementById("tedarikciTablosuGövdesi");
         govde.innerHTML = "";
@@ -39,12 +37,7 @@ document.getElementById("tedarikciFormu").addEventListener("submit", async (e) =
     };
     
     try {
-        const cevap = await fetch(API_URL, {
-            method: "POST",
-            headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
-            body: JSON.stringify(payload)
-        });
-        if (!cevap.ok) throw new Error("Eklenemedi");
+        await apiRequest('/suppliers', 'POST', payload);
         bootstrap.Modal.getInstance(document.getElementById("tedarikciModal")).hide();
         document.getElementById("tedarikciFormu").reset();
         tedarikcileriYukle();

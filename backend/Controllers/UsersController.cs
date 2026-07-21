@@ -29,6 +29,7 @@ public class UsersController : ControllerBase
                 u.Email,
                 u.FirstName,
                 u.LastName,
+                u.PhoneNumber,
                 u.Role,
                 u.IsEmailConfirmed,
                 u.CreatedAt
@@ -49,6 +50,7 @@ public class UsersController : ControllerBase
                 u.Email,
                 u.FirstName,
                 u.LastName,
+                u.PhoneNumber,
                 u.Role,
                 u.IsEmailConfirmed,
                 u.CreatedAt

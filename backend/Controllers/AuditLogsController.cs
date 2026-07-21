@@ -39,6 +39,7 @@ namespace stok_takip.Controllers
                     UserId = l.UserId,
                     UserName = l.User != null ? (l.User.FirstName + " " + l.User.LastName).Trim() : "Sistem/Bilinmeyen",
                     UserEmail = l.User != null ? l.User.Email : "",
+                    UserPhone = l.User != null ? l.User.PhoneNumber : "",
                     l.IpAddress,
                     OldValues = l.OldValues,
                     NewValues = l.NewValues
