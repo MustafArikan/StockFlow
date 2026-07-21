@@ -533,6 +533,10 @@ if (urunKategoriSelect) {
                 if (attributeArea) attributeArea.classList.add('d-none');
                 return;
             }
+            if (rules.length === 0) {
+                if (attributeArea) attributeArea.classList.add('d-none');
+                return;
+            }
 
             let validRuleIndex = 0;
             rules.forEach(rule => {
@@ -616,6 +620,18 @@ if (urunKategoriSelect) {
                         return map[normalized] || map[cName.toLowerCase().trim()] || "#cccccc";
                     };
 
+                    let liHtml = colors.map((opt, idx) => {
+                        let hex = getColorHex(opt);
+                        return `<div class="form-check mb-1">
+                                    <input class="form-check-input color-radio-item" type="radio" name="color_${rule.id}" id="color_${rule.id}_${idx}" value="${escapeHtml(opt)}" data-rule-id="${rule.id}" ${requiredAttr}>
+                                    <label class="form-check-label d-flex align-items-center cursor-pointer" for="color_${rule.id}_${idx}">
+                                        <svg width="18" height="18" class="svg-color-circle" xmlns="http://www.w3.org/2000/svg">
+                                            <circle cx="9" cy="9" r="8" fill="${hex}" stroke="#aaa" stroke-width="1"/>
+                                        </svg>
+                                        ${escapeHtml(opt)}
+                                    </label>
+                                </div>`;
+                    }).join('');
                     let liHtml = colors.map((opt, idx) => {
                         let hex = getColorHex(opt);
                         return `<div class="form-check mb-1">

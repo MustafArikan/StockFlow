@@ -24,8 +24,7 @@ namespace stok_takip.Controllers
             try
             {
                 var totalProducts = await _context.Products.AsNoTracking().Where(p => !p.IsDeleted).CountAsync();
-                var totalWarehouses = await _context.Warehouses.AsNoTracking().Where(w => !w.IsDeleted).CountAsync();
-
+                var totalWarehouses = await _context.Warehouses.AsNoTracking().Where(w => !w.IsDeleted).CountAsync();                
                 var criticalAlertsCount = await _context.Notifications
                     .AsNoTracking()
                     .Where(n => !n.IsRead && !n.IsDeleted)
