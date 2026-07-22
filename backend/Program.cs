@@ -97,12 +97,36 @@ builder.Services.AddAuthentication(options =>
             }
 
             var session = await dbContext.UserSessions
+                .Include(s => s.User)
                 .AsNoTracking()
                 .FirstOrDefaultAsync(s => s.SessionToken == sessionToken);
 
             if (session == null || !session.IsActive || session.ExpiresAt < DateTime.UtcNow)
             {
                 context.Fail("Session is inactive or expired.");
+                return;
+            }
+
+            if (session.User != null)
+            {
+                var identity = context.Principal.Identity as ClaimsIdentity;
+                if (identity != null)
+                {
+                    var existingRoleClaim = identity.FindAll(ClaimTypes.Role).ToList();
+                    foreach (var role in existingRoleClaim)
+                    {
+                        identity.RemoveClaim(role);
+                    }
+
+                    var userRole = session.User.Role.ToLower();
+
+                    identity.AddClaim(new Claim(ClaimTypes.Role, userRole));
+
+                    if (userRole == "superadmin")
+                    {
+                        identity.AddClaim(new Claim(ClaimTypes.Role, "admin"));
+                    }
+                }
             }
         }
     };

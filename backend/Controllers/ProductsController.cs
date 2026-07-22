@@ -170,8 +170,12 @@ public class ProductsController : ControllerBase
             using (var workbook = new XLWorkbook(stream))
             {
                 var worksheet = workbook.Worksheet(1); 
-                var rows = worksheet.RangeUsed().RowsUsed().Skip(1); 
+                var usedRange = worksheet.RangeUsed(); 
+                
+                if (usedRange == null) return BadRequest(new { message = "Yüklenen Excel dosyası tamamen boş veya formatı hatalı." });
 
+                var rows = usedRange.RowsUsed().Skip(1); // Başlık satırını atla
+                
                 int rowIndex = 2; 
                 foreach (var row in rows)
                 {

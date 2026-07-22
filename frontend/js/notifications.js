@@ -72,7 +72,7 @@ function renderNotifications(notificationsList) {
 
         const opacityClass = notification.isRead ? "opacity-50" : "";
         const isDanger = notification.severity === "DANGER";
-        const isAdmin = userRole === "admin";
+        const isAdmin = ["admin", "superadmin"].includes(getUserRole());
         
         const card = document.createElement("div");
         card.className = `card border shadow-sm rounded-3 p-3 notification-card ${borderClass} ${opacityClass}`;

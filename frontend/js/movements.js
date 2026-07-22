@@ -139,7 +139,7 @@ function parseJwt(t) {
         return JSON.parse(decodeURIComponent(atob(t.split('.')[1]).split('').map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join('')));
     } catch (e) { return null; }
 }
-const isAdmin = getUserRole() === "admin";
+const isAdmin = ["admin", "superadmin"].includes(getUserRole());
 
 function tabloyuCiz(veriListesi) {
     tabloGovdesi.innerHTML = "";
