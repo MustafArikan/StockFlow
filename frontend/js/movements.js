@@ -280,10 +280,41 @@ function aktifButonuGuncelle(aktifId) {
     });
 }
 
-document.getElementById("btnTumu").addEventListener("click", () => { aktifFiltre = 'TUMU'; aktifButonuGuncelle("btnTumu"); currentPage = 1; veriyiGuncelle(); });
-document.getElementById("btnGirisler").addEventListener("click", () => { aktifFiltre = 'GIRIS'; aktifButonuGuncelle("btnGirisler"); currentPage = 1; veriyiGuncelle(); });
-document.getElementById("btnCikislar").addEventListener("click", () => { aktifFiltre = 'CIKIS'; aktifButonuGuncelle("btnCikislar"); currentPage = 1; veriyiGuncelle(); });
-document.getElementById("btnTransferler").addEventListener("click", () => { aktifFiltre = 'TRANSFER'; aktifButonuGuncelle("btnTransferler"); currentPage = 1; veriyiGuncelle(); });
+document.getElementById("btnTumu").addEventListener("click", () => {
+    aktifFiltre = 'TUMU';
+    aktifButonuGuncelle("btnTumu");
+    currentPage = 1;
+    // URL'yi tamamen temizler
+    window.history.pushState({}, document.title, window.location.pathname);
+    veriyiGuncelle();
+});
+
+document.getElementById("btnGirisler").addEventListener("click", () => {
+    aktifFiltre = 'GIRIS';
+    aktifButonuGuncelle("btnGirisler");
+    currentPage = 1;
+    // URL'ye filtre parametresini ekler
+    window.history.pushState({}, document.title, `${window.location.pathname}?filter=GIRIS`);
+    veriyiGuncelle();
+});
+
+document.getElementById("btnCikislar").addEventListener("click", () => {
+    aktifFiltre = 'CIKIS';
+    aktifButonuGuncelle("btnCikislar");
+    currentPage = 1;
+    // URL'ye filtre parametresini ekler
+    window.history.pushState({}, document.title, `${window.location.pathname}?filter=CIKIS`);
+    veriyiGuncelle();
+});
+
+document.getElementById("btnTransferler").addEventListener("click", () => {
+    aktifFiltre = 'TRANSFER';
+    aktifButonuGuncelle("btnTransferler");
+    currentPage = 1;
+    // URL'ye filtre parametresini ekler
+    window.history.pushState({}, document.title, `${window.location.pathname}?filter=TRANSFER`);
+    veriyiGuncelle();
+});
 
 document.getElementById("aramaKutusu").addEventListener("keyup", (event) => {
     aktifArama = event.target.value.toLowerCase();
