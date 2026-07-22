@@ -91,7 +91,7 @@ function veriyiGuncelle() {
     const sayfadakiVeriler = islenmisVeri.slice(baslangic, bitis);
 
     tabloyuCiz(sayfadakiVeriler);
-    sayfalamayiCiz(islenmisVeri.length, currentPage);
+    sayfalamayiCiz(islenmisVeri.length);
 }
 
 function sirala(sutun) {
@@ -188,7 +188,7 @@ function tabloyuCiz(veriListesi) {
     tabloGovdesi.innerHTML = satirlar.join("");
 }
 
-function sayfalamayiCiz(totalItems, currentPage) {
+function sayfalamayiCiz(totalItems) {
     buildPagination(
         "paginationContainer", 
         totalItems, 
