@@ -1,4 +1,4 @@
-// const CONFIG = {
+﻿// const CONFIG = {
 //     API_BASE_URL: 'http://localhost:5000/api', // 5136'yÄ± 5000 yaptÄ±k!
 // }
 
@@ -59,7 +59,7 @@ function hasPermission(action) {
     return PERMISSIONS[role] && PERMISSIONS[role].includes(action);
 }
 
-// Merkezi Åifre GÃ¶ster/Gizle Ä°ÅŸlemi (Event Delegation / CSP Uyumlu)
+// Merkezi Şifre Göster/Gizle İşlemi (Event Delegation / CSP Uyumlu)
 document.addEventListener('click', function(e) {
     const btn = e.target.closest('.toggle-password');
     if (btn) {
@@ -85,9 +85,9 @@ document.addEventListener('click', function(e) {
     }
 });
 
-// Modal Ä°Ã§inde Enter Ä°le Kaydetme (Event Delegation / TÃ¼m Sayfalarda Ortak)
-// Form etiketiyle sarÄ±lÄ± olsun ya da olmasÄ±n, bir modal iÃ§indeki metin kutusunda
-// Enter'a basÄ±lÄ±nca o modalÄ±n birincil (kaydet/oluÅŸtur) butonunu tetikler.
+// Modal Girişinde Enter Tuşu ile Kaydetme (Event Delegation / Tüm Sayfalarda Ortak)
+// Form etiketiyle sarılı olsun ya da olmasın, bir modal içindeki metin kutusunda
+// Enter'a basılınca o modalın birincil (kaydet/oluştur) butonunu tetikler.
 document.addEventListener('keydown', function(e) {
     if (e.key !== 'Enter') return;
 
