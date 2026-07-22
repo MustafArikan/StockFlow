@@ -218,3 +218,10 @@ function buildPagination(containerId, totalItems, currentPage, pageSize, onPageC
         });
     }
 }
+
+// Modal icinde selectpicker fix
+if (typeof $ !== 'undefined') {
+    $(document).on('shown.bs.modal', '.modal', function () {
+        $(this).find('.selectpicker').selectpicker('render');
+    });
+}

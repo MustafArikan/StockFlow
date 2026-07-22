@@ -526,11 +526,11 @@ document.getElementById('urunKategoriId').addEventListener('change', async funct
             let uiType = rule.uiComponent || rule.dataType; 
 
             if (uiType === 'searchable_dropdown' || uiType === 'autocomplete') {
-                let optionsHtml = options.map(opt => `<option value="${escapeHtml(opt)}">`).join('');
-                inputHtml = `<input list="datalist_${rule.id}" class="form-control dynamic-rule-input" data-rule-id="${rule.id}" data-rule-key="${escapeHtml(rule.attributeKey)}" data-rule-type="text" placeholder="Seçiniz veya yazınız..." ${requiredAttr}>
-                             <datalist id="datalist_${rule.id}">
+                let optionsHtml = options.map(opt => `<option value="${escapeHtml(opt)}" data-tokens="${escapeHtml(opt)}">${escapeHtml(opt)}</option>`).join('');
+                inputHtml = `<select class="selectpicker form-control dynamic-rule-input" data-width="100%" data-live-search="true" data-rule-id="${rule.id}" data-rule-key="${escapeHtml(rule.attributeKey)}" data-rule-type="text" title="Seçiniz..." ${requiredAttr}>
+                                <option value="" data-tokens="temizle">Seçiniz...</option>
                                 ${optionsHtml}
-                             </datalist>`;
+                             </select>`;
             }
             else if (uiType === 'dropdown' || uiType === 'icon_dropdown') {
                 let optionsHtml = options.map(opt => `<option value="${escapeHtml(opt)}">${escapeHtml(opt)}</option>`).join('');
@@ -632,7 +632,7 @@ document.getElementById('urunKategoriId').addEventListener('change', async funct
                 inputHtml = `<input type="text" class="form-control dynamic-rule-input" data-rule-id="${rule.id}" data-rule-key="${escapeHtml(rule.attributeKey)}" data-rule-type="text" ${requiredAttr} placeholder="Örn: XXXX-XXXX">`;
             }
             else if (rule.dataType === 'number') {
-                inputHtml = `<input type="number" class="form-control dynamic-rule-input" data-rule-id="${rule.id}" data-rule-key="${escapeHtml(rule.attributeKey)}" data-rule-type="number" ${requiredAttr}>`;
+                inputHtml = `<input type="number" step="1" class="form-control dynamic-rule-input" data-rule-id="${rule.id}" data-rule-key="${escapeHtml(rule.attributeKey)}" data-rule-type="number" ${requiredAttr}>`;
             } 
             else if (rule.dataType === 'decimal') {
                 inputHtml = `<input type="number" step="0.01" class="form-control dynamic-rule-input" data-rule-id="${rule.id}" data-rule-key="${escapeHtml(rule.attributeKey)}" data-rule-type="decimal" ${requiredAttr}>`;
@@ -641,9 +641,11 @@ document.getElementById('urunKategoriId').addEventListener('change', async funct
                 inputHtml = `<input type="text" class="form-control dynamic-rule-input" data-rule-id="${rule.id}" data-rule-key="${escapeHtml(rule.attributeKey)}" data-rule-type="text" ${requiredAttr}>`;
             }
 
+            let isBoolean = (uiType === 'toggle_switch' || uiType === 'checkbox' || uiType === 'boolean');
             const div = document.createElement('div');
             div.className = `col-md-6 mb-4 dynamic-rule-wrapper ${validRuleIndex > 0 ? 'd-none' : ''}`;
             div.dataset.index = validRuleIndex;
+            div.dataset.isBoolean = isBoolean ? 'true' : 'false';
             
             if (rule.dataType === 'color_picker') {
                 div.innerHTML = `<a class="text-decoration-none text-dark d-flex align-items-center mb-2" data-bs-toggle="collapse" href="#collapseColor_${rule.id}" role="button" aria-expanded="true">
@@ -660,6 +662,10 @@ document.getElementById('urunKategoriId').addEventListener('change', async funct
             validRuleIndex++;
         });
 
+        if (typeof $ !== 'undefined' && $.fn.selectpicker) {
+            $('.selectpicker.dynamic-rule-input').selectpicker();
+        }
+
         // PIM - Sırayla Gösterme Mantığı (Event Listener'ları 1 kez ekle)
         if (!container.dataset.pimListenersAttached) {
             container.dataset.pimListenersAttached = 'true';
@@ -671,8 +677,20 @@ document.getElementById('urunKategoriId').addEventListener('change', async funct
                 if (nextDiv && nextDiv.classList.contains('d-none')) {
                     nextDiv.classList.remove('d-none');
                     nextDiv.classList.add('animate__animated', 'animate__fadeIn');
+                    
+                    if (nextDiv.dataset.isBoolean === 'true') {
+                        revealNext(nextDiv);
+                    }
                 }
             };
+
+            // Sayfa yüklendiğinde ilk eleman boolean ise hemen sonrakini de aç
+            setTimeout(() => {
+                const firstEl = container.querySelector('.dynamic-rule-wrapper[data-index="0"]');
+                if (firstEl && firstEl.dataset.isBoolean === 'true') {
+                    revealNext(firstEl);
+                }
+            }, 50);
 
             container.addEventListener('input', (e) => revealNext(e.target.closest('.dynamic-rule-wrapper')));
             container.addEventListener('change', (e) => revealNext(e.target.closest('.dynamic-rule-wrapper')));
@@ -787,7 +805,9 @@ document.getElementById("btnUrunKaydet").addEventListener("click", async () => {
         minStockLevel: parseInt(minStockLevel) || 0,
         categoryId: parseInt(categoryId) || null,
         targetLocationId: parseInt(targetLocationId) || 0,
-        initialQuantity: parseInt(initialQuantity) || 0
+        initialQuantity: parseInt(initialQuantity) || 0,
+        cost: 0,
+        price: 0
     };
 
     const dinamikInputlar = document.querySelectorAll('.dynamic-rule-input');
