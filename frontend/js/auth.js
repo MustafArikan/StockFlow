@@ -32,6 +32,12 @@ document.addEventListener('DOMContentLoaded', () => {
             // Token parçalanırken hata oluşursa sayfa patlamasın diye try-catch içinde tutuyoruz
             const payload = JSON.parse(atob(token.split('.')[1]));
             userProfileEl.textContent = payload.email || "Kullanıcı";
+            
+            // Eğer rol superadmin ise Kullanıcılar menüsünü göster
+            if (payload.role === "superadmin") {
+                const navUsersItem = document.getElementById("navUsersItem");
+                if (navUsersItem) navUsersItem.classList.remove("d-none");
+            }
         } catch (e) {
             console.error("Token çözümlenemedi:", e);
             userProfileEl.textContent = "Kullanıcı";

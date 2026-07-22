@@ -13,9 +13,9 @@ let aktifDepoId = null;
 let aktifRafId = null;
 
 let depoPage = 1;
-const depoPageSize = 10;
+let depoPageSize = 10;
 let rafPage = 1;
-const rafPageSize = 10;
+let rafPageSize = 10;
 
 let aktifArama = '';
 let siralamaSutunu = 'id';
@@ -56,20 +56,12 @@ document.getElementById("btnNavbarLogout")?.addEventListener("click", () => {
 
 async function depolariYukle(page = 1) {
     try {
-        const cevap = await fetch(`${API_URL}?pageNumber=${page}&pageSize=${depoPageSize}`, {
-            method: 'GET',
-            headers: { "Authorization": `Bearer ${token}` }
-        });
-
-        if (cevap.status === 401) return window.location.href = 'login.html';
-        if (!cevap.ok) throw new Error("Sunucu hatası: " + cevap.status);
-        
-        const sonuc = await cevap.json();
+        const sonuc = await apiRequest(`/warehouses?pageNumber=${page}&pageSize=${depoPageSize}`, 'GET');
         tumDepolar = sonuc.items || sonuc;      
         depoPage = sonuc.currentPage || 1;
 
         depolariFiltreleVeCiz();
-        sayfalamayiCizDepolar(sonuc.totalPages || 1, depoPage);
+        sayfalamayiCizDepolar(sonuc.totalRecords || 0, depoPage);
         yoneticileriYukle();
     } catch (hata) {
         const container = document.getElementById("depoKartlariContainer");
@@ -77,19 +69,20 @@ async function depolariYukle(page = 1) {
     }
 }
 
-function sayfalamayiCizDepolar(totalPages, currentPage) {
-    const container = document.getElementById("depoPaginationContainer");
-    if (!container) return;
-    if (totalPages <= 1) { container.innerHTML = ""; return; }
-
-    let html = `<nav><ul class="pagination pagination-sm m-0 justify-content-center mt-3">`;
-    html += `<li class="page-item ${currentPage === 1 ? 'disabled' : ''}"><button data-page="${currentPage - 1}" class="page-link text-dark btn-depo-page">Önceki</button></li>`;
-    for (let i = 1; i <= totalPages; i++) {
-        html += `<li class="page-item ${currentPage === i ? 'active' : ''}"><button data-page="${i}" class="page-link ${currentPage === i ? 'bg-dark border-dark text-white' : 'text-dark'} btn-depo-page">${i}</button></li>`;
-    }
-    html += `<li class="page-item ${currentPage === totalPages ? 'disabled' : ''}"><button data-page="${currentPage + 1}" class="page-link text-dark btn-depo-page">Sonraki</button></li>`;
-    html += `</ul></nav>`;
-    container.innerHTML = html;
+function sayfalamayiCizDepolar(totalItems, currentPage) {
+    buildPagination(
+        "depoPaginationContainer", 
+        totalItems, 
+        currentPage, 
+        depoPageSize, 
+        (newPage) => {
+            depolariYukle(newPage);
+        },
+        (newSize) => {
+            depoPageSize = newSize;
+            depolariYukle(1);
+        }
+    );
 }
 
 function depolariFiltreleVeCiz() {
@@ -142,7 +135,7 @@ function depolariFiltreleVeCiz() {
 
         const cardHtml = `
             <div class="col-md-4">
-                <div class="card h-100 border border-light-subtle shadow-sm rounded-4 text-center p-4 position-relative depo-karti" data-id="${depo.id}" data-name="${escapeHtml(depo.name)}">
+                <div class="card h-100 border border-light-subtle shadow-sm rounded-4 text-center p-4 position-relative depo-karti cursor-pointer" data-id="${depo.id}" data-name="${escapeHtml(depo.name)}">
                     <div class="position-absolute top-0 end-0 m-3 d-flex">
                         ${silİkonu} ${duzenleİkonu}
                     </div>
@@ -160,14 +153,11 @@ async function yoneticileriYukle() {
     const select = document.getElementById("depoYoneticiId");
     if(!select) return;
     try {
-        const cevap = await fetch(`${CONFIG.API_BASE_URL}/users`, { headers: { "Authorization": `Bearer ${token}` } });
-        if(cevap.ok) {
-            const yoneticiler = await cevap.json();
-            select.innerHTML = '<option value="">Yönetici Seçiniz...</option>';
-            yoneticiler.forEach(y => {
+        const yoneticiler = await apiRequest('/users', 'GET');
+        select.innerHTML = '<option value="">Yönetici Seçiniz...</option>';
+        yoneticiler.forEach(y => {
                 select.innerHTML += `<option value="${y.id}">${escapeHtml(y.email)}</option>`;
-            });
-        }
+        });
     } catch(e) {
         select.innerHTML = '<option value="">Yöneticiler Yüklenemedi (Opsiyonel)</option>';
     }
@@ -184,20 +174,13 @@ document.getElementById("btnDepoKaydet")?.addEventListener("click", async () => 
 
     const depoVerisi = { name, address, managerId: managerId || null };
     const metod = id ? "PUT" : "POST";
-    const adres = id ? `${API_URL}/${id}` : API_URL;
+    const adres = id ? `/warehouses/${id}` : '/warehouses';
 
     try {
         btnKaydet.disabled = true;
         btnKaydet.innerText = "Kaydediliyor...";
 
-        const cevap = await fetch(adres, {
-            method: metod,
-            headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
-            body: JSON.stringify(depoVerisi)
-        });
-
-        if (cevap.status === 401) return window.location.href = 'login.html';
-        if (!cevap.ok) throw new Error("İşlem başarısız: " + cevap.status);
+        await apiRequest(adres, metod, depoVerisi);
 
         bootstrap.Modal.getInstance(document.getElementById("depoModal"))?.hide();
         document.getElementById("depoFormu").reset();
@@ -232,12 +215,7 @@ async function depoSil(id, depoAdi) {
     if (!confirm(onayMsg)) return;
 
     try {
-        const cevap = await fetch(`${API_URL}/${id}`, {
-            method: "DELETE",
-            headers: { "Authorization": `Bearer ${token}` }
-        });
-        if (cevap.status === 401) return window.location.href = 'login.html';
-        if (!cevap.ok) throw new Error("Silme başarısız: " + cevap.status);
+        await apiRequest(`/warehouses/${id}`, 'DELETE');
         
         alert("Depo ve içindeki tüm bileşenler veritabanından başarıyla temizlendi.");
         depolariYukle();
@@ -269,11 +247,7 @@ async function raflariGoruntule(depoId, depoIsmi) {
     
     // 📊 Kutu İstatistiklerini Güncelle (Toplam Çeşit ve Kritik Stok)
     try {
-        const depoCevap = await fetch(`${CONFIG.API_BASE_URL}/warehouses/${depoId}/stocks`, {
-            headers: { "Authorization": `Bearer ${token}` }
-        });
-        if (depoCevap.ok) {
-            const stocks = await depoCevap.json();
+        const stocks = await apiRequest(`/warehouses/${depoId}/stocks`, 'GET');
             
             // 1. Bu depodaki benzersiz (unique) ürün çeşidi sayısı
             const uniqueProductIds = new Set(stocks.map(s => s.id || s.productId));
@@ -301,7 +275,6 @@ async function raflariGoruntule(depoId, depoIsmi) {
             
             const kutuKritik = document.getElementById("kutuKritikStokDepo");
             if (kutuKritik) kutuKritik.innerText = criticalCount;
-        }
     } catch(e) {
         console.error("Depo kutu istatistikleri yüklenirken hata:", e);
     }
@@ -312,14 +285,7 @@ async function raflariSayfaliYukle(depoId, page = 1) {
     const rafSelect = document.getElementById("rafAramaSelect");
     
     try {
-        const cevap = await fetch(`${CONFIG.API_BASE_URL}/locations/by-warehouse/${depoId}?pageNumber=${page}&pageSize=${rafPageSize}`, {
-            headers: { "Authorization": `Bearer ${token}` }
-        });
-
-        if (cevap.status === 401) return window.location.href = 'login.html';
-        if (!cevap.ok) throw new Error("Raflar alınamadı");
-
-        const sonuc = await cevap.json();
+        const sonuc = await apiRequest(`/locations/by-warehouse/${depoId}?pageNumber=${page}&pageSize=${rafPageSize}`, 'GET');
         const raflar = sonuc.items || sonuc;
         rafPage = sonuc.currentPage || 1;
 
@@ -353,7 +319,7 @@ async function raflariSayfaliYukle(depoId, page = 1) {
                 </tr>`;
         });
 
-        sayfalamayiCizRaflar(sonuc.totalPages || 1, rafPage, depoId);
+        sayfalamayiCizRaflar(sonuc.totalRecords || 0, rafPage, depoId);
     } catch (hata) {
         tbody.innerHTML = `<tr><td colspan="3" class="text-center text-danger py-4">Raflar yüklenemedi! (${hata.message})</td></tr>`;
     }
@@ -368,19 +334,20 @@ document.getElementById("rafAramaSelect")?.addEventListener("change", function()
     });
 });
 
-function sayfalamayiCizRaflar(totalPages, currentPage, depoId) {
-    const container = document.getElementById("rafSayfalamaContainer") || document.getElementById("rafSayfalamaContainer");
-    if (!container) return;
-    if (totalPages <= 1) { container.innerHTML = ""; return; }
-
-    let html = `<nav><ul class="pagination pagination-sm m-0 justify-content-center mt-3">`;
-    html += `<li class="page-item ${currentPage === 1 ? 'disabled' : ''}"><button data-page="${currentPage - 1}" data-depoid="${depoId}" class="page-link text-dark btn-raf-page">Önceki</button></li>`;
-    for (let i = 1; i <= totalPages; i++) {
-        html += `<li class="page-item ${currentPage === i ? 'active' : ''}"><button data-page="${i}" data-depoid="${depoId}" class="page-link ${currentPage === i ? 'bg-dark border-dark text-white' : 'text-dark'} btn-raf-page">${i}</button></li>`;
-    }
-    html += `<li class="page-item ${currentPage === totalPages ? 'disabled' : ''}"><button data-page="${currentPage + 1}" data-depoid="${depoId}" class="page-link text-dark btn-raf-page">Sonraki</button></li>`;
-    html += `</ul></nav>`;
-    container.innerHTML = html;
+function sayfalamayiCizRaflar(totalItems, currentPage, depoId) {
+    buildPagination(
+        "rafSayfalamaContainer", 
+        totalItems, 
+        currentPage, 
+        rafPageSize, 
+        (newPage) => {
+            raflariSayfaliYukle(depoId, newPage);
+        },
+        (newSize) => {
+            rafPageSize = newSize;
+            raflariSayfaliYukle(depoId, 1);
+        }
+    );
 }
 
 async function rafSil(rafId, rafKodu) {
@@ -388,11 +355,7 @@ async function rafSil(rafId, rafKodu) {
     if (!confirm(onayMsg)) return;
 
     try {
-        const cevap = await fetch(`${CONFIG.API_BASE_URL}/locations/${rafId}`, {
-            method: "DELETE",
-            headers: { "Authorization": `Bearer ${token}` }
-        });
-        if (!cevap.ok) throw new Error("Raf silinemedi!");
+        await apiRequest(`/locations/${rafId}`, 'DELETE');
         
         alert("Raf ve içindeki ürünler başarıyla temizlendi.");
         raflariSayfaliYukle(aktifDepoId, rafPage);
@@ -408,12 +371,7 @@ if (btnRafKaydetModal) {
         if (!code) return alert("Raf kodu giriniz!");
 
         try {
-            const cevap = await fetch(`${CONFIG.API_BASE_URL}/locations`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
-                body: JSON.stringify({ WarehouseId: aktifDepoId, Code: code })
-            });
-            if (!cevap.ok) throw new Error("Raf eklenemedi");
+            await apiRequest('/locations', 'POST', { WarehouseId: aktifDepoId, Code: code });
 
             const modalInstance = bootstrap.Modal.getInstance(document.getElementById("rafEkleModal")) || bootstrap.Modal.getInstance(document.getElementById("rafEkleModal"));
             if (modalInstance) modalInstance.hide();
@@ -439,13 +397,7 @@ async function raftakiUrunleriGoruntule(rafId, rafKodu) {
     document.getElementById("seciliRafKoduUrunlerIcin").innerText = rafKodu;
 
     try {
-        const depoCevap = await fetch(`${CONFIG.API_BASE_URL}/warehouses/${aktifDepoId}/stocks`, {
-            headers: { "Authorization": `Bearer ${token}` }
-        });
-        
-        if (!depoCevap.ok) throw new Error("Stok verileri alınamadı.");
-        
-        const tumUrunler = await depoCevap.json();
+        const tumUrunler = await apiRequest(`/warehouses/${aktifDepoId}/stocks`, 'GET');
         
         seciliRafUrunleri = tumUrunler.filter(u => 
             Number(u.locationId) === Number(rafId) || 
@@ -523,11 +475,7 @@ let seciliUrunGecmisi = [];
 async function stokGecmisiniAc(productId, productName) {
     document.getElementById("gecmisModalBaslik").innerText = `${productName} - Stok Geçmişi`;
     try {
-        const cevap = await fetch(`${CONFIG.API_BASE_URL}/stock/movements/product/${productId}`, {
-            headers: { "Authorization": `Bearer ${token}` }
-        });
-        if (cevap.ok) seciliUrunGecmisi = await cevap.json();
-        else seciliUrunGecmisi = [];
+        seciliUrunGecmisi = await apiRequest(`/stock/movements/product/${productId}`, 'GET');
         
         if(document.getElementById("filtreZaman")) document.getElementById("filtreZaman").value = "TUMU";
         if(document.getElementById("siralaGecmis")) document.getElementById("siralaGecmis").value = "YENIDEN_ESKIYE";
@@ -648,9 +596,7 @@ async function depoIciKategorileriYukle() {
     const select = document.getElementById("depoIciUrunKategoriId");
     if (!select) return;
     try {
-        const cevap = await fetch(`${CONFIG.API_BASE_URL}/categories?pageSize=1000`, { headers: { "Authorization": `Bearer ${token}` } });
-        if (!cevap.ok) throw new Error("Kategoriler alınamadı");
-        const sonuc = await cevap.json();
+        const sonuc = await apiRequest('/categories?pageSize=1000', 'GET');
         const kategoriler = sonuc.items || sonuc;
         
         select.innerHTML = '<option value="" selected disabled>Kategori seçin...</option>';
@@ -684,14 +630,7 @@ async function hizliKategoriKaydet() {
     const ad = document.getElementById("yeniKategoriAdi").value.trim();
     if(!ad) return alert("Kategori adı boş olamaz!");
     try {
-        const cevap = await fetch(`${CONFIG.API_BASE_URL}/categories`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
-            body: JSON.stringify({ Name: ad, ParentId: 0 }) 
-        });
-        if(!cevap.ok) throw new Error("Kategori eklenemedi");
-        
-        const data = await cevap.json();
+        const data = await apiRequest('/categories', 'POST', { Name: ad, ParentId: 0 });
         await depoIciKategorileriYukle();
         if(data.id) document.getElementById("depoIciUrunKategoriId").value = data.id; 
         document.getElementById("yeniKategoriAlani")?.classList.add("d-none");
@@ -707,9 +646,7 @@ async function depoIciRaflariYukle(depoId) {
     const select = document.getElementById("depoIciUrunRafId");
     if (!select) return;
     try {
-        const cevap = await fetch(`${CONFIG.API_BASE_URL}/locations/by-warehouse/${depoId}?pageSize=1000`, { headers: { "Authorization": `Bearer ${token}` } });
-        if (!cevap.ok) throw new Error("Raflar alınamadı");
-        const sonuc = await cevap.json();
+        const sonuc = await apiRequest(`/locations/by-warehouse/${depoId}?pageSize=1000`, 'GET');
         const raflar = sonuc.items || sonuc;
         
         select.innerHTML = '<option value="" selected disabled>Ürünün konulacağı rafı seçin...</option>';
@@ -743,14 +680,7 @@ async function hizliRafKaydet() {
     const kod = document.getElementById("yeniRafKodu").value.trim();
     if(!kod) return alert("Raf kodu boş olamaz!");
     try {
-        const cevap = await fetch(`${CONFIG.API_BASE_URL}/locations`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
-            body: JSON.stringify({ WarehouseId: aktifDepoId, Code: kod })
-        });
-        if(!cevap.ok) throw new Error("Raf eklenemedi");
-        
-        const data = await cevap.json();
+        const data = await apiRequest('/locations', 'POST', { WarehouseId: aktifDepoId, Code: kod });
         await depoIciRaflariYukle(aktifDepoId); 
         
         const rafSelect = document.getElementById("depoIciUrunRafId");
@@ -792,14 +722,7 @@ document.getElementById("btnDepoIciUrunKaydet")?.addEventListener("click", async
     };
 
     try {
-        const cevap = await fetch(`${CONFIG.API_BASE_URL}/products`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
-            body: JSON.stringify(urunPayload)
-        });
-
-        if (cevap.status === 401) return window.location.href = 'login.html';
-        if (!cevap.ok) throw new Error(await cevap.text() || "Ürün ekleme başarısız.");
+        await apiRequest('/products', 'POST', urunPayload);
 
         bootstrap.Modal.getInstance(document.getElementById("depoIciUrunModal"))?.hide();
         alert("Ürün başarıyla tanımlandı ve stok işlendi!");
@@ -869,19 +792,6 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    // 2. Depo Sayfalama
-    const depoPaginationContainer = document.getElementById("depoPaginationContainer");
-    if (depoPaginationContainer) {
-        depoPaginationContainer.addEventListener("click", (e) => {
-            const btn = e.target.closest(".btn-depo-page");
-            if (btn) {
-                const parent = btn.parentElement;
-                if (!parent.classList.contains("disabled") && !parent.classList.contains("active")) {
-                    depolariYukle(parseInt(btn.getAttribute("data-page")));
-                }
-            }
-        });
-    }
 
     // 3. Raf Tablosu (Sil & Görüntüle)
     const rafTablosuGovdesi = document.getElementById("rafTablosuGovdesi");
@@ -899,19 +809,6 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    // 4. Raf Sayfalama
-    const rafSayfalamaContainer = document.getElementById("rafSayfalamaContainer");
-    if (rafSayfalamaContainer) {
-        rafSayfalamaContainer.addEventListener("click", (e) => {
-            const btn = e.target.closest(".btn-raf-page");
-            if (btn) {
-                const parent = btn.parentElement;
-                if (!parent.classList.contains("disabled") && !parent.classList.contains("active")) {
-                    raflariSayfaliYukle(btn.getAttribute("data-depoid"), parseInt(btn.getAttribute("data-page")));
-                }
-            }
-        });
-    }
 
     // 5. Ürün Stok Geçmişi
     const seciliRafUrunleriTabloGovdesi = document.getElementById("urunTablosuGovdesi");

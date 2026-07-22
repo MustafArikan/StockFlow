@@ -23,11 +23,7 @@ document.getElementById('btnSubmitMaintenance').addEventListener('click', submit
 async function loadProductsForDropdown() {
     const token = localStorage.getItem('token');
     try {
-        const response = await fetch(`${CONFIG.API_BASE_URL}/products?pageNumber=1&pageSize=1000`, {
-            headers: { "Authorization": `Bearer ${token}` }
-        });
-        if (!response.ok) return;
-        const data = await response.json();
+        const data = await apiRequest('/products?pageNumber=1&pageSize=1000', 'GET');
         
         const select = document.getElementById('newAssetProduct');
         select.innerHTML = '<option value="">-- Bir Ürün Seçin --</option>';
@@ -47,11 +43,7 @@ async function loadProductsForDropdown() {
 async function loadUsersForDropdown() {
     const token = localStorage.getItem('token');
     try {
-        const response = await fetch(`${CONFIG.API_BASE_URL}/users`, {
-            headers: { "Authorization": `Bearer ${token}` }
-        });
-        if (!response.ok) return;
-        const users = await response.json();
+        const users = await apiRequest('/users', 'GET');
         
         const select = document.getElementById('assignUserSelect');
         select.innerHTML = '<option value="">-- Personel Seçin --</option>';
@@ -80,22 +72,7 @@ async function searchAsset() {
     if (!serial) return;
 
     try {
-        const token = localStorage.getItem('token');
-        const response = await fetch(`${CONFIG.API_BASE_URL}/assets/${encodeURIComponent(serial)}/timeline`, {
-            method: 'GET',
-            headers: { "Authorization": `Bearer ${token}` }
-        });
-
-        if (!response.ok) {
-            let errorMsg = "Cihaz bulunamadı veya yetkiniz yok!";
-            try {
-                const errData = await response.json();
-                if (errData && errData.message) errorMsg = errData.message;
-            } catch(e) {}
-            throw new Error(errorMsg);
-        }
-
-        const data = await response.json();
+        const data = await apiRequest(`/assets/${encodeURIComponent(serial)}/timeline`, 'GET');
         currentAssetId = data.assetInfo.id;
         
         document.getElementById('assetResultContainer').classList.remove('d-none');
@@ -215,22 +192,9 @@ async function submitMaintenance() {
 
 // Tüm Butonlar İçin Ortak Backend İletişim Fonksiyonu
 async function sendAssetAction(url, method, body) {
-    const token = localStorage.getItem('token');
     try {
-        const response = await fetch(url, {
-            method: method,
-            headers: {
-                "Authorization": `Bearer ${token}`,
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify(body)
-        });
-
-        const result = await response.json().catch(()=>({}));
-        if (!response.ok) {
-            alert("Hata: " + (result.message || "İşlem başarısız!"));
-            return;
-        }
+        const endpoint = url.replace(CONFIG.API_BASE_URL, '');
+        const result = await apiRequest(endpoint, method, body) || {};
 
         // Açık olan modal penceresini kapat
         document.querySelectorAll('.modal').forEach(m => {
@@ -260,26 +224,12 @@ async function submitCreateAsset() {
         return alert("Lütfen Ürün seçin ve Seri Numarası girin!");
     }
     
-    const token = localStorage.getItem('token');
     try {
-        const response = await fetch(`${CONFIG.API_BASE_URL}/assets`, {
-            method: 'POST',
-            headers: {
-                "Authorization": `Bearer ${token}`,
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({
-                productId: parseInt(productId),
-                serialNumber: serialNumber,
-                notes: notes
-            })
-        });
-        
-        const result = await response.json().catch(()=>({}));
-        if (!response.ok) {
-            alert("Hata: " + (result.message || "Cihaz eklenemedi!"));
-            return;
-        }
+        const result = await apiRequest('/assets', 'POST', {
+            productId: parseInt(productId),
+            serialNumber: serialNumber,
+            notes: notes
+        }) || {};
         
         alert("Harika! Yeni Demirbaş başarıyla sisteme kaydedildi.");
         

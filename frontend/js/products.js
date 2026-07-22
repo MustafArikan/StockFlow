@@ -6,7 +6,7 @@ let tumUrunler = [];
 let filtreliUrunler = [];
 const tabloGovdesi = document.getElementById("urunTablosuGovdesi");
 let currentPage = 1;
-const pageSize = 10;
+let pageSize = 10;
 
 let aktifArama = '';
 let siralamaSutunu = 'id';
@@ -201,20 +201,7 @@ async function handleExcelImport() {
     if(alertContainer) alertContainer.innerHTML = `<div class="alert alert-info rounded-3">Dosya satır satır denetleniyor, lütfen bekleyin...</div>`;
 
     try {
-        const response = await fetch(`${API_URL}/import`, {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${token}`
-            },
-            body: formData
-        });
-
-        if (!response.ok) {
-            const errData = await response.json();
-            throw new Error(errData.message || "İçe aktarma sırasında sunucu hatası oluştu.");
-        }
-
-        const report = await response.json();
+        const report = await apiRequest('/products/import', 'POST', formData);
         
         if(alertContainer) {
             let reportHtml = `
@@ -289,20 +276,7 @@ document.getElementById("aramaKutusu").addEventListener("keyup", (event) => {
 
 async function urunleriYukle(page = 1) {
     try {
-        const cevap = await fetch(`${API_URL}?pageNumber=1&pageSize=1000`, {
-            method: 'GET',
-            headers: { "Authorization": `Bearer ${token}` }
-        });
-
-        if (cevap.status === 401) {
-            localStorage.removeItem('token');
-            window.location.href = 'login.html';
-            return;
-        }
-
-        if (!cevap.ok) throw new Error("Sunucu hatası: " + cevap.status);
-
-        const sonuc = await cevap.json();
+        const sonuc = await apiRequest('/products?pageNumber=1&pageSize=1000', 'GET');
         tumUrunler = sonuc.items || sonuc;
         currentPage = page;
 
@@ -473,14 +447,7 @@ function buildCategoryCascader(containerId, hiddenInputId, selectedCategoryId = 
 
 async function dropdownKategorileriniYukle() {
     try {
-        const cevap = await fetch(`${CONFIG.API_BASE_URL}/categories?pageSize=1000`, {
-            method: "GET",
-            headers: { "Authorization": `Bearer ${token}` }
-        });
-
-        if (!cevap.ok) throw new Error("Kategoriler alınamadı.");
-
-        const data = await cevap.json();
+        const data = await apiRequest('/categories?pageSize=1000', 'GET');
         window.tumKategoriler = data.items || data;
         
         buildCategoryCascader('urunKategoriContainer', 'urunKategoriId', null, false);
@@ -531,13 +498,7 @@ document.getElementById('urunKategoriId').addEventListener('change', async funct
         if (attributeArea) attributeArea.classList.remove('d-none');
         if (container) container.innerHTML = '<div class="col-12 text-center"><div class="spinner-border spinner-border-sm text-primary"></div> Kurallar yükleniyor...</div>';        
         
-        const response = await fetch(`${CONFIG.API_BASE_URL}/attribute-rules/category/${categoryId}`, {
-            headers: { "Authorization": `Bearer ${token}` }
-        });
-        
-        if (!response.ok) throw new Error("Kurallar çekilemedi!");
-        
-        const rules = await response.json();
+        const rules = await apiRequest(`/attribute-rules/category/${categoryId}`, 'GET');
         // Backend'den gelen kurallar artık DisplayOrder değerine göre sıralanmış durumdadır.
         if (container) container.innerHTML = ''; // İçini temizle
 
@@ -787,48 +748,22 @@ function tabloyuCiz(urunler) {
 }
 
 function sayfalamayiCiz(totalPages, currentPage) {
-    const container = document.getElementById("paginationContainer");
-    if (!container) return;
-
-    if (totalPages <= 1) {
-        container.innerHTML = "";
-        return;
-    }
-
-    let html = `<nav><ul class="pagination pagination-sm mb-0 shadow-sm justify-content-center mt-3">`;
-    html += `<li class="page-item ${currentPage === 1 ? 'disabled' : ''}"><a class="page-link page-action" href="#" data-page="${currentPage - 1}">« Önceki</a></li>`;
-
-    for (let i = 1; i <= totalPages; i++) {
-        if (totalPages > 7) {
-            if (i === 1 || i === totalPages || (i >= currentPage - 1 && i <= currentPage + 1)) {
-                html += `<li class="page-item ${currentPage === i ? 'active' : ''}"><a class="page-link page-action" href="#" data-page="${i}">${i}</a></li>`;
-            } else if (i === 2 || i === totalPages - 1) {
-                html += `<li class="page-item disabled"><span class="page-link text-muted">...</span></li>`;
-            }
-        } else {
-            html += `<li class="page-item ${currentPage === i ? 'active' : ''}"><a class="page-link page-action" href="#" data-page="${i}">${i}</a></li>`;
-        }
-    }
-
-    html += `<li class="page-item ${currentPage === totalPages ? 'disabled' : ''}"><a class="page-link page-action" href="#" data-page="${currentPage + 1}">Sonraki »</a></li>`;
-    html += `</ul></nav>`;
-    container.innerHTML = html;
-}
-
-document.getElementById("paginationContainer").addEventListener("click", (e) => {
-    e.preventDefault();
-    const btn = e.target.closest(".page-action");
-    if (btn) {
-        const parentLi = btn.closest(".page-item");
-        if (parentLi && (parentLi.classList.contains("disabled") || parentLi.classList.contains("active"))) return;
-
-        const page = parseInt(btn.getAttribute("data-page"));
-        if (!isNaN(page)) {
-            currentPage = page;
+    buildPagination(
+        "paginationContainer", 
+        filtreliUrunler.length, 
+        currentPage, 
+        pageSize, 
+        (newPage) => {
+            currentPage = newPage;
+            veriyiGuncelle();
+        },
+        (newSize) => {
+            pageSize = newSize;
+            currentPage = 1;
             veriyiGuncelle();
         }
-    }
-});
+    );
+}
 
 document.getElementById("btnUrunKaydet").addEventListener("click", async () => {
     const form = document.getElementById("urunFormu");
@@ -893,29 +828,14 @@ document.getElementById("btnUrunKaydet").addEventListener("click", async () => {
     }
 
     const metod = id ? "PUT" : "POST";
-    const adres = id ? (`${API_URL}/${id}`) : API_URL;
+    const adres = id ? `/products/${id}` : '/products';
 
     try {
         const orjinalMetin = btnKaydet.innerText;
         btnKaydet.disabled = true;
         btnKaydet.innerText = "Kaydediliyor...";
 
-        const cevap = await fetch(adres, {
-            method: metod,
-            headers: {
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${token}`
-            },
-            body: JSON.stringify(urunVerisi)
-        });
-
-        if (cevap.status === 401) {
-            localStorage.removeItem('token');
-            window.location.href = 'login.html';
-            return;
-        }
-
-        if (!cevap.ok) throw new Error("İşlem başarısız: " + cevap.status);
+        await apiRequest(adres, metod, urunVerisi);
 
         const modalElement = document.getElementById("urunModal");
         const modalInstance = bootstrap.Modal.getOrCreateInstance(modalElement);
@@ -943,12 +863,7 @@ async function urunSil(id) {
     if (!onay) return;
 
     try {
-        const cevap = await fetch(`${API_URL}/${id}`, {
-            method: "DELETE",
-            headers: { "Authorization": `Bearer ${token}` }
-        });
-
-        if (!cevap.ok) throw new Error("Silme başarısız: " + cevap.status);
+        await apiRequest(`/products/${id}`, 'DELETE');
         urunleriYukle(currentPage);
     } catch (hata) {
         alert("Ürün silinemedi: " + hata.message);
@@ -1127,12 +1042,7 @@ dropdownKategorileriniYukle();
 
 async function dropdownDepolariYukle() {
     try {
-        const response = await fetch(`${CONFIG.API_BASE_URL}/warehouses?pageSize=1000`, {
-            method: "GET",
-            headers: { "Authorization": `Bearer ${token}` }
-        });
-        if (!response.ok) throw new Error("Depolar alınamadı.");
-        const data = await response.json();
+        const data = await apiRequest('/warehouses?pageSize=1000', 'GET');
         const depolar = data.items || data;
         const select = document.getElementById("urunDepoId");
         if (select) {
@@ -1162,12 +1072,7 @@ document.getElementById("urunDepoId").addEventListener("change", async function(
     try {
         rafSelect.disabled = false;
         rafSelect.innerHTML = '<option value="">Yükleniyor...</option>';
-        const response = await fetch(`${CONFIG.API_BASE_URL}/locations/by-warehouse/${warehouseId}?pageSize=1000`, {
-            method: "GET",
-            headers: { "Authorization": `Bearer ${token}` }
-        });
-        if (!response.ok) throw new Error("Raflar alınamadı.");
-        const data = await response.json();
+        const data = await apiRequest(`/locations/by-warehouse/${warehouseId}?pageSize=1000`, 'GET');
         const raflar = data.items || data;
         
         rafSelect.innerHTML = '<option value="">Raf seçin...</option>';
@@ -1215,13 +1120,7 @@ document.getElementById('filtreKategoriId')?.addEventListener('change', async fu
         currentPage = 1;
         veriyiGuncelle();
         
-        const response = await fetch(`${CONFIG.API_BASE_URL}/attribute-rules/category/${categoryId}`, {
-            headers: { "Authorization": `Bearer ${token}` }
-        });
-        
-        if (!response.ok) throw new Error("Kurallar çekilemedi!");
-        
-        const rules = await response.json();
+        const rules = await apiRequest(`/attribute-rules/category/${categoryId}`, 'GET');
         // rules.reverse(); KALDIRILDI çünkü DisplayOrder kullanılıyor
 
         filterContainer.innerHTML = '';

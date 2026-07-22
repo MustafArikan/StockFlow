@@ -1,4 +1,4 @@
-﻿const API_URL = `${CONFIG.API_BASE_URL}/notifications`;
+const API_URL = `${CONFIG.API_BASE_URL}/notifications`;
 const token = localStorage.getItem("token");
 
 // 1. SECURITY CONTROL: Redirect to login if token is missing
@@ -35,25 +35,8 @@ function escapeHtml(text) {
 // 3. FETCH NOTIFICATIONS FROM API
 async function loadNotifications() {
     try {
-        const url = filterOnlyUnread ? `${API_URL}?onlyUnread=true` : API_URL;
-
-        const response = await fetch(url, {
-            method: "GET",
-            headers: {
-                "Authorization": `Bearer ${token}`,
-                "Accept": "application/json"
-            }
-        });
-
-        if (response.status === 401) {
-            localStorage.removeItem("token");
-            window.location.href = "login.html";
-            return;
-        }
-
-        if (!response.ok) throw new Error("Bildirimler yüklenemedi.");
-
-        const notifications = await response.json();
+        const endpoint = filterOnlyUnread ? '/notifications?onlyUnread=true' : '/notifications';
+        const notifications = await apiRequest(endpoint, 'GET');
         renderNotifications(notifications);
     } catch (error) {
         document.getElementById("notificationList").innerHTML = 
@@ -89,7 +72,7 @@ function renderNotifications(notificationsList) {
 
         const opacityClass = notification.isRead ? "opacity-50" : "";
         const isDanger = notification.severity === "DANGER";
-        const isAdmin = userRole === "admin";
+        const isAdmin = ["admin", "superadmin"].includes(getUserRole());
         
         const card = document.createElement("div");
         card.className = `card border shadow-sm rounded-3 p-3 notification-card ${borderClass} ${opacityClass}`;
@@ -137,18 +120,7 @@ document.getElementById("notificationList").addEventListener("click", (e) => {
 // 5. MARK SINGLE NOTIFICATION AS READ
 async function markNotificationAsRead(id) {
     try {
-        const response = await fetch(`${API_URL}/${id}/read`, {
-            method: "PUT",
-            headers: {
-                "Authorization": `Bearer ${token}`
-            }
-        });
-
-        if (!response.ok) {
-            const errorData = await response.json();
-            alert(errorData.message || "İşlem başarısız.");
-            return;
-        }
+        await apiRequest(`/notifications/${id}/read`, 'PUT');
 
         loadNotifications();
     } catch (error) {
@@ -159,14 +131,7 @@ async function markNotificationAsRead(id) {
 // 6. MARK ALL AS READ (Bulk update)
 async function markAllNotificationsAsRead() {
     try {
-        const response = await fetch(`${API_URL}/read-all`, {
-            method: "POST",
-            headers: {
-                "Authorization": `Bearer ${token}`
-            }
-        });
-
-        if (!response.ok) throw new Error("İşlem başarısız.");
+        await apiRequest('/notifications/read-all', 'POST');
         
         loadNotifications();
     } catch (error) {

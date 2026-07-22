@@ -22,7 +22,7 @@
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
-                                <ul class="navbar-nav me-auto">
+                <ul class="navbar-nav me-auto">
                     <li class="nav-item"><a class="nav-link" href="index.html">Ana Sayfa</a></li>
                     <li class="nav-item"><a class="nav-link" href="categories.html">Kategoriler</a></li>
                     <li class="nav-item"><a class="nav-link" href="products.html">Ürünler</a></li>
@@ -38,7 +38,7 @@
                         title="Temayı Değiştir">
                         <i class="bi bi-moon-fill" id="themeIcon"></i>
                     </button>
-                    <span id="userProfile" class="me-3 small fw-bold text-white-50"></span>
+                    <a href="profile.html" id="userProfile" class="me-3 small fw-bold text-white-50 text-decoration-none border border-secondary rounded-pill px-3 py-1 bg-dark bg-opacity-25" title="Profil Ayarları"></a>
                     <button id="btnNavbarLogout" class="btn btn-sm btn-outline-danger rounded-pill px-3">Çıkış
                         Yap</button>
                 </div>
@@ -79,7 +79,7 @@
                         </tbody>
                     </table>
                 </div>
-                <div id="paginationContainer" class="mt-3"></div>
+
             </div>
         </div>
     </div>
@@ -100,9 +100,8 @@
                         </div>
                         <div class="mb-4">
                             <label class="form-label text-muted small fw-bold">Üst Kategori (Opsiyonel)</label>
-                            <select class="form-select" id="ustKategoriId">
-                                <option value="">Yok (Ana Kategori Olarak Ekle)</option>
-                            </select>
+                            <div id="ustKategoriContainer" class="d-flex flex-column gap-2"></div>
+                            <input type="hidden" id="ustKategoriId" value="">
                         </div>
                         <button type="button" id="btnKategoriKaydet"
                             class="btn btn-primary w-100 rounded-pill py-2 fw-bold">Ekle ve Kaydet</button>

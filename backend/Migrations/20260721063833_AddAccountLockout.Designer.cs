@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using stok_takip.Data;
 
@@ -11,9 +12,11 @@ using stok_takip.Data;
 namespace backend.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260721063833_AddAccountLockout")]
+    partial class AddAccountLockout
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -635,10 +638,6 @@ namespace backend.Migrations
                         .HasColumnType("nvarchar(max)")
                         .HasColumnName("email_confirmation_code");
 
-                    b.Property<int>("FailedLoginAttempts")
-                        .HasColumnType("int")
-                        .HasColumnName("failed_login_attempts");
-
                     b.Property<string>("FirstName")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)")
@@ -651,10 +650,6 @@ namespace backend.Migrations
                     b.Property<bool>("IsEmailConfirmed")
                         .HasColumnType("bit")
                         .HasColumnName("is_email_confirmed");
-
-                    b.Property<DateTime?>("LastFailedLoginAttempt")
-                        .HasColumnType("datetime2")
-                        .HasColumnName("last_failed_login_attempt");
 
                     b.Property<string>("LastName")
                         .IsRequired()
@@ -673,10 +668,6 @@ namespace backend.Migrations
                     b.Property<DateTime?>("PasswordResetCodeExpiry")
                         .HasColumnType("datetime2")
                         .HasColumnName("password_reset_code_expiry");
-
-                    b.Property<string>("PhoneNumber")
-                        .HasColumnType("nvarchar(max)")
-                        .HasColumnName("phone_number");
 
                     b.Property<string>("Role")
                         .IsRequired()
