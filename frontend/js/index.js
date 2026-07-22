@@ -274,6 +274,7 @@ document.getElementById("trendProductFilter")?.addEventListener("change", async 
     }
 });
 
+// Son 30 Gün Stok Hareket Trend grafiğini çizer
 function renderTrendChart(data) {
     const ctx = document.getElementById('trendChart');
     if (!ctx || typeof Chart === 'undefined') return;
@@ -325,7 +326,7 @@ function renderTrendChart(data) {
             labels: labels,
             datasets: [
                 {
-                    label: 'Stok Girişi',
+                    label: ' Stok Girişi',
                     data: girisData,
                     borderColor: '#198754',
                     backgroundColor: gradientGiris,
@@ -337,7 +338,7 @@ function renderTrendChart(data) {
                     pointBackgroundColor: '#198754'
                 },
                 {
-                    label: 'Stok Çıkışı',
+                    label: ' Stok Çıkışı',
                     data: cikisData,
                     borderColor: '#dc3545',
                     backgroundColor: gradientCikis,
@@ -349,7 +350,7 @@ function renderTrendChart(data) {
                     pointBackgroundColor: '#dc3545'
                 },
                 {
-                    label: 'Transfer',
+                    label: ' Transfer',
                     data: transferData,
                     borderColor: '#0dcaf0',
                     backgroundColor: gradientTransfer,
@@ -364,12 +365,12 @@ function renderTrendChart(data) {
         },
         options: {
             responsive: true,
-            maintainAspectRatio: false,
+            maintainAspectRatio: false,          
             interaction: { mode: 'index', intersect: false },
             plugins: {
                 legend: {
                     position: 'top', align: 'end',
-                    labels: { color: textColor, usePointStyle: true, boxWidth: 8, font: { family: "'Inter', sans-serif", weight: '600' } }
+                    labels: { color: textColor, padding: 25, usePointStyle: true, boxWidth: 8, font: { family: "'Inter', sans-serif", weight: '600' } }
                 },
                 tooltip: {
                     backgroundColor: isDark ? 'rgba(30, 31, 36, 0.95)' : 'rgba(255, 255, 255, 0.95)',
@@ -419,7 +420,11 @@ function renderMovementSummaryChart(data) {
         },
         options: {
             responsive: true,
-            maintainAspectRatio: false,    
+            maintainAspectRatio: false,
+            // Fare grafiğin üzerindeyken el işareti (pointer) yapması için gereken kod:
+            onHover: (event, chartElement) => {
+                event.native.target.style.cursor = chartElement[0] ? 'pointer' : 'default';
+            },    
             onClick: (event, elements) => {
                 if (elements.length > 0) {
                     const index = elements[0].index;
@@ -489,6 +494,10 @@ function renderCategoryChart(data) {
             responsive: true,
             maintainAspectRatio: false,
             cutout: '55%',
+            // Fare grafiğin üzerindeyken el işareti (pointer) yapması için gereken kod:
+            onHover: (event, chartElement) => {
+                event.native.target.style.cursor = chartElement[0] ? 'pointer' : 'default';
+            },
             onClick: (event, elements) => {
                 if (elements.length > 0) {
                     const index = elements[0].index;
@@ -546,7 +555,7 @@ function renderTopProductsChart(data) {
                 labels: safeData.map(d => d.urunAdi || d.UrunAdi || d.barkod || "İsimsiz Ürün"),
                 datasets: [
                     {
-                        label: 'Stok Girişi',
+                        label: ' Stok Girişi',
                         data: safeData.map(d => d.girisMiktari || d.GirisMiktari || 0),
                         backgroundColor: '#198754', 
                         barPercentage: 0.65, 
@@ -554,7 +563,7 @@ function renderTopProductsChart(data) {
                         borderRadius: 3
                     },
                     {
-                        label: 'Stok Çıkışı',
+                        label: ' Stok Çıkışı',
                         data: safeData.map(d => d.cikisMiktari || d.CikisMiktari || 0),
                         backgroundColor: '#dc3545', 
                         barPercentage: 0.65,
@@ -562,7 +571,7 @@ function renderTopProductsChart(data) {
                         borderRadius: 3
                     },
                     {
-                        label: 'Transfer',
+                        label: ' Transfer',
                         data: safeData.map(d => d.transferMiktari || d.TransferMiktari || 0),
                         backgroundColor: '#0dcaf0', 
                         barPercentage: 0.65,
@@ -582,7 +591,7 @@ function renderTopProductsChart(data) {
                     legend: {
                         display: true,
                         position: 'top',
-                        labels: { color: textColor, usePointStyle: true, font: { size: 12, family: "'Inter', sans-serif" } }
+                        labels: { color: textColor, padding: 25, usePointStyle: true, font: { size: 12, family: "'Inter', sans-serif" } }
                     },
                     tooltip: {
                         mode: 'y', 
