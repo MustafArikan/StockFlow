@@ -1,21 +1,21 @@
 // const CONFIG = {
-//     API_BASE_URL: 'http://localhost:5000/api', // 5136'yÄ± 5000 yaptÄ±k!
+//     API_BASE_URL: 'http://localhost:5000/api', // 5136'yi 5000 yaptik!
 // }
 
-// --- AkÄ±llÄ± Port Tespiti (Auto-Discovery) ---
+// --- Akilli Port Tespiti (Auto-Discovery) ---
 let activePort = localStorage.getItem('API_PORT_OVERRIDE');
 
 if (!activePort) {
-    // EÄŸer override yoksa 5000 portuna istek at
+    // Eger override yoksa 5000 portuna istek at
     try {
         const xhr = new XMLHttpRequest();
         // senkron istek
         xhr.open('GET', 'http://localhost:5000/api/health', false);
         xhr.send(null);
-        // Hata yoksa 5000 portu ayaktadÄ±r ve cevap veriyordur
+        // Hata yoksa 5000 portu ayaktadir ve cevap veriyordur
         activePort = '5000';
     } catch (error) {
-        // 5000 portuna ulaÅŸÄ±lamazsa
+        // 5000 portuna ulasilamazsa
         activePort = '5136';
     }
 }
@@ -59,7 +59,7 @@ function hasPermission(action) {
     return PERMISSIONS[role] && PERMISSIONS[role].includes(action);
 }
 
-// Merkezi Åifre GÃ¶ster/Gizle Ä°ÅŸlemi (Event Delegation / CSP Uyumlu)
+// Merkezi Şifre Göster/Gizle İşlemi (Event Delegation / CSP Uyumlu)
 document.addEventListener('click', function(e) {
     const btn = e.target.closest('.toggle-password');
     if (btn) {
@@ -85,9 +85,9 @@ document.addEventListener('click', function(e) {
     }
 });
 
-// Modal Ä°Ã§inde Enter Ä°le Kaydetme (Event Delegation / TÃ¼m Sayfalarda Ortak)
-// Form etiketiyle sarÄ±lÄ± olsun ya da olmasÄ±n, bir modal iÃ§indeki metin kutusunda
-// Enter'a basÄ±lÄ±nca o modalÄ±n birincil (kaydet/oluÅŸtur) butonunu tetikler.
+// Modal Girişinde Enter Tuşu ile Kaydetme (Event Delegation / Tüm Sayfalarda Ortak)
+// Form etiketiyle sarılı olsun ya da olmasın, bir modal içindeki metin kutusunda
+// Enter'a basılınca o modalın birincil (kaydet/oluştur) butonunu tetikler.
 document.addEventListener('keydown', function(e) {
     if (e.key !== 'Enter') return;
 
@@ -100,7 +100,7 @@ document.addEventListener('keydown', function(e) {
     const modal = aktifEleman.closest('.modal');
     if (!modal) return;
 
-    e.preventDefault(); // Form varsa sayfanÄ±n yenilenmesini engelle
+    e.preventDefault(); // Form varsa sayfanin yenilenmesini engelle
 
     const kaydetButonu = modal.querySelector('.btn-primary:not(.btn-close), .btn-success:not(.btn-close)');
     if (kaydetButonu && !kaydetButonu.disabled) {
@@ -120,7 +120,7 @@ async function apiRequest(endpoint, method = 'GET', bodyData = null) {
     };
     if (bodyData) {
         if (bodyData instanceof FormData) {
-            // FormData kullanÄ±ldÄ±ÄŸÄ±nda Content-Type'Ä± tarayÄ±cÄ± otomatik belirlemelidir (boundary vb. ekler)
+            // FormData kullanildiginda Content-Type'i tarayici otomatik belirlemelidir (boundary vb. ekler)
             options.body = bodyData;
         } else {
             headers['Content-Type'] = 'application/json';
@@ -129,16 +129,16 @@ async function apiRequest(endpoint, method = 'GET', bodyData = null) {
     }
     const response = await fetch(`${CONFIG.API_BASE_URL}${endpoint  }`, options);
     if (response.status === 401) {
-        // Token geÃ§ersiz veya sÃ¼resi dolmuÅŸ, kullanÄ±cÄ±yÄ± Ã§Ä±kÄ±ÅŸ yapmaya zorla
+        // Token gecersiz veya suresi dolmus, kullaniciyi cikis yapmaya zorla
         localStorage.removeItem('token');
         window.location.href = '/login.html';
-        throw new Error('Oturum sÃ¼resi doldu veya yetkisiz eriÅŸim. LÃ¼tfen tekrar giriÅŸ yapÄ±n.');
+        throw new Error('Oturum suresi doldu veya yetkisiz erisim. Lutfen tekrar giris yapin.');
     }
     const isJson = response.headers.get('content-type')?.includes('application/json');
     const data = isJson ? await response.json() : null;
 
     if (!response.ok) {
-        const errorMessage = data?.message || 'Sunucu ile iletiÅŸimde bir hata oluÅŸtu.';
+        const errorMessage = data?.message || 'Sunucu ile iletisimde bir hata olustu.';
         throw new Error(errorMessage);
     }
     return data;

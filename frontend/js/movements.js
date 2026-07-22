@@ -1,4 +1,4 @@
-const API_URL = `${CONFIG.API_BASE_URL}/stock/movements`;
+﻿const API_URL = `${CONFIG.API_BASE_URL}/stock/movements`;
 const token = localStorage.getItem('token');
 
 if (!token) window.location.href = 'login.html';
@@ -24,7 +24,7 @@ const tabloGovdesi = document.getElementById("hareketTablosuGövdesi");
 const aramaKutusu = document.getElementById("aramaKutusu");
 
 // Sayfalama, Arama ve Sıralama Durumları
-let currentPage = 1;
+window.window.currentPage = 1;
 let pageSize = 10;
 let aktifFiltre = 'TUMU';
 let aktifArama = '';
@@ -35,63 +35,7 @@ let siralamaYonu = 'desc';
 // 1. ARAMA, FİLTRELEME VE KUSURSUZ SIRALAMA
 // ==========================================
 function veriyiGuncelle() {
-    // 1. Buton Filtresi
-    let islenmisVeri = stokHareketleri;
-    if (aktifFiltre !== 'TUMU') {
-        const fTipi = aktifFiltre === 'GIRIS' ? 'IN' : 'OUT';
-        islenmisVeri = islenmisVeri.filter(h => (h.movementType || h.islemTipi) === fTipi || (h.movementType || h.islemTipi) === aktifFiltre);
-    }
-
-    // 2. Arama Çubuğu
-    if (aktifArama.trim() !== '') {
-        islenmisVeri = islenmisVeri.filter(h =>
-            ((h.urunAdı || h.urunAdi || h.productName || "").toLowerCase().includes(aktifArama)) ||
-            ((h.urunKodu || "").toLowerCase().includes(aktifArama)) ||
-            ((h.personel || "").toLowerCase().includes(aktifArama))
-        );
-    }
-
-    // 3. Sıralama Motoru (Tarih, Sayı ve Türkçe A-Z)
-    islenmisVeri.sort((a, b) => {
-        let valA = a[siralamaSutunu];
-        let valB = b[siralamaSutunu];
-
-        if (siralamaSutunu === "urunAdi") {
-            valA = a.urunAdi || a.urunAdı || a.productName || '';
-            valB = b.urunAdi || b.urunAdı || b.productName || '';
-        } else if (siralamaSutunu === "islemTipi") {
-            valA = (a.islemTipi || a.movementType) === 'IN' || (a.islemTipi || a.movementType) === 'GIRIS' ? 'GIRIS' : 'CIKIS';
-            valB = (b.islemTipi || b.movementType) === 'IN' || (b.islemTipi || b.movementType) === 'GIRIS' ? 'GIRIS' : 'CIKIS';
-        } else {
-            valA = valA != null ? valA : '';
-            valB = valB != null ? valB : '';
-        }
-
-        if (siralamaSutunu === 'tarih') {
-            const tarihA = new Date(valA).getTime() || 0;
-            const tarihB = new Date(valB).getTime() || 0;
-            return siralamaYonu === 'asc' ? tarihA - tarihB : tarihB - tarihA;
-        }
-
-        if (siralamaSutunu === 'quantity') {
-            return siralamaYonu === 'asc' ? Number(valA) - Number(valB) : Number(valB) - Number(valA);
-        }
-
-        valA = valA.toString();
-        valB = valB.toString();
-        return siralamaYonu === 'asc' ? valA.localeCompare(valB, 'tr') : valB.localeCompare(valA, 'tr');
-    });
-
-    // 4. Sayfalama Kesimi
-    const toplamSayfa = Math.ceil(islenmisVeri.length / pageSize) || 1;
-    if (currentPage > toplamSayfa) currentPage = toplamSayfa;
-
-    const baslangic = (currentPage - 1) * pageSize;
-    const bitis = baslangic + pageSize;
-    const sayfadakiVeriler = islenmisVeri.slice(baslangic, bitis);
-
-    tabloyuCiz(sayfadakiVeriler);
-    sayfalamayiCiz(islenmisVeri.length);
+    hareketleriYukle();
 }
 
 function sirala(sutun) {
@@ -120,10 +64,20 @@ function sirala(sutun) {
 // ==========================================
 async function hareketleriYukle() {
     try {
-        const sonuc = await apiRequest('/stock/movements?pageNumber=1&pageSize=10000', 'GET');
-        stokHareketleri = sonuc.items || sonuc || [];
-
-        veriyiGuncelle();
+        let filterStr = aktifFiltre !== 'TUMU' ? `&type=${aktifFiltre}` : '';
+        let searchStr = aktifArama ? `&search=${encodeURIComponent(aktifArama)}` : '';
+        let sortStr = siralamaSutunu ? `&sort=${siralamaSutunu}_${siralamaYonu}` : '';
+        
+        const sonuc = await apiRequest(`/stock/movements?pageNumber=${window.currentPage}&pageSize=${pageSize}${filterStr}${searchStr}${sortStr}`, 'GET');
+        
+        const data = sonuc.items || sonuc || [];
+        tabloyuCiz(data);
+        
+        if (sonuc.totalRecords !== undefined) {
+            sayfalamayiCiz(sonuc.totalRecords, window.currentPage);
+        } else {
+            sayfalamayiCiz(data.length, window.currentPage);
+        }
     } catch (hata) {
         tabloGovdesi.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-danger">Bağlantı Hatası: ${hata.message}</td></tr>`;
         const paginationContainer = document.getElementById("paginationContainer");
@@ -188,19 +142,19 @@ function tabloyuCiz(veriListesi) {
     tabloGovdesi.innerHTML = satirlar.join("");
 }
 
-function sayfalamayiCiz(totalItems) {
+function sayfalamayiCiz(totalItems, currentPage) {
     buildPagination(
         "paginationContainer", 
         totalItems, 
         currentPage, 
         pageSize, 
         (newPage) => {
-            currentPage = newPage;
+            window.currentPage = newPage;
             veriyiGuncelle();
         },
         (newSize) => {
             pageSize = newSize;
-            currentPage = 1;
+            window.currentPage = 1;
             veriyiGuncelle();
         }
     );
@@ -234,13 +188,13 @@ function aktifButonuGuncelle(aktifId) {
     });
 }
 
-document.getElementById("btnTumu").addEventListener("click", () => { aktifFiltre = 'TUMU'; aktifButonuGuncelle("btnTumu"); currentPage = 1; veriyiGuncelle(); });
-document.getElementById("btnGirisler").addEventListener("click", () => { aktifFiltre = 'GIRIS'; aktifButonuGuncelle("btnGirisler"); currentPage = 1; veriyiGuncelle(); });
-document.getElementById("btnCikislar").addEventListener("click", () => { aktifFiltre = 'CIKIS'; aktifButonuGuncelle("btnCikislar"); currentPage = 1; veriyiGuncelle(); });
+document.getElementById("btnTumu").addEventListener("click", () => { aktifFiltre = 'TUMU'; aktifButonuGuncelle("btnTumu"); window.currentPage = 1; veriyiGuncelle(); });
+document.getElementById("btnGirisler").addEventListener("click", () => { aktifFiltre = 'GIRIS'; aktifButonuGuncelle("btnGirisler"); window.currentPage = 1; veriyiGuncelle(); });
+document.getElementById("btnCikislar").addEventListener("click", () => { aktifFiltre = 'CIKIS'; aktifButonuGuncelle("btnCikislar"); window.currentPage = 1; veriyiGuncelle(); });
 
 document.getElementById("aramaKutusu").addEventListener("keyup", (event) => {
     aktifArama = event.target.value.toLowerCase();
-    currentPage = 1;
+    window.currentPage = 1;
     veriyiGuncelle();
 });
 
@@ -273,6 +227,21 @@ async function dropdownUrunleriYukle() {
     }
 }
 
+async function dropdownLokasyonlariYukle() {
+    const sourceSelect = document.getElementById("sourceLocationId");
+    const targetSelect = document.getElementById("targetLocationId");
+    try {
+        const data = await apiRequest('/locations?pageSize=1000', 'GET');
+        tumLokasyonlar = data.items || data;
+
+        sourceSelect.innerHTML = '<option value="" selected disabled>Kaynak raf seçiniz...</option>';
+        targetSelect.innerHTML = '<option value="" selected disabled>Hedef raf seçiniz...</option>';
+
+        tumLokasyonlar.forEach(lok => {
+            const optSource = document.createElement("option"); optSource.value = lok.id; optSource.textContent = lok.code;
+            const optTarget = document.createElement("option"); optTarget.value = lok.id; optTarget.textContent = lok.code;
+            sourceSelect.appendChild(optSource);
+            targetSelect.appendChild(optTarget);
         });
     } catch (hata) {
         console.error("Lokasyon yükleme hatası:", hata);
@@ -435,7 +404,7 @@ async function dropdownTedarikcileriYukle() {
 async function baslat() {
     await dropdownTedarikcileriYukle();
     await dropdownUrunleriYukle();
-    await dropdownIslemDepolariYukle();
+    await dropdownLokasyonlariYukle();
     await hareketleriYukle();
 }
 baslat();
