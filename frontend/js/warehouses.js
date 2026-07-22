@@ -54,14 +54,12 @@ document.getElementById("btnNavbarLogout")?.addEventListener("click", () => {
 // 1. KATMAN: DEPO İŞLEMLERİ 
 // ============================================================================
 
-async function depolariYukle(page = 1) {
+async function depolariYukle() {
     try {
-        const sonuc = await apiRequest(`/warehouses?pageNumber=${page}&pageSize=${depoPageSize}`, 'GET');
+        const sonuc = await apiRequest(`/warehouses?pageSize=1000`, 'GET');
         tumDepolar = sonuc.items || sonuc;      
-        depoPage = sonuc.currentPage || 1;
 
         depolariFiltreleVeCiz();
-        sayfalamayiCizDepolar(sonuc.totalRecords || 0, depoPage);
         yoneticileriYukle();
     } catch (hata) {
         const container = document.getElementById("depoKartlariContainer");
@@ -69,21 +67,7 @@ async function depolariYukle(page = 1) {
     }
 }
 
-function sayfalamayiCizDepolar(totalItems, currentPage) {
-    buildPagination(
-        "depoPaginationContainer", 
-        totalItems, 
-        currentPage, 
-        depoPageSize, 
-        (newPage) => {
-            depolariYukle(newPage);
-        },
-        (newSize) => {
-            depoPageSize = newSize;
-            depolariYukle(1);
-        }
-    );
-}
+
 
 function depolariFiltreleVeCiz() {
     const aramaKutusu = document.getElementById("aramaKutusuDepo") || document.getElementById("aramaKutusu");
@@ -750,7 +734,7 @@ document.getElementById("btnGeriDonDepolara")?.addEventListener("click", () => {
     document.getElementById("urunListesiGorunumu").classList.add("d-none");
     document.getElementById("depoListesiGorunumu").classList.remove("d-none");
     aktifDepoId = null;
-    depolariYukle(depoPage); 
+    depolariYukle(); 
 });
 
 document.getElementById("btnGeriDonRaflara")?.addEventListener("click", () => {
