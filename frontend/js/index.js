@@ -1,4 +1,4 @@
-﻿const token = localStorage.getItem('token');
+const token = localStorage.getItem('token');
 
 if (!token) {
     window.location.href = 'login.html';
@@ -86,122 +86,97 @@ document.addEventListener('DOMContentLoaded', () => {
 
 async function loadDashboardSummary() {
     try {
-            const response = await fetch(`${CONFIG.API_BASE_URL}/reports/dashboard-summary`, {  
-                method: 'GET',
-                headers: {
-                    "Authorization": `Bearer ${token}`
-                }
-            });
-            
-            if (response.status == 401) {
-                logout();
-                return;
+        const data = await apiRequest('/reports/dashboard-summary', 'GET');
+        
+        document.getElementById('totalProducts').textContent = data.toplamUrunCesidi || 0;
+        document.getElementById('lowStockCount').textContent = data.kritikStoktakiUrunSayisi || 0;
+        document.getElementById('monthlyInputs').textContent = data.aylikGiris || 0;
+        document.getElementById('monthlyOutputs').textContent = data.aylikCikis || 0;
+
+        document.getElementById('totalProductsValue').textContent = formatCurrency(data.toplamStokDegeri || 0);
+
+        if (data.sonIslemler && Array.isArray(data.sonIslemler)) {
+            const list = document.getElementById('recentActivityList');
+            if (list) {
+                list.innerHTML = '';
+                data.sonIslemler.forEach(islem => {
+                    let icon = 'bi-arrow-right-circle text-secondary';
+                    let badge = 'bg-secondary';
+                    if (islem.type === 'GIRIS') { icon = 'bi-arrow-down-circle text-success'; badge = 'bg-success'; }
+                    else if (islem.type === 'CIKIS') { icon = 'bi-arrow-up-circle text-danger'; badge = 'bg-danger'; }
+                    else if (islem.type === 'TRANSFER') { icon = 'bi-arrow-left-right text-info'; badge = 'bg-info'; }
+
+                    list.innerHTML += `
+                        <div class="activity-item pb-3 mb-3 border-bottom">
+                            <div class="d-flex align-items-center">
+                                <i class="bi ${icon} fs-4 me-3"></i>
+                                <div>
+                                    <h6 class="mb-0 fw-bold">${islem.productName}</h6>
+                                    <small class="text-muted">${new Date(islem.createdAt).toLocaleString('tr-TR')} - ${islem.quantity} Adet <span class="badge ${badge} ms-1">${islem.type}</span></small>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
             }
-
-            if (!response.ok) throw new Error("Dashboard verileri alınamadı.");
-                 
-            const data = await response.json();
-
-            document.getElementById("totalProductsText").textContent = data.totalProducts;
-            document.getElementById("activeWarehousesText").textContent = data.totalWarehouses;
-            document.getElementById("criticalAlertsText").textContent = data.criticalAlertsCount;
-    }
-    catch (error) {
-        console.error("Dashboard yükleme hatası:", error);
+        }
+    } catch (error) {
+        console.error("Dashboard özeti yüklenemedi:", error);
     }
 }
 
 async function loadNavbarNotifications() {
     try {
-        const response = await fetch(`${CONFIG.API_BASE_URL}/notifications?onlyUnread=true`, {
-            method: 'GET',
-            headers: {
-                "Authorization": `Bearer ${token}`
-            }
-        });
+        const notifications = await apiRequest('/notifications?onlyUnread=true', 'GET');
+        const list = document.getElementById("navbarNotificationList");
+        const badge = document.getElementById("navbarNotificationCount");
+        
+        if (!list || !badge) return;
 
-        if (response.status == 401) {
-            logout();
+        list.innerHTML = "";
+        
+        if (!notifications || notifications.length === 0) {
+            badge.classList.add("d-none");
+            list.innerHTML = '<li class="text-center text-muted py-3 small">Yeni bildiriminiz yok.</li>';
             return;
         }
 
-        if (!response.ok) throw new Error("Bildirimler alınamadı.");
-
-        const notifications = await response.json();
-        renderNavbarNotifications(notifications);
-    } catch (error) {
-        console.error("Zil bildirimleri yükleme hatası:", error);
-    }
-}
-
-function renderNavbarNotifications(notifications) {
-    const badge = document.getElementById("notificationBadge");
-    const list = document.getElementById("navbarNotificationList");
-
-    if (!badge || !list) return;
-
-    const count = notifications.length;
-    if (count > 0) {
-        badge.textContent = count;
+        badge.textContent = notifications.length;
         badge.classList.remove("d-none");
-    } else {
-        badge.classList.add("d-none");
-    }
 
-    if (count === 0) {
-        list.innerHTML = `<li class="text-center text-muted py-3 small">Kritik stok uyarısı bulunmamaktadır.</li>`;
-        return;
-    }
+        // En son 5 bildirimi göster (eğer çok varsa)
+        const recentNotifications = notifications.slice(0, 5);
 
-    const recentNotifications = notifications.slice(0, 4);
-    list.innerHTML = ""; // Clear existing first
-    
-    recentNotifications.forEach(notification => {
-        let iconClass = "bi-exclamation-triangle-fill text-warning";
-        if (notification.severity === "CRITICAL") {
-            iconClass = "bi-exclamation-circle-fill text-orange-custom";
-        } else if (notification.severity === "DANGER" || notification.severity === "EMPTY_STOCK") {
-            iconClass = "bi-shield-fill-x text-danger";
-        } else if (notification.severity === "INFO") {
-            iconClass = "bi-info-circle-fill text-secondary";
-        }
-        
-        const li = document.createElement("li");
-        li.className = "p-2 border-bottom small rounded hover-bg";
-        
-        li.innerHTML = `
-            <div class="d-flex align-items-start">
-                <i class="bi ${iconClass} me-2"></i>
-                <div class="flex-1-min-0">
-                    <p class="mb-0 text-dark text-truncate fs-085 safe-message-container"></p>
-                    <small class="text-muted fs-075">${new Date(notification.createdAt).toLocaleTimeString("tr-TR", {hour: '2-digit', minute:'2-digit'})}</small>
+        recentNotifications.forEach(n => {
+            const li = document.createElement("li");
+            li.className = "dropdown-item border-bottom pb-2 mb-2 px-3 py-2";
+            li.style.whiteSpace = "normal";
+            li.innerHTML = `
+                <div class="d-flex align-items-start">
+                    <div class="me-3 mt-1 text-danger">
+                        <i class="bi bi-exclamation-circle-fill fs-5"></i>
+                    </div>
+                    <div>
+                        <div class="fw-bold small mb-1">${n.title}</div>
+                        <div class="text-muted small mb-1" style="font-size: 0.8rem;">${n.message}</div>
+                        <div class="text-secondary small" style="font-size: 0.75rem;">${new Date(n.createdAt).toLocaleString('tr-TR')}</div>
+                    </div>
                 </div>
-            </div>
-        `;
-        
-        const msgContainer = li.querySelector(".safe-message-container");
-        msgContainer.title = notification.message;
-        msgContainer.textContent = notification.message; // GÜVENLİ XSS koruması
-        
-        list.appendChild(li);
-    });
+            `;
+            list.appendChild(li);
+        });
+
+    } catch (error) {
+        console.error("Bildirimler yüklenemedi:", error);
+    }
 }
 
 async function markAllAsRead() {
     try {
-        const response = await fetch(`${CONFIG.API_BASE_URL}/notifications/read-all`, {
-            method: "POST",
-            headers: {
-                "Authorization": `Bearer ${token}`
-            }
-        });
-
-        if (!response.ok) throw new Error("İşlem başarısız.");
-
-        loadDashboardSummary();
+        await apiRequest('/notifications/read-all', 'POST');
         loadNavbarNotifications();
     } catch (error) {
-        console.error("Tümünü okundu işaretleme hatası:", error);
+        console.error("Bildirimler okundu işaretlenemedi:", error);
     }
 }
 
@@ -226,18 +201,18 @@ function getChartGridColor() {
     return document.documentElement.getAttribute('data-theme') === 'dark' ? '#40424c' : '#d8dce2';
 }
 
-// Sunucudan 3 rapor verisini birlikte çekip 3 grafiği de çizer
-async function loadReportCharts() {
+async function loadCharts() {
     try {
-        const [trendRes, categoryRes, topProductsRes] = await Promise.all([
-            fetch(`${CONFIG.API_BASE_URL}/reports/trend`, { headers: { "Authorization": `Bearer ${token}` } }),
-            fetch(`${CONFIG.API_BASE_URL}/reports/by-category`, { headers: { "Authorization": `Bearer ${token}` } }),
-            fetch(`${CONFIG.API_BASE_URL}/reports/top-products`, { headers: { "Authorization": `Bearer ${token}` } })
+        const trendUrl = currentTrendProduct ? `/reports/trend?productId=${currentTrendProduct}` : '/reports/trend';
+        
+        const [trendData, categoryData, topProductsData, moveData, prodDataRaw] = await Promise.all([
+            apiRequest(trendUrl, 'GET'),
+            apiRequest('/reports/by-category', 'GET'),
+            apiRequest('/reports/top-products', 'GET'),
+            apiRequest('/reports/movement-summary', 'GET'),
+            apiRequest('/products?pageSize=10000', 'GET')
         ]);
 
-        if (trendRes.status === 401 || categoryRes.status === 401 || topProductsRes.status === 401) {
-            logout();
-            return;
         }
 
         lastTrendData = trendRes.ok ? await trendRes.json() : [];
