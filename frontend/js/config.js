@@ -1,9 +1,3 @@
-// const CONFIG = {
-//     API_BASE_URL: 'http://localhost:5000/api', // 5136'yi 5000 yaptik!
-//     API_BASE_URL: 'http://localhost:5000/api', // 5136'yi 5000 yaptik!
-// }
-
-// --- Akilli Port Tespiti (Auto-Discovery) ---
 // --- Akilli Port Tespiti (Auto-Discovery) ---
 let activePort = localStorage.getItem('API_PORT_OVERRIDE');
 
@@ -30,17 +24,21 @@ const CONFIG = {
 };
 
 // Merkezi Yetki Denetim Sistemi (RBAC)
+// Kullanıcının rolünü JWT token üzerinden güvenli bir şekilde çözer
 function getUserRole() {
     try {
         const token = localStorage.getItem('token');
-        if (!token) return "viewer";
+        if (!token) return "viewer"; // Token yoksa varsayılan en düşük yetki
+
         const payloadBase64 = token.split('.')[1];
         const payloadDecoded = JSON.parse(atob(payloadBase64));
 
+        // Sunucudan gelen rol bilgisini farklı claim tiplerine karşı güvenle okur
         return payloadDecoded["role"] ||
             payloadDecoded["http://schemas.microsoft.com/ws/2008/06/identity/claims/role"] ||
             "viewer";
     } catch (e) {
+        // Token parse edilemezse veya formatı hatalıysa sistemin çökmesini önler, güvenli rol döner
         return "viewer";
     }
 }
@@ -61,7 +59,6 @@ const PERMISSIONS = {
 
 function hasPermission(action) {
     const role = getUserRole();
-    if (role === "superadmin") return true; // Süper admin her şeye yetkilidir
     if (role === "superadmin") return true; // Süper admin her şeye yetkilidir
     return PERMISSIONS[role] && PERMISSIONS[role].includes(action);
 }
@@ -136,7 +133,9 @@ async function apiRequest(endpoint, method = 'GET', bodyData = null) {
             options.body = JSON.stringify(bodyData);
         }
     }
-    const response = await fetch(`${CONFIG.API_BASE_URL}${endpoint  }`, options);
+    const response = await fetch(`${CONFIG.API_BASE_URL}${endpoint}`, options);
+
+    // Eğer token süresi dolduysa veya geçersizse kullanıcıyı login sayfasına atar
     if (response.status === 401) {
         // Token gecersiz veya suresi dolmus, kullaniciyi cikis yapmaya zorla
         localStorage.removeItem('token');
@@ -153,6 +152,8 @@ async function apiRequest(endpoint, method = 'GET', bodyData = null) {
     return data;
 }
 
+// MERKEZİ SAYFALAMA (PAGINATION) OLUŞTURUCU
+// Tabloların altında sayfa numaralarını ve sayfa başına kayıt sayısını dinamik çizen fonksiyondur
 function buildPagination(containerId, totalItems, currentPage, pageSize, onPageChange, onPageSizeChange) {
     const container = document.getElementById(containerId);
     if (!container) return;
@@ -173,7 +174,7 @@ function buildPagination(containerId, totalItems, currentPage, pageSize, onPageC
         </div>
         <nav>
             <ul class="pagination pagination-sm mb-0 shadow-sm justify-content-center">`;
-    
+
     html += `<li class="page-item ${currentPage === 1 ? 'disabled' : ''}"><a class="page-link page-action" href="#" data-page="${currentPage - 1}">« Önceki</a></li>`;
 
     for (let i = 1; i <= totalPages; i++) {
@@ -203,6 +204,7 @@ function buildPagination(containerId, totalItems, currentPage, pageSize, onPageC
 
     container.innerHTML = html;
 
+    // Sayfa değiştirme butonlarına tıklama olayını bağlar
     const navEl = container.querySelector('nav');
     if (navEl) {
         navEl.addEventListener('click', (e) => {
@@ -220,6 +222,7 @@ function buildPagination(containerId, totalItems, currentPage, pageSize, onPageC
         });
     }
 
+    // Sayfa başına satır sayısı değiştirme olayını bağlar
     const selectEl = container.querySelector('.page-size-action');
     if (selectEl) {
         selectEl.addEventListener('change', (e) => {
@@ -228,86 +231,11 @@ function buildPagination(containerId, totalItems, currentPage, pageSize, onPageC
     }
 }
 
-// Modal icinde selectpicker fix
+// Modal içinde selectpicker bileşeni varsa render sorununu çözen fix
 if (typeof $ !== 'undefined') {
     $(document).on('shown.bs.modal', '.modal', function () {
         $(this).find('.selectpicker').selectpicker('render');
     });
-}
-
-function buildPagination(containerId, totalItems, currentPage, pageSize, onPageChange, onPageSizeChange) {
-    const container = document.getElementById(containerId);
-    if (!container) return;
-
-    if (totalItems === 0) {
-        container.innerHTML = "";
-        return;
-    }
-
-    const totalPages = Math.ceil(totalItems / pageSize) || 1;
-    let startItem = (currentPage - 1) * pageSize + 1;
-    let endItem = Math.min(currentPage * pageSize, totalItems);
-
-    let html = `
-    <div class="d-flex justify-content-between align-items-center mt-3">
-        <div class="text-muted small">
-            ${startItem}-${endItem} / ${totalItems} kayıt
-        </div>
-        <nav>
-            <ul class="pagination pagination-sm mb-0 shadow-sm justify-content-center">`;
-    
-    html += `<li class="page-item ${currentPage === 1 ? 'disabled' : ''}"><a class="page-link page-action" href="#" data-page="${currentPage - 1}">« Önceki</a></li>`;
-
-    for (let i = 1; i <= totalPages; i++) {
-        if (totalPages > 7) {
-            if (i === 1 || i === totalPages || (i >= currentPage - 1 && i <= currentPage + 1)) {
-                html += `<li class="page-item ${currentPage === i ? 'active' : ''}"><a class="page-link page-action" href="#" data-page="${i}">${i}</a></li>`;
-            } else if (i === 2 || i === totalPages - 1) {
-                html += `<li class="page-item disabled"><span class="page-link text-muted">...</span></li>`;
-            }
-        } else {
-            html += `<li class="page-item ${currentPage === i ? 'active' : ''}"><a class="page-link page-action" href="#" data-page="${i}">${i}</a></li>`;
-        }
-    }
-
-    html += `<li class="page-item ${currentPage === totalPages ? 'disabled' : ''}"><a class="page-link page-action" href="#" data-page="${currentPage + 1}">Sonraki »</a></li>`;
-    html += `   </ul>
-        </nav>
-        <div>
-            <select class="form-select form-select-sm shadow-sm page-size-action" style="width: auto;">
-                <option value="10" ${pageSize === 10 ? 'selected' : ''}>10 Satır</option>
-                <option value="25" ${pageSize === 25 ? 'selected' : ''}>25 Satır</option>
-                <option value="50" ${pageSize === 50 ? 'selected' : ''}>50 Satır</option>
-                <option value="100" ${pageSize === 100 ? 'selected' : ''}>100 Satır</option>
-            </select>
-        </div>
-    </div>`;
-
-    container.innerHTML = html;
-
-    const navEl = container.querySelector('nav');
-    if (navEl) {
-        navEl.addEventListener('click', (e) => {
-            e.preventDefault();
-            const btn = e.target.closest(".page-action");
-            if (btn) {
-                const parentLi = btn.closest(".page-item");
-                if (parentLi && (parentLi.classList.contains("disabled") || parentLi.classList.contains("active"))) return;
-
-                const page = parseInt(btn.getAttribute("data-page"));
-                if (!isNaN(page)) {
-                    onPageChange(page);
-                }
-            }
-        });
-    }
-
-    const selectEl = container.querySelector('.page-size-action');
-    if (selectEl) {
-        selectEl.addEventListener('change', (e) => {
-            onPageSizeChange(parseInt(e.target.value));
-        });
-    }
 }
 
 // LAYOUT (SIDEBAR & TOPBAR) RENDER MOTORU
@@ -325,7 +253,7 @@ function renderProfessionalLayout() {
     // adında yeni bir div'in içine taşır
     const contentContainer = document.createElement('div');
     contentContainer.className = 'container-fluid p-4';
-    
+
     while (document.body.firstChild) {
         contentContainer.appendChild(document.body.firstChild);
     }
@@ -365,7 +293,7 @@ function renderProfessionalLayout() {
     // 5. ÜST BARI (TOPBAR) VE ANA İSKELETİ OLUŞTURMA:
     const mainWrapper = document.createElement('div');
     mainWrapper.id = 'main-wrapper';
-    
+
     const topbar = document.createElement('header');
     topbar.className = 'topbar shadow-sm';
     topbar.innerHTML = `
@@ -421,15 +349,37 @@ function renderProfessionalLayout() {
             </div>
         </div>
     `;
-    
+
     mainWrapper.appendChild(topbar);
     mainWrapper.appendChild(contentContainer);
-    
+
     document.body.appendChild(sidebar);
-    document.body.appendChild(mainWrapper);
+    document.body.appendChild(mainWrapper);   
+
+    // Sunucuya istek atarak giriş yapan kullanıcının bilgilerini (Ad, Soyad, Rol vb.) alıyoruz
+    apiRequest('/auth/me', 'GET').then(userData => {
+        const userProfileEl = document.getElementById('userProfile');
+        if (userProfileEl) {
+            userProfileEl.textContent = `${userData.firstName || ''} ${userData.lastName || ''}`.trim() || userData.email;
+        }
+
+        // Kullanıcının rolünü kontrol ediyoruz (Superadmin ise)
+        const role = userData.role || getUserRole();
+        if (role === 'superadmin') {
+            const navUsersItem = document.getElementById('navUsersItem');
+            if (navUsersItem) {
+                navUsersItem.classList.remove('d-none');
+            }
+        }
+    }).catch((error) => {
+        // İstek başarısız olursa hem konsola hatayı logluyoruz hem de arayüzün çökmesini engellemek için "Hesap" yazdırıyoruz
+        console.error("Layout yüklenirken hata oluştu:", error);
+        const userProfileEl = document.getElementById('userProfile');
+        if (userProfileEl) userProfileEl.textContent = 'Hesap';
+    });
 
     // 6. ETKİLEŞİMLER (EVENT LISTENERS)
-    
+
     // Sidebar'ı açıp kapatan butonun ayarları
     document.getElementById('btnToggleSidebar').addEventListener('click', () => {
         document.getElementById('sidebar').classList.toggle('collapsed');
