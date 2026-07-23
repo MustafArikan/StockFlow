@@ -7,7 +7,6 @@ let filtreliUrunler = [];
 const tabloGovdesi = document.getElementById("urunTablosuGovdesi");
 let currentPage = 1;
 let pageSize = 10;
-let pageSize = 10;
 
 let aktifArama = '';
 let siralamaSutunu = 'id';
@@ -252,9 +251,6 @@ async function handleExcelImport() {
     try {
         const report = await apiRequest('/products/import', 'POST', formData);
 
-        if (alertContainer) {
-        const report = await apiRequest('/products/import', 'POST', formData);
-        
         if(alertContainer) {
             let reportHtml = `
                 <div class="alert ${report.errorCount > 0 ? 'alert-warning' : 'alert-success'} rounded-3 p-4 border shadow-sm">
@@ -784,14 +780,6 @@ if (urunKategoriSelectForm) {
             const rules = await apiRequest(`/attribute-rules/category/${categoryId}`, 'GET');
             // Backend'den gelen kurallar artık DisplayOrder değerine göre sıralanmış durumdadır.
             if (container) container.innerHTML = ''; // İçini temizle
-    try {
-        if (attributeArea) attributeArea.classList.remove('d-none');
-        if (container) container.innerHTML = '<div class="col-12 text-center"><div class="spinner-border spinner-border-sm text-primary"></div> Kurallar yükleniyor...</div>';        
-        
-        const rules = await apiRequest(`/attribute-rules/category/${categoryId}`, 'GET');
-        // Backend'den gelen kurallar artık DisplayOrder değerine göre sıralanmış durumdadır.
-        if (container) container.innerHTML = ''; // İçini temizle
-
             if (rules.length === 0) {
                 if (attributeArea) attributeArea.classList.add('d-none');
                 return;
@@ -938,26 +926,6 @@ if (urunKategoriSelectForm) {
                 container.appendChild(div);
                 validRuleIndex++;
             });
-            let isBoolean = (uiType === 'toggle_switch' || uiType === 'checkbox' || uiType === 'boolean');
-            const div = document.createElement('div');
-            div.className = `col-md-6 mb-4 dynamic-rule-wrapper ${validRuleIndex > 0 ? 'd-none' : ''}`;
-            div.dataset.index = validRuleIndex;
-            div.dataset.isBoolean = isBoolean ? 'true' : 'false';
-            
-            if (rule.dataType === 'color_picker') {
-                div.innerHTML = `<a class="text-decoration-none text-dark d-flex align-items-center mb-2" data-bs-toggle="collapse" href="#collapseColor_${rule.id}" role="button" aria-expanded="true">
-                                    <label class="form-label small fw-bold mb-0 cursor-pointer">${escapeHtml(rule.attributeKey)} ${starHtml}</label>
-                                    <i class="bi bi-caret-down-fill text-warning ms-1"></i>
-                                    ${skipHtml}
-                                 </a>
-                                 ${inputHtml}`;
-            } else {
-                div.innerHTML = `<label class="form-label small fw-bold d-flex align-items-center mb-2">${escapeHtml(rule.attributeKey)} ${starHtml} ${skipHtml}</label>
-                                 ${inputHtml}`;
-            }
-            container.appendChild(div);
-            validRuleIndex++;
-        });
 
         if (typeof $ !== 'undefined' && $.fn.selectpicker) {
             $('.selectpicker.dynamic-rule-input').selectpicker();
@@ -1063,20 +1031,8 @@ function tabloyuCiz(urunler) {
     tabloGovdesi.innerHTML = satirlar.join("");
 }
 
+
 function sayfalamayiCiz() {
-    buildPagination(
-        "paginationContainer",
-        filtreliUrunler.length,
-        currentPage,
-        pageSize,
-        (newPage) => {
-            currentPage = newPage;
-            veriyiGuncelle();
-        },
-        (newSize) => {
-            pageSize = newSize;
-            currentPage = 1;
-function sayfalamayiCiz(totalPages, currentPage) {
     buildPagination(
         "paginationContainer", 
         filtreliUrunler.length, 
@@ -1165,8 +1121,6 @@ if (btnUrunKaydetEl) {
 
         const metod = id ? "PUT" : "POST";
         const adres = id ? `/products/${id}` : '/products';
-    const metod = id ? "PUT" : "POST";
-    const adres = id ? `/products/${id}` : '/products';
 
         try {
             const orjinalMetin = btnKaydet.innerText;
@@ -1174,7 +1128,6 @@ if (btnUrunKaydetEl) {
             btnKaydet.innerText = "Kaydediliyor...";
 
             await apiRequest(adres, metod, urunVerisi);
-        await apiRequest(adres, metod, urunVerisi);
 
             const modalElement = document.getElementById("urunModal");
             const modalInstance = bootstrap.Modal.getOrCreateInstance(modalElement);
@@ -1478,8 +1431,6 @@ document.getElementById('filtreKategoriId')?.addEventListener('change', async fu
         currentPage = 1;
         veriyiGuncelle();
 
-        const rules = await apiRequest(`/attribute-rules/category/${categoryId}`, 'GET');
-        
         const rules = await apiRequest(`/attribute-rules/category/${categoryId}`, 'GET');
         // rules.reverse(); KALDIRILDI çünkü DisplayOrder kullanılıyor
 
