@@ -62,8 +62,8 @@ function veriyiGuncelle() {
             let uKodu = h.urunKodu || h.productCode || h.barcode || "";
             let personel = h.personelName || h.personel || h.userName || h.fullName || h.userEmail || "";
             return uAdi.toLowerCase().includes(aktifArama) ||
-                   uKodu.toLowerCase().includes(aktifArama) ||
-                   personel.toLowerCase().includes(aktifArama);
+                uKodu.toLowerCase().includes(aktifArama) ||
+                personel.toLowerCase().includes(aktifArama);
         });
     }
 
@@ -106,8 +106,8 @@ function veriyiGuncelle() {
 
         // Ç, Ğ, İ, Ö, Ş, Ü harflerini kusursuz sıralayan Intl.Collator API'si
         const trCollator = new Intl.Collator('tr-TR', { numeric: true, sensitivity: 'base' });
-        return siralamaYonu === 'asc' 
-            ? trCollator.compare(valA.toString(), valB.toString()) 
+        return siralamaYonu === 'asc'
+            ? trCollator.compare(valA.toString(), valB.toString())
             : trCollator.compare(valB.toString(), valA.toString());
     });
 
@@ -184,16 +184,16 @@ function tabloyuCiz(veriListesi) {
         let adetIsareti = isGiris ? "+" : nType === "TRANSFER" ? "⇄" : "-";
 
         const formatliTarih = new Date(hareket.tarih || hareket.createdAt || hareket.date || Date.now()).toLocaleString('tr-TR');
-        
+
         let pCode = hareket.urunKodu || hareket.productCode || hareket.barcode || '-';
         let pName = hareket.urunAdi || hareket.urunAdı || hareket.productName || hareket.name || '-';
 
         let kisiIsmi = hareket.personelName || hareket.personel || hareket.userName || hareket.fullName || 'Sistem';
         let kisiMail = hareket.userEmail || hareket.email || '';
         let finalKisiHtml = "";
-        
+
         let uId = hareket.userId || hareket.id;
-        
+
         // ADMIN OLMAYANLAR DA PROFİLE TIKLAYABİLSİN
         if (uId) {
             finalKisiHtml = `
@@ -227,10 +227,10 @@ function tabloyuCiz(veriListesi) {
 
 function sayfalamayiCiz(totalItems, curPage) {
     buildPagination(
-        "paginationContainer", 
-        totalItems, 
-        curPage, 
-        pageSize, 
+        "paginationContainer",
+        totalItems,
+        curPage,
+        pageSize,
         (newPage) => {
             currentPage = newPage;
             veriyiGuncelle();
@@ -548,34 +548,63 @@ const btnCloseCamera = document.getElementById("btnKameraKapat");
 const productSelect = document.getElementById("urunSecimi");
 
 if (btnOpenCamera) {
-    btnOpenCamera.addEventListener("click", () => {
-        cameraArea.classList.remove("d-none");
-        startScanner("reader", (scannedText) => {
-            let isProductFound = false;
-            if (productSelect) {
-                for (let i = 0; i < productSelect.options.length; i++) {
-                    if (productSelect.options[i].value === scannedText) {
-                        productSelect.selectedIndex = i;
-                        isProductFound = true;
-                        break;
+    btnOpenCamera.addEventListener("click", async () => {
+        // 1. ÇİFTE TIKLAMA KORUMASI: Buton zaten işlem yapıyorsa durdur
+        if (btnOpenCamera.disabled) return;
+
+        const originalText = btnOpenCamera.innerHTML;
+        btnOpenCamera.disabled = true; // Butonu kilitle
+        btnOpenCamera.innerHTML = `<span class="spinner-border spinner-border-sm"></span> İzin Bekleniyor...`;
+
+        try {
+            // 2. KUTUYU AÇMADAN ÖNCE KAMERA İZNİNİ KONTROL ET
+            const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+            
+            // İzin başarılı oldu! Arka planda açılan test kamerasını kapatıyoruz
+            stream.getTracks().forEach(track => track.stop());
+
+            // 3. İZİN VARSA SİYAH KUTUYU GÖSTER VE KÜTÜPHANEYİ BAŞLAT
+            cameraArea.classList.remove("d-none");
+            btnOpenCamera.innerHTML = originalText; 
+
+            startScanner("reader", (scannedText) => {
+                let isProductFound = false;
+                if (productSelect) {
+                    for (let i = 0; i < productSelect.options.length; i++) {
+                        if (productSelect.options[i].value === scannedText) {
+                            productSelect.selectedIndex = i;
+                            isProductFound = true;
+                            break;
+                        }
                     }
                 }
-            }
-            if (isProductFound) {
-                let audio = new Audio('https://www.soundjay.com/button/beep-07.wav');
-                audio.play().catch(() => { });
-                formuDenetle();
-                closeCamera();
-            } else {
-                alert(`Taranan barkod (${scannedText}) bulunamadı!`);
-            }
-        }, () => { });
+                if (isProductFound) {
+                    let audio = new Audio('https://www.soundjay.com/button/beep-07.wav');
+                    audio.play().catch(() => { });
+                    formuDenetle();
+                    closeCamera();
+                } else {
+                    alert(`Taranan barkod (${scannedText}) bulunamadı!`);
+                }
+            }, () => { });
+
+        } catch (error) {
+            // 4. İZİN REDDEDİLDİ VEYA KAMERA YOKSA (SİYAH KUTU ASLA AÇILMAZ)
+            alert("Kameraya erişilemedi! Lütfen tarayıcı adres çubuğundaki kilit/kamera simgesinden izin verin.");
+            btnOpenCamera.disabled = false; // Buton kilidini aç
+            btnOpenCamera.innerHTML = originalText;
+        }
     });
 }
 
 if (btnCloseCamera) btnCloseCamera.addEventListener("click", closeCamera);
+
 function closeCamera() {
     if (cameraArea) cameraArea.classList.add("d-none");
+    if (btnOpenCamera) {
+        btnOpenCamera.disabled = false;
+        btnOpenCamera.innerHTML = `<i class="bi bi-upc-scan me-1"></i> Barkod Okut`;
+    }
     stopScanner();
 }
 
@@ -616,7 +645,7 @@ baslat();
 async function kullaniciProfiliGoster(userId) {
     try {
         const user = await apiRequest(`/users/${userId}`, 'GET');
-        
+
         document.getElementById('upmName').textContent = `${user.firstName || ''} ${user.lastName || ''}`;
         document.getElementById('upmEmail').textContent = (user.email || '') + (user.phoneNumber ? ' | 📞 ' + user.phoneNumber : '');
         document.getElementById('upmRole').textContent = user.role || 'viewer';
