@@ -82,6 +82,7 @@ async function loadNavbarNotifications() {
         }
 
         badge.textContent = notifications.length;
+        badge.textContent = notifications.length;
         badge.classList.remove("d-none");
 
         // En son 5 bildirimi göster (eğer çok varsa)

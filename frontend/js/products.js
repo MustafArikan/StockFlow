@@ -7,6 +7,7 @@ let filtreliUrunler = [];
 const tabloGovdesi = document.getElementById("urunTablosuGovdesi");
 let currentPage = 1;
 let pageSize = 10;
+let pageSize = 10;
 
 let aktifArama = '';
 let siralamaSutunu = 'id';
@@ -60,7 +61,9 @@ function veriyiGuncelle() {
     document.querySelectorAll('.kural-filtresi').forEach(input => {
         if (input.value && input.value.trim() !== '') {
             dynamicFilters.push({
+                ruleId: parseInt(input.getAttribute('data-rule-id') || '0'),
                 key: input.getAttribute('data-rule-key'),
+                type: input.getAttribute('data-filter-type') || 'text',
                 value: input.value.toLowerCase().trim()
             });
         }
@@ -88,12 +91,38 @@ function veriyiGuncelle() {
             if (!urun.attributes || !Array.isArray(urun.attributes)) return false;
 
             for (let filter of dynamicFilters) {
-                const attr = urun.attributes.find(a => a.key === filter.key);
-                if (!attr || !(attr.value ?? '').toString().toLowerCase().includes(filter.value)) {
-                    return false;
+                // API either sends ruleId or key. We'll check both for robustness.
+                const attr = urun.attributes.find(a => (a.ruleId && a.ruleId === filter.ruleId) || (a.key && a.key === filter.key));
+                if (!attr) return false;
+
+                if (filter.type === 'range') {
+                    // Range filter value is "min-max"
+                    const parts = filter.value.split('-');
+                    if (parts.length === 2) {
+                        const min = parseFloat(parts[0]);
+                        const max = parseFloat(parts[1]);
+                        const attrVal = parseFloat(attr.value);
+                        if (isNaN(attrVal) || attrVal < min || attrVal > max) {
+                            return false;
+                        }
+                    }
+                } else if (filter.type === 'discrete_range') {
+                    try {
+                        const validValues = JSON.parse(filter.value);
+                        if (!validValues.includes((attr.value ?? '').toString().toLowerCase())) {
+                            return false;
+                        }
+                    } catch(e) {
+                        return false;
+                    }
+                } else {
+                    if (!(attr.value ?? '').toString().toLowerCase().includes(filter.value)) {
+                        return false;
+                    }
                 }
             }
         }
+
         return true;
     });
 
@@ -223,6 +252,9 @@ async function handleExcelImport() {
         const report = await apiRequest('/products/import', 'POST', formData);
 
         if (alertContainer) {
+        const report = await apiRequest('/products/import', 'POST', formData);
+        
+        if(alertContainer) {
             let reportHtml = `
                 <div class="alert ${report.errorCount > 0 ? 'alert-warning' : 'alert-success'} rounded-3 p-4 border shadow-sm">
                     <h5 class="fw-bold mb-3"><i class="bi bi-clipboard-data-fill"></i> İçe Aktarma Sonuç Raporu</h5>
@@ -634,6 +666,13 @@ if (urunKategoriSelectForm) {
             const rules = await apiRequest(`/attribute-rules/category/${categoryId}`, 'GET');
             // Backend'den gelen kurallar artık DisplayOrder değerine göre sıralanmış durumdadır.
             if (container) container.innerHTML = ''; // İçini temizle
+    try {
+        if (attributeArea) attributeArea.classList.remove('d-none');
+        if (container) container.innerHTML = '<div class="col-12 text-center"><div class="spinner-border spinner-border-sm text-primary"></div> Kurallar yükleniyor...</div>';        
+        
+        const rules = await apiRequest(`/attribute-rules/category/${categoryId}`, 'GET');
+        // Backend'den gelen kurallar artık DisplayOrder değerine göre sıralanmış durumdadır.
+        if (container) container.innerHTML = ''; // İçini temizle
 
             if (rules.length === 0) {
                 if (attributeArea) attributeArea.classList.add('d-none');
@@ -649,13 +688,14 @@ if (urunKategoriSelectForm) {
                 let starHtml = rule.isRequired ? '<span class="text-danger">*</span>' : '';
                 let skipHtml = !rule.isRequired ? `<a href="#" class="text-primary text-decoration-none ms-3 small fw-normal btn-skip border rounded px-2 py-1 bg-white shadow-sm" title="Zorunlu değil, atla">Atla <i class="bi bi-arrow-right"></i></a>` : '';
 
-                let options = [];
-                if (rule.allowedValues && rule.allowedValues !== "[]") {
-                    try { options = JSON.parse(rule.allowedValues); }
-                    catch (e) { options = rule.allowedValues.split(',').map(s => s.trim()); }
-                }
-
-                let uiType = rule.uiComponent || rule.dataType;
+            let options = [];
+            if (rule.allowedValues && rule.allowedValues !== "[]") {
+                try { options = JSON.parse(rule.allowedValues); } 
+                catch(e) { options = rule.allowedValues.split(',').map(s => s.trim()); }
+            }
+            
+            inputHtml = DynamicUI.renderFormInput(rule, options, escapeHtml);
+            let uiType = rule.uiComponent || rule.dataType;
 
                 if (uiType === 'searchable_dropdown' || uiType === 'autocomplete') {
                     let optionsHtml = options.map(opt => `<option value="${escapeHtml(opt)}">`).join('');
@@ -780,19 +820,56 @@ if (urunKategoriSelectForm) {
                 container.appendChild(div);
                 validRuleIndex++;
             });
+            let isBoolean = (uiType === 'toggle_switch' || uiType === 'checkbox' || uiType === 'boolean');
+            const div = document.createElement('div');
+            div.className = `col-md-6 mb-4 dynamic-rule-wrapper ${validRuleIndex > 0 ? 'd-none' : ''}`;
+            div.dataset.index = validRuleIndex;
+            div.dataset.isBoolean = isBoolean ? 'true' : 'false';
+            
+            if (rule.dataType === 'color_picker') {
+                div.innerHTML = `<a class="text-decoration-none text-dark d-flex align-items-center mb-2" data-bs-toggle="collapse" href="#collapseColor_${rule.id}" role="button" aria-expanded="true">
+                                    <label class="form-label small fw-bold mb-0 cursor-pointer">${escapeHtml(rule.attributeKey)} ${starHtml}</label>
+                                    <i class="bi bi-caret-down-fill text-warning ms-1"></i>
+                                    ${skipHtml}
+                                 </a>
+                                 ${inputHtml}`;
+            } else {
+                div.innerHTML = `<label class="form-label small fw-bold d-flex align-items-center mb-2">${escapeHtml(rule.attributeKey)} ${starHtml} ${skipHtml}</label>
+                                 ${inputHtml}`;
+            }
+            container.appendChild(div);
+            validRuleIndex++;
+        });
 
-            if (!container.dataset.pimListenersAttached) {
-                container.dataset.pimListenersAttached = 'true';
+        if (typeof $ !== 'undefined' && $.fn.selectpicker) {
+            $('.selectpicker.dynamic-rule-input').selectpicker();
+        }
 
-                const revealNext = (wrapper) => {
-                    if (!wrapper) return;
-                    const nextIndex = parseInt(wrapper.dataset.index) + 1;
-                    const nextDiv = container.querySelector(`.dynamic-rule-wrapper[data-index="${nextIndex}"]`);
-                    if (nextDiv && nextDiv.classList.contains('d-none')) {
-                        nextDiv.classList.remove('d-none');
-                        nextDiv.classList.add('animate__animated', 'animate__fadeIn');
+        // PIM - Sırayla Gösterme Mantığı (Event Listener'ları 1 kez ekle)
+        if (!container.dataset.pimListenersAttached) {
+            container.dataset.pimListenersAttached = 'true';
+            
+            const revealNext = (wrapper) => {
+                if (!wrapper) return;
+                const nextIndex = parseInt(wrapper.dataset.index) + 1;
+                const nextDiv = container.querySelector(`.dynamic-rule-wrapper[data-index="${nextIndex}"]`);
+                if (nextDiv && nextDiv.classList.contains('d-none')) {
+                    nextDiv.classList.remove('d-none');
+                    nextDiv.classList.add('animate__animated', 'animate__fadeIn');
+                    
+                    if (nextDiv.dataset.isBoolean === 'true') {
+                        revealNext(nextDiv);
                     }
-                };
+                }
+            };
+
+            // Sayfa yüklendiğinde ilk eleman boolean ise hemen sonrakini de aç
+            setTimeout(() => {
+                const firstEl = container.querySelector('.dynamic-rule-wrapper[data-index="0"]');
+                if (firstEl && firstEl.dataset.isBoolean === 'true') {
+                    revealNext(firstEl);
+                }
+            }, 50);
 
                 container.addEventListener('input', (e) => revealNext(e.target.closest('.dynamic-rule-wrapper')));
                 container.addEventListener('change', (e) => revealNext(e.target.closest('.dynamic-rule-wrapper')));
@@ -881,6 +958,19 @@ function sayfalamayiCiz() {
         (newSize) => {
             pageSize = newSize;
             currentPage = 1;
+function sayfalamayiCiz(totalPages, currentPage) {
+    buildPagination(
+        "paginationContainer", 
+        filtreliUrunler.length, 
+        currentPage, 
+        pageSize, 
+        (newPage) => {
+            currentPage = newPage;
+            veriyiGuncelle();
+        },
+        (newSize) => {
+            pageSize = newSize;
+            currentPage = 1;
             veriyiGuncelle();
         }
     );
@@ -904,50 +994,61 @@ if (btnUrunKaydetEl) {
         const initialQuantity = document.getElementById("urunBaslangicStok")?.value;
         const btnKaydet = document.getElementById("btnUrunKaydet");
 
-        const urunVerisi = {
-            name: name,
-            barcode: barcode,
-            minStockLevel: parseInt(minStockLevel) || 0,
-            categoryId: parseInt(categoryId) || null,
-            targetLocationId: parseInt(targetLocationId) || 0,
-            initialQuantity: parseInt(initialQuantity) || 0
-        };
+    const urunVerisi = {
+        name: name,
+        barcode: barcode,
+        minStockLevel: parseInt(minStockLevel) || 0,
+        categoryId: parseInt(categoryId) || null,
+        targetLocationId: parseInt(targetLocationId) || 0,
+        initialQuantity: parseInt(initialQuantity) || 0,
+        cost: 0,
+        price: 0
+    };
 
-        const dinamikInputlar = document.querySelectorAll('.dynamic-rule-input');
-        if (dinamikInputlar.length > 0) {
-            urunVerisi.attributes = [];
-            dinamikInputlar.forEach(input => {
-                const ruleId = parseInt(input.getAttribute('data-rule-id'));
-                const key = input.getAttribute('data-rule-key');
-                const type = input.getAttribute('data-rule-type');
-                let val = "";
-
-                if (type === "radio") {
-                    const checked = input.querySelector('input[type="radio"]:checked');
-                    if (checked) val = checked.value;
-                } else if (type === "checkbox_group") {
-                    const checkedBoxes = Array.from(input.querySelectorAll('input[type="checkbox"]:checked')).map(cb => cb.value);
-                    if (checkedBoxes.length > 0) val = checkedBoxes.join(", ");
-                } else if (type === "boolean") {
-                    const checkbox = input.querySelector('input[type="checkbox"]');
-                    val = checkbox.checked ? "true" : "false";
-                } else if (type === "range_slider") {
-                    val = input.querySelector('input[type="range"]').value;
-                } else if (type === "color_picker") {
-                    const checkedRb = input.querySelector('.color-radio-item:checked');
-                    if (checkedRb) val = checkedRb.value;
-                } else {
-                    val = input.value;
-                }
-
-                if (ruleId && key && val !== "") {
-                    urunVerisi.attributes.push({ ruleId: ruleId, key: key, value: val });
-                }
-            });
-        }
+    const dinamikInputlar = document.querySelectorAll('.dynamic-rule-input');
+    if (dinamikInputlar.length > 0) {
+        urunVerisi.attributes = []; 
+        dinamikInputlar.forEach(input => {
+            const ruleId = parseInt(input.getAttribute('data-rule-id'));
+            const key = input.getAttribute('data-rule-key');
+            const type = input.getAttribute('data-rule-type');
+            let val = "";
+            
+            if (type === "radio") {
+                const checked = input.querySelector('input[type="radio"]:checked');
+                if (checked) val = checked.value;
+            } else if (type === "checkbox_group") {
+                const checkedBoxes = Array.from(input.querySelectorAll('input[type="checkbox"]:checked')).map(cb => cb.value);
+                if (checkedBoxes.length > 0) val = checkedBoxes.join(", ");
+            } else if (type === "boolean") {
+                const checkbox = input.querySelector('input[type="checkbox"]');
+                val = checkbox.checked ? "true" : "false";
+            } else if (type === "range_slider") {
+                val = input.querySelector('input[type="range"]').value;
+            } else if (type === "discrete_slider") {
+                val = input.querySelector('input[type="hidden"]').value;
+            } else if (type === "color_picker") {
+                const checkedRb = input.querySelector('.color-radio-item:checked');
+                if (checkedRb) val = checkedRb.value;
+                else val = input.querySelector('input[type="color"]')?.value || "";
+            } else {
+                val = input.value;
+            }
+            
+            if (ruleId && key && val !== "") {
+                urunVerisi.attributes.push({
+                    ruleId: ruleId,
+                    key: key,
+                    value: val
+                });
+            }
+        });
+    }
 
         const metod = id ? "PUT" : "POST";
         const adres = id ? `/products/${id}` : '/products';
+    const metod = id ? "PUT" : "POST";
+    const adres = id ? `/products/${id}` : '/products';
 
         try {
             const orjinalMetin = btnKaydet.innerText;
@@ -955,6 +1056,7 @@ if (btnUrunKaydetEl) {
             btnKaydet.innerText = "Kaydediliyor...";
 
             await apiRequest(adres, metod, urunVerisi);
+        await apiRequest(adres, metod, urunVerisi);
 
             const modalElement = document.getElementById("urunModal");
             const modalInstance = bootstrap.Modal.getOrCreateInstance(modalElement);
@@ -1086,11 +1188,28 @@ function urunDuzenle(id) {
                         if (range) {
                             range.value = attr.value;
                             const numberInput = document.getElementById(`val_${attr.ruleId}`);
-                            if (numberInput) numberInput.value = attr.value;
+                            if(numberInput) numberInput.value = attr.value;
+                        }
+                    } else if (type === 'discrete_slider') {
+                        const range = input.querySelector(`input[type="range"]`);
+                        const hidden = input.querySelector(`input[type="hidden"]`);
+                        const textInput = input.querySelector(`input[type="text"]`);
+                        if (range && hidden && input.dataset.options) {
+                            let optionsArr = JSON.parse(input.dataset.options);
+                            let idx = optionsArr.findIndex(o => String(o).toLowerCase() === String(attr.value).toLowerCase());
+                            if (idx !== -1) {
+                                range.value = idx;
+                                hidden.value = optionsArr[idx];
+                                if (textInput) textInput.value = optionsArr[idx];
+                            }
                         }
                     } else if (type === 'color_picker') {
                         const rb = input.querySelector(`input[type="radio"][value="${attr.value}"]`);
                         if (rb) rb.checked = true;
+                        else {
+                            const colorInput = input.querySelector(`input[type="color"]`);
+                            if (colorInput) colorInput.value = attr.value;
+                        }
                     } else {
                         input.value = attr.value;
                     }
@@ -1239,6 +1358,8 @@ document.getElementById('filtreKategoriId')?.addEventListener('change', async fu
         veriyiGuncelle();
 
         const rules = await apiRequest(`/attribute-rules/category/${categoryId}`, 'GET');
+        
+        const rules = await apiRequest(`/attribute-rules/category/${categoryId}`, 'GET');
         // rules.reverse(); KALDIRILDI çünkü DisplayOrder kullanılıyor
 
         filterContainer.innerHTML = '';
@@ -1257,39 +1378,100 @@ document.getElementById('filtreKategoriId')?.addEventListener('change', async fu
                 catch (e) { options = rule.allowedValues.split(',').map(s => s.trim()); }
             }
 
-            let uiType = rule.uiComponent || rule.dataType;
-            let inputHtml = '';
-
-            if (uiType === 'searchable_dropdown' || uiType === 'autocomplete') {
-                let optionsHtml = options.map(opt => `<option value="${escapeHtml(opt)}">`).join('');
-                inputHtml = `<input list="datalist_filter_${rule.id}" class="form-control form-control-sm kural-filtresi" data-rule-key="${escapeHtml(rule.attributeKey)}" placeholder="Ara veya Seç...">
-                             <datalist id="datalist_filter_${rule.id}">
-                                ${optionsHtml}
-                             </datalist>`;
-            }
-            else if (uiType === 'dropdown' || uiType === 'icon_dropdown' || uiType === 'radio' || uiType === 'segmented_button' || uiType === 'color_picker') {
-                let optionsHtml = options.map(opt => `<option value="${escapeHtml(opt)}">${escapeHtml(opt)}</option>`).join('');
-                inputHtml = `<select class="form-select form-select-sm kural-filtresi" data-rule-key="${escapeHtml(rule.attributeKey)}">
-                                <option value="">Tümü</option>
-                                ${optionsHtml}
-                             </select>`;
-            }
-            else if (uiType === 'toggle_switch' || uiType === 'checkbox' || uiType === 'boolean') {
-                inputHtml = `<select class="form-select form-select-sm kural-filtresi" data-rule-key="${escapeHtml(rule.attributeKey)}">
-                                <option value="">Tümü</option>
-                                <option value="true">Evet/Açık</option>
-                                <option value="false">Hayır/Kapalı</option>
-                             </select>`;
-            }
-            else {
-                inputHtml = `<input type="text" class="form-control form-control-sm kural-filtresi" data-rule-key="${escapeHtml(rule.attributeKey)}" placeholder="Ara...">`;
-            }
+            let inputHtml = DynamicUI.renderFilterInput(rule, options, escapeHtml);
 
             const div = document.createElement('div');
             div.className = 'col-md-3 mb-2';
             div.innerHTML = `<label class="form-label small fw-bold mb-1">${escapeHtml(rule.attributeKey)}</label>
                              ${inputHtml}`;
             filterContainer.appendChild(div);
+        });
+
+        // Initialize noUiSliders
+        document.querySelectorAll('.double-slider').forEach(el => {
+            try {
+                let id = el.id.replace('slider_', '');
+                let hidden = document.getElementById(`filter_hidden_${id}`);
+
+                if (el.hasAttribute('data-options')) {
+                    // Özel dizi değerli slider
+                    let optionsArr = JSON.parse(el.dataset.options || '[]');
+                    let lblMin = document.getElementById(`filter_min_lbl_${id}`);
+                    let lblMax = document.getElementById(`filter_max_lbl_${id}`);
+
+                    let format = {
+                        to: function(value) { return String(optionsArr[Math.round(value)] || ''); },
+                        from: function(value) { return optionsArr.indexOf(String(value)); }
+                    };
+
+                    noUiSlider.create(el, {
+                        start: [0, Math.max(0, optionsArr.length - 1)],
+                        connect: true,
+                        step: 1,
+                        range: { 'min': 0, 'max': Math.max(1, optionsArr.length - 1) },
+                        tooltips: true,
+                        format: format,
+                        pips: { mode: 'steps', format: format }
+                    });
+
+                    el.noUiSlider.on('update', function (values, handle) {
+                        let minIdx = optionsArr.indexOf(values[0]);
+                        let maxIdx = optionsArr.indexOf(values[1]);
+                        if(minIdx === -1) minIdx = 0;
+                        if(maxIdx === -1) maxIdx = optionsArr.length - 1;
+
+                        if (handle === 0 && lblMin) lblMin.innerText = optionsArr[minIdx];
+                        if (handle === 1 && lblMax) lblMax.innerText = optionsArr[maxIdx];
+
+                        let validValues = optionsArr.slice(minIdx, maxIdx + 1).map(v => String(v).toLowerCase());
+                        hidden.value = JSON.stringify(validValues);
+                    });
+
+                    el.noUiSlider.on('change', function () {
+                        hidden.dispatchEvent(new Event('input'));
+                    });
+                } else {
+                    // Sayısal aralıklı slider
+                    let min = parseFloat(el.dataset.min);
+                    let max = parseFloat(el.dataset.max);
+                    if (isNaN(min)) min = 0;
+                    if (isNaN(max)) max = 1000;
+                    if (min >= max) max = min + 100;
+                    let step = parseFloat(el.dataset.step) || 1;
+                    
+                    noUiSlider.create(el, {
+                        start: [min, max],
+                        connect: true,
+                        step: step,
+                        range: { 'min': min, 'max': max },
+                        tooltips: true
+                    });
+                    
+                    let minIn = document.getElementById(`filter_min_${id}`);
+                    let maxIn = document.getElementById(`filter_max_${id}`);
+                    
+                    el.noUiSlider.on('update', function (values, handle) {
+                        if (handle === 0) { if(minIn) minIn.value = values[0]; }
+                        else { if(maxIn) maxIn.value = values[1]; }
+                        hidden.value = `${minIn ? minIn.value : values[0]}-${maxIn ? maxIn.value : values[1]}`;
+                    });
+                    
+                    el.noUiSlider.on('change', function () {
+                        hidden.dispatchEvent(new Event('input'));
+                    });
+
+                    if (minIn) minIn.addEventListener('change', function() { 
+                        el.noUiSlider.set([this.value, null]); 
+                        hidden.dispatchEvent(new Event('input'));
+                    });
+                    if (maxIn) maxIn.addEventListener('change', function() { 
+                        el.noUiSlider.set([null, this.value]); 
+                        hidden.dispatchEvent(new Event('input'));
+                    });
+                }
+            } catch (err) {
+                console.error("Slider initialization failed for", el, err);
+            }
         });
 
         // Dinamik filtrelere event listener ekle

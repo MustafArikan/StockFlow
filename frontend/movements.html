@@ -25,6 +25,7 @@
                 <p class="text-muted mb-0">Ürün giriş ve çıkış kayıtları</p>
             </div>
             <button class="btn btn-primary rounded-pill px-4 shadow-sm" data-bs-toggle="modal" data-bs-target="#stokIslemModal">
+            <button class="btn btn-primary rounded-pill px-4 shadow-sm" data-bs-toggle="modal" data-bs-target="#stokIslemModal">
                 + Yeni İşlem Ekle
             </button>
         </div>
@@ -36,6 +37,8 @@
                 <div class="row mb-4 align-items-center mt-3">
                     <div class="col-md-6">
                         <div class="position-relative">
+                            <span class="position-absolute top-50 translate-middle-y ms-3 text-muted pointer-events-none">🔍</span>
+                            <input type="text" id="aramaKutusu" class="form-control rounded-pill ps-5" placeholder="Ürün Adı, Kodu veya Personel Ara...">
                             <span class="position-absolute top-50 translate-middle-y ms-3 text-muted pointer-events-none">🔍</span>
                             <input type="text" id="aramaKutusu" class="form-control rounded-pill ps-5" placeholder="Ürün Adı, Kodu veya Personel Ara...">
                         </div>
@@ -55,6 +58,7 @@
                     </div>
                 </div>
 
+                <!-- Stok hareketlerini listeleyen tabloyu tanımlar -->
                 <!-- Stok hareketlerini listeleyen tabloyu tanımlar -->
                 <div class="table-responsive">
                     <table class="table table-hover align-middle mb-0 min-w-700">
@@ -85,6 +89,7 @@
     </div>
 
     <!-- Yeni stok işlemi eklemek için kullanılan modalı (açılır pencere) tanımlar -->
+    <!-- Yeni stok işlemi eklemek için kullanılan modalı (açılır pencere) tanımlar -->
     <div class="modal fade" id="stokIslemModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content border-0 shadow rounded-3">
@@ -93,8 +98,14 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Kapat"></button>
                 </div>
                 <div class="modal-body p-4 bg-light">
+                <div class="modal-body p-4 bg-light">
                     <form id="stokIslemFormu">
                         <input type="hidden" id="hareketId">
+
+                        <!-- 1. ADIM: İşlem tipini belirler -->
+                        <div class="mb-4 bg-white p-3 border rounded-3 shadow-sm">
+                            <label class="form-label text-muted small fw-bold">1. İşlem Tipi Seçin</label>
+                            <select class="form-select rounded-3 border-secondary" id="islemTipi" required>
 
                         <!-- 1. ADIM: İşlem tipini belirler -->
                         <div class="mb-4 bg-white p-3 border rounded-3 shadow-sm">
@@ -104,8 +115,16 @@
                                 <option value="GIRIS">Stok Girişi (Tedarik)</option>
                                 <option value="CIKIS">Stok Çıkışı (Satış/Kullanım)</option>
                                 <option value="TRANSFER">Stok Transferi (Depo/Raf Arası)</option>
+                                <option value="TRANSFER">Stok Transferi (Depo/Raf Arası)</option>
                             </select>
                         </div>
+
+                        <!-- 2. ADIM: Ürün seçimini ve barkod okuma alanını içerir -->
+                        <div class="mb-4 p-3 bg-white border rounded-3 shadow-sm">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <label class="form-label text-muted small fw-bold mb-0">2. İşlem Yapılacak Ürün</label>
+                                <button type="button" class="btn btn-sm btn-outline-primary rounded-pill py-0 px-3 fw-bold" id="btnKameraAc">
+                                    <i class="bi bi-upc-scan me-1"></i> Barkod Okut
 
                         <!-- 2. ADIM: Ürün seçimini ve barkod okuma alanını içerir -->
                         <div class="mb-4 p-3 bg-white border rounded-3 shadow-sm">
@@ -224,6 +243,7 @@
     </div>
 
     <!-- Kullanıcı profilini gösteren açılır pencereyi tanımlar -->
+    <!-- Kullanıcı profilini gösteren açılır pencereyi tanımlar -->
     <div class="modal fade" id="userProfileModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content border-0 shadow">
@@ -256,6 +276,7 @@
         </div>
     </div>
 
+    <!-- Gerekli kütüphaneleri ve sayfa scriptlerini yükler -->
     <!-- Gerekli kütüphaneleri ve sayfa scriptlerini yükler -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>

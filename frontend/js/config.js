@@ -1,11 +1,14 @@
 // const CONFIG = {
 //     API_BASE_URL: 'http://localhost:5000/api', // 5136'yi 5000 yaptik!
+//     API_BASE_URL: 'http://localhost:5000/api', // 5136'yi 5000 yaptik!
 // }
 
+// --- Akilli Port Tespiti (Auto-Discovery) ---
 // --- Akilli Port Tespiti (Auto-Discovery) ---
 let activePort = localStorage.getItem('API_PORT_OVERRIDE');
 
 if (!activePort) {
+    // Eger override yoksa 5000 portuna istek at
     // Eger override yoksa 5000 portuna istek at
     try {
         const xhr = new XMLHttpRequest();
@@ -13,8 +16,10 @@ if (!activePort) {
         xhr.open('GET', 'http://localhost:5000/api/health', false);
         xhr.send(null);
         // Hata yoksa 5000 portu ayaktadir ve cevap veriyordur
+        // Hata yoksa 5000 portu ayaktadir ve cevap veriyordur
         activePort = '5000';
     } catch (error) {
+        // 5000 portuna ulasilamazsa
         // 5000 portuna ulasilamazsa
         activePort = '5136';
     }
@@ -56,6 +61,7 @@ const PERMISSIONS = {
 function hasPermission(action) {
     const role = getUserRole();
     if (role === "superadmin") return true; // Süper admin her şeye yetkilidir
+    if (role === "superadmin") return true; // Süper admin her şeye yetkilidir
     return PERMISSIONS[role] && PERMISSIONS[role].includes(action);
 }
 
@@ -86,6 +92,7 @@ document.addEventListener('click', function (e) {
 });
 
 // Modal Girişinde Enter Tuşu ile Kaydetme (Event Delegation / Tüm Sayfalarda Ortak)
+// Modal Girişinde Enter Tuşu ile Kaydetme (Event Delegation / Tüm Sayfalarda Ortak)
 // Form etiketiyle sarılı olsun ya da olmasın, bir modal içindeki metin kutusunda
 // Enter'a basılınca o modalın birincil (kaydet/oluştur) butonunu tetikler.
 document.addEventListener('keydown', function (e) {
@@ -100,6 +107,7 @@ document.addEventListener('keydown', function (e) {
     const modal = aktifEleman.closest('.modal');
     if (!modal) return;
 
+    e.preventDefault(); // Form varsa sayfanin yenilenmesini engelle
     e.preventDefault(); // Form varsa sayfanin yenilenmesini engelle
 
     const kaydetButonu = modal.querySelector('.btn-primary:not(.btn-close), .btn-success:not(.btn-close)');
@@ -127,11 +135,11 @@ async function apiRequest(endpoint, method = 'GET', bodyData = null) {
             options.body = JSON.stringify(bodyData);
         }
     }
-    const response = await fetch(`${CONFIG.API_BASE_URL}${endpoint}`, options);
+    const response = await fetch(`${CONFIG.API_BASE_URL}${endpoint  }`, options);
     if (response.status === 401) {
         // Token gecersiz veya suresi dolmus, kullaniciyi cikis yapmaya zorla
         localStorage.removeItem('token');
-        window.location.href = 'login.html';
+        window.location.href = '/login.html';
         throw new Error('Oturum suresi doldu veya yetkisiz erisim. Lutfen tekrar giris yapin.');
     }
     const isJson = response.headers.get('content-type')?.includes('application/json');
@@ -142,6 +150,88 @@ async function apiRequest(endpoint, method = 'GET', bodyData = null) {
         throw new Error(errorMessage);
     }
     return data;
+}
+
+function buildPagination(containerId, totalItems, currentPage, pageSize, onPageChange, onPageSizeChange) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+
+    if (totalItems === 0) {
+        container.innerHTML = "";
+        return;
+    }
+
+    const totalPages = Math.ceil(totalItems / pageSize) || 1;
+    let startItem = (currentPage - 1) * pageSize + 1;
+    let endItem = Math.min(currentPage * pageSize, totalItems);
+
+    let html = `
+    <div class="d-flex justify-content-between align-items-center mt-3">
+        <div class="text-muted small">
+            ${startItem}-${endItem} / ${totalItems} kayıt
+        </div>
+        <nav>
+            <ul class="pagination pagination-sm mb-0 shadow-sm justify-content-center">`;
+    
+    html += `<li class="page-item ${currentPage === 1 ? 'disabled' : ''}"><a class="page-link page-action" href="#" data-page="${currentPage - 1}">« Önceki</a></li>`;
+
+    for (let i = 1; i <= totalPages; i++) {
+        if (totalPages > 7) {
+            if (i === 1 || i === totalPages || (i >= currentPage - 1 && i <= currentPage + 1)) {
+                html += `<li class="page-item ${currentPage === i ? 'active' : ''}"><a class="page-link page-action" href="#" data-page="${i}">${i}</a></li>`;
+            } else if (i === 2 || i === totalPages - 1) {
+                html += `<li class="page-item disabled"><span class="page-link text-muted">...</span></li>`;
+            }
+        } else {
+            html += `<li class="page-item ${currentPage === i ? 'active' : ''}"><a class="page-link page-action" href="#" data-page="${i}">${i}</a></li>`;
+        }
+    }
+
+    html += `<li class="page-item ${currentPage === totalPages ? 'disabled' : ''}"><a class="page-link page-action" href="#" data-page="${currentPage + 1}">Sonraki »</a></li>`;
+    html += `   </ul>
+        </nav>
+        <div>
+            <select class="form-select form-select-sm shadow-sm page-size-action" style="width: auto;">
+                <option value="10" ${pageSize === 10 ? 'selected' : ''}>10 Satır</option>
+                <option value="25" ${pageSize === 25 ? 'selected' : ''}>25 Satır</option>
+                <option value="50" ${pageSize === 50 ? 'selected' : ''}>50 Satır</option>
+                <option value="100" ${pageSize === 100 ? 'selected' : ''}>100 Satır</option>
+            </select>
+        </div>
+    </div>`;
+
+    container.innerHTML = html;
+
+    const navEl = container.querySelector('nav');
+    if (navEl) {
+        navEl.addEventListener('click', (e) => {
+            e.preventDefault();
+            const btn = e.target.closest(".page-action");
+            if (btn) {
+                const parentLi = btn.closest(".page-item");
+                if (parentLi && (parentLi.classList.contains("disabled") || parentLi.classList.contains("active"))) return;
+
+                const page = parseInt(btn.getAttribute("data-page"));
+                if (!isNaN(page)) {
+                    onPageChange(page);
+                }
+            }
+        });
+    }
+
+    const selectEl = container.querySelector('.page-size-action');
+    if (selectEl) {
+        selectEl.addEventListener('change', (e) => {
+            onPageSizeChange(parseInt(e.target.value));
+        });
+    }
+}
+
+// Modal icinde selectpicker fix
+if (typeof $ !== 'undefined') {
+    $(document).on('shown.bs.modal', '.modal', function () {
+        $(this).find('.selectpicker').selectpicker('render');
+    });
 }
 
 function buildPagination(containerId, totalItems, currentPage, pageSize, onPageChange, onPageSizeChange) {
