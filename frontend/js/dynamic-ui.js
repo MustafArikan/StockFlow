@@ -175,12 +175,20 @@ class DynamicUI {
         else if (uiType === 'slider' || uiType === 'range_slider_integer' || uiType === 'range_slider_decimal' || rule.dataType === 'number' || rule.dataType === 'decimal') {
             if (options && options.length > 1) {
                 // Özel dizi değerli slider (Örn: 128GB, 256GB, 512GB)
+                let rMin = 0;
+                let rMax = options.length - 1;
+                let rStep = 1;
                 let encodedOptions = escapeHtml(JSON.stringify(options));
-                inputHtml = `<div class="px-2 pb-3 pt-1">
-                                <div class="double-slider" id="slider_${rule.id}" data-options='${encodedOptions}'></div>
-                                <div class="d-flex justify-content-between mt-3 text-muted small px-1 fw-bold">
-                                    <span id="filter_min_lbl_${rule.id}"></span>
-                                    <span id="filter_max_lbl_${rule.id}"></span>
+                inputHtml = `<div class="px-2 pb-3 pt-1" data-options='${encodedOptions}'>
+                                <div class="d-flex justify-content-between mb-2">
+                                    <input type="text" id="filter_min_box_${rule.id}" class="form-control form-control-sm text-center fw-bold" style="width:48%;" value="${escapeHtml(options[0])}" readonly>
+                                    <input type="text" id="filter_max_box_${rule.id}" class="form-control form-control-sm text-center fw-bold" style="width:48%;" value="${escapeHtml(options[rMax])}" readonly>
+                                </div>
+                                <div class="dual-range position-relative mb-2 mt-1" style="height:20px;">
+                                    <input type="range" class="form-range position-absolute w-100" id="filter_min_${rule.id}"
+                                           min="${rMin}" max="${rMax}" step="${rStep}" value="${rMin}" oninput="DynamicUI.syncDiscreteDual(this, 'min', ${rule.id})" style="pointer-events: auto; z-index:2;">
+                                    <input type="range" class="form-range position-absolute w-100" id="filter_max_${rule.id}"
+                                           min="${rMin}" max="${rMax}" step="${rStep}" value="${rMax}" oninput="DynamicUI.syncDiscreteDual(this, 'max', ${rule.id})" style="pointer-events: auto; z-index:1; background:transparent;">
                                 </div>
                                 <input type="hidden" class="kural-filtresi" id="filter_hidden_${rule.id}" data-rule-id="${rule.id}" data-rule-key="${escapeHtml(rule.attributeKey)}" data-filter-type="discrete_range">
                              </div>`;
@@ -195,10 +203,10 @@ class DynamicUI {
                 let rStep = decimals > 0 ? 1 / Math.pow(10, decimals) : 1;
 
                 inputHtml = `<div class="px-2 pb-3 pt-1">
-                                <label class="form-label small d-flex justify-content-between w-100 px-1 mb-1 text-muted fw-bold">
-                                  <span><span id="filter_min_lbl_${rule.id}">${rMin.toFixed(decimals)}</span></span>
-                                  <span><span id="filter_max_lbl_${rule.id}">${rMax.toFixed(decimals)}</span></span>
-                                </label>
+                                <div class="d-flex justify-content-between mb-2">
+                                    <input type="number" id="filter_min_box_${rule.id}" class="form-control form-control-sm text-center fw-bold" style="width:48%;" min="${rMin}" max="${rMax}" step="${rStep}" value="${rMin.toFixed(decimals)}" oninput="DynamicUI.syncDualBox(this, 'min', ${rule.id}, ${rStep}, ${decimals})">
+                                    <input type="number" id="filter_max_box_${rule.id}" class="form-control form-control-sm text-center fw-bold" style="width:48%;" min="${rMin}" max="${rMax}" step="${rStep}" value="${rMax.toFixed(decimals)}" oninput="DynamicUI.syncDualBox(this, 'max', ${rule.id}, ${rStep}, ${decimals})">
+                                </div>
                                 <div class="dual-range position-relative mb-2 mt-1" style="height:20px;">
                                     <input type="range" class="form-range position-absolute w-100" id="filter_min_${rule.id}"
                                            min="${rMin}" max="${rMax}" step="${rStep}" value="${rMin}" oninput="DynamicUI.syncDual(this, 'min', ${rule.id}, ${rStep}, ${decimals})" style="pointer-events: auto; z-index:2;">
@@ -347,8 +355,8 @@ class DynamicUI {
     static syncDual(sourceEl, type, ruleId, step, decimals) {
         let minEl = document.getElementById('filter_min_' + ruleId);
         let maxEl = document.getElementById('filter_max_' + ruleId);
-        let minLbl = document.getElementById('filter_min_lbl_' + ruleId);
-        let maxLbl = document.getElementById('filter_max_lbl_' + ruleId);
+        let minBox = document.getElementById('filter_min_box_' + ruleId);
+        let maxBox = document.getElementById('filter_max_box_' + ruleId);
         let hiddenEl = document.getElementById('filter_hidden_' + ruleId);
 
         let lo = Number(minEl.value);
@@ -363,12 +371,70 @@ class DynamicUI {
         lo = Math.round(lo * factor) / factor;
         hi = Math.round(hi * factor) / factor;
 
-        minLbl.textContent = lo.toFixed(decimals);
-        maxLbl.textContent = hi.toFixed(decimals);
-        hiddenEl.value = lo + "-" + hi;
+        if (minBox) minBox.value = lo.toFixed(decimals);
+        if (maxBox) maxBox.value = hi.toFixed(decimals);
         
-        // Tetikleyici (debounce uygulanabilir gerçekte)
-        hiddenEl.dispatchEvent(new Event('change', { bubbles: true }));
+        if (hiddenEl) {
+            hiddenEl.value = lo + "-" + hi;
+            hiddenEl.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+    }
+
+    static syncDualBox(sourceEl, type, ruleId, step, decimals) {
+        let minEl = document.getElementById('filter_min_' + ruleId);
+        let maxEl = document.getElementById('filter_max_' + ruleId);
+        let minBox = document.getElementById('filter_min_box_' + ruleId);
+        let maxBox = document.getElementById('filter_max_box_' + ruleId);
+        let hiddenEl = document.getElementById('filter_hidden_' + ruleId);
+
+        let lo = Number(minBox.value);
+        let hi = Number(maxBox.value);
+
+        if (lo > hi - step) {
+            if (type === 'min') { lo = hi - step; minBox.value = lo.toFixed(decimals); }
+            else { hi = lo + step; maxBox.value = hi.toFixed(decimals); }
+        }
+
+        if (minEl) minEl.value = lo;
+        if (maxEl) maxEl.value = hi;
+        
+        if (minEl && maxEl) {
+            lo = Number(minEl.value);
+            hi = Number(maxEl.value);
+        }
+
+        if (hiddenEl) {
+            hiddenEl.value = lo + "-" + hi;
+            hiddenEl.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+    }
+
+    static syncDiscreteDual(sourceEl, type, ruleId) {
+        let minEl = document.getElementById('filter_min_' + ruleId);
+        let maxEl = document.getElementById('filter_max_' + ruleId);
+        let minBox = document.getElementById('filter_min_box_' + ruleId);
+        let maxBox = document.getElementById('filter_max_box_' + ruleId);
+        let hiddenEl = document.getElementById('filter_hidden_' + ruleId);
+        
+        let wrapper = minEl.closest('[data-options]');
+        if(!wrapper) return;
+        let arr = JSON.parse(wrapper.dataset.options);
+
+        let lo = Number(minEl.value);
+        let hi = Number(maxEl.value);
+
+        if (lo > hi) {
+            if (type === 'min') { lo = hi; minEl.value = lo; }
+            else { hi = lo; maxEl.value = hi; }
+        }
+
+        if (minBox) minBox.value = arr[lo];
+        if (maxBox) maxBox.value = arr[hi];
+        
+        if (hiddenEl) {
+            hiddenEl.value = arr[lo] + "-" + arr[hi];
+            hiddenEl.dispatchEvent(new Event('change', { bubbles: true }));
+        }
     }
 
     static searchableInput(inputEl, ruleId, optionsStr) {
