@@ -96,6 +96,12 @@ public class ProductsController : ControllerBase
         if (!locationExists) 
             return BadRequest(new { message = "Belirtilen raf/lokasyon bulunamadı." });
 
+        if (dto.Attributes != null && dto.Attributes.Any())
+        {
+            var validationError = await ValidateAndNormalizeAttributesAsync(dto.Attributes, dto.CategoryId);
+            if (validationError != null) return BadRequest(new { message = validationError });
+        }
+
         var product = new Product {
             Name = dto.Name,
             Barcode = dto.Barcode,
@@ -252,6 +258,12 @@ public class ProductsController : ControllerBase
             return BadRequest("Bu isim veya barkoda sahip bir ürün zaten var.");
         }
 
+        if (dto.Attributes != null && dto.Attributes.Any())
+        {
+            var validationError = await ValidateAndNormalizeAttributesAsync(dto.Attributes, dto.CategoryId);
+            if (validationError != null) return BadRequest(new { message = validationError });
+        }
+
         product.Name = dto.Name;
         product.Barcode = dto.Barcode;
         product.MinStockLevel = dto.MinStockLevel;
@@ -354,5 +366,92 @@ public class ProductsController : ControllerBase
             .ToListAsync();    
 
         return Ok(products);    
+    }
+
+    // =========================================================================
+    // 🎯 YENİ EKLENEN ARKA YÜZ (BACKEND) KURAL DENETİMLERİ (MD Dosyasına Göre)
+    // =========================================================================
+
+    private async Task<string?> ValidateAndNormalizeAttributesAsync(List<ProductAttributeDto> attributes, int categoryId)
+    {
+        var rules = await _context.AttributeRules
+            .Where(r => (r.CategoryId == categoryId || r.CategoryId == null) && !r.IsDeleted)
+            .ToListAsync();
+
+        foreach (var attr in attributes)
+        {
+            if (string.IsNullOrWhiteSpace(attr.Value)) continue;
+
+            var rule = rules.FirstOrDefault(r => r.Id == attr.RuleId);
+            if (rule == null) continue;
+
+            string uiType = rule.UiComponent ?? rule.DataType;
+
+            if (uiType == "searchable_dropdown" || uiType == "discrete_slider" || uiType == "dropdown" || uiType == "radio" || uiType == "segmented_button")
+            {
+                if (!string.IsNullOrEmpty(rule.AllowedValues))
+                {
+                    try
+                    {
+                        var allowedList = JsonSerializer.Deserialize<List<string>>(rule.AllowedValues);
+                        if (allowedList != null && allowedList.Any())
+                        {
+                            var normInput = NormalizeForCompare(attr.Value);
+                            var match = allowedList.FirstOrDefault(o => NormalizeForCompare(o) == normInput);
+                            if (match == null)
+                            {
+                                return $"'{rule.AttributeKey}' için geçersiz seçim yapıldı. Listede olmayan veri girilemez.";
+                            }
+                            attr.Value = match; // Orijinal doğru formata çevir.
+                        }
+                    }
+                    catch { }
+                }
+            }
+            else if (rule.DataType == "number" || rule.DataType == "integer" || uiType == "range_slider_integer")
+            {
+                var numStr = CoerceNumericString(attr.Value);
+                if (!int.TryParse(numStr, out int n)) return $"'{rule.AttributeKey}' tam sayı olmalıdır.";
+                if (rule.MinValue.HasValue && n < rule.MinValue.Value) return $"'{rule.AttributeKey}' minimum {rule.MinValue} olabilir.";
+                if (rule.MaxValue.HasValue && n > rule.MaxValue.Value) return $"'{rule.AttributeKey}' maksimum {rule.MaxValue} olabilir.";
+                attr.Value = n.ToString();
+            }
+            else if (rule.DataType == "decimal" || uiType == "range_slider" || uiType == "range_slider_decimal" || uiType == "slider")
+            {
+                var numStr = CoerceNumericString(attr.Value);
+                if (!decimal.TryParse(numStr, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out decimal d)) 
+                    return $"'{rule.AttributeKey}' geçerli bir ondalıklı sayı olmalıdır.";
+                if (rule.MinValue.HasValue && d < (decimal)rule.MinValue.Value) return $"'{rule.AttributeKey}' minimum {rule.MinValue} olabilir.";
+                if (rule.MaxValue.HasValue && d > (decimal)rule.MaxValue.Value) return $"'{rule.AttributeKey}' maksimum {rule.MaxValue} olabilir.";
+                
+                // MD: Ondalık yuvarlama varsa burada da yapılabilir ancak UI'dan düzgün gelmesi beklenir.
+                attr.Value = d.ToString(System.Globalization.CultureInfo.InvariantCulture);
+            }
+        }
+
+        // MD Kuralı: Required Check
+        foreach (var rule in rules.Where(r => r.IsRequired))
+        {
+            var exists = attributes.Any(a => a.RuleId == rule.Id && !string.IsNullOrWhiteSpace(a.Value));
+            if (!exists) return $"'{rule.AttributeKey}' zorunlu bir alandır, boş bırakılamaz.";
+        }
+
+        return null;
+    }
+
+    private static string NormalizeForCompare(string str)
+    {
+        if(string.IsNullOrWhiteSpace(str)) return "";
+        return System.Text.RegularExpressions.Regex.Replace(str, @"\s+", " ")
+              .Normalize(System.Text.NormalizationForm.FormC)
+              .Trim()
+              .ToLower(new System.Globalization.CultureInfo("tr-TR"));
+    }
+
+    private static string CoerceNumericString(string str)
+    {
+        if(string.IsNullOrWhiteSpace(str)) return "";
+        str = str.Trim().Replace(",", ".");
+        return System.Text.RegularExpressions.Regex.Replace(str, @"[^\d.\-]", "");
     }
 }

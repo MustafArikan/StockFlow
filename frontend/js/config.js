@@ -309,25 +309,6 @@ function buildPagination(containerId, totalItems, currentPage, pageSize, onPageC
     }
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 // LAYOUT (SIDEBAR & TOPBAR) RENDER MOTORU
 function renderProfessionalLayout() {
     // 1. GÜVENLİK VE KONTROL: Eğer kullanıcı giriş, kayıt veya şifre sıfırlama sayfasındaysa

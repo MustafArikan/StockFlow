@@ -199,11 +199,12 @@ body {
 .top-products-wrapper { height: 500px; }
 
 /* Barkod Okuyucu (Kamera) arayüzünü şekillendirir. */
-.scanner-wrapper { background-color: #000; min-height: 200px; border: 2px dashed var(--border-color); }
-#reader { width: 100% !important; }
+#kameraAlani, .scanner-wrapper { background-color: #000; min-height: 200px; border: 2px dashed var(--border-color); }
+#reader { width: 100% !important; border: none !important; }
 #reader video { border-radius: 8px; object-fit: cover; }
 #reader__dashboard_section_csr span, #reader__dashboard_section_swaplink { color: var(--text-primary) !important; font-size: 14px; text-decoration: none; }
 [data-theme="dark"] #reader { background-color: var(--card-bg) !important; border-color: #40424c !important; }
+[data-theme="dark"] #kameraAlani { border-color: #40424c !important; }
 [data-theme="dark"] #reader__dashboard_section_csr { background-color: var(--card-bg) !important; color: #ececec !important; }
 
 /* Demirbaş Zaman Çizelgesinin (Timeline) iskeletini ve dikey çizgisini çizer. */
@@ -283,3 +284,9 @@ button:disabled, .btn:disabled, .btn.disabled { cursor: not-allowed !important; 
 .color-dot { display: inline-block; width: 18px; height: 18px; border: 1px solid var(--border-color); border-radius: 50%; }
 .svg-color-circle { margin-right: 8px; }
 .scrollable-card { max-height: 200px; overflow-y: auto; background-color: var(--bg-primary); }
+/* Dual Range Slider Fix */
+.dual-range input[type=range] { pointer-events: none; -webkit-appearance: none; background: transparent; }
+.dual-range input[type=range]::-webkit-slider-thumb { pointer-events: auto; -webkit-appearance: none; width: 16px; height: 16px; background: #0d6efd; border-radius: 50%; cursor: pointer; margin-top: -6px; }
+.dual-range input[type=range]::-moz-range-thumb { pointer-events: auto; width: 16px; height: 16px; background: #0d6efd; border-radius: 50%; cursor: pointer; border: none; }
+.dual-range input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 4px; background: transparent; border-radius: 2px; }
+.dual-range input[type=range]:first-child::-webkit-slider-runnable-track { background: #dee2e6; }
