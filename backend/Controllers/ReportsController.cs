@@ -17,14 +17,14 @@ namespace stok_takip.Controllers
             _context = context;
         }
 
+        // DASHBOARD KARTLARI İÇİN ÖZET BİLGİLER 
         [HttpGet("dashboard-summary")]
         public async Task<IActionResult> GetDashboardSummary()
         {
             try
             {
                 var totalProducts = await _context.Products.AsNoTracking().Where(p => !p.IsDeleted).CountAsync();
-                var totalWarehouses = await _context.Warehouses.AsNoTracking().Where(w => !w.IsDeleted).CountAsync();
-
+                var totalWarehouses = await _context.Warehouses.AsNoTracking().Where(w => !w.IsDeleted).CountAsync();                
                 var criticalAlertsCount = await _context.Notifications
                     .AsNoTracking()
                     .Where(n => !n.IsRead && !n.IsDeleted)

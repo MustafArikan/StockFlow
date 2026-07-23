@@ -1,30 +1,10 @@
-const token = localStorage.getItem('token');
-
-if (!token) {
-    window.location.href = 'login.html';
-}
-
-function getUserEmail() {
-    try {
-        const payloadBase64 = token.split('.')[1];
-        const payloadDecoded = JSON.parse(atob(payloadBase64));
-        return payloadDecoded["email"] ||
-               payloadDecoded["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress"] ||
-               "Kullanıcı";
-    } catch (e) {
-        return "Kullanıcı";
-    }
-}
-
-window.logout = function() {
-    localStorage.removeItem('token');
-    window.location.href = 'login.html';
+function formatCurrency(amount) {
+    return new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY' }).format(amount);
 }
 
 function escapeHtml(text) {
     if (!text) return "";
-    return text
-        .toString()
+    return text.toString()
         .replace(/&/g, "&amp;")
         .replace(/</g, "&lt;")
         .replace(/>/g, "&gt;")
@@ -33,52 +13,36 @@ function escapeHtml(text) {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-    const userProfileEl = document.getElementById('userProfile');
-    if (userProfileEl) {
-        userProfileEl.textContent = getUserEmail();    
-    }
-
     loadDashboardSummary();
     loadNavbarNotifications();
-    loadReportCharts();
-    
+    loadCharts();
+
     if (document.fonts && document.fonts.ready) {
         document.fonts.ready.then(() => {
             if (trendChartInstance) trendChartInstance.update();
             if (categoryChartInstance) categoryChartInstance.update();
             if (topProductsChartInstance) topProductsChartInstance.update();
+            if (movementSummaryChartInstance) movementSummaryChartInstance.update();
         });
     }
 
     const btnNavbarReadAll = document.getElementById('btnNavbarReadAll');
-    if (btnNavbarReadAll) {
-        btnNavbarReadAll.addEventListener("click", markAllAsRead);
-    }
-
-    const btnNavbarLogout = document.getElementById('btnNavbarLogout');
-    if (btnNavbarLogout) {
-        btnNavbarLogout.addEventListener("click", logout);
-    }
+    if (btnNavbarReadAll) btnNavbarReadAll.addEventListener("click", markAllAsRead);
 
     const btnExportPdf = document.getElementById('btnExportPdf');
-    if (btnExportPdf) {
-        btnExportPdf.addEventListener("click", exportDashboardAsPdf);
-    }
+    if (btnExportPdf) btnExportPdf.addEventListener("click", exportDashboardAsPdf);
 
     const btnExportCsv = document.getElementById('btnExportCsv');
-    if (btnExportCsv) {
-        btnExportCsv.addEventListener("click", exportDashboardAsCsv);
-    }
-
-    // Tema (aydınlık/karanlık) değişince grafikleri yeni renklerle yeniden çiz
+    if (btnExportCsv) btnExportCsv.addEventListener("click", exportDashboardAsExcel);
     
-    const themeToggleBtn = document.getElementById('themeToggleBtn');
+    const themeToggleBtn = document.getElementById('layoutThemeToggleBtn') || document.getElementById('themeToggleBtn');
     if (themeToggleBtn) {
         themeToggleBtn.addEventListener('click', () => {
             setTimeout(() => {
                 if (lastTrendData && lastTrendData.length > 0) renderTrendChart(lastTrendData);
                 if (lastCategoryData && lastCategoryData.length > 0) renderCategoryChart(lastCategoryData);
                 if (lastTopProductsData && lastTopProductsData.length > 0) renderTopProductsChart(lastTopProductsData);
+                if (lastMovementData) renderMovementSummaryChart(lastMovementData);
             }, 50);
         });
     }
@@ -87,39 +51,15 @@ document.addEventListener('DOMContentLoaded', () => {
 async function loadDashboardSummary() {
     try {
         const data = await apiRequest('/reports/dashboard-summary', 'GET');
-        
-        document.getElementById('totalProducts').textContent = data.toplamUrunCesidi || 0;
-        document.getElementById('lowStockCount').textContent = data.kritikStoktakiUrunSayisi || 0;
-        document.getElementById('monthlyInputs').textContent = data.aylikGiris || 0;
-        document.getElementById('monthlyOutputs').textContent = data.aylikCikis || 0;
 
-        document.getElementById('totalProductsValue').textContent = formatCurrency(data.toplamStokDegeri || 0);
+        document.getElementById('totalProductsText').textContent = data.totalProducts || 0;
+        document.getElementById('totalStockText').innerHTML = `${data.totalStockQuantity || 0} <span class="fs-6 text-muted">Adet</span>`;
+        document.getElementById('activeWarehousesText').textContent = data.totalWarehouses || 0;
+        document.getElementById('criticalAlertsText').textContent = data.criticalAlertsCount || 0;
 
-        if (data.sonIslemler && Array.isArray(data.sonIslemler)) {
-            const list = document.getElementById('recentActivityList');
-            if (list) {
-                list.innerHTML = '';
-                data.sonIslemler.forEach(islem => {
-                    let icon = 'bi-arrow-right-circle text-secondary';
-                    let badge = 'bg-secondary';
-                    if (islem.type === 'GIRIS') { icon = 'bi-arrow-down-circle text-success'; badge = 'bg-success'; }
-                    else if (islem.type === 'CIKIS') { icon = 'bi-arrow-up-circle text-danger'; badge = 'bg-danger'; }
-                    else if (islem.type === 'TRANSFER') { icon = 'bi-arrow-left-right text-info'; badge = 'bg-info'; }
+        const valEl = document.getElementById('totalProductsValue');
+        if (valEl) valEl.textContent = formatCurrency(data.totalWarehouseValue || 0);
 
-                    list.innerHTML += `
-                        <div class="activity-item pb-3 mb-3 border-bottom">
-                            <div class="d-flex align-items-center">
-                                <i class="bi ${icon} fs-4 me-3"></i>
-                                <div>
-                                    <h6 class="mb-0 fw-bold">${islem.productName}</h6>
-                                    <small class="text-muted">${new Date(islem.createdAt).toLocaleString('tr-TR')} - ${islem.quantity} Adet <span class="badge ${badge} ms-1">${islem.type}</span></small>
-                                </div>
-                            </div>
-                        </div>
-                    `;
-                });
-            }
-        }
     } catch (error) {
         console.error("Dashboard özeti yüklenemedi:", error);
     }
@@ -130,17 +70,18 @@ async function loadNavbarNotifications() {
         const notifications = await apiRequest('/notifications?onlyUnread=true', 'GET');
         const list = document.getElementById("navbarNotificationList");
         const badge = document.getElementById("navbarNotificationCount");
-        
+
         if (!list || !badge) return;
 
         list.innerHTML = "";
-        
+
         if (!notifications || notifications.length === 0) {
             badge.classList.add("d-none");
             list.innerHTML = '<li class="text-center text-muted py-3 small">Yeni bildiriminiz yok.</li>';
             return;
         }
 
+        badge.textContent = notifications.length;
         badge.textContent = notifications.length;
         badge.classList.remove("d-none");
 
@@ -157,15 +98,14 @@ async function loadNavbarNotifications() {
                         <i class="bi bi-exclamation-circle-fill fs-5"></i>
                     </div>
                     <div>
-                        <div class="fw-bold small mb-1">${n.title}</div>
-                        <div class="text-muted small mb-1" style="font-size: 0.8rem;">${n.message}</div>
+                        <div class="fw-bold small mb-1">${escapeHtml(n.title)}</div>
+                        <div class="text-muted small mb-1" style="font-size: 0.8rem;">${escapeHtml(n.message)}</div>
                         <div class="text-secondary small" style="font-size: 0.75rem;">${new Date(n.createdAt).toLocaleString('tr-TR')}</div>
                     </div>
                 </div>
             `;
             list.appendChild(li);
         });
-
     } catch (error) {
         console.error("Bildirimler yüklenemedi:", error);
     }
@@ -180,23 +120,23 @@ async function markAllAsRead() {
     }
 }
 
-// DASHBOARD GRAFİKLERİ (Chart.js ile çizilir)
-// Chart.js grafik nesnelerini burada tutuluyor
-// veri çekince eskisini silip yenisini bu değişkenlere atıyoruz.
+// DASHBOARD GRAFİKLERİ
 let trendChartInstance = null;
 let categoryChartInstance = null;
 let topProductsChartInstance = null;
+let movementSummaryChartInstance = null;
 
-// Excel/CSV indirirken tekrar sunucudan veri istemek yerine, en son çekilen veriyi burada saklanır.
+let lastTrendData = [];
 let lastCategoryData = [];
 let lastTopProductsData = [];
+let lastMovementData = null;
+let allProductsForExcel = [];
+let currentTrendProduct = null;
 
-// Karanlık/aydınlık temaya göre grafik yazı rengi değişir.
 function getChartTextColor() {
     return document.documentElement.getAttribute('data-theme') === 'dark' ? '#ececec' : '#1a1d23';
 }
 
-// Karanlık/aydınlık temaya göre grafik ızgara (grid) çizgisi rengini değişir.
 function getChartGridColor() {
     return document.documentElement.getAttribute('data-theme') === 'dark' ? '#40424c' : '#d8dce2';
 }
@@ -204,7 +144,7 @@ function getChartGridColor() {
 async function loadCharts() {
     try {
         const trendUrl = currentTrendProduct ? `/reports/trend?productId=${currentTrendProduct}` : '/reports/trend';
-        
+
         const [trendData, categoryData, topProductsData, moveData, prodDataRaw] = await Promise.all([
             apiRequest(trendUrl, 'GET'),
             apiRequest('/reports/by-category', 'GET'),
@@ -213,30 +153,84 @@ async function loadCharts() {
             apiRequest('/products?pageSize=10000', 'GET')
         ]);
 
+
+        lastTrendData = trendData || [];
+        lastCategoryData = categoryData || [];
+        lastTopProductsData = topProductsData || [];
+        lastMovementData = moveData || { giris: 0, cikis: 0, transfer: 0 };
+        allProductsForExcel = prodDataRaw?.items || prodDataRaw || [];
+
+        const filterSelect = document.getElementById("trendProductFilter");
+        if (filterSelect && filterSelect.options.length <= 1) {
+            allProductsForExcel.forEach(p => {
+                const opt = document.createElement("option");
+                opt.value = p.id; // Doğru alan (ID)
+                opt.textContent = `[${p.barcode}] ${p.name}`;
+                filterSelect.appendChild(opt);
+            });
         }
 
-        lastTrendData = trendRes.ok ? await trendRes.json() : [];
-        lastCategoryData = categoryRes.ok ? await categoryRes.json() : [];
-        lastTopProductsData = topProductsRes.ok ? await topProductsRes.json() : [];
+
 
         renderTrendChart(lastTrendData);
         renderCategoryChart(lastCategoryData);
         renderTopProductsChart(lastTopProductsData);
+        renderMovementSummaryChart(lastMovementData);
     } catch (error) {
         console.error("Rapor grafikleri yüklenemedi:", error);
     }
 }
 
-// Son 30 günün giriş/çıkış miktarlarını çizgi grafik olarak çizer
+document.getElementById("trendProductFilter")?.addEventListener("change", async (e) => {
+    currentTrendProduct = e.target.value;
+    loadCharts();
+});
+
+// Son 30 Gün Stok Hareket Trend grafiğini çizer
 function renderTrendChart(data) {
     const ctx = document.getElementById('trendChart');
     if (!ctx || typeof Chart === 'undefined') return;
 
     const textColor = getChartTextColor();
     const gridColor = getChartGridColor();
-    const labels = data.map(d => new Date(d.tarih).toLocaleDateString('tr-TR', { day: '2-digit', month: '2-digit' }));
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
 
-    if (trendChartInstance) trendChartInstance.destroy(); // Eski grafik varsa önce onu temizler
+    const labels = [];
+    const girisData = [];
+    const cikisData = [];
+    const transferData = [];
+
+    for (let i = 29; i >= 0; i--) {
+        const d = new Date();
+        d.setDate(d.getDate() - i);
+        const dayMonthStr = d.toLocaleDateString('tr-TR', { day: '2-digit', month: '2-digit' });
+        labels.push(dayMonthStr);
+
+        const match = data.find(x => {
+            const xDate = new Date(x.tarih || x.Date);
+            return xDate.toLocaleDateString('tr-TR', { day: '2-digit', month: '2-digit' }) === dayMonthStr;
+        });
+
+        girisData.push(match ? (match.girisMiktari || match.GirisMiktari || 0) : 0);
+        cikisData.push(match ? (match.cikisMiktari || match.CikisMiktari || 0) : 0);
+        transferData.push(match ? (match.transferMiktari || match.TransferMiktari || 0) : 0);
+    }
+
+    if (trendChartInstance) trendChartInstance.destroy();
+
+    const ctx2d = ctx.getContext('2d');
+
+    const gradientGiris = ctx2d.createLinearGradient(0, 0, 0, 450);
+    gradientGiris.addColorStop(0, 'rgba(25, 135, 84, 0.4)');
+    gradientGiris.addColorStop(1, 'rgba(25, 135, 84, 0.0)');
+
+    const gradientCikis = ctx2d.createLinearGradient(0, 0, 0, 450);
+    gradientCikis.addColorStop(0, 'rgba(220, 53, 69, 0.4)');
+    gradientCikis.addColorStop(1, 'rgba(220, 53, 69, 0.0)');
+
+    const gradientTransfer = ctx2d.createLinearGradient(0, 0, 0, 450);
+    gradientTransfer.addColorStop(0, 'rgba(13, 202, 240, 0.4)');
+    gradientTransfer.addColorStop(1, 'rgba(13, 202, 240, 0.0)');
 
     trendChartInstance = new Chart(ctx, {
         type: 'line',
@@ -244,112 +238,312 @@ function renderTrendChart(data) {
             labels: labels,
             datasets: [
                 {
-                    label: 'Giriş',
-                    data: data.map(d => d.girisMiktari),
+                    label: ' Stok Girişi',
+                    data: girisData,
                     borderColor: '#198754',
-                    backgroundColor: 'rgba(25, 135, 84, 0.15)',
-                    tension: 0.3,
-                    fill: true
+                    backgroundColor: gradientGiris,
+                    borderWidth: 2.5,
+                    tension: 0.4,
+                    fill: true,
+                    pointRadius: 0,
+                    pointHoverRadius: 6,
+                    pointBackgroundColor: '#198754'
                 },
                 {
-                    label: 'Çıkış',
-                    data: data.map(d => d.cikisMiktari),
+                    label: ' Stok Çıkışı',
+                    data: cikisData,
                     borderColor: '#dc3545',
-                    backgroundColor: 'rgba(220, 53, 69, 0.15)',
-                    tension: 0.3,
-                    fill: true
+                    backgroundColor: gradientCikis,
+                    borderWidth: 2.5,
+                    tension: 0.4,
+                    fill: true,
+                    pointRadius: 0,
+                    pointHoverRadius: 6,
+                    pointBackgroundColor: '#dc3545'
+                },
+                {
+                    label: ' Transfer',
+                    data: transferData,
+                    borderColor: '#0dcaf0',
+                    backgroundColor: gradientTransfer,
+                    borderWidth: 2.5,
+                    tension: 0.4,
+                    fill: true,
+                    pointRadius: 0,
+                    pointHoverRadius: 6,
+                    pointBackgroundColor: '#0dcaf0'
                 }
             ]
         },
         options: {
             responsive: true,
-            maintainAspectRatio: false, 
+            maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: false },
             plugins: {
-                legend: { labels: { color: textColor } }
+                legend: {
+                    position: 'top', align: 'end',
+                    labels: { color: textColor, padding: 25, usePointStyle: true, boxWidth: 8, font: { family: "'Inter', sans-serif", weight: '600' } }
+                },
+                tooltip: {
+                    backgroundColor: isDark ? 'rgba(30, 31, 36, 0.95)' : 'rgba(255, 255, 255, 0.95)',
+                    titleColor: isDark ? '#fff' : '#000',
+                    bodyColor: isDark ? '#ccc' : '#444',
+                    borderColor: gridColor, borderWidth: 1, padding: 12,
+                    titleFont: { size: 14, family: "'Inter', sans-serif" },
+                    bodyFont: { size: 13, family: "'Inter', sans-serif" },
+                    boxPadding: 6, usePointStyle: true
+                }
             },
             scales: {
-                x: { ticks: { color: textColor }, grid: { color: gridColor } },
-                y: { ticks: { color: textColor }, grid: { color: gridColor }, beginAtZero: true }
+                x: { ticks: { color: textColor, maxRotation: 45, minRotation: 0, font: { family: "'Inter', sans-serif" } }, grid: { display: false } },
+                y: { grace: '10%', ticks: { color: textColor, font: { family: "'Inter', sans-serif" }, padding: 10 }, grid: { color: gridColor, drawBorder: false, borderDash: [5, 5] }, beginAtZero: true }
             }
         }
     });
 }
 
-// Kategorilere göre toplam stok dağılımını halka grafik olarak çizer
+// Stok işlemlerinin (Giriş/Çıkış/Transfer) dağılımını tıklanabilir pasta grafik olarak çizer
+function renderMovementSummaryChart(data) {
+    const ctx = document.getElementById('movementSummaryChart');
+    if (!ctx || typeof Chart === 'undefined') return;
+
+    const textColor = getChartTextColor();
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+
+    if (movementSummaryChartInstance) movementSummaryChartInstance.destroy();
+
+    const giris = data.Giris || data.giris || 0;
+    const cikis = data.Cikis || data.cikis || 0;
+    const transfer = data.Transfer || data.transfer || 0;
+
+    const filtreKodlari = ['GIRIS', 'CIKIS', 'TRANSFER'];
+
+    movementSummaryChartInstance = new Chart(ctx, {
+        type: 'pie',
+        data: {
+            labels: ['Stok Girişi', 'Stok Çıkışı', 'Transfer'],
+            datasets: [{
+                data: [giris, cikis, transfer],
+                backgroundColor: ['#198754', '#dc3545', '#0dcaf0'],
+                borderWidth: 2,
+                borderColor: isDark ? '#262730' : '#ffffff',
+                hoverOffset: 6
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            // Fare grafiğin üzerindeyken el işareti (pointer) yapması için gereken kod:
+            onHover: (event, chartElement) => {
+                event.native.target.style.cursor = chartElement[0] ? 'pointer' : 'default';
+            },
+            onClick: (event, elements) => {
+                if (elements.length > 0) {
+                    const index = elements[0].index;
+                    const secilenFiltre = filtreKodlari[index];
+
+                    window.location.href = `movements.html?filter=${secilenFiltre}`;
+                }
+            },
+
+            plugins: {
+                legend: { position: 'bottom', labels: { color: textColor, padding: 15 } },
+                tooltip: {
+                    backgroundColor: isDark ? 'rgba(30, 31, 36, 0.95)' : 'rgba(255, 255, 255, 0.95)',
+                    titleColor: isDark ? '#fff' : '#000',
+                    bodyColor: isDark ? '#ccc' : '#444',
+                    borderWidth: 1, padding: 12, usePointStyle: true,
+                    callbacks: {
+                        afterLabel: function (context) {
+                            return ' (Filtrelemek için tıkla)';
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
 function renderCategoryChart(data) {
     const ctx = document.getElementById('categoryChart');
     if (!ctx || typeof Chart === 'undefined') return;
 
     const textColor = getChartTextColor();
-    
-    const palette = [
-        '#0d6efd', '#fd7e14', '#198754', '#6f42c1', 
-        '#d63384', '#20c997', '#ffc107', '#0dcaf0', 
-        '#6c757d', '#6610f2', '#e83e8c', '#17a2b8'
-    ];
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+
+    const gecerliVeri = data.filter(d => d.toplamStok > 0);
+
+    const generateColors = (count) => {
+        const palette = [
+            '#0d6efd', '#fd7e14', '#198754', '#6f42c1',
+            '#d63384', '#20c997', '#ffc107', '#0dcaf0',
+            '#6c757d', '#6610f2', '#e83e8c', '#17a2b8'
+        ];
+        const bg = [];
+        for (let i = 0; i < count; i++) {
+            bg.push(palette[i % palette.length]);
+        }
+        return bg;
+    };
 
     if (categoryChartInstance) categoryChartInstance.destroy();
+
+    if (gecerliVeri.length === 0) return;
 
     categoryChartInstance = new Chart(ctx, {
         type: 'doughnut',
         data: {
-            labels: data.map(d => d.kategoriAdi),
+            labels: gecerliVeri.map(d => d.kategoriAdi),
             datasets: [{
-                data: data.map(d => d.toplamStok),
-                backgroundColor: data.map((_, i) => palette[i % palette.length])
+                data: gecerliVeri.map(d => d.toplamStok),
+                backgroundColor: generateColors(gecerliVeri.length),
+                borderWidth: 2,
+                borderColor: isDark ? '#262730' : '#ffffff',
+                hoverOffset: 6
             }]
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
-            plugins: {
-                legend: { position: 'bottom', labels: { color: textColor } }
-            }
-        }
-    });
-}
-
-// En çok hareket gören 5 ürünü yatay çubuk grafik olarak çizer
-function renderTopProductsChart(data) {
-    const ctx = document.getElementById('topProductsChart');
-    if (!ctx || typeof Chart === 'undefined') return;
-
-    const textColor = getChartTextColor();
-    const gridColor = getChartGridColor();
-
-    if (topProductsChartInstance) topProductsChartInstance.destroy();
-
-    topProductsChartInstance = new Chart(ctx, {
-        type: 'bar',
-        data: {
-            labels: data.map(d => d.urunAdi),
-            datasets: [{
-                label: 'Toplam Hareket Miktarı',
-                data: data.map(d => d.toplamHareketMiktari),
-                backgroundColor: '#0d6efd'
-            }]
-        },
-        options: {
-            indexAxis: 'y',
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: { display: false }
+            cutout: '55%',
+            // Fare grafiğin üzerindeyken el işareti (pointer) yapması için gereken kod:
+            onHover: (event, chartElement) => {
+                event.native.target.style.cursor = chartElement[0] ? 'pointer' : 'default';
             },
-            scales: {
-                x: { ticks: { color: textColor }, grid: { color: gridColor }, beginAtZero: true },
-                y: { ticks: { color: textColor }, grid: { color: gridColor } }
+            onClick: (event, elements) => {
+                if (elements.length > 0) {
+                    const index = elements[0].index;
+                    const kategoriAdi = gecerliVeri[index].kategoriAdi;
+                    window.location.href = `products.html?search=${encodeURIComponent(kategoriAdi)}`;
+                }
+            },
+            plugins: {
+                legend: {
+                    position: 'right',
+                    align: 'center',
+                    labels: {
+                        color: textColor,
+                        usePointStyle: true,
+                        padding: 15,
+                        font: { family: "'Inter', sans-serif", size: 12 }
+                    }
+                },
+                tooltip: {
+                    backgroundColor: isDark ? 'rgba(30, 31, 36, 0.95)' : 'rgba(255, 255, 255, 0.95)',
+                    titleColor: isDark ? '#fff' : '#000',
+                    bodyColor: isDark ? '#ccc' : '#444',
+                    borderWidth: 1, padding: 12, usePointStyle: true,
+                    callbacks: {
+                        afterLabel: function (context) {
+                            return ' (Filtrelemek için tıkla)';
+                        }
+                    }
+                }
             }
         }
     });
 }
 
+// En Çok Hareket Gören 7 Ürünü Çizer
+function renderTopProductsChart(data) {
+    try {
+        const canvas = document.getElementById('topProductsChart');
+        if (!canvas || typeof Chart === 'undefined') return;
 
-// PDF OLARAK DIŞA AKTARMA (jsPDF + html2canvas kullanılır)
+        const ctx = canvas.getContext('2d');
+        const textColor = getChartTextColor();
+        const gridColor = getChartGridColor();
 
+        if (topProductsChartInstance) {
+            topProductsChartInstance.destroy();
+        }
 
-// Dashboard alanının bir "fotoğrafını" çekip PDF'e yerleştirir. İçerik tek sayfaya
-// sığmıyorsa görüntüyü dilimleyip birden fazla sayfaya bölerek ekler.
+        const safeData = (Array.isArray(data) && data.length > 0) ? data.slice(0, 7) : [];
+        if (safeData.length === 0) return;
+
+        topProductsChartInstance = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: safeData.map(d => d.urunAdi || d.UrunAdi || d.barkod || "İsimsiz Ürün"),
+                datasets: [
+                    {
+                        label: ' Stok Girişi',
+                        data: safeData.map(d => d.girisMiktari || d.GirisMiktari || 0),
+                        backgroundColor: '#198754',
+                        barPercentage: 0.65,
+                        categoryPercentage: 0.85,
+                        borderRadius: 3
+                    },
+                    {
+                        label: ' Stok Çıkışı',
+                        data: safeData.map(d => d.cikisMiktari || d.CikisMiktari || 0),
+                        backgroundColor: '#dc3545',
+                        barPercentage: 0.65,
+                        categoryPercentage: 0.85,
+                        borderRadius: 3
+                    },
+                    {
+                        label: ' Transfer',
+                        data: safeData.map(d => d.transferMiktari || d.TransferMiktari || 0),
+                        backgroundColor: '#0dcaf0',
+                        barPercentage: 0.65,
+                        categoryPercentage: 0.85,
+                        borderRadius: 3
+                    }
+                ]
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                maintainAspectRatio: false,
+                layout: {
+                    padding: { left: 5, right: 30, top: 10, bottom: 10 }
+                },
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'top',
+                        labels: { color: textColor, padding: 25, usePointStyle: true, font: { size: 12, family: "'Inter', sans-serif" } }
+                    },
+                    tooltip: {
+                        mode: 'y',
+                        intersect: true,
+                        padding: 12,
+                        callbacks: {
+                            footer: function (items) {
+                                let total = items.reduce((sum, item) => sum + item.raw, 0);
+                                return '\nToplam Hareket: ' + total + ' Adet';
+                            }
+                        },
+                        footerColor: '#ffc107',
+                        footerFont: { weight: 'bold', size: 13, family: "'Inter', sans-serif" }
+                    }
+                },
+                scales: {
+                    x: {
+                        stacked: true,
+                        grid: { color: gridColor, borderDash: [4, 4] },
+                        ticks: { color: textColor, font: { size: 12 } },
+                        beginAtZero: true
+                    },
+                    y: {
+                        stacked: true,
+                        grid: { display: false },
+                        ticks: {
+                            color: textColor,
+                            autoSkip: false,
+                            padding: 12,
+                            font: { size: 12, family: "'Inter', sans-serif", weight: '500' }
+                        }
+                    }
+                }
+            }
+        });
+    } catch (error) {
+        console.error("Grafik çizilirken hata oluştu:", error);
+    }
+}
+
 async function exportDashboardAsPdf() {
     const target = document.getElementById('dashboardExportArea');
     const btn = document.getElementById('btnExportPdf');
@@ -361,16 +555,25 @@ async function exportDashboardAsPdf() {
 
     try {
         const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+
+        const tempHeader = document.createElement("div");
+        tempHeader.innerHTML = `
+            <h1 style="color: ${isDark ? '#fff' : '#000'}; font-weight: bold; margin-bottom: 5px;">StockFlow - Detaylı Kontrol Paneli Raporu</h1>
+            <p style="color: gray; margin-bottom: 20px;">Tarih: ${new Date().toLocaleString('tr-TR')}</p>
+        `;
+        target.insertBefore(tempHeader, target.firstChild);
+
         const sourceCanvas = await html2canvas(target, {
             backgroundColor: isDark ? '#1c1d21' : '#ffffff',
-            scale: 2 
+            scale: 2
         });
+
+        target.removeChild(tempHeader);
 
         const { jsPDF } = window.jspdf;
         const pdf = new jsPDF('p', 'mm', 'a4');
 
         const margin = 10;
-        const headerHeight = 14; // Başlık + tarih yazısı için ayrılan alan (sadece ilk sayfada)
         const pageWidth = pdf.internal.pageSize.getWidth();
         const pageHeight = pdf.internal.pageSize.getHeight();
         const contentWidth = pageWidth - margin * 2;
@@ -378,10 +581,8 @@ async function exportDashboardAsPdf() {
 
         let renderedPx = 0;
         let pageIndex = 0;
-
-        // Görüntü bir A4 sayfasından uzunsa, kalan kısmı yeni sayfalara böle böle ekliyoruz
         while (renderedPx < sourceCanvas.height) {
-            const topOffset = pageIndex === 0 ? margin + headerHeight : margin;
+            const topOffset = margin;
             const availableMm = pageHeight - topOffset - margin;
             const sliceHeightPx = Math.min(Math.floor(availableMm * pxPerMm), sourceCanvas.height - renderedPx);
 
@@ -396,13 +597,9 @@ async function exportDashboardAsPdf() {
 
             if (pageIndex > 0) pdf.addPage();
 
-            if (pageIndex === 0) {
-                pdf.setFontSize(14);
-                pdf.setTextColor(20);
-                pdf.text('StockFlow - Kontrol Paneli Raporu', margin, margin + 4);
-                pdf.setFontSize(9);
-                pdf.setTextColor(120);
-                pdf.text(new Date().toLocaleString('tr-TR'), margin, margin + 10);
+            if (isDark) {
+                pdf.setFillColor(28, 29, 33);
+                pdf.rect(0, 0, pageWidth, pageHeight, 'F');
             }
 
             const sliceHeightMm = sliceHeightPx / pxPerMm;
@@ -412,7 +609,7 @@ async function exportDashboardAsPdf() {
             pageIndex++;
         }
 
-        pdf.save(`stockflow-rapor-${new Date().toISOString().slice(0, 10)}.pdf`);
+        pdf.save(`StockFlow_Rapor_${new Date().toISOString().slice(0, 10)}.pdf`);
     } catch (error) {
         console.error("PDF oluşturma hatası:", error);
         alert("PDF oluşturulurken bir hata oluştu.");
@@ -422,50 +619,79 @@ async function exportDashboardAsPdf() {
     }
 }
 
-// EXCEL/CSV OLARAK DIŞA AKTARMA 
+async function exportDashboardAsExcel() {
+    if (typeof XLSX === 'undefined') {
+        alert("Excel kütüphanesi yüklenemedi!");
+        return;
+    }
 
-// Bir satırı düzgün CSV formatına çevirir 
-function csvSatiriOlustur(degerler) {
-    return degerler.map(deger => {
-        const metin = (deger ?? '').toString().replace(/"/g, '""');
-        return `"${metin}"`;
-    }).join(';') + '\r\n';   
-}
+    const btn = document.getElementById('btnExportCsv');
+    const originalText = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = 'Excel Hazırlanıyor...';
 
-// Son çekilen 3 rapor verisini tek bir CSV dosyası olarak indirir
-function exportDashboardAsCsv() {
-    let csvContent = '\uFEFF'; // Excel'in Türkçe karakterleri (ş, ı, ğ...) doğru okuması için gerekli işaret
+    try {
+        const wb = XLSX.utils.book_new();
 
-    csvContent += csvSatiriOlustur(['StockFlow Kontrol Paneli Raporu', new Date().toLocaleString('tr-TR')]);
-    csvContent += '\r\n';
+        const borderStyle = {
+            top: { style: "thin", color: { rgb: "000000" } },
+            bottom: { style: "thin", color: { rgb: "000000" } },
+            left: { style: "thin", color: { rgb: "000000" } },
+            right: { style: "thin", color: { rgb: "000000" } }
+        };
+        const headerStyle = { font: { bold: true, color: { rgb: "FFFFFF" } }, fill: { fgColor: { rgb: "0D6EFD" } }, alignment: { horizontal: "center" }, border: borderStyle };
+        const cellStyle = { alignment: { horizontal: "center" }, border: borderStyle };
+        const leftAlignStyle = { alignment: { horizontal: "left" }, border: borderStyle };
 
-    csvContent += csvSatiriOlustur(['Son 30 Gün Stok Hareket Trendi']);
-    csvContent += csvSatiriOlustur(['Tarih', 'Giriş Miktarı', 'Çıkış Miktarı']);
-    lastTrendData.forEach(d => {
-        csvContent += csvSatiriOlustur([d.tarih, d.girisMiktari, d.cikisMiktari]);
-    });
-    csvContent += '\r\n';
+        function addSheetWithStyles(wb, sheetName, dataArray, colWidths) {
+            const ws = XLSX.utils.json_to_sheet(dataArray);
+            const range = XLSX.utils.decode_range(ws['!ref']);
 
-    csvContent += csvSatiriOlustur(['Kategoriye Göre Stok Dağılımı']);
-    csvContent += csvSatiriOlustur(['Kategori', 'Toplam Stok']);
-    lastCategoryData.forEach(d => {
-        csvContent += csvSatiriOlustur([d.kategoriAdi, d.toplamStok]);
-    });
-    csvContent += '\r\n';
+            for (let R = range.s.r; R <= range.e.r; ++R) {
+                for (let C = range.s.c; C <= range.e.c; ++C) {
+                    const cellRef = XLSX.utils.encode_cell({ c: C, r: R });
+                    if (!ws[cellRef]) continue;
+                    let isText = typeof ws[cellRef].v === 'string';
+                    ws[cellRef].s = R === 0 ? headerStyle : (isText ? leftAlignStyle : cellStyle);
+                }
+            }
+            ws['!cols'] = colWidths;
+            XLSX.utils.book_append_sheet(wb, ws, sheetName);
+        }
 
-    csvContent += csvSatiriOlustur(['En Çok Hareket Gören 5 Ürün']);
-    csvContent += csvSatiriOlustur(['Ürün Adı', 'Barkod', 'Toplam Hareket Miktarı', 'Hareket Sayısı']);
-    lastTopProductsData.forEach(d => {
-        csvContent += csvSatiriOlustur([d.urunAdi, d.barkod, d.toplamHareketMiktari, d.hareketSayisi]);
-    });
+        const envanterVerisi = allProductsForExcel.map(p => ({
+            "Sistem ID": p.id,
+            "Ürün Adı": p.name,
+            "Barkod": p.barcode,
+            "Kategori": p.categoryName || "-",
+            "Mevcut Stok": p.stockQuantity,
+            "Kritik Eşik": p.minStockLevel
+        }));
+        addSheetWithStyles(wb, "1. Tüm Ürünler ve Stoklar", envanterVerisi, [{ wch: 10 }, { wch: 40 }, { wch: 20 }, { wch: 25 }, { wch: 15 }, { wch: 15 }]);
 
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `stockflow-rapor-${new Date().toISOString().slice(0, 10)}.csv`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+        const kritikVerisi = envanterVerisi.filter(p => p["Mevcut Stok"] <= p["Kritik Eşik"]);
+        addSheetWithStyles(wb, "2. Kritik Stok Uyarıları", kritikVerisi, [{ wch: 10 }, { wch: 40 }, { wch: 20 }, { wch: 25 }, { wch: 15 }, { wch: 15 }]);
+
+        const kategoriVerisi = lastCategoryData.map(d => ({
+            "Kategori Adı": d.kategoriAdi,
+            "Toplam Stok": d.toplamStok
+        }));
+        addSheetWithStyles(wb, "3. Kategori Dağılımı", kategoriVerisi, [{ wch: 30 }, { wch: 20 }]);
+
+        const trendVerisi = lastTrendData.map(d => ({
+            "Tarih": new Date(d.tarih || d.Date).toLocaleDateString('tr-TR'),
+            "Giriş Miktarı": d.girisMiktari || d.GirisMiktari || 0,
+            "Çıkış Miktarı": d.cikisMiktari || d.CikisMiktari || 0,
+            "Transfer Miktarı": d.transferMiktari || d.TransferMiktari || 0
+        }));
+        addSheetWithStyles(wb, "4. Günlük Hareket Trendi", trendVerisi, [{ wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 15 }]);
+
+        XLSX.writeFile(wb, `StockFlow_Analiz_${new Date().toISOString().slice(0, 10)}.xlsx`);
+
+    } catch (error) {
+        alert("Excel raporu oluşturulurken hata: " + error.message);
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+    }
 }
