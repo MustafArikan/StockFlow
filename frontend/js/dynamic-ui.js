@@ -6,11 +6,15 @@ class DynamicUI {
         let uiType = rule.uiComponent || rule.dataType;
 
         if (uiType === 'searchable_dropdown') {
-            let optionsHtml = options.map(opt => `<option value="${escapeHtml(opt)}" data-tokens="${escapeHtml(opt)}">${escapeHtml(opt)}</option>`).join('');
-            inputHtml = `<select class="selectpicker form-control dynamic-rule-input" data-width="100%" data-live-search="true" data-rule-id="${rule.id}" data-rule-key="${escapeHtml(rule.attributeKey)}" data-rule-type="text" title="Seçiniz..." ${requiredAttr}>
-                            <option value="" data-tokens="temizle">Seçiniz...</option>
-                            ${optionsHtml}
-                         </select>`;
+            let optionsStr = escapeHtml(JSON.stringify(options));
+            inputHtml = `<div class="position-relative dynamic-rule-input-group" data-rule-id="${rule.id}">
+                            <input type="text" class="form-control" id="search_${rule.id}" autocomplete="off" placeholder="Arayın veya seçin..." oninput="DynamicUI.searchableInput(this, '${rule.id}', this.parentElement.dataset.options)" onblur="DynamicUI.searchableBlur(this, '${rule.id}')" ${requiredAttr}>
+                            <input type="hidden" class="dynamic-rule-input" id="rule_${rule.id}" data-rule-id="${rule.id}" data-rule-key="${escapeHtml(rule.attributeKey)}" data-rule-type="text" ${requiredAttr}>
+                            <ul class="list-group position-absolute w-100 shadow-sm" id="results_${rule.id}" style="z-index:1000; display:none; max-height:200px; overflow-y:auto;"></ul>
+                            <div class="invalid-feedback">Listeden bir seçim yapmalısınız</div>
+                         </div>`;
+            // Add options as dataset string to prevent parsing errors inside HTML attributes
+            inputHtml = inputHtml.replace('<div', `<div data-options='${optionsStr}'`);
         }
         else if (uiType === 'autocomplete') {
             let optionsHtml = options.map(opt => `<option value="${escapeHtml(opt)}">`).join('');
@@ -86,10 +90,11 @@ class DynamicUI {
                 let rMax = parseFloat(rule.maxValue);
                 if (isNaN(rMax)) rMax = 100;
                 if (rMin >= rMax) rMax = rMin + 100;
-                let rStep = (rule.dataType === 'decimal' || uiType === 'range_slider_decimal') ? 0.01 : 1;
+                let decimals = rule.decimals ?? ((rule.dataType === 'decimal' || uiType === 'range_slider_decimal') ? 2 : 0);
+                let rStep = decimals > 0 ? 1 / Math.pow(10, decimals) : 1;
                 inputHtml = `<div class="d-flex align-items-center dynamic-rule-input" data-rule-id="${rule.id}" data-rule-key="${escapeHtml(rule.attributeKey)}" data-rule-type="range_slider" data-min="${rMin}" data-max="${rMax}">
-                                <input type="range" class="form-range flex-grow-1" min="${rMin}" max="${rMax}" step="${rStep}" value="${rMin}" id="rule_${rule.id}" oninput="document.getElementById('val_${rule.id}').value=this.value">
-                                <input type="number" class="form-control form-control-sm ms-2 text-center w-75px" id="val_${rule.id}" value="${rMin}" min="${rMin}" max="${rMax}" step="${rStep}" oninput="document.getElementById('rule_${rule.id}').value=this.value">
+                                <input type="range" class="form-range flex-grow-1" min="${rMin}" max="${rMax}" step="${rStep}" value="${rMin}" id="rule_${rule.id}" oninput="DynamicUI.syncDecimal(this, 'val_${rule.id}', ${decimals})">
+                                <input type="number" class="form-control form-control-sm ms-2 text-center w-75px" id="val_${rule.id}" value="${rMin.toFixed(decimals)}" min="${rMin}" max="${rMax}" step="${rStep}" oninput="DynamicUI.syncDecimal(this, 'rule_${rule.id}', ${decimals})">
                              </div>`;
             }
         }
@@ -147,11 +152,14 @@ class DynamicUI {
         let inputHtml = '';
 
         if (uiType === 'searchable_dropdown' || uiType === 'autocomplete') {
-            let optionsHtml = options.map(opt => `<option value="${escapeHtml(opt)}">`).join('');
-            inputHtml = `<input list="datalist_filter_${rule.id}" class="form-control form-control-sm kural-filtresi" data-rule-key="${escapeHtml(rule.attributeKey)}" placeholder="Ara veya Seç...">
-                         <datalist id="datalist_filter_${rule.id}">
-                            ${optionsHtml}
-                         </datalist>`;
+            let optionsStr = escapeHtml(JSON.stringify(options));
+            inputHtml = `<div class="position-relative">
+                            <input type="text" class="form-control form-control-sm" placeholder="Ara veya Seç..."
+                                   oninput="DynamicUI.searchableFilterInput(this, '${rule.id}', '${optionsStr}')"
+                                   onblur="DynamicUI.searchableFilterBlur(this, '${rule.id}')">
+                            <ul id="results_filter_${rule.id}" class="list-group position-absolute w-100 shadow-sm z-3" style="display:none; max-height:200px; overflow-y:auto; top:100%;"></ul>
+                            <input type="hidden" id="filter_hidden_${rule.id}" class="kural-filtresi" data-rule-id="${rule.id}" data-rule-key="${escapeHtml(rule.attributeKey)}" data-filter-type="text">
+                         </div>`;
         }
         else if (uiType === 'dropdown' || uiType === 'icon_dropdown' || uiType === 'radio' || uiType === 'segmented_button' || uiType === 'color_picker') {
             let optionsHtml = options.map(opt => `<option value="${escapeHtml(opt)}">${escapeHtml(opt)}</option>`).join('');
@@ -170,12 +178,20 @@ class DynamicUI {
         else if (uiType === 'slider' || uiType === 'range_slider_integer' || uiType === 'range_slider_decimal' || rule.dataType === 'number' || rule.dataType === 'decimal') {
             if (options && options.length > 1) {
                 // Özel dizi değerli slider (Örn: 128GB, 256GB, 512GB)
+                let rMin = 0;
+                let rMax = options.length - 1;
+                let rStep = 1;
                 let encodedOptions = escapeHtml(JSON.stringify(options));
-                inputHtml = `<div class="px-2 pb-3 pt-1">
-                                <div class="double-slider" id="slider_${rule.id}" data-options='${encodedOptions}'></div>
-                                <div class="d-flex justify-content-between mt-3 text-muted small px-1 fw-bold">
-                                    <span id="filter_min_lbl_${rule.id}"></span>
-                                    <span id="filter_max_lbl_${rule.id}"></span>
+                inputHtml = `<div class="px-2 pb-3 pt-1" data-options='${encodedOptions}'>
+                                <div class="d-flex justify-content-between mb-2">
+                                    <input type="text" id="filter_min_box_${rule.id}" class="form-control form-control-sm text-center fw-bold" style="width:48%;" value="${escapeHtml(options[0])}" readonly>
+                                    <input type="text" id="filter_max_box_${rule.id}" class="form-control form-control-sm text-center fw-bold" style="width:48%;" value="${escapeHtml(options[rMax])}" readonly>
+                                </div>
+                                <div class="dual-range position-relative mb-2 mt-1" style="height:20px;">
+                                    <input type="range" class="form-range position-absolute w-100" id="filter_min_${rule.id}"
+                                           min="${rMin}" max="${rMax}" step="${rStep}" value="${rMin}" oninput="DynamicUI.syncDiscreteDual(this, 'min', ${rule.id})" style="z-index:2;">
+                                    <input type="range" class="form-range position-absolute w-100" id="filter_max_${rule.id}"
+                                           min="${rMin}" max="${rMax}" step="${rStep}" value="${rMax}" oninput="DynamicUI.syncDiscreteDual(this, 'max', ${rule.id})" style="z-index:1; background:transparent;">
                                 </div>
                                 <input type="hidden" class="kural-filtresi" id="filter_hidden_${rule.id}" data-rule-id="${rule.id}" data-rule-key="${escapeHtml(rule.attributeKey)}" data-filter-type="discrete_range">
                              </div>`;
@@ -186,14 +202,21 @@ class DynamicUI {
                 let rMax = parseFloat(rule.maxValue);
                 if (isNaN(rMax)) rMax = 1000;
                 if (rMin >= rMax) rMax = rMin + 1000;
-                let rStep = (rule.dataType === 'decimal' || uiType === 'range_slider_decimal') ? 0.01 : 1;
+                let decimals = rule.decimals ?? ((rule.dataType === 'decimal' || uiType === 'range_slider_decimal') ? 2 : 0);
+                let rStep = decimals > 0 ? 1 / Math.pow(10, decimals) : 1;
+
                 inputHtml = `<div class="px-2 pb-3 pt-1">
-                                <div class="double-slider" id="slider_${rule.id}" data-min="${rMin}" data-max="${rMax}" data-step="${rStep}"></div>
-                                <div class="d-flex justify-content-between mt-3">
-                                    <input type="number" id="filter_min_${rule.id}" class="form-control form-control-sm text-center w-45" placeholder="Min" step="${rStep}">
-                                    <input type="number" id="filter_max_${rule.id}" class="form-control form-control-sm text-center w-45" placeholder="Max" step="${rStep}">
-                                    <input type="hidden" class="kural-filtresi" id="filter_hidden_${rule.id}" data-rule-id="${rule.id}" data-rule-key="${escapeHtml(rule.attributeKey)}" data-filter-type="range">
+                                <div class="d-flex justify-content-between mb-2">
+                                    <input type="number" id="filter_min_box_${rule.id}" class="form-control form-control-sm text-center fw-bold" style="width:48%;" min="${rMin}" max="${rMax}" step="${rStep}" value="${rMin.toFixed(decimals)}" oninput="DynamicUI.syncDualBox(this, 'min', ${rule.id}, ${rStep}, ${decimals})">
+                                    <input type="number" id="filter_max_box_${rule.id}" class="form-control form-control-sm text-center fw-bold" style="width:48%;" min="${rMin}" max="${rMax}" step="${rStep}" value="${rMax.toFixed(decimals)}" oninput="DynamicUI.syncDualBox(this, 'max', ${rule.id}, ${rStep}, ${decimals})">
                                 </div>
+                                <div class="dual-range position-relative mb-2 mt-1" style="height:20px;">
+                                    <input type="range" class="form-range position-absolute w-100" id="filter_min_${rule.id}"
+                                           min="${rMin}" max="${rMax}" step="${rStep}" value="${rMin}" oninput="DynamicUI.syncDual(this, 'min', ${rule.id}, ${rStep}, ${decimals})" style="z-index:2;">
+                                    <input type="range" class="form-range position-absolute w-100" id="filter_max_${rule.id}"
+                                           min="${rMin}" max="${rMax}" step="${rStep}" value="${rMax}" oninput="DynamicUI.syncDual(this, 'max', ${rule.id}, ${rStep}, ${decimals})" style="z-index:1; background:transparent;">
+                                </div>
+                                <input type="hidden" class="kural-filtresi" id="filter_hidden_${rule.id}" data-rule-id="${rule.id}" data-rule-key="${escapeHtml(rule.attributeKey)}" data-filter-type="range">
                              </div>`;
             }
         }
@@ -320,6 +343,199 @@ class DynamicUI {
             inputHtml = `<input type="text" class="form-control form-control-sm" placeholder="Serbest metin giriniz...">`;
         }
         return inputHtml;
+    }
+
+    // --- HELPER METHODS FOR NEW MD RULES ---
+    static syncDecimal(sourceEl, targetId, decimals) {
+        let val = Number(sourceEl.value);
+        if(isNaN(val)) return;
+        const factor = 10 ** decimals;
+        const rounded = Math.round(val * factor) / factor;
+        document.getElementById(targetId).value = rounded.toFixed(decimals);
+        if(sourceEl.type === 'number') sourceEl.value = rounded.toFixed(decimals);
+    }
+
+    static syncDual(sourceEl, type, ruleId, step, decimals) {
+        let minEl = document.getElementById('filter_min_' + ruleId);
+        let maxEl = document.getElementById('filter_max_' + ruleId);
+        let minBox = document.getElementById('filter_min_box_' + ruleId);
+        let maxBox = document.getElementById('filter_max_box_' + ruleId);
+        let hiddenEl = document.getElementById('filter_hidden_' + ruleId);
+
+        let lo = Number(minEl.value);
+        let hi = Number(maxEl.value);
+
+        if (lo > hi - step) {
+            if (type === 'min') { lo = hi - step; minEl.value = lo; }
+            else { hi = lo + step; maxEl.value = hi; }
+        }
+        
+        let factor = 10 ** decimals;
+        lo = Math.round(lo * factor) / factor;
+        hi = Math.round(hi * factor) / factor;
+
+        if (minBox) minBox.value = lo.toFixed(decimals);
+        if (maxBox) maxBox.value = hi.toFixed(decimals);
+        
+        if (hiddenEl) {
+            hiddenEl.value = lo + "-" + hi;
+            hiddenEl.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+    }
+
+    static syncDualBox(sourceEl, type, ruleId, step, decimals) {
+        let minEl = document.getElementById('filter_min_' + ruleId);
+        let maxEl = document.getElementById('filter_max_' + ruleId);
+        let minBox = document.getElementById('filter_min_box_' + ruleId);
+        let maxBox = document.getElementById('filter_max_box_' + ruleId);
+        let hiddenEl = document.getElementById('filter_hidden_' + ruleId);
+
+        let lo = Number(minBox.value);
+        let hi = Number(maxBox.value);
+
+        if (lo > hi - step) {
+            if (type === 'min') { lo = hi - step; minBox.value = lo.toFixed(decimals); }
+            else { hi = lo + step; maxBox.value = hi.toFixed(decimals); }
+        }
+
+        if (minEl) minEl.value = lo;
+        if (maxEl) maxEl.value = hi;
+        
+        if (minEl && maxEl) {
+            lo = Number(minEl.value);
+            hi = Number(maxEl.value);
+        }
+
+        if (hiddenEl) {
+            hiddenEl.value = lo + "-" + hi;
+            hiddenEl.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+    }
+
+    static syncDiscreteDual(sourceEl, type, ruleId) {
+        let minEl = document.getElementById('filter_min_' + ruleId);
+        let maxEl = document.getElementById('filter_max_' + ruleId);
+        let minBox = document.getElementById('filter_min_box_' + ruleId);
+        let maxBox = document.getElementById('filter_max_box_' + ruleId);
+        let hiddenEl = document.getElementById('filter_hidden_' + ruleId);
+        
+        let wrapper = minEl.closest('[data-options]');
+        if(!wrapper) return;
+        let arr = JSON.parse(wrapper.dataset.options);
+
+        let lo = Number(minEl.value);
+        let hi = Number(maxEl.value);
+
+        if (lo > hi) {
+            if (type === 'min') { lo = hi; minEl.value = lo; }
+            else { hi = lo; maxEl.value = hi; }
+        }
+
+        if (minBox) minBox.value = arr[lo];
+        if (maxBox) maxBox.value = arr[hi];
+        
+        if (hiddenEl) {
+            let validSubset = arr.slice(lo, hi + 1).map(x => String(x).toLowerCase());
+            hiddenEl.value = JSON.stringify(validSubset);
+            hiddenEl.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+    }
+
+    static searchableInput(inputEl, ruleId, optionsStr) {
+        let hiddenId = document.getElementById('rule_' + ruleId);
+        let resultsUl = document.getElementById('results_' + ruleId);
+        hiddenId.value = ''; // invalidate selection
+        
+        let q = inputEl.value.toLocaleLowerCase("tr-TR").trim();
+        let options = [];
+        try { options = JSON.parse(optionsStr); } catch(e){}
+        
+        resultsUl.innerHTML = '';
+        if(!q) {
+            resultsUl.style.display = 'none';
+            return;
+        }
+        
+        let matches = options.filter(opt => String(opt).toLocaleLowerCase("tr-TR").includes(q));
+        if(matches.length === 0) {
+            resultsUl.style.display = 'none';
+            return;
+        }
+        
+        matches.forEach(m => {
+            let li = document.createElement('li');
+            li.className = 'list-group-item list-group-item-action';
+            li.style.cursor = 'pointer';
+            li.textContent = m;
+            li.onmousedown = function() { // onmousedown fires before input blur
+                inputEl.value = m;
+                hiddenId.value = m;
+                resultsUl.style.display = 'none';
+                inputEl.classList.remove('is-invalid');
+            };
+            resultsUl.appendChild(li);
+        });
+        resultsUl.style.display = 'block';
+    }
+
+    static searchableBlur(inputEl, ruleId) {
+        let hiddenId = document.getElementById('rule_' + ruleId);
+        let resultsUl = document.getElementById('results_' + ruleId);
+        setTimeout(() => {
+            if (!hiddenId.value) {
+                inputEl.value = '';
+                inputEl.classList.add('is-invalid');
+            } else {
+                inputEl.classList.remove('is-invalid');
+            }
+            if(resultsUl) resultsUl.style.display = 'none';
+        }, 150);
+    }
+
+    static searchableFilterInput(inputEl, ruleId, optionsStr) {
+        let hiddenId = document.getElementById('filter_hidden_' + ruleId);
+        let resultsUl = document.getElementById('results_filter_' + ruleId);
+        
+        hiddenId.value = inputEl.value;
+        hiddenId.dispatchEvent(new Event('input', { bubbles: true }));
+
+        let q = inputEl.value.toLocaleLowerCase("tr-TR").trim();
+        let options = [];
+        try { options = JSON.parse(optionsStr); } catch(e){}
+        
+        resultsUl.innerHTML = '';
+        if(!q) {
+            resultsUl.style.display = 'none';
+            return;
+        }
+        
+        let matches = options.filter(opt => String(opt).toLocaleLowerCase("tr-TR").includes(q));
+        if(matches.length === 0) {
+            resultsUl.style.display = 'none';
+            return;
+        }
+        
+        matches.forEach(m => {
+            let li = document.createElement('li');
+            li.className = 'list-group-item list-group-item-action py-1 small';
+            li.style.cursor = 'pointer';
+            li.textContent = m;
+            li.onmousedown = function() {
+                inputEl.value = m;
+                hiddenId.value = m;
+                resultsUl.style.display = 'none';
+                hiddenId.dispatchEvent(new Event('change', { bubbles: true }));
+            };
+            resultsUl.appendChild(li);
+        });
+        resultsUl.style.display = 'block';
+    }
+
+    static searchableFilterBlur(inputEl, ruleId) {
+        let resultsUl = document.getElementById('results_filter_' + ruleId);
+        setTimeout(() => {
+            if(resultsUl) resultsUl.style.display = 'none';
+        }, 150);
     }
 }
 
