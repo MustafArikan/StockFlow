@@ -28,6 +28,8 @@ public class AppDbContext : DbContext
     public DbSet<SecurityAuditLog> SecurityAuditLogs { get; set; } = null!;
     public DbSet<AttributeRule> AttributeRules { get; set; } = null!;
     public DbSet<Supplier> Suppliers { get; set; } = null!;
+
+    public DbSet<ProductSupplier> ProductSuppliers { get; set; } = null!;
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -47,6 +49,7 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<UserSession>().HasQueryFilter(e => !e.IsDeleted);
         modelBuilder.Entity<AttributeRule>().HasQueryFilter(e => !e.IsDeleted);
         modelBuilder.Entity<Supplier>().HasQueryFilter(e => !e.IsDeleted);
+        modelBuilder.Entity<ProductSupplier>().HasQueryFilter(e => !e.IsDeleted);
 
 
 
@@ -113,6 +116,23 @@ public class AppDbContext : DbContext
             .WithMany(s => s.StockMovements)
             .HasForeignKey(sm => sm.SupplierId)
             .OnDelete(DeleteBehavior.Restrict);
+
+        // ilişkiler (ürün/tedarikçi silinince ara kayıt patlamasın → Restrict):
+        modelBuilder.Entity<ProductSupplier>()
+            .HasOne(ps => ps.Product)
+            .WithMany(p => p.ProductSuppliers)
+            .HasForeignKey(ps => ps.ProductId)
+            .OnDelete(DeleteBehavior.Restrict);
+        modelBuilder.Entity<ProductSupplier>()
+            .HasOne(ps => ps.Supplier)
+            .WithMany(s => s.ProductSuppliers)
+            .HasForeignKey(ps => ps.SupplierId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        // aynı ürün-tedarikçi ikilisi iki kez eklenmesin:
+        modelBuilder.Entity<ProductSupplier>()
+            .HasIndex(ps => new { ps.ProductId, ps.SupplierId })
+            .IsUnique().HasFilter("[is_deleted] = 0");
 
         foreach (var entity in modelBuilder.Model.GetEntityTypes())
         {

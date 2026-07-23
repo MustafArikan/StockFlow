@@ -71,10 +71,39 @@ public class ProductsController : ControllerBase
     [HttpGet("{id}")]
     public async Task<IActionResult> GetById(int id)
     {
-        var product = await _context.Products.FindAsync(id);
+        var product = await _context.Products
+            .AsNoTracking()
+            .Where(p => p.Id == id && !p.IsDeleted)
+            .Select(p => new        {
+                Id = p.Id,
+                Name = p.Name,
+                Barcode = p.Barcode,
+                MinStockLevel = p.MinStockLevel,
+                CategoryId = p.CategoryId,
+                CategoryName = p.Category.Name,
+                StockQuantity = p.StockLevels.Sum(sl => sl.Quantity),
+                AttributesStr = p.Attributes
+            }).FirstOrDefaultAsync();
+            
         if (product == null)
             return NotFound();
-        return Ok(new ProductResponseDto(product.Id, product.Name, product.Barcode, product.MinStockLevel, product.CategoryId, product.Attributes));
+
+        var dto = new ProductDto
+        {
+            Id = product.Id,
+            Name = product.Name,
+            Barcode = product.Barcode,
+            MinStockLevel = product.MinStockLevel,
+            CategoryId = product.CategoryId,
+            CategoryName = product.CategoryName,
+            StockQuantity = product.StockQuantity,
+            Attributes = string.IsNullOrEmpty(product.AttributesStr)
+                ? new List<ProductAttributeDto>()
+                : System.Text.Json.JsonSerializer.Deserialize<List<ProductAttributeDto>>(product.AttributesStr) 
+        };
+
+        return Ok(dto);
+        
     }
 
     [HttpPost]
