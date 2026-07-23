@@ -50,7 +50,8 @@ const PERMISSIONS = {
         "Product.Add", "Product.Edit", "Product.Delete",
         "Category.Add", "Category.Edit", "Category.Delete",
         "Warehouse.Add", "Warehouse.Edit", "Warehouse.Delete",
-        "Location.Add", "Location.Delete"
+        "Location.Add", "Location.Delete",
+        "Supplier.Add", "Supplier.Edit", "Supplier.Delete"
     ],
     "operator": [
         "Product.Edit", "Category.Edit", "Warehouse.Edit"

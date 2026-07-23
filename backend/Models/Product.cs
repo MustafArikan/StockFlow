@@ -11,15 +11,17 @@ public class Product : BaseEntity
     public int CategoryId { get; set; }
 
     [Column(TypeName = "decimal(18,2)")]
-    public decimal Cost { get; set; } = 0; // Maliyet fiyatý
+    public decimal Cost { get; set; } = 0; // Maliyet fiyatï¿½
     [Column(TypeName = "decimal(18,2)")]
-    public decimal Price { get; set; } = 0; // Çýkýþ fiyat
+    public decimal Price { get; set; } = 0; // ï¿½ï¿½kï¿½ï¿½ fiyat
 
-    public string? Attributes { get; set; } // JSON formatýnda ürün özellikleri
+    public string? Attributes { get; set; } // JSON formatï¿½nda ï¿½rï¿½n ï¿½zellikleri
 
     public Category Category { get; set; } = null!;
     public ICollection<StockLevel> StockLevels { get; set; } = new List<StockLevel>();
     public ICollection<StockMovement> StockMovements { get; set; } = new List<StockMovement>();
     public ICollection<Asset> Assets { get; set; } = new List<Asset>();
+
+    public ICollection<ProductSupplier> ProductSuppliers{ get; set; } = new List<ProductSupplier>();
 
 }

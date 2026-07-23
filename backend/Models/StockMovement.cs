@@ -26,6 +26,13 @@ public class StockMovement : BaseEntity
     public string? Destination { get; set; }
 
     [MaxLength(100)]
-    public string? DocumentNumber { get; set; } // Fatura veya irsaliye numaras�
+    public string? DocumentNumber { get; set; } // Fatura veya irsaliye numarası
+
+    [MaxLength(150)]
+    public string? SupplierName { get; set; }      // alındığı andaki isim (donuk)
+
+    [MaxLength(50)]
+    public string? SupplierTaxNumber { get; set; } // istersen vergi no da
+
 
 }

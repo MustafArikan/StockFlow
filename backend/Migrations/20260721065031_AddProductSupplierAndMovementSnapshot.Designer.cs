@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using stok_takip.Data;
 
@@ -11,9 +12,11 @@ using stok_takip.Data;
 namespace backend.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260721065031_AddProductSupplierAndMovementSnapshot")]
+    partial class AddProductSupplierAndMovementSnapshot
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -42,10 +45,6 @@ namespace backend.Migrations
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("bit")
                         .HasColumnName("is_deleted");
-
-                    b.Property<DateTime?>("NextMaintenanceDate")
-                        .HasColumnType("datetime2")
-                        .HasColumnName("next_maintenance_date");
 
                     b.Property<string>("Notes")
                         .HasColumnType("nvarchar(max)")
@@ -162,10 +161,6 @@ namespace backend.Migrations
                         .HasColumnType("nvarchar(100)")
                         .HasColumnName("data_type");
 
-                    b.Property<int>("DisplayOrder")
-                        .HasColumnType("int")
-                        .HasColumnName("display_order");
-
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("bit")
                         .HasColumnName("is_deleted");
@@ -173,26 +168,6 @@ namespace backend.Migrations
                     b.Property<bool>("IsRequired")
                         .HasColumnType("bit")
                         .HasColumnName("is_required");
-
-                    b.Property<decimal?>("MaxValue")
-                        .HasColumnType("decimal(18,2)")
-                        .HasColumnName("max_value");
-
-                    b.Property<decimal?>("MinValue")
-                        .HasColumnType("decimal(18,2)")
-                        .HasColumnName("min_value");
-
-                    b.Property<string>("TargetLevel")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)")
-                        .HasColumnName("target_level");
-
-                    b.Property<string>("UiComponent")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)")
-                        .HasColumnName("ui_component");
 
                     b.HasKey("Id")
                         .HasName("pk_attribute_rules");
@@ -706,10 +681,6 @@ namespace backend.Migrations
                         .HasColumnType("nvarchar(max)")
                         .HasColumnName("email_confirmation_code");
 
-                    b.Property<int>("FailedLoginAttempts")
-                        .HasColumnType("int")
-                        .HasColumnName("failed_login_attempts");
-
                     b.Property<string>("FirstName")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)")
@@ -722,10 +693,6 @@ namespace backend.Migrations
                     b.Property<bool>("IsEmailConfirmed")
                         .HasColumnType("bit")
                         .HasColumnName("is_email_confirmed");
-
-                    b.Property<DateTime?>("LastFailedLoginAttempt")
-                        .HasColumnType("datetime2")
-                        .HasColumnName("last_failed_login_attempt");
 
                     b.Property<string>("LastName")
                         .IsRequired()
@@ -744,10 +711,6 @@ namespace backend.Migrations
                     b.Property<DateTime?>("PasswordResetCodeExpiry")
                         .HasColumnType("datetime2")
                         .HasColumnName("password_reset_code_expiry");
-
-                    b.Property<string>("PhoneNumber")
-                        .HasColumnType("nvarchar(max)")
-                        .HasColumnName("phone_number");
 
                     b.Property<string>("Role")
                         .IsRequired()
