@@ -7,19 +7,15 @@ if (!token) {
 
 let logsData = [];
 let currentPage = 1;
-const pageSize = 50;
+let pageSize = 50;
 
 async function loglariYukle(page = 1) {
     currentPage = page;
     try {
-        const cevap = await fetch(`${API_URL}?pageNumber=${page}&pageSize=${pageSize}`, { 
-            headers: { "Authorization": `Bearer ${token}` } 
-        });
-        if (!cevap.ok) throw new Error("Loglar alınamadı");
-        const responseData = await cevap.json();
+        const responseData = await apiRequest(`/audit-logs?pageNumber=${page}&pageSize=${pageSize}`, 'GET');
         logsData = responseData.items || responseData; // Geriye dönük uyumluluk
         tabloyuCiz(logsData);
-        sayfalamaCiz(responseData.currentPage || 1, responseData.totalPages || 1);
+        sayfalamaCiz(responseData.totalRecords || 0, responseData.currentPage || 1);
     } catch (e) {
         console.error(e);
     }
@@ -63,54 +59,28 @@ function tabloyuCiz(veriler) {
     govde.innerHTML = mHtml;
 }
 
-function sayfalamaCiz(current, total) {
-    const container = document.getElementById("paginationContainer");
-    if (!container) return;
-    
-    if (total <= 1) {
-        container.innerHTML = "";
-        return;
-    }
-
-    let html = `<nav><ul class="pagination justify-content-center">`;
-    
-    // Geri Butonu
-    html += `<li class="page-item ${current === 1 ? 'disabled' : ''}">
-                <a class="page-link" href="#" data-page="${current - 1}">&laquo;</a>
-             </li>`;
-             
-    for (let i = 1; i <= total; i++) {
-        // Çok sayfa varsa sadece etraftakileri göster (opsiyonel basit mantık)
-        if(i === 1 || i === total || (i >= current - 2 && i <= current + 2)) {
-            html += `<li class="page-item ${i === current ? 'active' : ''}">
-                        <a class="page-link" href="#" data-page="${i}">${i}</a>
-                     </li>`;
-        } else if (i === current - 3 || i === current + 3) {
-            html += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
+function sayfalamaCiz(totalRecords, current) {
+    buildPagination(
+        "paginationContainer", 
+        totalRecords, 
+        current, 
+        pageSize, 
+        (newPage) => {
+            loglariYukle(newPage);
+        },
+        (newSize) => {
+            pageSize = newSize;
+            loglariYukle(1);
         }
-    }
-    
-    // İleri Butonu
-    html += `<li class="page-item ${current === total ? 'disabled' : ''}">
-                <a class="page-link" href="#" data-page="${current + 1}">&raquo;</a>
-             </li>`;
-             
-    html += `</ul></nav>`;
-    container.innerHTML = html;
+    );
 }
 
 async function kullaniciProfiliGoster(userId) {
     try {
-        const yanit = await fetch(`${CONFIG.API_BASE_URL}/users/${userId}`, {
-            headers: {
-                "Authorization": `Bearer ${localStorage.getItem("token")}`
-            }
-        });
-        if (!yanit.ok) throw new Error("Kullanıcı bilgileri alınamadı.");
-        const user = await yanit.json();
+        const user = await apiRequest(`/users/${userId}`, 'GET');
         
         document.getElementById('upmName').textContent = `${user.firstName || ''} ${user.lastName || ''}`;
-        document.getElementById('upmEmail').textContent = user.email || '';
+        document.getElementById('upmEmail').textContent = (user.email || '') + (user.phoneNumber ? ' | 📞 ' + user.phoneNumber : '');
         document.getElementById('upmRole').textContent = user.role || 'viewer';
         document.getElementById('upmDate').textContent = new Date(user.createdAt).toLocaleDateString("tr-TR");
         
@@ -221,20 +191,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Pagination Click Listener
-    const paginationContainer = document.getElementById("paginationContainer");
-    if (paginationContainer) {
-        paginationContainer.addEventListener('click', (e) => {
-            e.preventDefault();
-            const pageLink = e.target.closest('a.page-link');
-            if (pageLink) {
-                const page = parseInt(pageLink.getAttribute('data-page'), 10);
-                if (!isNaN(page) && page > 0) {
-                    loglariYukle(page);
-                }
-            }
-        });
-    }
+    // Pagination Click Listener is handled by buildPagination
 });
 
 

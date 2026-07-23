@@ -6,7 +6,7 @@ let tumUrunler = [];
 let filtreliUrunler = [];
 const tabloGovdesi = document.getElementById("urunTablosuGovdesi");
 let currentPage = 1;
-const pageSize = 10;
+let pageSize = 10;
 
 let aktifArama = '';
 let siralamaSutunu = 'id';
@@ -54,7 +54,7 @@ function getAltKategoriIdleri(parentId) {
 // =========================================================================
 function veriyiGuncelle() {
     const seciliKategoriId = document.getElementById("filtreKategoriId")?.value;
-    
+
     // Aktif dinamik filtreleri topla
     const dynamicFilters = [];
     document.querySelectorAll('.kural-filtresi').forEach(input => {
@@ -68,7 +68,7 @@ function veriyiGuncelle() {
 
     filtreliUrunler = tumUrunler.filter(urun => {
         // 1. Genel Metin Araması
-        const textMatch = 
+        const textMatch =
             (urun.name && urun.name.toLowerCase().includes(aktifArama)) ||
             (urun.barcode && urun.barcode.toLowerCase().includes(aktifArama)) ||
             (urun.categoryName && urun.categoryName.toLowerCase().includes(aktifArama)) ||
@@ -86,7 +86,7 @@ function veriyiGuncelle() {
         // 3. Dinamik Özellik Filtreleri
         if (dynamicFilters.length > 0) {
             if (!urun.attributes || !Array.isArray(urun.attributes)) return false;
-            
+
             for (let filter of dynamicFilters) {
                 const attr = urun.attributes.find(a => a.key === filter.key);
                 if (!attr || !(attr.value ?? '').toString().toLowerCase().includes(filter.value)) {
@@ -116,8 +116,8 @@ function veriyiGuncelle() {
     const sayfadakiVeriler = filtreliUrunler.slice(baslangic, bitis);
 
     tabloyuCiz(sayfadakiVeriler);
-    sayfalamayiCiz(yeniToplamSayfa, currentPage);
-    
+    sayfalamayiCiz();
+
     // Senin eklediğin Özet Bilgi Fonksiyonunu Çağırıyoruz
     kategoriOzetiniGuncelle(filtreliUrunler);
 }
@@ -160,7 +160,7 @@ function exportProductsToExcel() {
     const worksheet = XLSX.utils.json_to_sheet(flattenedData);
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "Ürünler");
-    XLSX.writeFile(workbook, `StockFlow_Urunler_${new Date().toISOString().slice(0,10)}.xlsx`);
+    XLSX.writeFile(workbook, `StockFlow_Urunler_${new Date().toISOString().slice(0, 10)}.xlsx`);
 }
 
 function exportProductsToPDF() {
@@ -178,7 +178,7 @@ function exportProductsToPDF() {
 
     doc.text("Stok Takip - Ürün Envanter Raporu", 14, 15);
     doc.autoTable({ head: [tableColumn], body: tableRows, startY: 20 });
-    doc.save(`StockFlow_Urunler_${new Date().toISOString().slice(0,10)}.pdf`);
+    doc.save(`StockFlow_Urunler_${new Date().toISOString().slice(0, 10)}.pdf`);
 }
 
 function exportProductsToCSV() {
@@ -195,7 +195,7 @@ function exportProductsToCSV() {
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement("a");
     link.href = URL.createObjectURL(blob);
-    link.setAttribute("download", `StockFlow_Urunler_${new Date().toISOString().slice(0,10)}.csv`);
+    link.setAttribute("download", `StockFlow_Urunler_${new Date().toISOString().slice(0, 10)}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -207,9 +207,9 @@ function exportProductsToCSV() {
 async function handleExcelImport() {
     const fileInput = document.getElementById('excelImportFile');
     const alertContainer = document.getElementById('importReportAlert');
-    
+
     if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
-        if(alertContainer) alertContainer.innerHTML = `<div class="alert alert-warning rounded-3">Lütfen yüklenecek bir Excel (.xlsx) dosyası seçin.</div>`;
+        if (alertContainer) alertContainer.innerHTML = `<div class="alert alert-warning rounded-3">Lütfen yüklenecek bir Excel (.xlsx) dosyası seçin.</div>`;
         return;
     }
 
@@ -217,23 +217,12 @@ async function handleExcelImport() {
     const formData = new FormData();
     formData.append("file", file);
 
-    if(alertContainer) alertContainer.innerHTML = `<div class="alert alert-info rounded-3">Dosya satır satır denetleniyor, lütfen bekleyin...</div>`;
+    if (alertContainer) alertContainer.innerHTML = `<div class="alert alert-info rounded-3">Dosya satır satır denetleniyor, lütfen bekleyin...</div>`;
 
     try {
-        const response = await fetch(`${API_URL}/import`, {
-            method: 'POST',
-            headers: { 'Authorization': `Bearer ${token}` },
-            body: formData
-        });
+        const report = await apiRequest('/products/import', 'POST', formData);
 
-        if (!response.ok) {
-            const errData = await response.json();
-            throw new Error(errData.message || "İçe aktarma sırasında sunucu hatası oluştu.");
-        }
-
-        const report = await response.json();
-        
-        if(alertContainer) {
+        if (alertContainer) {
             let reportHtml = `
                 <div class="alert ${report.errorCount > 0 ? 'alert-warning' : 'alert-success'} rounded-3 p-4 border shadow-sm">
                     <h5 class="fw-bold mb-3"><i class="bi bi-clipboard-data-fill"></i> İçe Aktarma Sonuç Raporu</h5>
@@ -258,10 +247,10 @@ async function handleExcelImport() {
             reportHtml += `</div>`;
             alertContainer.innerHTML = reportHtml;
         }
-        
+
         urunleriYukle(currentPage);
     } catch (error) {
-        if(alertContainer) alertContainer.innerHTML = `<div class="alert alert-danger rounded-3"><strong>Sistem Hatası:</strong> ${error.message}</div>`;
+        if (alertContainer) alertContainer.innerHTML = `<div class="alert alert-danger rounded-3"><strong>Sistem Hatası:</strong> ${error.message}</div>`;
     }
 }
 
@@ -314,20 +303,7 @@ if (aramaKutusuEl) {
 // API ÇAĞRILARI
 async function urunleriYukle(page = 1) {
     try {
-        const cevap = await fetch(`${API_URL}?pageNumber=1&pageSize=1000`, {
-            method: 'GET',
-            headers: { "Authorization": `Bearer ${token}` }
-        });
-
-        if (cevap.status === 401) {
-            localStorage.removeItem('token');
-            window.location.href = 'login.html';
-            return;
-        }
-
-        if (!cevap.ok) throw new Error("Sunucu hatası: " + cevap.status);
-
-        const sonuc = await cevap.json();
+        const sonuc = await apiRequest('/products?pageNumber=1&pageSize=1000', 'GET');
         tumUrunler = sonuc.items || sonuc;
         currentPage = page;
 
@@ -353,7 +329,7 @@ function buildCategoryCascader(containerId, hiddenInputId, selectedCategoryId = 
     function updateExpandedCategories(id) {
         expandedCategories.clear();
         if (!id) return;
-        
+
         expandedCategories.add(id);
         let current = window.tumKategoriler.find(k => k.id == id);
         while (current && current.parentId) {
@@ -367,27 +343,27 @@ function buildCategoryCascader(containerId, hiddenInputId, selectedCategoryId = 
     }
 
     container.innerHTML = '';
-    
+
     const dropdownDiv = document.createElement('div');
     dropdownDiv.className = 'dropdown w-100';
-    
+
     const button = document.createElement('button');
     let btnClasses = isFilter ? 'btn form-control rounded-pill text-start bg-white border d-flex justify-content-between align-items-center' : 'btn form-control text-start bg-white border d-flex justify-content-between align-items-center';
     button.className = btnClasses;
     button.type = 'button';
     button.dataset.bsToggle = 'dropdown';
     button.dataset.bsAutoClose = 'outside';
-    
+
     const spanText = document.createElement('span');
     spanText.className = 'text-truncate pe-2';
-    
+
     const caretIcon = document.createElement('i');
     caretIcon.className = 'bi bi-chevron-down text-muted';
     caretIcon.style.fontSize = '0.8rem';
-    
+
     button.appendChild(spanText);
     button.appendChild(caretIcon);
-    
+
     const menu = document.createElement('ul');
     menu.className = 'dropdown-menu w-100 shadow-sm';
     menu.style.maxHeight = '300px';
@@ -401,14 +377,14 @@ function buildCategoryCascader(containerId, hiddenInputId, selectedCategoryId = 
 
     function renderOptions() {
         menu.innerHTML = '';
-        
+
         if (finalizedCategoryId) {
             const cat = window.tumKategoriler.find(k => k.id == finalizedCategoryId);
             spanText.textContent = cat ? cat.name : (isFilter ? 'Tüm Kategoriler' : 'Kategori Seçin...');
         } else {
             spanText.textContent = isFilter ? 'Tüm Kategoriler' : 'Kategori Seçin...';
         }
-        
+
         const clearLi = document.createElement('li');
         const clearA = document.createElement('a');
         clearA.className = 'dropdown-item text-muted fst-italic border-bottom mb-1 pb-2';
@@ -432,18 +408,18 @@ function buildCategoryCascader(containerId, hiddenInputId, selectedCategoryId = 
 
         function buildTree(parentId, level) {
             const children = window.tumKategoriler.filter(k => k.parentId == parentId);
-            
+
             children.forEach(c => {
                 const isInPath = expandedCategories.has(c.id);
                 const isChildOfFinal = (c.parentId === finalizedCategoryId);
                 const isRootWhenEmpty = (finalizedCategoryId === null && c.parentId === null);
 
                 if (!isInPath && !isChildOfFinal && !isRootWhenEmpty) {
-                    return; 
+                    return;
                 }
 
                 const hasChildren = window.tumKategoriler.some(k => k.parentId == c.id);
-                
+
                 const li = document.createElement('li');
                 const a = document.createElement('a');
                 a.className = 'dropdown-item';
@@ -451,26 +427,26 @@ function buildCategoryCascader(containerId, hiddenInputId, selectedCategoryId = 
                     a.classList.add('active');
                 }
                 a.href = '#';
-                
-                const prefix = '\u00A0\u00A0\u00A0'.repeat(level); 
-                
+
+                const prefix = '\u00A0\u00A0\u00A0'.repeat(level);
+
                 if (hasChildren) {
                     a.innerHTML = prefix + (isInPath ? '▾ ' : '▸ ') + escapeHtml(c.name);
                     a.classList.add('fw-bold');
                 } else {
                     a.innerHTML = prefix + '• ' + escapeHtml(c.name);
                 }
-                
+
                 a.addEventListener('click', (e) => {
                     e.preventDefault();
-                    
+
                     finalizedCategoryId = c.id;
                     updateExpandedCategories(c.id);
                     hiddenInput.value = c.id;
                     hiddenInput.dispatchEvent(new Event('change'));
-                    
+
                     renderOptions();
-                    
+
                     if (!hasChildren) {
                         const dropdownInstance = bootstrap.Dropdown.getInstance(button) || new bootstrap.Dropdown(button);
                         dropdownInstance.hide();
@@ -485,7 +461,7 @@ function buildCategoryCascader(containerId, hiddenInputId, selectedCategoryId = 
                 }
             });
         }
-        
+
         buildTree(null, 0);
     }
     renderOptions();
@@ -493,44 +469,13 @@ function buildCategoryCascader(containerId, hiddenInputId, selectedCategoryId = 
 
 async function dropdownKategorileriniYukle() {
     try {
-        const cevap = await fetch(`${CONFIG.API_BASE_URL}/categories?pageSize=1000`, {
-            method: "GET",
-            headers: { "Authorization": `Bearer ${token}` }
-        });
-
-        if (!cevap.ok) throw new Error("Kategoriler alınamadı.");
-
-        const data = await cevap.json();
+        const data = await apiRequest('/categories?pageSize=1000', 'GET');
         window.tumKategoriler = data.items || data;
-        
+
         buildCategoryCascader('urunKategoriContainer', 'urunKategoriId', null, false);
         buildCategoryCascader('filtreKategoriContainer', 'filtreKategoriId', null, true);
     } catch (hata) {
         console.error("Kategori dropdown yükleme hatası:", hata);
-    }
-}
-
-async function dropdownDepolariYukle() {
-    try {
-        const response = await fetch(`${CONFIG.API_BASE_URL}/warehouses?pageSize=1000`, {
-            method: "GET",
-            headers: { "Authorization": `Bearer ${token}` }
-        });
-        if (!response.ok) throw new Error("Depolar alınamadı.");
-        const data = await response.json();
-        const depolar = data.items || data;
-        const select = document.getElementById("urunDepoId");
-        if (select) {
-            select.innerHTML = '<option value="">Önce depo seçin...</option>';
-            depolar.forEach(depo => {
-                const option = document.createElement("option");
-                option.value = depo.id;
-                option.textContent = escapeHtml(depo.name);
-                select.appendChild(option);
-            });
-        }
-    } catch (hata) {
-        console.error("Depo dropdown yükleme hatası:", hata);
     }
 }
 
@@ -549,12 +494,8 @@ if (urunDepoSelect) {
         try {
             rafSelect.disabled = false;
             rafSelect.innerHTML = '<option value="">Yükleniyor...</option>';
-            const response = await fetch(`${CONFIG.API_BASE_URL}/locations/by-warehouse/${warehouseId}?pageSize=1000`, {
-                method: "GET",
-                headers: { "Authorization": `Bearer ${token}` }
-            });
-            if (!response.ok) throw new Error("Raflar alınamadı.");
-            const data = await response.json();
+
+            const data = await apiRequest(`/locations/by-warehouse/${warehouseId}?pageSize=1000`, 'GET');
             const raflar = data.items || data;
 
             rafSelect.innerHTML = '<option value="">Raf seçin...</option>';
@@ -580,7 +521,7 @@ if (urunDepoSelect) {
 // =========================================================================
 // FİLTRELEME (TABLE ÜSTÜ) İÇİN DİNAMİK KURALLARIN YÜKLENMESİ
 // =========================================================================
-document.getElementById('filtreKategoriId')?.addEventListener('change', async function() {
+document.getElementById('filtreKategoriId')?.addEventListener('change', async function () {
     const categoryId = this.value;
     const filterArea = document.getElementById('dynamicFilterArea');
     const filterContainer = document.getElementById('dynamicFilterContainer');
@@ -589,26 +530,21 @@ document.getElementById('filtreKategoriId')?.addEventListener('change', async fu
     veriyiGuncelle();
 
     if (!categoryId) {
-        if(filterArea) filterArea.classList.add('d-none');
-        if(filterContainer) filterContainer.innerHTML = '';
+        if (filterArea) filterArea.classList.add('d-none');
+        if (filterContainer) filterContainer.innerHTML = '';
         return;
     }
 
     try {
-        if(filterArea) filterArea.classList.remove('d-none');
-        if(filterContainer) filterContainer.innerHTML = '<div class="col-12 text-center text-muted"><div class="spinner-border spinner-border-sm me-2"></div>Özellikler yükleniyor...</div>';
-        
-        const response = await fetch(`${CONFIG.API_BASE_URL}/attribute-rules/category/${categoryId}`, {
-            headers: { "Authorization": `Bearer ${token}` }
-        });
-        
-        if (!response.ok) throw new Error("Kurallar çekilemedi!");
-        
-        const rules = await response.json();
+        if (filterArea) filterArea.classList.remove('d-none');
+        if (filterContainer) filterContainer.innerHTML = '<div class="col-12 text-center text-muted"><div class="spinner-border spinner-border-sm me-2"></div>Özellikler yükleniyor...</div>';
+
+        const rules = await apiRequest(`/attribute-rules/category/${categoryId}`, 'GET');
+
         filterContainer.innerHTML = '';
 
         const validRules = rules.filter(r => r.targetLevel !== "Asset");
-        
+
         if (validRules.length === 0) {
             filterContainer.innerHTML = '<div class="col-12 text-muted fst-italic">Bu kategoriye ait filtrelenebilir özellik bulunamadı.</div>';
             return;
@@ -617,8 +553,8 @@ document.getElementById('filtreKategoriId')?.addEventListener('change', async fu
         validRules.forEach(rule => {
             let options = [];
             if (rule.allowedValues && rule.allowedValues !== "[]") {
-                try { options = JSON.parse(rule.allowedValues); } 
-                catch(e) { options = rule.allowedValues.split(',').map(s => s.trim()); }
+                try { options = JSON.parse(rule.allowedValues); }
+                catch (e) { options = rule.allowedValues.split(',').map(s => s.trim()); }
             }
 
             let uiType = rule.uiComponent || rule.dataType;
@@ -634,7 +570,7 @@ document.getElementById('filtreKategoriId')?.addEventListener('change', async fu
                 inputHtml = `<select class="form-select form-select-sm kural-filtresi" data-rule-key="${escapeHtml(rule.attributeKey)}">
                                 <option value="">Tümü</option>${optionsHtml}
                              </select>`;
-            } 
+            }
             else if (uiType === 'toggle_switch' || uiType === 'checkbox' || uiType === 'boolean') {
                 inputHtml = `<select class="form-select form-select-sm kural-filtresi" data-rule-key="${escapeHtml(rule.attributeKey)}">
                                 <option value="">Tümü</option>
@@ -642,7 +578,7 @@ document.getElementById('filtreKategoriId')?.addEventListener('change', async fu
                                 <option value="false">Hayır/Kapalı</option>
                              </select>`;
             }
-            else { 
+            else {
                 inputHtml = `<input type="text" class="form-control form-control-sm kural-filtresi" data-rule-key="${escapeHtml(rule.attributeKey)}" placeholder="Ara...">`;
             }
 
@@ -657,9 +593,9 @@ document.getElementById('filtreKategoriId')?.addEventListener('change', async fu
             el.addEventListener('change', () => { currentPage = 1; veriyiGuncelle(); });
         });
 
-    } catch(e) {
+    } catch (e) {
         console.error("Filtre kuralları yüklenirken hata:", e);
-        if(filterContainer) filterContainer.innerHTML = '<div class="col-12 text-danger">Özellikler yüklenemedi.</div>';
+        if (filterContainer) filterContainer.innerHTML = '<div class="col-12 text-danger">Özellikler yüklenemedi.</div>';
     }
 });
 
@@ -695,14 +631,9 @@ if (urunKategoriSelectForm) {
             if (attributeArea) attributeArea.classList.remove('d-none');
             if (container) container.innerHTML = '<div class="col-12 text-center"><div class="spinner-border spinner-border-sm text-primary"></div> Kurallar yükleniyor...</div>';
 
-            const response = await fetch(`${CONFIG.API_BASE_URL}/attribute-rules/category/${categoryId}`, {
-                headers: { "Authorization": `Bearer ${token}` }
-            });
-
-            if (!response.ok) throw new Error("Kurallar çekilemedi!");
-
-            const rules = await response.json();
-            if (container) container.innerHTML = '';
+            const rules = await apiRequest(`/attribute-rules/category/${categoryId}`, 'GET');
+            // Backend'den gelen kurallar artık DisplayOrder değerine göre sıralanmış durumdadır.
+            if (container) container.innerHTML = ''; // İçini temizle
 
             if (rules.length === 0) {
                 if (attributeArea) attributeArea.classList.add('d-none');
@@ -720,11 +651,11 @@ if (urunKategoriSelectForm) {
 
                 let options = [];
                 if (rule.allowedValues && rule.allowedValues !== "[]") {
-                    try { options = JSON.parse(rule.allowedValues); } 
-                    catch(e) { options = rule.allowedValues.split(',').map(s => s.trim()); }
+                    try { options = JSON.parse(rule.allowedValues); }
+                    catch (e) { options = rule.allowedValues.split(',').map(s => s.trim()); }
                 }
-                
-                let uiType = rule.uiComponent || rule.dataType; 
+
+                let uiType = rule.uiComponent || rule.dataType;
 
                 if (uiType === 'searchable_dropdown' || uiType === 'autocomplete') {
                     let optionsHtml = options.map(opt => `<option value="${escapeHtml(opt)}">`).join('');
@@ -736,7 +667,7 @@ if (urunKategoriSelectForm) {
                     inputHtml = `<select class="form-select dynamic-rule-input" data-rule-id="${rule.id}" data-rule-key="${escapeHtml(rule.attributeKey)}" data-rule-type="dropdown" ${requiredAttr}>
                                     <option value="">Seçiniz...</option>${optionsHtml}
                                  </select>`;
-                } 
+                }
                 else if (uiType === 'radio' || uiType === 'segmented_button') {
                     inputHtml = `<div class="mt-2 dynamic-rule-input" data-rule-id="${rule.id}" data-rule-key="${escapeHtml(rule.attributeKey)}" data-rule-type="radio">`;
                     options.forEach((opt, idx) => {
@@ -777,7 +708,7 @@ if (urunKategoriSelectForm) {
                 else if (uiType === 'color_picker') {
                     let defaultColors = ["Siyah", "Beyaz", "Gri", "Gümüş", "Altın", "Kırmızı", "Mavi", "Yeşil", "Sarı", "Turuncu", "Mor", "Pembe", "Lacivert", "Kahverengi", "Bej"];
                     let colors = (options && options.length > 0) ? options : defaultColors;
-                    
+
                     const getColorHex = (cName) => {
                         const normalized = cName.toLocaleLowerCase('tr-TR').trim();
                         const map = {
@@ -787,7 +718,7 @@ if (urunKategoriSelectForm) {
                             "turuncu": "#ff9800", "mor": "#9c27b0", "pembe": "#e91e63", "lacivert": "#1a237e",
                             "kahverengi": "#795548", "bej": "#f5f5dc", "bordo": "#800000", "krem": "#ffdab9"
                         };
-                        if(cName.startsWith('#')) return cName;
+                        if (cName.startsWith('#')) return cName;
                         return map[normalized] || map[cName.toLowerCase().trim()] || "#cccccc";
                     };
 
@@ -834,7 +765,7 @@ if (urunKategoriSelectForm) {
                 const div = document.createElement('div');
                 div.className = `col-md-6 mb-4 dynamic-rule-wrapper ${validRuleIndex > 0 ? 'd-none' : ''}`;
                 div.dataset.index = validRuleIndex;
-                
+
                 if (rule.dataType === 'color_picker') {
                     div.innerHTML = `<a class="text-decoration-none text-dark d-flex align-items-center mb-2" data-bs-toggle="collapse" href="#collapseColor_${rule.id}" role="button" aria-expanded="true">
                                         <label class="form-label small fw-bold mb-0 cursor-pointer">${escapeHtml(rule.attributeKey)} ${starHtml}</label>
@@ -852,7 +783,7 @@ if (urunKategoriSelectForm) {
 
             if (!container.dataset.pimListenersAttached) {
                 container.dataset.pimListenersAttached = 'true';
-                
+
                 const revealNext = (wrapper) => {
                     if (!wrapper) return;
                     const nextIndex = parseInt(wrapper.dataset.index) + 1;
@@ -880,10 +811,10 @@ if (urunKategoriSelectForm) {
                 const numberInput = div.querySelector('input[type="number"]');
                 const min = parseFloat(div.getAttribute('data-min')) || 0;
                 const max = parseFloat(div.getAttribute('data-max')) || 100;
-                
+
                 if (range && numberInput) {
-                    range.addEventListener('input', function() { numberInput.value = this.value; });
-                    numberInput.addEventListener('input', function() {
+                    range.addEventListener('input', function () { numberInput.value = this.value; });
+                    numberInput.addEventListener('input', function () {
                         let val = parseFloat(this.value);
                         if (isNaN(val)) val = min;
                         if (val < min) val = min;
@@ -937,51 +868,22 @@ function tabloyuCiz(urunler) {
     tabloGovdesi.innerHTML = satirlar.join("");
 }
 
-function sayfalamayiCiz(totalPages, currentPage) {
-    const container = document.getElementById("paginationContainer");
-    if (!container) return;
-
-    if (totalPages <= 1) {
-        container.innerHTML = "";
-        return;
-    }
-
-    let html = `<nav><ul class="pagination pagination-sm mb-0 shadow-sm justify-content-center mt-3">`;
-    html += `<li class="page-item ${currentPage === 1 ? 'disabled' : ''}"><a class="page-link page-action" href="#" data-page="${currentPage - 1}">« Önceki</a></li>`;
-
-    for (let i = 1; i <= totalPages; i++) {
-        if (totalPages > 7) {
-            if (i === 1 || i === totalPages || (i >= currentPage - 1 && i <= currentPage + 1)) {
-                html += `<li class="page-item ${currentPage === i ? 'active' : ''}"><a class="page-link page-action" href="#" data-page="${i}">${i}</a></li>`;
-            } else if (i === 2 || i === totalPages - 1) {
-                html += `<li class="page-item disabled"><span class="page-link text-muted">...</span></li>`;
-            }
-        } else {
-            html += `<li class="page-item ${currentPage === i ? 'active' : ''}"><a class="page-link page-action" href="#" data-page="${i}">${i}</a></li>`;
+function sayfalamayiCiz() {
+    buildPagination(
+        "paginationContainer",
+        filtreliUrunler.length,
+        currentPage,
+        pageSize,
+        (newPage) => {
+            currentPage = newPage;
+            veriyiGuncelle();
+        },
+        (newSize) => {
+            pageSize = newSize;
+            currentPage = 1;
+            veriyiGuncelle();
         }
-    }
-
-    html += `<li class="page-item ${currentPage === totalPages ? 'disabled' : ''}"><a class="page-link page-action" href="#" data-page="${currentPage + 1}">Sonraki »</a></li>`;
-    html += `</ul></nav>`;
-    container.innerHTML = html;
-}
-
-const paginationContainerEl = document.getElementById("paginationContainer");
-if (paginationContainerEl) {
-    paginationContainerEl.addEventListener("click", (e) => {
-        e.preventDefault();
-        const btn = e.target.closest(".page-action");
-        if (btn) {
-            const parentLi = btn.closest(".page-item");
-            if (parentLi && (parentLi.classList.contains("disabled") || parentLi.classList.contains("active"))) return;
-
-            const page = parseInt(btn.getAttribute("data-page"));
-            if (!isNaN(page)) {
-                currentPage = page;
-                veriyiGuncelle();
-            }
-        }
-    });
+    );
 }
 
 const btnUrunKaydetEl = document.getElementById("btnUrunKaydet");
@@ -1045,26 +947,14 @@ if (btnUrunKaydetEl) {
         }
 
         const metod = id ? "PUT" : "POST";
-        const adres = id ? (`${API_URL}/${id}`) : API_URL;
+        const adres = id ? `/products/${id}` : '/products';
 
         try {
             const orjinalMetin = btnKaydet.innerText;
             btnKaydet.disabled = true;
             btnKaydet.innerText = "Kaydediliyor...";
 
-            const cevap = await fetch(adres, {
-                method: metod,
-                headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
-                body: JSON.stringify(urunVerisi)
-            });
-
-            if (cevap.status === 401) {
-                localStorage.removeItem('token');
-                window.location.href = 'login.html';
-                return;
-            }
-
-            if (!cevap.ok) throw new Error("İşlem başarısız: " + cevap.status);
+            await apiRequest(adres, metod, urunVerisi);
 
             const modalElement = document.getElementById("urunModal");
             const modalInstance = bootstrap.Modal.getOrCreateInstance(modalElement);
@@ -1094,12 +984,7 @@ async function urunSil(id) {
     if (!onay) return;
 
     try {
-        const cevap = await fetch(`${API_URL}/${id}`, {
-            method: "DELETE",
-            headers: { "Authorization": `Bearer ${token}` }
-        });
-
-        if (!cevap.ok) throw new Error("Silme başarısız: " + cevap.status);
+        await apiRequest(`/products/${id}`, 'DELETE');
         urunleriYukle(currentPage);
     } catch (hata) {
         alert("Ürün silinemedi: " + hata.message);
@@ -1165,7 +1050,7 @@ function urunDuzenle(id) {
     document.getElementById("urunAdi").value = urun.name;
     document.getElementById("urunBarkod").value = urun.barcode;
     document.getElementById("urunMinStok").value = urun.minStockLevel;
-    
+
     buildCategoryCascader('urunKategoriContainer', 'urunKategoriId', urun.categoryId || null, false);
 
     document.getElementById("modalBaslik").innerText = "Ürün Düzenle";
@@ -1241,7 +1126,7 @@ if (btnYeniUrunModal) {
         document.getElementById("urunFormu").reset();
         document.getElementById("urunId").value = "";
         document.getElementById("modalBaslik").innerText = "Yeni Ürün Ekle";
-    
+
         buildCategoryCascader('urunKategoriContainer', 'urunKategoriId', null, false);
 
         const depoSecimi = document.getElementById("depoSecimiAlani");
@@ -1272,4 +1157,167 @@ if (!hasPermission("Product.Edit") && !hasPermission("Product.Delete")) {
 
 urunleriYukle(currentPage);
 dropdownKategorileriniYukle();
+
+async function dropdownDepolariYukle() {
+    try {
+        const data = await apiRequest('/warehouses?pageSize=1000', 'GET');
+        const depolar = data.items || data;
+        const select = document.getElementById("urunDepoId");
+        if (select) {
+            select.innerHTML = '<option value="">Önce depo seçin...</option>';
+            depolar.forEach(depo => {
+                const option = document.createElement("option");
+                option.value = depo.id;
+                option.textContent = escapeHtml(depo.name);
+                select.appendChild(option);
+            });
+        }
+    } catch (hata) {
+        console.error("Depo dropdown yükleme hatası:", hata);
+    }
+}
+
+document.getElementById("urunDepoId").addEventListener("change", async function () {
+    const warehouseId = this.value;
+    const rafSelect = document.getElementById("urunRafId");
+
+    if (!warehouseId) {
+        rafSelect.innerHTML = '<option value="">Depo bekleniyor...</option>';
+        rafSelect.disabled = true;
+        return;
+    }
+
+    try {
+        rafSelect.disabled = false;
+        rafSelect.innerHTML = '<option value="">Yükleniyor...</option>';
+        const data = await apiRequest(`/locations/by-warehouse/${warehouseId}?pageSize=1000`, 'GET');
+        const raflar = data.items || data;
+
+        rafSelect.innerHTML = '<option value="">Raf seçin...</option>';
+        if (raflar.length === 0) {
+            rafSelect.innerHTML = '<option value="">Bu depoda raf yok</option>';
+            rafSelect.disabled = true;
+            return;
+        }
+
+        raflar.forEach(raf => {
+            const option = document.createElement("option");
+            option.value = raf.id;
+            option.textContent = escapeHtml(raf.code);
+            rafSelect.appendChild(option);
+        });
+    } catch (hata) {
+        console.error("Raf dropdown yükleme hatası:", hata);
+        rafSelect.innerHTML = '<option value="">Hata oluştu</option>';
+    }
+});
+
 dropdownDepolariYukle();
+
+
+// --- FİLTRELEME İŞLEMLERİ ---
+document.getElementById('filtreKategoriId')?.addEventListener('change', async function () {
+    const categoryId = this.value;
+    const filterArea = document.getElementById('dynamicFilterArea');
+    const filterContainer = document.getElementById('dynamicFilterContainer');
+
+    if (!categoryId) {
+        filterArea.classList.add('d-none');
+        filterContainer.innerHTML = '';
+        currentPage = 1;
+        veriyiGuncelle();
+        return;
+    }
+
+    try {
+        filterArea.classList.remove('d-none');
+        // Önce filtreleri temizle ki eski filtreler yeni kategoriye etki etmesin
+        filterContainer.innerHTML = '<div class="col-12 text-center text-muted"><div class="spinner-border spinner-border-sm me-2"></div>Özellikler yükleniyor...</div>';
+
+        // Şimdi listeyi güncelle (dinamik filtreler temizlendiği için sadece kategoriye göre günceller)
+        currentPage = 1;
+        veriyiGuncelle();
+
+        const rules = await apiRequest(`/attribute-rules/category/${categoryId}`, 'GET');
+        // rules.reverse(); KALDIRILDI çünkü DisplayOrder kullanılıyor
+
+        filterContainer.innerHTML = '';
+
+        const validRules = rules.filter(r => r.targetLevel !== "Asset");
+
+        if (validRules.length === 0) {
+            filterContainer.innerHTML = '<div class="col-12 text-muted fst-italic">Bu kategoriye ait filtrelenebilir özellik bulunamadı.</div>';
+            return;
+        }
+
+        validRules.forEach(rule => {
+            let options = [];
+            if (rule.allowedValues && rule.allowedValues !== "[]") {
+                try { options = JSON.parse(rule.allowedValues); }
+                catch (e) { options = rule.allowedValues.split(',').map(s => s.trim()); }
+            }
+
+            let uiType = rule.uiComponent || rule.dataType;
+            let inputHtml = '';
+
+            if (uiType === 'searchable_dropdown' || uiType === 'autocomplete') {
+                let optionsHtml = options.map(opt => `<option value="${escapeHtml(opt)}">`).join('');
+                inputHtml = `<input list="datalist_filter_${rule.id}" class="form-control form-control-sm kural-filtresi" data-rule-key="${escapeHtml(rule.attributeKey)}" placeholder="Ara veya Seç...">
+                             <datalist id="datalist_filter_${rule.id}">
+                                ${optionsHtml}
+                             </datalist>`;
+            }
+            else if (uiType === 'dropdown' || uiType === 'icon_dropdown' || uiType === 'radio' || uiType === 'segmented_button' || uiType === 'color_picker') {
+                let optionsHtml = options.map(opt => `<option value="${escapeHtml(opt)}">${escapeHtml(opt)}</option>`).join('');
+                inputHtml = `<select class="form-select form-select-sm kural-filtresi" data-rule-key="${escapeHtml(rule.attributeKey)}">
+                                <option value="">Tümü</option>
+                                ${optionsHtml}
+                             </select>`;
+            }
+            else if (uiType === 'toggle_switch' || uiType === 'checkbox' || uiType === 'boolean') {
+                inputHtml = `<select class="form-select form-select-sm kural-filtresi" data-rule-key="${escapeHtml(rule.attributeKey)}">
+                                <option value="">Tümü</option>
+                                <option value="true">Evet/Açık</option>
+                                <option value="false">Hayır/Kapalı</option>
+                             </select>`;
+            }
+            else {
+                inputHtml = `<input type="text" class="form-control form-control-sm kural-filtresi" data-rule-key="${escapeHtml(rule.attributeKey)}" placeholder="Ara...">`;
+            }
+
+            const div = document.createElement('div');
+            div.className = 'col-md-3 mb-2';
+            div.innerHTML = `<label class="form-label small fw-bold mb-1">${escapeHtml(rule.attributeKey)}</label>
+                             ${inputHtml}`;
+            filterContainer.appendChild(div);
+        });
+
+        // Dinamik filtrelere event listener ekle
+        document.querySelectorAll('.kural-filtresi').forEach(el => {
+            el.addEventListener('input', () => {
+                currentPage = 1;
+                veriyiGuncelle();
+            });
+            el.addEventListener('change', () => {
+                currentPage = 1;
+                veriyiGuncelle();
+            });
+        });
+
+    } catch (e) {
+        console.error("Filtre kuralları yüklenirken hata:", e);
+        filterContainer.innerHTML = '<div class="col-12 text-danger">Özellikler yüklenemedi.</div>';
+    }
+});
+
+document.getElementById('btnFiltreleriTemizle')?.addEventListener('click', () => {
+    document.getElementById('aramaKutusu').value = '';
+    aktifArama = '';
+
+    const catSelect = document.getElementById('filtreKategoriId');
+    if (catSelect) {
+        catSelect.value = '';
+        const event = new Event('change');
+        catSelect.dispatchEvent(event);
+    }
+});

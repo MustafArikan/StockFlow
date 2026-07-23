@@ -1,24 +1,5 @@
-﻿const token = localStorage.getItem('token');
-
-if (!token) {
-    window.location.href = 'login.html';
-}
-
-function getUserEmail() {
-    try {
-        const payloadBase64 = token.split('.')[1];
-        const payloadDecoded = JSON.parse(atob(payloadBase64));
-        return payloadDecoded["email"] ||
-            payloadDecoded["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress"] ||
-            "Kullanıcı";
-    } catch (e) {
-        return "Kullanıcı";
-    }
-}
-
-window.logout = function () {
-    localStorage.removeItem('token');
-    window.location.href = 'login.html';
+function formatCurrency(amount) {
+    return new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY' }).format(amount);
 }
 
 function escapeHtml(text) {
@@ -32,14 +13,9 @@ function escapeHtml(text) {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-    const userProfileEl = document.getElementById('userProfile');
-    if (userProfileEl) {
-        userProfileEl.textContent = getUserEmail();
-    }
-
     loadDashboardSummary();
     loadNavbarNotifications();
-    loadReportCharts();
+    loadCharts();
 
     if (document.fonts && document.fonts.ready) {
         document.fonts.ready.then(() => {
@@ -53,16 +29,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnNavbarReadAll = document.getElementById('btnNavbarReadAll');
     if (btnNavbarReadAll) btnNavbarReadAll.addEventListener("click", markAllAsRead);
 
-    const btnNavbarLogout = document.getElementById('btnNavbarLogout');
-    if (btnNavbarLogout) btnNavbarLogout.addEventListener("click", logout);
-
     const btnExportPdf = document.getElementById('btnExportPdf');
     if (btnExportPdf) btnExportPdf.addEventListener("click", exportDashboardAsPdf);
 
     const btnExportCsv = document.getElementById('btnExportCsv');
     if (btnExportCsv) btnExportCsv.addEventListener("click", exportDashboardAsExcel);
-
-    const themeToggleBtn = document.getElementById('themeToggleBtn');
+    
+    const themeToggleBtn = document.getElementById('layoutThemeToggleBtn') || document.getElementById('themeToggleBtn');
     if (themeToggleBtn) {
         themeToggleBtn.addEventListener('click', () => {
             setTimeout(() => {
@@ -77,118 +50,72 @@ document.addEventListener('DOMContentLoaded', () => {
 
 async function loadDashboardSummary() {
     try {
-        const response = await fetch(`${CONFIG.API_BASE_URL}/reports/dashboard-summary`, {
-            method: 'GET',
-            headers: { "Authorization": `Bearer ${token}` }
-        });
+        const data = await apiRequest('/reports/dashboard-summary', 'GET');
 
-        if (response.status == 401) {
-            logout();
-            return;
-        }
+        document.getElementById('totalProductsText').textContent = data.totalProducts || 0;
+        document.getElementById('totalStockText').innerHTML = `${data.totalStockQuantity || 0} <span class="fs-6 text-muted">Adet</span>`;
+        document.getElementById('activeWarehousesText').textContent = data.totalWarehouses || 0;
+        document.getElementById('criticalAlertsText').textContent = data.criticalAlertsCount || 0;
 
-        if (!response.ok) throw new Error("Dashboard verileri alınamadı.");
-
-        const data = await response.json();
-
-        const elTotalProducts = document.getElementById("totalProductsText");
-        const elTotalStock = document.getElementById("totalStockText");
-        const elActiveWarehouses = document.getElementById("activeWarehousesText");
-        const elCriticalAlerts = document.getElementById("criticalAlertsText");
-
-        if (elTotalProducts) elTotalProducts.textContent = data.totalProducts || 0;
-        if (elTotalStock) elTotalStock.innerHTML = `${data.totalStockQuantity || 0} <span class="fs-6 text-muted">Adet</span>`;
-        if (elActiveWarehouses) elActiveWarehouses.textContent = data.totalWarehouses || 0;
-        if (elCriticalAlerts) elCriticalAlerts.textContent = data.criticalAlertsCount || 0;
+        const valEl = document.getElementById('totalProductsValue');
+        if (valEl) valEl.textContent = formatCurrency(data.totalWarehouseValue || 0);
 
     } catch (error) {
-        console.error("Dashboard yükleme hatası:", error);
+        console.error("Dashboard özeti yüklenemedi:", error);
     }
 }
 
 async function loadNavbarNotifications() {
     try {
-        const response = await fetch(`${CONFIG.API_BASE_URL}/notifications?onlyUnread=true`, {
-            method: 'GET',
-            headers: { "Authorization": `Bearer ${token}` }
-        });
+        const notifications = await apiRequest('/notifications?onlyUnread=true', 'GET');
+        const list = document.getElementById("navbarNotificationList");
+        const badge = document.getElementById("navbarNotificationCount");
 
-        if (response.status == 401) {
-            logout();
+        if (!list || !badge) return;
+
+        list.innerHTML = "";
+
+        if (!notifications || notifications.length === 0) {
+            badge.classList.add("d-none");
+            list.innerHTML = '<li class="text-center text-muted py-3 small">Yeni bildiriminiz yok.</li>';
             return;
         }
 
-        if (!response.ok) throw new Error("Bildirimler alınamadı.");
-
-        const notifications = await response.json();
-        renderNavbarNotifications(notifications);
-    } catch (error) {
-        console.error("Zil bildirimleri yükleme hatası:", error);
-    }
-}
-
-function renderNavbarNotifications(notifications) {
-    const badge = document.getElementById("notificationBadge");
-    const list = document.getElementById("navbarNotificationList");
-
-    if (!badge || !list) return;
-
-    const count = notifications.length;
-    if (count > 0) {
-        badge.textContent = count;
+        badge.textContent = notifications.length;
         badge.classList.remove("d-none");
-    } else {
-        badge.classList.add("d-none");
-    }
 
-    if (count === 0) {
-        list.innerHTML = `<li class="text-center text-muted py-3 small">Kritik stok uyarısı bulunmamaktadır.</li>`;
-        return;
-    }
+        // En son 5 bildirimi göster (eğer çok varsa)
+        const recentNotifications = notifications.slice(0, 5);
 
-    const recentNotifications = notifications.slice(0, 4);
-    list.innerHTML = "";
-
-    recentNotifications.forEach(notification => {
-        let iconClass = "bi-exclamation-triangle-fill text-warning";
-        if (notification.severity === "CRITICAL") iconClass = "bi-exclamation-circle-fill text-orange-custom";
-        else if (notification.severity === "DANGER" || notification.severity === "EMPTY_STOCK") iconClass = "bi-shield-fill-x text-danger";
-        else if (notification.severity === "INFO") iconClass = "bi-info-circle-fill text-secondary";
-
-        const li = document.createElement("li");
-        li.className = "p-2 border-bottom small rounded hover-bg";
-
-        li.innerHTML = `
-            <div class="d-flex align-items-start">
-                <i class="bi ${iconClass} me-2"></i>
-                <div class="flex-1-min-0">
-                    <p class="mb-0 text-dark text-truncate fs-085 safe-message-container"></p>
-                    <small class="text-muted fs-075">${new Date(notification.createdAt).toLocaleTimeString("tr-TR", { hour: '2-digit', minute: '2-digit' })}</small>
+        recentNotifications.forEach(n => {
+            const li = document.createElement("li");
+            li.className = "dropdown-item border-bottom pb-2 mb-2 px-3 py-2";
+            li.style.whiteSpace = "normal";
+            li.innerHTML = `
+                <div class="d-flex align-items-start">
+                    <div class="me-3 mt-1 text-danger">
+                        <i class="bi bi-exclamation-circle-fill fs-5"></i>
+                    </div>
+                    <div>
+                        <div class="fw-bold small mb-1">${escapeHtml(n.title)}</div>
+                        <div class="text-muted small mb-1" style="font-size: 0.8rem;">${escapeHtml(n.message)}</div>
+                        <div class="text-secondary small" style="font-size: 0.75rem;">${new Date(n.createdAt).toLocaleString('tr-TR')}</div>
+                    </div>
                 </div>
-            </div>
-        `;
-
-        const msgContainer = li.querySelector(".safe-message-container");
-        msgContainer.title = notification.message;
-        msgContainer.textContent = notification.message;
-
-        list.appendChild(li);
-    });
+            `;
+            list.appendChild(li);
+        });
+    } catch (error) {
+        console.error("Bildirimler yüklenemedi:", error);
+    }
 }
 
 async function markAllAsRead() {
     try {
-        const response = await fetch(`${CONFIG.API_BASE_URL}/notifications/read-all`, {
-            method: "POST",
-            headers: { "Authorization": `Bearer ${token}` }
-        });
-
-        if (!response.ok) throw new Error("İşlem başarısız.");
-
-        loadDashboardSummary();
+        await apiRequest('/notifications/read-all', 'POST');
         loadNavbarNotifications();
     } catch (error) {
-        console.error("Tümünü okundu işaretleme hatası:", error);
+        console.error("Bildirimler okundu işaretlenemedi:", error);
     }
 }
 
@@ -203,6 +130,7 @@ let lastCategoryData = [];
 let lastTopProductsData = [];
 let lastMovementData = null;
 let allProductsForExcel = [];
+let currentTrendProduct = null;
 
 function getChartTextColor() {
     return document.documentElement.getAttribute('data-theme') === 'dark' ? '#ececec' : '#1a1d23';
@@ -212,41 +140,36 @@ function getChartGridColor() {
     return document.documentElement.getAttribute('data-theme') === 'dark' ? '#40424c' : '#d8dce2';
 }
 
-async function loadReportCharts() {
+async function loadCharts() {
     try {
-        const filterSelect = document.getElementById("trendProductFilter");
-        const selectedBarcode = filterSelect ? filterSelect.value : "";
-        const trendUrl = selectedBarcode
-            ? `${CONFIG.API_BASE_URL}/reports/trend?barcode=${selectedBarcode}`
-            : `${CONFIG.API_BASE_URL}/reports/trend`;
+        const trendUrl = currentTrendProduct ? `/reports/trend?productId=${currentTrendProduct}` : '/reports/trend';
 
-        const [trendRes, categoryRes, topProductsRes, moveRes, prodRes] = await Promise.all([
-            fetch(trendUrl, { headers: { "Authorization": `Bearer ${token}` } }),
-            fetch(`${CONFIG.API_BASE_URL}/reports/by-category`, { headers: { "Authorization": `Bearer ${token}` } }),
-            fetch(`${CONFIG.API_BASE_URL}/reports/top-products`, { headers: { "Authorization": `Bearer ${token}` } }),
-            fetch(`${CONFIG.API_BASE_URL}/reports/movement-summary`, { headers: { "Authorization": `Bearer ${token}` } }),
-            fetch(`${CONFIG.API_BASE_URL}/products?pageSize=10000`, { headers: { "Authorization": `Bearer ${token}` } })
+        const [trendData, categoryData, topProductsData, moveData, prodDataRaw] = await Promise.all([
+            apiRequest(trendUrl, 'GET'),
+            apiRequest('/reports/by-category', 'GET'),
+            apiRequest('/reports/top-products', 'GET'),
+            apiRequest('/reports/movement-summary', 'GET'),
+            apiRequest('/products?pageSize=10000', 'GET')
         ]);
 
-        if (trendRes.status === 401 || categoryRes.status === 401 || topProductsRes.status === 401) {
-            logout();
-            return;
-        }
 
-        lastTrendData = trendRes.ok ? await trendRes.json() : [];
-        lastCategoryData = categoryRes.ok ? await categoryRes.json() : [];
-        lastTopProductsData = topProductsRes.ok ? await topProductsRes.json() : [];
-        lastMovementData = moveRes.ok ? await moveRes.json() : { giris: 0, cikis: 0, transfer: 0 };
-        allProductsForExcel = prodRes.ok ? (await prodRes.json()).items || [] : [];
+        lastTrendData = trendData || [];
+        lastCategoryData = categoryData || [];
+        lastTopProductsData = topProductsData || [];
+        lastMovementData = moveData || { giris: 0, cikis: 0, transfer: 0 };
+        allProductsForExcel = prodDataRaw?.items || prodDataRaw || [];
 
+        const filterSelect = document.getElementById("trendProductFilter");
         if (filterSelect && filterSelect.options.length <= 1) {
             allProductsForExcel.forEach(p => {
                 const opt = document.createElement("option");
-                opt.value = p.barcode;
+                opt.value = p.id; // Doğru alan (ID)
                 opt.textContent = `[${p.barcode}] ${p.name}`;
                 filterSelect.appendChild(opt);
             });
         }
+
+
 
         renderTrendChart(lastTrendData);
         renderCategoryChart(lastCategoryData);
@@ -258,20 +181,8 @@ async function loadReportCharts() {
 }
 
 document.getElementById("trendProductFilter")?.addEventListener("change", async (e) => {
-    const barcode = e.target.value;
-    const trendUrl = barcode
-        ? `${CONFIG.API_BASE_URL}/reports/trend?barcode=${barcode}`
-        : `${CONFIG.API_BASE_URL}/reports/trend`;
-
-    try {
-        const res = await fetch(trendUrl, { headers: { "Authorization": `Bearer ${token}` } });
-        if (res.ok) {
-            lastTrendData = await res.json();
-            renderTrendChart(lastTrendData);
-        }
-    } catch (error) {
-        console.error("Trend filtresi hatası:", error);
-    }
+    currentTrendProduct = e.target.value;
+    loadCharts();
 });
 
 // Son 30 Gün Stok Hareket Trend grafiğini çizer
@@ -365,7 +276,7 @@ function renderTrendChart(data) {
         },
         options: {
             responsive: true,
-            maintainAspectRatio: false,          
+            maintainAspectRatio: false,
             interaction: { mode: 'index', intersect: false },
             plugins: {
                 legend: {
@@ -403,7 +314,7 @@ function renderMovementSummaryChart(data) {
     const giris = data.Giris || data.giris || 0;
     const cikis = data.Cikis || data.cikis || 0;
     const transfer = data.Transfer || data.transfer || 0;
-    
+
     const filtreKodlari = ['GIRIS', 'CIKIS', 'TRANSFER'];
 
     movementSummaryChartInstance = new Chart(ctx, {
@@ -424,12 +335,12 @@ function renderMovementSummaryChart(data) {
             // Fare grafiğin üzerindeyken el işareti (pointer) yapması için gereken kod:
             onHover: (event, chartElement) => {
                 event.native.target.style.cursor = chartElement[0] ? 'pointer' : 'default';
-            },    
+            },
             onClick: (event, elements) => {
                 if (elements.length > 0) {
                     const index = elements[0].index;
                     const secilenFiltre = filtreKodlari[index];
-                  
+
                     window.location.href = `movements.html?filter=${secilenFiltre}`;
                 }
             },
@@ -441,7 +352,7 @@ function renderMovementSummaryChart(data) {
                     titleColor: isDark ? '#fff' : '#000',
                     bodyColor: isDark ? '#ccc' : '#444',
                     borderWidth: 1, padding: 12, usePointStyle: true,
-                    callbacks: {                        
+                    callbacks: {
                         afterLabel: function (context) {
                             return ' (Filtrelemek için tıkla)';
                         }
@@ -557,15 +468,15 @@ function renderTopProductsChart(data) {
                     {
                         label: ' Stok Girişi',
                         data: safeData.map(d => d.girisMiktari || d.GirisMiktari || 0),
-                        backgroundColor: '#198754', 
-                        barPercentage: 0.65, 
+                        backgroundColor: '#198754',
+                        barPercentage: 0.65,
                         categoryPercentage: 0.85,
                         borderRadius: 3
                     },
                     {
                         label: ' Stok Çıkışı',
                         data: safeData.map(d => d.cikisMiktari || d.CikisMiktari || 0),
-                        backgroundColor: '#dc3545', 
+                        backgroundColor: '#dc3545',
                         barPercentage: 0.65,
                         categoryPercentage: 0.85,
                         borderRadius: 3
@@ -573,7 +484,7 @@ function renderTopProductsChart(data) {
                     {
                         label: ' Transfer',
                         data: safeData.map(d => d.transferMiktari || d.TransferMiktari || 0),
-                        backgroundColor: '#0dcaf0', 
+                        backgroundColor: '#0dcaf0',
                         barPercentage: 0.65,
                         categoryPercentage: 0.85,
                         borderRadius: 3
@@ -594,8 +505,8 @@ function renderTopProductsChart(data) {
                         labels: { color: textColor, padding: 25, usePointStyle: true, font: { size: 12, family: "'Inter', sans-serif" } }
                     },
                     tooltip: {
-                        mode: 'y', 
-                        intersect: true, 
+                        mode: 'y',
+                        intersect: true,
                         padding: 12,
                         callbacks: {
                             footer: function (items) {
@@ -767,11 +678,12 @@ async function exportDashboardAsExcel() {
         addSheetWithStyles(wb, "3. Kategori Dağılımı", kategoriVerisi, [{ wch: 30 }, { wch: 20 }]);
 
         const trendVerisi = lastTrendData.map(d => ({
-            "Tarih": new Date(d.tarih).toLocaleDateString('tr-TR'),
-            "Giriş Miktarı": d.girisMiktari,
-            "Çıkış Miktarı": d.cikisMiktari
+            "Tarih": new Date(d.tarih || d.Date).toLocaleDateString('tr-TR'),
+            "Giriş Miktarı": d.girisMiktari || d.GirisMiktari || 0,
+            "Çıkış Miktarı": d.cikisMiktari || d.CikisMiktari || 0,
+            "Transfer Miktarı": d.transferMiktari || d.TransferMiktari || 0
         }));
-        addSheetWithStyles(wb, "4. Günlük Hareket Trendi", trendVerisi, [{ wch: 15 }, { wch: 15 }, { wch: 15 }]);
+        addSheetWithStyles(wb, "4. Günlük Hareket Trendi", trendVerisi, [{ wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 15 }]);
 
         XLSX.writeFile(wb, `StockFlow_Analiz_${new Date().toISOString().slice(0, 10)}.xlsx`);
 

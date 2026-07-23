@@ -46,7 +46,7 @@
                         </tbody>
                     </table>
                 </div>
-                <div id="paginationContainer" class="mt-3"></div>
+
             </div>
         </div>
     </div>
@@ -67,9 +67,8 @@
                         </div>
                         <div class="mb-4">
                             <label class="form-label text-muted small fw-bold">Üst Kategori (Opsiyonel)</label>
-                            <select class="form-select" id="ustKategoriId">
-                                <option value="">Yok (Ana Kategori Olarak Ekle)</option>
-                            </select>
+                            <div id="ustKategoriContainer" class="d-flex flex-column gap-2"></div>
+                            <input type="hidden" id="ustKategoriId" value="">
                         </div>
                         <button type="button" id="btnKategoriKaydet"
                             class="btn btn-primary w-100 rounded-pill py-2 fw-bold">Ekle ve Kaydet</button>

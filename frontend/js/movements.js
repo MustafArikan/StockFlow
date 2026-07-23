@@ -6,7 +6,7 @@ if (!token) window.location.href = 'login.html';
 
 const MAX_ISLEM_ADEDI = 100000;
 
-// XSS koruması için özel HTML karakterlerini güvenli formata dönüştürür
+// XSS koruması
 function escapeHtml(text) {
     if (!text) return "";
     return text.toString()
@@ -17,11 +17,9 @@ function escapeHtml(text) {
         .replace(/'/g, "&#039;");
 }
 
-// URL'den gelen filtre parametresini yakalar 
 const urlParams = new URLSearchParams(window.location.search);
 const urlFilter = urlParams.get('filter');
 
-// GLOBAL DEĞİŞKENLER
 let stokHareketleri = [];
 let tumUrunler = [];
 let tumLokasyonlar = [];
@@ -29,55 +27,71 @@ let tumLokasyonlar = [];
 const tabloGovdesi = document.getElementById("hareketTablosuGövdesi");
 const aramaKutusu = document.getElementById("aramaKutusu");
 
-// Sayfalama, Arama ve Sıralama Durumları
 let currentPage = 1;
-const pageSize = 10;
+let pageSize = 10;
 let aktifFiltre = urlFilter ? urlFilter : 'TUMU';
 let aktifArama = '';
 let siralamaSutunu = 'tarih';
 let siralamaYonu = 'desc';
 
-// ==========================================
-// 1. ARAMA, FİLTRELEME VE KUSURSUZ SIRALAMA
-// ==========================================
-
-// Tablo verilerini arama, filtreleme ve sıralama durumuna göre günceller
 function veriyiGuncelle() {
-    // 1. Buton Filtresi 
-    let islenmisVeri = stokHareketleri;
+    let islenmisVeri = stokHareketleri || [];
+
     if (aktifFiltre !== 'TUMU') {
         if (aktifFiltre === 'GIRIS') {
-            islenmisVeri = islenmisVeri.filter(h => (h.movementType || h.islemTipi) === 'IN' || (h.movementType || h.islemTipi) === 'GIRIS');
+            islenmisVeri = islenmisVeri.filter(h => {
+                let type = h.movementType || h.islemTipi || h.type;
+                return type === 'IN' || type === 'GIRIS';
+            });
         } else if (aktifFiltre === 'CIKIS') {
-            islenmisVeri = islenmisVeri.filter(h => (h.movementType || h.islemTipi) === 'OUT' || (h.movementType || h.islemTipi) === 'CIKIS');
+            islenmisVeri = islenmisVeri.filter(h => {
+                let type = h.movementType || h.islemTipi || h.type;
+                return type === 'OUT' || type === 'CIKIS';
+            });
         } else if (aktifFiltre === 'TRANSFER') {
-            islenmisVeri = islenmisVeri.filter(h => (h.movementType || h.islemTipi) === 'TRANSFER');
+            islenmisVeri = islenmisVeri.filter(h => {
+                let type = h.movementType || h.islemTipi || h.type;
+                return type === 'TRANSFER';
+            });
         }
     }
 
-    // 2. Arama Çubuğu
     if (aktifArama.trim() !== '') {
-        islenmisVeri = islenmisVeri.filter(h =>
-            ((h.urunAdı || h.urunAdi || h.productName || "").toLowerCase().includes(aktifArama)) ||
-            ((h.urunKodu || "").toLowerCase().includes(aktifArama)) ||
-            ((h.personel || "").toLowerCase().includes(aktifArama))
-        );
+        islenmisVeri = islenmisVeri.filter(h => {
+            let uAdi = h.urunAdi || h.urunAdı || h.productName || h.name || "";
+            let uKodu = h.urunKodu || h.productCode || h.barcode || "";
+            let personel = h.personelName || h.personel || h.userName || h.fullName || h.userEmail || "";
+            return uAdi.toLowerCase().includes(aktifArama) ||
+                   uKodu.toLowerCase().includes(aktifArama) ||
+                   personel.toLowerCase().includes(aktifArama);
+        });
     }
 
-    // 3. Sıralama Motoru (Tarih, Sayı ve Türkçe A-Z)
+    // KESİN ÇÖZÜM: TÜRKÇE ALFABETİK SIRALAMA MOTORU
     islenmisVeri.sort((a, b) => {
-        let valA = a[siralamaSutunu];
-        let valB = b[siralamaSutunu];
+        let valA = '';
+        let valB = '';
 
         if (siralamaSutunu === "urunAdi") {
-            valA = a.urunAdi || a.urunAdı || a.productName || '';
-            valB = b.urunAdi || b.urunAdı || b.productName || '';
+            valA = a.urunAdi || a.urunAdı || a.productName || a.name || '';
+            valB = b.urunAdi || b.urunAdı || b.productName || b.name || '';
+        } else if (siralamaSutunu === "urunKodu") {
+            valA = a.urunKodu || a.productCode || a.barcode || '';
+            valB = b.urunKodu || b.productCode || b.barcode || '';
         } else if (siralamaSutunu === "islemTipi") {
-            valA = (a.islemTipi || a.movementType) === 'IN' || (a.islemTipi || a.movementType) === 'GIRIS' ? 'GIRIS' : 'CIKIS';
-            valB = (b.islemTipi || b.movementType) === 'IN' || (b.islemTipi || b.movementType) === 'GIRIS' ? 'GIRIS' : 'CIKIS';
-        } else {
-            valA = valA != null ? valA : '';
-            valB = valB != null ? valB : '';
+            let typeA = a.movementType || a.islemTipi || a.type || '';
+            let typeB = b.movementType || b.islemTipi || b.type || '';
+            valA = (typeA === 'IN' || typeA === 'GIRIS') ? 'Stok Girişi' : (typeA === 'TRANSFER' ? 'Stok Transferi' : 'Stok Çıkışı');
+            valB = (typeB === 'IN' || typeB === 'GIRIS') ? 'Stok Girişi' : (typeB === 'TRANSFER' ? 'Stok Transferi' : 'Stok Çıkışı');
+        } else if (siralamaSutunu === "personel") {
+            valA = a.personelName || a.personel || a.userName || a.fullName || a.userEmail || '';
+            valB = b.personelName || b.personel || b.userName || b.fullName || b.userEmail || '';
+        } else if (siralamaSutunu === "tarih") {
+            valA = a.tarih || a.createdAt || a.date || 0;
+            valB = b.tarih || b.createdAt || b.date || 0;
+        } else if (siralamaSutunu === "quantity") {
+            valA = Number(a.quantity) || 0;
+            valB = Number(b.quantity) || 0;
         }
 
         if (siralamaSutunu === 'tarih') {
@@ -87,15 +101,16 @@ function veriyiGuncelle() {
         }
 
         if (siralamaSutunu === 'quantity') {
-            return siralamaYonu === 'asc' ? Number(valA) - Number(valB) : Number(valB) - Number(valA);
+            return siralamaYonu === 'asc' ? valA - valB : valB - valA;
         }
 
-        valA = valA.toString();
-        valB = valB.toString();
-        return siralamaYonu === 'asc' ? valA.localeCompare(valB, 'tr') : valB.localeCompare(valA, 'tr');
+        // Ç, Ğ, İ, Ö, Ş, Ü harflerini kusursuz sıralayan Intl.Collator API'si
+        const trCollator = new Intl.Collator('tr-TR', { numeric: true, sensitivity: 'base' });
+        return siralamaYonu === 'asc' 
+            ? trCollator.compare(valA.toString(), valB.toString()) 
+            : trCollator.compare(valB.toString(), valA.toString());
     });
 
-    // 4. Sayfalama Kesimi
     const toplamSayfa = Math.ceil(islenmisVeri.length / pageSize) || 1;
     if (currentPage > toplamSayfa) currentPage = toplamSayfa;
 
@@ -104,10 +119,9 @@ function veriyiGuncelle() {
     const sayfadakiVeriler = islenmisVeri.slice(baslangic, bitis);
 
     tabloyuCiz(sayfadakiVeriler);
-    sayfalamayiCiz(toplamSayfa, currentPage);
+    sayfalamayiCiz(islenmisVeri.length, currentPage);
 }
 
-// Sütun başlığına tıklandığında sıralama yönünü belirler ve veriyi günceller
 function sirala(sutun) {
     if (siralamaSutunu === sutun) {
         siralamaYonu = siralamaYonu === 'asc' ? 'desc' : 'asc';
@@ -129,25 +143,10 @@ function sirala(sutun) {
     veriyiGuncelle();
 }
 
-// ==========================================
-// 2. API'DEN TÜM VERİYİ ÇEKME
-// ==========================================
-
-// API üzerinden tüm stok hareketlerini çeker ve global diziye aktarır
 async function hareketleriYukle() {
     try {
-        const adres = `${API_URL}?pageNumber=1&pageSize=10000`;
-        const cevap = await fetch(adres, {
-            method: 'GET',
-            headers: { "Authorization": `Bearer ${token}` }
-        });
-
-        if (cevap.status === 401) { localStorage.removeItem('token'); window.location.href = 'login.html'; return; }
-        if (!cevap.ok) throw new Error("Stok hareketleri yüklenemedi");
-
-        const sonuc = await cevap.json();
-        stokHareketleri = sonuc.items || sonuc || [];
-
+        const sonuc = await apiRequest('/stock/movements?pageSize=100000', 'GET');
+        stokHareketleri = sonuc.items || sonuc.data || sonuc || [];
         veriyiGuncelle();
     } catch (hata) {
         tabloGovdesi.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-danger">Bağlantı Hatası: ${hata.message}</td></tr>`;
@@ -156,29 +155,25 @@ async function hareketleriYukle() {
     }
 }
 
-// ==========================================
-// 3. TABLO ÇİZİMİ VE SAYFALAMA 
-// ==========================================
-// JWT token içindeki payload kısmını çözer
 function parseJwt(t) {
     try {
         return JSON.parse(decodeURIComponent(atob(t.split('.')[1]).split('').map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join('')));
     } catch (e) { return null; }
 }
-const currentPayload = parseJwt(token);
-const isAdmin = currentPayload && currentPayload["http://schemas.microsoft.com/ws/2008/06/identity/claims/role"] === "admin";
 
-// Gelen verileri HTML tablosuna satır satır ekler
+const userRole = getUserRole() || '';
+const isAdmin = ["admin", "superadmin"].includes(userRole.toLowerCase());
+
 function tabloyuCiz(veriListesi) {
     tabloGovdesi.innerHTML = "";
-    if (veriListesi.length === 0) {
+    if (!veriListesi || veriListesi.length === 0) {
         tabloGovdesi.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-muted">Kayıt bulunamadı.</td></tr>`;
         return;
     }
 
     let satirlar = [];
     veriListesi.forEach(hareket => {
-        let nType = hareket.movementType || hareket.islemTipi;
+        let nType = hareket.movementType || hareket.islemTipi || hareket.type;
         let isGiris = nType === "IN" || nType === "GIRIS";
 
         let tipEtiketi = isGiris
@@ -190,22 +185,38 @@ function tabloyuCiz(veriListesi) {
         let adetRengi = isGiris ? "text-success" : nType === "TRANSFER" ? "text-primary" : "text-danger";
         let adetIsareti = isGiris ? "+" : nType === "TRANSFER" ? "⇄" : "-";
 
-        const formatliTarih = new Date(hareket.tarih).toLocaleString('tr-TR');
-        let pName = hareket.urunAdı || hareket.urunAdi || hareket.productName || '';
+        const formatliTarih = new Date(hareket.tarih || hareket.createdAt || hareket.date || Date.now()).toLocaleString('tr-TR');
+        
+        let pCode = hareket.urunKodu || hareket.productCode || hareket.barcode || '-';
+        let pName = hareket.urunAdi || hareket.urunAdı || hareket.productName || hareket.name || '-';
 
-        let kisiIsmi = hareket.personelName || hareket.personel;
+        let kisiIsmi = hareket.personelName || hareket.personel || hareket.userName || hareket.fullName || 'Sistem';
+        let kisiMail = hareket.userEmail || hareket.email || '';
         let finalKisiHtml = "";
-
-        if (isAdmin && hareket.userId) {
-            finalKisiHtml = `<a href="#" onclick="kullaniciProfiliGoster(${hareket.userId}); return false;" class="text-decoration-none fw-bold text-primary"><i class="bi bi-person-badge me-1"></i>${escapeHtml(kisiIsmi)}</a><br><small class="text-muted">${escapeHtml(hareket.personel)}</small>`;
+        
+        let uId = hareket.userId || hareket.id;
+        
+        // ADMIN OLMAYANLAR DA PROFİLE TIKLAYABİLSİN
+        if (uId) {
+            finalKisiHtml = `
+            <div class="d-flex flex-column align-items-center justify-content-center">
+                <a href="#" data-action="view-profile" data-user-id="${uId}" class="text-decoration-none fw-bold text-primary text-truncate" style="max-width: 150px;">
+                    <i class="bi bi-person-badge me-1"></i>${escapeHtml(kisiIsmi)}
+                </a>
+                ${kisiMail ? `<small class="text-muted text-truncate" style="max-width: 150px; font-size: 0.75rem;">${escapeHtml(kisiMail)}</small>` : ''}
+            </div>`;
         } else {
-            finalKisiHtml = `<span>${escapeHtml(kisiIsmi)}</span><br><small class="text-muted">${escapeHtml(hareket.personel)}</small>`;
+            finalKisiHtml = `
+            <div class="d-flex flex-column align-items-center justify-content-center">
+                <span class="fw-bold text-secondary text-truncate" style="max-width: 150px;">${escapeHtml(kisiIsmi)}</span>
+                ${kisiMail ? `<small class="text-muted text-truncate" style="max-width: 150px; font-size: 0.75rem;">${escapeHtml(kisiMail)}</small>` : ''}
+            </div>`;
         }
 
         const satir = `
             <tr>
                 <td class="text-muted small align-middle fw-bold text-center">${escapeHtml(formatliTarih)}</td>
-                <td class="fw-bold align-middle d-none d-md-table-cell text-center">${escapeHtml(hareket.urunKodu)}</td>
+                <td class="fw-bold align-middle d-none d-md-table-cell text-center">${escapeHtml(pCode)}</td>
                 <td class="align-middle">${escapeHtml(pName)}</td>
                 <td class="text-center align-middle">${tipEtiketi}</td>
                 <td class="fw-bold text-center align-middle ${adetRengi}">${adetIsareti}${hareket.quantity}</td>
@@ -216,51 +227,35 @@ function tabloyuCiz(veriListesi) {
     tabloGovdesi.innerHTML = satirlar.join("");
 }
 
-// Sayfalama butonlarını oluşturur
-function sayfalamayiCiz(totalPages, curPage) {
-    const container = document.getElementById("paginationContainer");
-    if (!container) return;
-    if (totalPages <= 1) { container.innerHTML = ""; return; }
-
-    let html = `<nav><ul class="pagination pagination-sm mb-0 shadow-sm justify-content-center mt-4">`;
-    html += `<li class="page-item ${curPage === 1 ? 'disabled' : ''}"><a class="page-link page-action" href="#" data-page="${curPage - 1}">« Önceki</a></li>`;
-
-    for (let i = 1; i <= totalPages; i++) {
-        if (totalPages > 7) {
-            if (i === 1 || i === totalPages || (i >= curPage - 1 && i <= curPage + 1)) {
-                html += `<li class="page-item ${i === curPage ? 'active' : ''}"><a class="page-link page-action" href="#" data-page="${i}">${i}</a></li>`;
-            } else if (i === 2 || i === totalPages - 1) {
-                html += `<li class="page-item disabled"><span class="page-link text-muted">...</span></li>`;
-            }
-        } else {
-            html += `<li class="page-item ${i === curPage ? 'active' : ''}"><a class="page-link page-action" href="#" data-page="${i}">${i}</a></li>`;
+function sayfalamayiCiz(totalItems, curPage) {
+    buildPagination(
+        "paginationContainer", 
+        totalItems, 
+        curPage, 
+        pageSize, 
+        (newPage) => {
+            currentPage = newPage;
+            veriyiGuncelle();
+        },
+        (newSize) => {
+            pageSize = newSize;
+            currentPage = 1;
+            veriyiGuncelle();
         }
-    }
-
-    html += `<li class="page-item ${curPage === totalPages ? 'disabled' : ''}"><a class="page-link page-action" href="#" data-page="${curPage + 1}">Sonraki »</a></li>`;
-    html += `</ul></nav>`;
-    container.innerHTML = html;
+    );
 }
 
-// ==========================================
-// 4. EVENT LISTENER (DİNLEYİCİLER)
-// ==========================================
-document.getElementById("paginationContainer").addEventListener("click", (e) => {
-    e.preventDefault();
-    const btn = e.target.closest(".page-action");
-    if (btn) {
-        const parentLi = btn.closest(".page-item");
-        if (parentLi && (parentLi.classList.contains("disabled") || parentLi.classList.contains("active"))) return;
-
-        const page = parseInt(btn.getAttribute("data-page"));
-        if (!isNaN(page)) {
-            currentPage = page;
-            veriyiGuncelle();
+tabloGovdesi.addEventListener('click', (e) => {
+    const profileLink = e.target.closest('[data-action="view-profile"]');
+    if (profileLink) {
+        e.preventDefault();
+        const userId = profileLink.getAttribute('data-user-id');
+        if (userId) {
+            kullaniciProfiliGoster(userId);
         }
     }
 });
 
-// Aktif olan filtre butonunun rengini günceller
 function aktifButonuGuncelle(aktifId) {
     const butonlar = ["btnTumu", "btnGirisler", "btnCikislar", "btnTransferler"];
     butonlar.forEach(id => {
@@ -284,7 +279,6 @@ document.getElementById("btnTumu").addEventListener("click", () => {
     aktifFiltre = 'TUMU';
     aktifButonuGuncelle("btnTumu");
     currentPage = 1;
-    // URL'yi tamamen temizler
     window.history.pushState({}, document.title, window.location.pathname);
     veriyiGuncelle();
 });
@@ -293,7 +287,6 @@ document.getElementById("btnGirisler").addEventListener("click", () => {
     aktifFiltre = 'GIRIS';
     aktifButonuGuncelle("btnGirisler");
     currentPage = 1;
-    // URL'ye filtre parametresini ekler
     window.history.pushState({}, document.title, `${window.location.pathname}?filter=GIRIS`);
     veriyiGuncelle();
 });
@@ -302,27 +295,29 @@ document.getElementById("btnCikislar").addEventListener("click", () => {
     aktifFiltre = 'CIKIS';
     aktifButonuGuncelle("btnCikislar");
     currentPage = 1;
-    // URL'ye filtre parametresini ekler
     window.history.pushState({}, document.title, `${window.location.pathname}?filter=CIKIS`);
     veriyiGuncelle();
 });
 
-document.getElementById("btnTransferler").addEventListener("click", () => {
-    aktifFiltre = 'TRANSFER';
-    aktifButonuGuncelle("btnTransferler");
-    currentPage = 1;
-    // URL'ye filtre parametresini ekler
-    window.history.pushState({}, document.title, `${window.location.pathname}?filter=TRANSFER`);
-    veriyiGuncelle();
-});
+const btnTransferler = document.getElementById("btnTransferler");
+if (btnTransferler) {
+    btnTransferler.addEventListener("click", () => {
+        aktifFiltre = 'TRANSFER';
+        aktifButonuGuncelle("btnTransferler");
+        currentPage = 1;
+        window.history.pushState({}, document.title, `${window.location.pathname}?filter=TRANSFER`);
+        veriyiGuncelle();
+    });
+}
 
-document.getElementById("aramaKutusu").addEventListener("keyup", (event) => {
-    aktifArama = event.target.value.toLowerCase();
-    currentPage = 1;
-    veriyiGuncelle();
-});
+if (aramaKutusu) {
+    aramaKutusu.addEventListener("keyup", (event) => {
+        aktifArama = event.target.value.toLowerCase();
+        currentPage = 1;
+        veriyiGuncelle();
+    });
+}
 
-// Sütun başlıklarına tıklama olaylarını dinler
 if (document.getElementById("tarihBaslik")) document.getElementById("tarihBaslik").addEventListener("click", () => sirala("tarih"));
 if (document.getElementById("thUrunKodu")) document.getElementById("thUrunKodu").addEventListener("click", () => sirala("urunKodu"));
 if (document.getElementById("thUrunAdi")) document.getElementById("thUrunAdi").addEventListener("click", () => sirala("urunAdi"));
@@ -330,48 +325,32 @@ if (document.getElementById("thIslemTipi")) document.getElementById("thIslemTipi
 if (document.getElementById("thAdet")) document.getElementById("thAdet").addEventListener("click", () => sirala("quantity"));
 if (document.getElementById("thPersonel")) document.getElementById("thPersonel").addEventListener("click", () => sirala("personel"));
 
-// ==========================================
-// 5. DROPDOWNS VE YENİ KAYIT FORMU (DEPO/RAF HİYERARŞİSİ)
-// ==========================================
-
-// Ürünleri API'den çekip seçim kutusuna ekler
 async function dropdownUrunleriYukle() {
     const urunSelect = document.getElementById("urunSecimi");
     try {
-        const cevap = await fetch(`${CONFIG.API_BASE_URL}/products?pageSize=1000`, {
-            method: 'GET',
-            headers: { "Authorization": `Bearer ${token}` }
-        });
-        if (!cevap.ok) throw new Error("Ürünler alınamadı.");
-
-        const data = await cevap.json();
+        const data = await apiRequest('/products?pageSize=10000', 'GET');
         tumUrunler = data.items || data;
 
-        urunSelect.innerHTML = '<option value="" selected disabled>Lütfen bir ürün seçiniz...</option>';
-        tumUrunler.forEach(urun => {
-            const option = document.createElement("option");
-            option.value = urun.barcode;
-            option.textContent = `[${urun.barcode}] ${urun.name}`;
-            urunSelect.appendChild(option);
-        });
+        if (urunSelect) {
+            urunSelect.innerHTML = '<option value="" selected disabled>Lütfen bir ürün seçiniz...</option>';
+            tumUrunler.forEach(urun => {
+                const option = document.createElement("option");
+                option.value = urun.barcode;
+                option.textContent = `[${urun.barcode}] ${urun.name}`;
+                urunSelect.appendChild(option);
+            });
+        }
     } catch (hata) {
         if (urunSelect) urunSelect.innerHTML = '<option value="" selected disabled>Ürünler yüklenemedi!</option>';
     }
 }
 
-// Depoları API'den çekip kaynak ve hedef depo seçim kutularına ekler
 async function dropdownIslemDepolariYukle() {
     const sourceSelect = document.getElementById("sourceWarehouseId");
     const targetSelect = document.getElementById("targetWarehouseId");
 
     try {
-        const cevap = await fetch(`${CONFIG.API_BASE_URL}/warehouses?pageSize=1000`, {
-            method: 'GET',
-            headers: { "Authorization": `Bearer ${token}` }
-        });
-        if (!cevap.ok) throw new Error("Depolar alınamadı.");
-
-        const data = await cevap.json();
+        const data = await apiRequest('/warehouses?pageSize=1000', 'GET');
         const depolar = data.items || data;
 
         if (sourceSelect) sourceSelect.innerHTML = '<option value="" selected disabled>Önce depo seçiniz...</option>';
@@ -386,7 +365,6 @@ async function dropdownIslemDepolariYukle() {
     }
 }
 
-// Seçilen depoya ait rafları getirir ve ilgili seçim kutusuna ekler
 async function loadLocationsForWarehouse(warehouseId, targetDropdownId) {
     const select = document.getElementById(targetDropdownId);
     if (!select) return;
@@ -401,13 +379,7 @@ async function loadLocationsForWarehouse(warehouseId, targetDropdownId) {
     select.disabled = false;
 
     try {
-        const cevap = await fetch(`${CONFIG.API_BASE_URL}/locations/by-warehouse/${warehouseId}?pageSize=1000`, {
-            method: 'GET',
-            headers: { "Authorization": `Bearer ${token}` }
-        });
-        if (!cevap.ok) throw new Error("Raflar alınamadı.");
-
-        const data = await cevap.json();
+        const data = await apiRequest(`/locations/by-warehouse/${warehouseId}?pageSize=1000`, 'GET');
         const raflar = data.items || data;
 
         select.innerHTML = '<option value="" selected disabled>Raf seçiniz...</option>';
@@ -419,28 +391,20 @@ async function loadLocationsForWarehouse(warehouseId, targetDropdownId) {
     }
 }
 
-// Depo değişim olaylarını dinler ve ilgili raf listesini günceller
 const sWarehouseDropdown = document.getElementById("sourceWarehouseId");
 const tWarehouseDropdown = document.getElementById("targetWarehouseId");
 if (sWarehouseDropdown) sWarehouseDropdown.addEventListener("change", function () { loadLocationsForWarehouse(this.value, "sourceLocationId"); });
 if (tWarehouseDropdown) tWarehouseDropdown.addEventListener("change", function () { loadLocationsForWarehouse(this.value, "targetLocationId"); });
 
-// Formdaki zorunlu alanların doluluğunu kontrol eder ve kaydet butonunu aktif/pasif yapar
 function formuDenetle() {
-    const tipElement = document.getElementById("islemTipi");
-    const urunElement = document.getElementById("urunSecimi");
-    const adetElement = document.getElementById("islemAdedi");
-    const sourceLocElement = document.getElementById("sourceLocationId");
-    const targetLocElement = document.getElementById("targetLocationId");
+    const tip = document.getElementById("islemTipi").value;
+    const urun = document.getElementById("urunSecimi").value;
+    const adet = document.getElementById("islemAdedi").value;
+    const sourceLoc = document.getElementById("sourceLocationId").value;
+    const targetLoc = document.getElementById("targetLocationId").value;
     const kaydetButonu = document.getElementById("btnKaydet");
 
     if (!kaydetButonu) return;
-
-    const tip = tipElement ? tipElement.value : "";
-    const urun = urunElement ? urunElement.value : "";
-    const adet = adetElement ? adetElement.value : "";
-    const sourceLoc = sourceLocElement ? sourceLocElement.value : "";
-    const targetLoc = targetLocElement ? targetLocElement.value : "";
 
     let gecerli = (tip !== "" && urun !== "" && adet && parseInt(adet) > 0 && parseInt(adet) <= MAX_ISLEM_ADEDI);
 
@@ -452,7 +416,6 @@ function formuDenetle() {
     kaydetButonu.disabled = !gecerli;
 }
 
-// İşlem tipine göre kaynak veya hedef lokasyon alanlarını gösterir/gizler
 const islemTipiDropdown = document.getElementById("islemTipi");
 if (islemTipiDropdown) {
     islemTipiDropdown.addEventListener("change", (e) => {
@@ -460,7 +423,6 @@ if (islemTipiDropdown) {
         const sourceGroup = document.getElementById("sourceLocationGroup");
         const targetGroup = document.getElementById("targetLocationGroup");
 
-        // Senin orijinal kodundaki ekstra grupları (varsa) bozmadan gizle/göster yapar
         const tGroup = document.getElementById("tedarikciGroup");
         const cGroup = document.getElementById("cikisNoktasiGroup");
 
@@ -469,7 +431,6 @@ if (islemTipiDropdown) {
             if (sourceGroup) sourceGroup.classList.add("d-none");
             if (tGroup) tGroup.classList.remove("d-none");
             if (cGroup) cGroup.classList.add("d-none");
-
             const sLoc = document.getElementById("sourceLocationId");
             if (sLoc) sLoc.value = "";
         } else if (tip === "CIKIS") {
@@ -477,7 +438,6 @@ if (islemTipiDropdown) {
             if (targetGroup) targetGroup.classList.add("d-none");
             if (cGroup) cGroup.classList.remove("d-none");
             if (tGroup) tGroup.classList.add("d-none");
-
             const tLoc = document.getElementById("targetLocationId");
             if (tLoc) tLoc.value = "";
         } else if (tip === "TRANSFER") {
@@ -490,7 +450,6 @@ if (islemTipiDropdown) {
     });
 }
 
-// Alanlardaki değişiklikleri dinler
 ["urunSecimi", "islemAdedi", "sourceLocationId", "targetLocationId"].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.addEventListener("change", formuDenetle);
@@ -498,7 +457,7 @@ if (islemTipiDropdown) {
 const islemAdediInput = document.getElementById("islemAdedi");
 if (islemAdediInput) islemAdediInput.addEventListener("input", formuDenetle);
 
-// Form gönderildiğinde verileri toplayıp API'ye POST isteği atar
+// TEST KULLANICISININ KAYIT ETMESİNİ ENGELLEYEN HATA GİDERİLDİ
 const stokIslemFormu = document.getElementById("stokIslemFormu");
 if (stokIslemFormu) {
     stokIslemFormu.addEventListener("submit", async (e) => {
@@ -515,7 +474,6 @@ if (stokIslemFormu) {
 
         const kaydetButonu = document.getElementById("btnKaydet");
 
-        // Orijinal değişkenlerini korur, HTML'de yoksa null atanır
         const bFiyatElement = document.getElementById("birimFiyat");
         const fNoElement = document.getElementById("faturaNo");
         const tIdElement = document.getElementById("tedarikciSecimi");
@@ -530,13 +488,13 @@ if (stokIslemFormu) {
             productBarcode: barcode,
             movementType: tip === "GIRIS" ? "IN" : tip === "CIKIS" ? "OUT" : "TRANSFER",
             quantity: qty,
-            sourceLocationId: ((tip === "CIKIS" || tip === "TRANSFER") && sourceLocVal) ? parseInt(sourceLocVal) : null,
-            targetLocationId: ((tip === "GIRIS" || tip === "TRANSFER") && targetLocVal) ? parseInt(targetLocVal) : null,
+            sourceLocationId: ((tip === "CIKIS" || tip === "TRANSFER") && sourceLocVal && !isNaN(parseInt(sourceLocVal))) ? parseInt(sourceLocVal) : null,
+            targetLocationId: ((tip === "GIRIS" || tip === "TRANSFER") && targetLocVal && !isNaN(parseInt(targetLocVal))) ? parseInt(targetLocVal) : null,
             description: tip === "GIRIS" ? "Stok Girişi" : tip === "CIKIS" ? "Stok Çıkışı" : "Raf Arası Transfer",
             unitPrice: bFiyat,
-            documentNumber: fNo ? fNo : null,
-            supplierId: (tip === "GIRIS" && tId) ? parseInt(tId) : null,
-            destinationId: (tip === "CIKIS" && cNoktasi) ? cNoktasi : null
+            documentNumber: fNo && fNo.trim() !== "" ? fNo : null,
+            supplierId: (tip === "GIRIS" && tId && tId !== "" && !isNaN(parseInt(tId))) ? parseInt(tId) : null,
+            destinationId: (tip === "CIKIS" && cNoktasi && cNoktasi.trim() !== "") ? cNoktasi : null
         };
 
         try {
@@ -544,18 +502,7 @@ if (stokIslemFormu) {
             kaydetButonu.disabled = true;
             kaydetButonu.innerText = "İşleniyor...";
 
-            const cevap = await fetch(API_URL, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "Authorization": `Bearer ${token}`
-                },
-                body: JSON.stringify(payload)
-            });
-
-            if (cevap.status === 401) { localStorage.removeItem('token'); window.location.href = 'login.html'; return; }
-            if (cevap.status === 409) throw new Error("Stok çakışması hatası! Lütfen tekrar deneyin.");
-            if (!cevap.ok) throw new Error(await cevap.text() || "İşlem kaydedilemedi.");
+            await apiRequest('/stock/movements', 'POST', payload);
 
             const modalElement = document.getElementById("stokIslemModal");
             const modalInstance = bootstrap.Modal.getInstance(modalElement);
@@ -578,7 +525,6 @@ if (stokIslemFormu) {
     });
 }
 
-// Modal açıldığında alanları temizler ve verileri günceller
 const modalTrigger = document.querySelector('[data-bs-target="#stokIslemModal"]');
 if (modalTrigger) {
     modalTrigger.addEventListener("click", () => {
@@ -598,16 +544,11 @@ if (modalTrigger) {
     });
 }
 
-// ==========================================
-// 6. KAMERA BARKOD OKUYUCU MANTIĞI
-// ==========================================
-
 const cameraArea = document.getElementById("kameraAlani");
 const btnOpenCamera = document.getElementById("btnKameraAc");
 const btnCloseCamera = document.getElementById("btnKameraKapat");
 const productSelect = document.getElementById("urunSecimi");
 
-// Kamera okuyucusunu başlatır ve taranan barkodu ürün listesinde arar
 if (btnOpenCamera) {
     btnOpenCamera.addEventListener("click", () => {
         cameraArea.classList.remove("d-none");
@@ -635,27 +576,15 @@ if (btnOpenCamera) {
 }
 
 if (btnCloseCamera) btnCloseCamera.addEventListener("click", closeCamera);
-
 function closeCamera() {
     if (cameraArea) cameraArea.classList.add("d-none");
     stopScanner();
 }
 
-// ==========================================
-// BAŞLATICI VE PROFİL
-// ==========================================
-
-// Tedarikçileri API'den çeker ve listeye ekler
 async function dropdownTedarikcileriYukle() {
     const tedarikciSelect = document.getElementById("tedarikciSecimi");
     try {
-        const cevap = await fetch(`${CONFIG.API_BASE_URL}/suppliers`, {
-            method: 'GET',
-            headers: { "Authorization": `Bearer ${token}` }
-        });
-        if (!cevap.ok) throw new Error("Tedarikçiler alınamadı.");
-        const data = await cevap.json();
-
+        const data = await apiRequest('/suppliers', 'GET');
         if (tedarikciSelect) {
             tedarikciSelect.innerHTML = '<option value="" selected disabled>Tedarikçi seçiniz (Opsiyonel)</option>';
             data.forEach(t => {
@@ -670,35 +599,28 @@ async function dropdownTedarikcileriYukle() {
     }
 }
 
-// Sayfa yüklendiğinde gerekli dropdown ve tablo verilerini başlatır
 async function baslat() {
     await dropdownTedarikcileriYukle();
     await hareketleriYukle();
 
-    // URL'den gelen filtreye göre ilgili butonun rengini aktif yapar
     if (aktifFiltre === 'GIRIS') {
         aktifButonuGuncelle("btnGirisler");
     } else if (aktifFiltre === 'CIKIS') {
         aktifButonuGuncelle("btnCikislar");
     } else if (aktifFiltre === 'TRANSFER') {
         aktifButonuGuncelle("btnTransferler");
+    } else {
+        aktifButonuGuncelle("btnTumu");
     }
 }
 baslat();
 
-// Seçilen kullanıcının detaylı profil bilgisini modal içinde gösterir
 async function kullaniciProfiliGoster(userId) {
     try {
-        const yanit = await fetch(`${CONFIG.API_BASE_URL}/users/${userId}`, {
-            headers: {
-                "Authorization": `Bearer ${localStorage.getItem("token")}`
-            }
-        });
-        if (!yanit.ok) throw new Error("Kullanıcı bilgileri alınamadı.");
-        const user = await yanit.json();
-
+        const user = await apiRequest(`/users/${userId}`, 'GET');
+        
         document.getElementById('upmName').textContent = `${user.firstName || ''} ${user.lastName || ''}`;
-        document.getElementById('upmEmail').textContent = user.email || '';
+        document.getElementById('upmEmail').textContent = (user.email || '') + (user.phoneNumber ? ' | 📞 ' + user.phoneNumber : '');
         document.getElementById('upmRole').textContent = user.role || 'viewer';
         document.getElementById('upmDate').textContent = new Date(user.createdAt).toLocaleDateString("tr-TR");
 
