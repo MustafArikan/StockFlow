@@ -39,14 +39,16 @@ class DynamicUI {
                          </div>`;
         } 
         else if (uiType === 'radio' || uiType === 'segmented_button') {
-            inputHtml = `<div class="mt-2 dynamic-rule-input" data-rule-id="${rule.id}" data-rule-key="${escapeHtml(rule.attributeKey)}" data-rule-type="radio">`;
+            let wrapperClass = uiType === 'segmented_button' ? 'btn-group w-100' : 'mt-2';
+            let roleAttr = uiType === 'segmented_button' ? 'role="group"' : '';
+            inputHtml = `<div class="${wrapperClass} dynamic-rule-input" data-rule-id="${rule.id}" data-rule-key="${escapeHtml(rule.attributeKey)}" data-rule-type="radio" ${roleAttr}>`;
             options.forEach((opt, idx) => {
                 let isSeg = uiType === 'segmented_button';
                 let btnCls = isSeg ? 'btn-check' : 'form-check-input';
-                let lblCls = isSeg ? 'btn btn-outline-primary btn-sm' : 'form-check-label';
+                let lblCls = isSeg ? 'btn btn-outline-primary' : 'form-check-label';
                 if (isSeg) {
                     inputHtml += `<input class="${btnCls}" type="radio" name="rule_${rule.id}" id="rule_${rule.id}_${idx}" value="${escapeHtml(opt)}" ${requiredAttr}>
-                                  <label class="${lblCls} me-1 mb-1" for="rule_${rule.id}_${idx}">${escapeHtml(opt)}</label>`;
+                                  <label class="${lblCls}" for="rule_${rule.id}_${idx}">${escapeHtml(opt)}</label>`;
                 } else {
                     inputHtml += `<div class="form-check form-check-inline">
                                     <input class="${btnCls}" type="radio" name="rule_${rule.id}" id="rule_${rule.id}_${idx}" value="${escapeHtml(opt)}" ${requiredAttr}>
@@ -60,7 +62,7 @@ class DynamicUI {
             inputHtml = `<div class="mt-2 dynamic-rule-input" data-rule-id="${rule.id}" data-rule-key="${escapeHtml(rule.attributeKey)}" data-rule-type="checkbox_group">`;
             options.forEach((opt, idx) => {
                 inputHtml += `<div class="form-check form-check-inline">
-                                <input class="form-check-input" type="checkbox" id="rule_${rule.id}_${idx}" value="${escapeHtml(opt)}">
+                                <input class="form-check-input" type="checkbox" name="rule_${rule.id}[]" id="rule_${rule.id}_${idx}" value="${escapeHtml(opt)}">
                                 <label class="form-check-label" for="rule_${rule.id}_${idx}">${escapeHtml(opt)}</label>
                               </div>`;
             });
@@ -104,26 +106,27 @@ class DynamicUI {
                 });
                 inputHtml += `</div>`;
             } else {
-                inputHtml = `<div class="d-flex align-items-center dynamic-rule-input-group mt-2">
-                                <input type="color" class="form-control form-control-color dynamic-rule-input me-2" data-rule-id="${rule.id}" data-rule-key="${escapeHtml(rule.attributeKey)}" data-rule-type="color_picker" value="#000000" title="Renk seçin" ${requiredAttr}>
-                                <span class="small text-muted">Hex formatında seçin</span>
+                inputHtml = `<div class="input-group mb-3 mt-2 dynamic-rule-input-group">
+                                <input type="color" class="form-control form-control-color dynamic-rule-input" data-rule-id="${rule.id}" data-rule-key="${escapeHtml(rule.attributeKey)}" data-rule-type="color_picker" id="color_${rule.id}" value="#0d6efd" title="Renk seçin">
+                                <input type="text" class="form-control" id="colorLabel_${rule.id}" placeholder="Renk hex kodu (#000000)" oninput="document.getElementById('color_${rule.id}').value=this.value" ${requiredAttr}>
                              </div>`;
             }
         }
         else if (uiType === 'toggle_switch') {
             inputHtml = `<div class="form-check form-switch mt-2 dynamic-rule-input" data-rule-id="${rule.id}" data-rule-key="${escapeHtml(rule.attributeKey)}" data-rule-type="boolean">
-                            <input class="form-check-input" type="checkbox" id="rule_${rule.id}">
+                            <input class="form-check-input" type="checkbox" role="switch" name="rule_${rule.id}" id="rule_${rule.id}">
                             <label class="form-check-label text-muted" for="rule_${rule.id}">Evet / Açık</label>
                          </div>`;
         }
         else if (uiType === 'checkbox' || uiType === 'boolean') {
             inputHtml = `<div class="form-check mt-2 dynamic-rule-input" data-rule-id="${rule.id}" data-rule-key="${escapeHtml(rule.attributeKey)}" data-rule-type="boolean">
-                            <input class="form-check-input" type="checkbox" id="rule_${rule.id}">
+                            <input class="form-check-input" type="checkbox" name="rule_${rule.id}" id="rule_${rule.id}">
                             <label class="form-check-label text-muted" for="rule_${rule.id}">Evet / Doğru</label>
                          </div>`;
         }
         else if (uiType === 'masked_textbox') {
-            inputHtml = `<input type="text" class="form-control dynamic-rule-input" data-rule-id="${rule.id}" data-rule-key="${escapeHtml(rule.attributeKey)}" data-rule-type="text" ${requiredAttr} placeholder="Örn: XXXX-XXXX">`;
+            let imeiPattern = (rule.attributeKey && rule.attributeKey.toLowerCase().includes('imei')) ? 'inputmode="numeric" maxlength="15" pattern="[0-9]{15}"' : '';
+            inputHtml = `<input type="text" class="form-control dynamic-rule-input" data-rule-id="${rule.id}" data-rule-key="${escapeHtml(rule.attributeKey)}" data-rule-type="text" ${requiredAttr} placeholder="Örn: XXXX-XXXX" ${imeiPattern}>`;
         }
         else if (rule.dataType === 'number') {
             inputHtml = `<input type="number" step="1" class="form-control dynamic-rule-input" data-rule-id="${rule.id}" data-rule-key="${escapeHtml(rule.attributeKey)}" data-rule-type="number" ${requiredAttr}>`;
