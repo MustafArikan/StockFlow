@@ -152,11 +152,14 @@ class DynamicUI {
         let inputHtml = '';
 
         if (uiType === 'searchable_dropdown' || uiType === 'autocomplete') {
-            let optionsHtml = options.map(opt => `<option value="${escapeHtml(opt)}">`).join('');
-            inputHtml = `<input list="datalist_filter_${rule.id}" class="form-control form-control-sm kural-filtresi" data-rule-key="${escapeHtml(rule.attributeKey)}" placeholder="Ara veya Seç...">
-                         <datalist id="datalist_filter_${rule.id}">
-                            ${optionsHtml}
-                         </datalist>`;
+            let optionsStr = escapeHtml(JSON.stringify(options));
+            inputHtml = `<div class="position-relative">
+                            <input type="text" class="form-control form-control-sm" placeholder="Ara veya Seç..."
+                                   oninput="DynamicUI.searchableFilterInput(this, '${rule.id}', '${optionsStr}')"
+                                   onblur="DynamicUI.searchableFilterBlur(this, '${rule.id}')">
+                            <ul id="results_filter_${rule.id}" class="list-group position-absolute w-100 shadow-sm z-3" style="display:none; max-height:200px; overflow-y:auto; top:100%;"></ul>
+                            <input type="hidden" id="filter_hidden_${rule.id}" class="kural-filtresi" data-rule-id="${rule.id}" data-rule-key="${escapeHtml(rule.attributeKey)}" data-filter-type="text">
+                         </div>`;
         }
         else if (uiType === 'dropdown' || uiType === 'icon_dropdown' || uiType === 'radio' || uiType === 'segmented_button' || uiType === 'color_picker') {
             let optionsHtml = options.map(opt => `<option value="${escapeHtml(opt)}">${escapeHtml(opt)}</option>`).join('');
@@ -186,9 +189,9 @@ class DynamicUI {
                                 </div>
                                 <div class="dual-range position-relative mb-2 mt-1" style="height:20px;">
                                     <input type="range" class="form-range position-absolute w-100" id="filter_min_${rule.id}"
-                                           min="${rMin}" max="${rMax}" step="${rStep}" value="${rMin}" oninput="DynamicUI.syncDiscreteDual(this, 'min', ${rule.id})" style="pointer-events: auto; z-index:2;">
+                                           min="${rMin}" max="${rMax}" step="${rStep}" value="${rMin}" oninput="DynamicUI.syncDiscreteDual(this, 'min', ${rule.id})" style="z-index:2;">
                                     <input type="range" class="form-range position-absolute w-100" id="filter_max_${rule.id}"
-                                           min="${rMin}" max="${rMax}" step="${rStep}" value="${rMax}" oninput="DynamicUI.syncDiscreteDual(this, 'max', ${rule.id})" style="pointer-events: auto; z-index:1; background:transparent;">
+                                           min="${rMin}" max="${rMax}" step="${rStep}" value="${rMax}" oninput="DynamicUI.syncDiscreteDual(this, 'max', ${rule.id})" style="z-index:1; background:transparent;">
                                 </div>
                                 <input type="hidden" class="kural-filtresi" id="filter_hidden_${rule.id}" data-rule-id="${rule.id}" data-rule-key="${escapeHtml(rule.attributeKey)}" data-filter-type="discrete_range">
                              </div>`;
@@ -209,9 +212,9 @@ class DynamicUI {
                                 </div>
                                 <div class="dual-range position-relative mb-2 mt-1" style="height:20px;">
                                     <input type="range" class="form-range position-absolute w-100" id="filter_min_${rule.id}"
-                                           min="${rMin}" max="${rMax}" step="${rStep}" value="${rMin}" oninput="DynamicUI.syncDual(this, 'min', ${rule.id}, ${rStep}, ${decimals})" style="pointer-events: auto; z-index:2;">
+                                           min="${rMin}" max="${rMax}" step="${rStep}" value="${rMin}" oninput="DynamicUI.syncDual(this, 'min', ${rule.id}, ${rStep}, ${decimals})" style="z-index:2;">
                                     <input type="range" class="form-range position-absolute w-100" id="filter_max_${rule.id}"
-                                           min="${rMin}" max="${rMax}" step="${rStep}" value="${rMax}" oninput="DynamicUI.syncDual(this, 'max', ${rule.id}, ${rStep}, ${decimals})" style="pointer-events: auto; z-index:1; background:transparent;">
+                                           min="${rMin}" max="${rMax}" step="${rStep}" value="${rMax}" oninput="DynamicUI.syncDual(this, 'max', ${rule.id}, ${rStep}, ${decimals})" style="z-index:1; background:transparent;">
                                 </div>
                                 <input type="hidden" class="kural-filtresi" id="filter_hidden_${rule.id}" data-rule-id="${rule.id}" data-rule-key="${escapeHtml(rule.attributeKey)}" data-filter-type="range">
                              </div>`;
@@ -432,7 +435,8 @@ class DynamicUI {
         if (maxBox) maxBox.value = arr[hi];
         
         if (hiddenEl) {
-            hiddenEl.value = arr[lo] + "-" + arr[hi];
+            let validSubset = arr.slice(lo, hi + 1).map(x => String(x).toLowerCase());
+            hiddenEl.value = JSON.stringify(validSubset);
             hiddenEl.dispatchEvent(new Event('change', { bubbles: true }));
         }
     }
@@ -484,6 +488,52 @@ class DynamicUI {
             } else {
                 inputEl.classList.remove('is-invalid');
             }
+            if(resultsUl) resultsUl.style.display = 'none';
+        }, 150);
+    }
+
+    static searchableFilterInput(inputEl, ruleId, optionsStr) {
+        let hiddenId = document.getElementById('filter_hidden_' + ruleId);
+        let resultsUl = document.getElementById('results_filter_' + ruleId);
+        
+        hiddenId.value = inputEl.value;
+        hiddenId.dispatchEvent(new Event('input', { bubbles: true }));
+
+        let q = inputEl.value.toLocaleLowerCase("tr-TR").trim();
+        let options = [];
+        try { options = JSON.parse(optionsStr); } catch(e){}
+        
+        resultsUl.innerHTML = '';
+        if(!q) {
+            resultsUl.style.display = 'none';
+            return;
+        }
+        
+        let matches = options.filter(opt => String(opt).toLocaleLowerCase("tr-TR").includes(q));
+        if(matches.length === 0) {
+            resultsUl.style.display = 'none';
+            return;
+        }
+        
+        matches.forEach(m => {
+            let li = document.createElement('li');
+            li.className = 'list-group-item list-group-item-action py-1 small';
+            li.style.cursor = 'pointer';
+            li.textContent = m;
+            li.onmousedown = function() {
+                inputEl.value = m;
+                hiddenId.value = m;
+                resultsUl.style.display = 'none';
+                hiddenId.dispatchEvent(new Event('change', { bubbles: true }));
+            };
+            resultsUl.appendChild(li);
+        });
+        resultsUl.style.display = 'block';
+    }
+
+    static searchableFilterBlur(inputEl, ruleId) {
+        let resultsUl = document.getElementById('results_filter_' + ruleId);
+        setTimeout(() => {
             if(resultsUl) resultsUl.style.display = 'none';
         }, 150);
     }

@@ -585,30 +585,7 @@ document.getElementById('filtreKategoriId')?.addEventListener('change', async fu
                 catch (e) { options = rule.allowedValues.split(',').map(s => s.trim()); }
             }
 
-            let uiType = rule.uiComponent || rule.dataType;
-            let inputHtml = '';
-
-            if (uiType === 'searchable_dropdown' || uiType === 'autocomplete') {
-                let optionsHtml = options.map(opt => `<option value="${escapeHtml(opt)}">`).join('');
-                inputHtml = `<input list="datalist_filter_${rule.id}" class="form-control form-control-sm kural-filtresi" data-rule-key="${escapeHtml(rule.attributeKey)}" placeholder="Ara veya Seç...">
-                             <datalist id="datalist_filter_${rule.id}">${optionsHtml}</datalist>`;
-            }
-            else if (uiType === 'dropdown' || uiType === 'icon_dropdown' || uiType === 'radio' || uiType === 'segmented_button' || uiType === 'color_picker') {
-                let optionsHtml = options.map(opt => `<option value="${escapeHtml(opt)}">${escapeHtml(opt)}</option>`).join('');
-                inputHtml = `<select class="form-select form-select-sm kural-filtresi" data-rule-key="${escapeHtml(rule.attributeKey)}">
-                                <option value="">Tümü</option>${optionsHtml}
-                             </select>`;
-            }
-            else if (uiType === 'toggle_switch' || uiType === 'checkbox' || uiType === 'boolean') {
-                inputHtml = `<select class="form-select form-select-sm kural-filtresi" data-rule-key="${escapeHtml(rule.attributeKey)}">
-                                <option value="">Tümü</option>
-                                <option value="true">Evet/Açık</option>
-                                <option value="false">Hayır/Kapalı</option>
-                             </select>`;
-            }
-            else {
-                inputHtml = `<input type="text" class="form-control form-control-sm kural-filtresi" data-rule-key="${escapeHtml(rule.attributeKey)}" placeholder="Ara...">`;
-            }
+            let inputHtml = DynamicUI.renderFilterInput(rule, options, escapeHtml);
 
             const div = document.createElement('div');
             div.className = 'col-md-3 mb-2';
