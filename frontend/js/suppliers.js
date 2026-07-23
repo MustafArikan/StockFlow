@@ -75,6 +75,7 @@ document.getElementById("aramaKutusu")?.addEventListener("keyup", (e) => {
 
 async function tedarikcileriYukle() {
     try {
+
         const cevap = await fetch(API_URL, {
             method: 'GET',
             headers: { "Authorization": `Bearer ${token}` }
@@ -83,6 +84,7 @@ async function tedarikcileriYukle() {
         if (cevap.status === 401) {
             localStorage.removeItem('token');
             window.location.href = 'login.html';
+
             return;
         }
         if (!cevap.ok) throw new Error("Sunucu hatası: " + cevap.status);

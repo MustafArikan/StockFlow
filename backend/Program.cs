@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.AspNetCore.HttpOverrides;
 using System.Threading.RateLimiting;
 using stok_takip.Data;
 using stok_takip.DTOs;
@@ -31,6 +32,12 @@ builder.Services.AddRateLimiter(options =>
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests; // Too Many Requests
 }
 );
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+    options.KnownNetworks.Clear(); // Tüm ağları bilinen olarak kabul et
+    options.KnownProxies.Clear();  // Tüm proxyleri bilinen olarak kabul et
+});
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddOpenApi();
 builder.Services.AddDbContextPool<AppDbContext>(options =>
@@ -90,12 +97,36 @@ builder.Services.AddAuthentication(options =>
             }
 
             var session = await dbContext.UserSessions
+                .Include(s => s.User)
                 .AsNoTracking()
                 .FirstOrDefaultAsync(s => s.SessionToken == sessionToken);
 
             if (session == null || !session.IsActive || session.ExpiresAt < DateTime.UtcNow)
             {
                 context.Fail("Session is inactive or expired.");
+                return;
+            }
+
+            if (session.User != null)
+            {
+                var identity = context.Principal.Identity as ClaimsIdentity;
+                if (identity != null)
+                {
+                    var existingRoleClaim = identity.FindAll(ClaimTypes.Role).ToList();
+                    foreach (var role in existingRoleClaim)
+                    {
+                        identity.RemoveClaim(role);
+                    }
+
+                    var userRole = session.User.Role.ToLower();
+
+                    identity.AddClaim(new Claim(ClaimTypes.Role, userRole));
+
+                    if (userRole == "superadmin")
+                    {
+                        identity.AddClaim(new Claim(ClaimTypes.Role, "admin"));
+                    }
+                }
             }
         }
     };
@@ -140,6 +171,10 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi().AllowAnonymous();
     app.MapScalarApiReference().AllowAnonymous();
 }
+
+app.MapGet("/api/health", () => Results.Ok(new { status = "ok" })).AllowAnonymous();
+
+app.UseForwardedHeaders();
 
 app.UseHttpsRedirection();
 

@@ -1,4 +1,4 @@
-﻿const API_URL = `${CONFIG.API_BASE_URL}/notifications`;
+const API_URL = `${CONFIG.API_BASE_URL}/notifications`;
 const token = localStorage.getItem("token");
 
 // 1. SECURITY CONTROL: Redirect to login if token is missing
@@ -35,25 +35,8 @@ function escapeHtml(text) {
 // 3. FETCH NOTIFICATIONS FROM API
 async function loadNotifications() {
     try {
-        const url = filterOnlyUnread ? `${API_URL}?onlyUnread=true` : API_URL;
-
-        const response = await fetch(url, {
-            method: "GET",
-            headers: {
-                "Authorization": `Bearer ${token}`,
-                "Accept": "application/json"
-            }
-        });
-
-        if (response.status === 401) {
-            localStorage.removeItem("token");
-            window.location.href = "login.html";
-            return;
-        }
-
-        if (!response.ok) throw new Error("Bildirimler yüklenemedi.");
-
-        const notifications = await response.json();
+        const endpoint = filterOnlyUnread ? '/notifications?onlyUnread=true' : '/notifications';
+        const notifications = await apiRequest(endpoint, 'GET');
         renderNotifications(notifications);
     } catch (error) {
         document.getElementById("notificationList").innerHTML = 
@@ -89,10 +72,10 @@ function renderNotifications(notificationsList) {
 
         const opacityClass = notification.isRead ? "opacity-50" : "";
         const isDanger = notification.severity === "DANGER";
-        const isAdmin = userRole === "admin";
+        const isAdmin = ["admin", "superadmin"].includes(getUserRole());
         
         const card = document.createElement("div");
-        card.className = `card border-0 shadow-sm rounded-3 p-3 notification-card ${borderClass} ${opacityClass}`;
+        card.className = `card border shadow-sm rounded-3 p-3 notification-card ${borderClass} ${opacityClass}`;
         
         let buttonHtml = `<button class="btn btn-sm btn-outline-success rounded-pill px-3 fw-bold btn-read" data-id="${notification.id}" ${notification.isRead || (isDanger && !isAdmin) ? 'disabled' : ''}>`;
         if (notification.isRead) {
@@ -108,7 +91,7 @@ function renderNotifications(notificationsList) {
                 <div class="d-flex align-items-center gap-3">
                     <i class="bi ${iconClass}"></i>
                     <div>
-                        <p class="mb-0 fw-semibold text-dark safe-message-container"></p>
+                        <p class="mb-0 fw-semibold safe-message-container"></p>
                         <small class="text-muted">${new Date(notification.createdAt).toLocaleString("tr-TR")}</small>
                     </div>
                 </div>
@@ -125,7 +108,7 @@ function renderNotifications(notificationsList) {
     });
 }
 
-// Olay Delege Etme (Event Delegation) - Satır içi onclick kaldırıldı
+// Olay Delege Etme (Event Delegation)
 document.getElementById("notificationList").addEventListener("click", (e) => {
     const btnRead = e.target.closest(".btn-read");
     if (btnRead && !btnRead.disabled) {
@@ -137,18 +120,7 @@ document.getElementById("notificationList").addEventListener("click", (e) => {
 // 5. MARK SINGLE NOTIFICATION AS READ
 async function markNotificationAsRead(id) {
     try {
-        const response = await fetch(`${API_URL}/${id}/read`, {
-            method: "PUT",
-            headers: {
-                "Authorization": `Bearer ${token}`
-            }
-        });
-
-        if (!response.ok) {
-            const errorData = await response.json();
-            alert(errorData.message || "İşlem başarısız.");
-            return;
-        }
+        await apiRequest(`/notifications/${id}/read`, 'PUT');
 
         loadNotifications();
     } catch (error) {
@@ -159,14 +131,7 @@ async function markNotificationAsRead(id) {
 // 6. MARK ALL AS READ (Bulk update)
 async function markAllNotificationsAsRead() {
     try {
-        const response = await fetch(`${API_URL}/read-all`, {
-            method: "POST",
-            headers: {
-                "Authorization": `Bearer ${token}`
-            }
-        });
-
-        if (!response.ok) throw new Error("İşlem başarısız.");
+        await apiRequest('/notifications/read-all', 'POST');
         
         loadNotifications();
     } catch (error) {
@@ -179,7 +144,7 @@ document.getElementById("btnMarkAllAsRead").addEventListener("click", markAllNot
 
 document.getElementById("btnFilterAll").addEventListener("click", () => {
     filterOnlyUnread = false;
-    document.getElementById("btnFilterAll").className = "btn btn-dark btn-sm rounded-pill px-3";
+    document.getElementById("btnFilterAll").className = "btn btn-primary btn-sm rounded-pill px-3";
     document.getElementById("btnFilterUnread").className = "btn btn-outline-secondary btn-sm rounded-pill px-3";
     loadNotifications();
 });
@@ -187,7 +152,7 @@ document.getElementById("btnFilterAll").addEventListener("click", () => {
 document.getElementById("btnFilterUnread").addEventListener("click", () => {
     filterOnlyUnread = true;
     document.getElementById("btnFilterAll").className = "btn btn-outline-secondary btn-sm rounded-pill px-3";
-    document.getElementById("btnFilterUnread").className = "btn btn-dark btn-sm rounded-pill px-3";
+    document.getElementById("btnFilterUnread").className = "btn btn-primary btn-sm rounded-pill px-3";
     loadNotifications();
 });
 
@@ -202,6 +167,20 @@ const btnNavbarLogout = document.getElementById("btnNavbarLogout");
 if (btnNavbarLogout) {
     btnNavbarLogout.addEventListener("click", logout);
 }
+
+// Profil Adını Çekme
+document.addEventListener('DOMContentLoaded', () => {
+    const userProfileEl = document.getElementById('userProfile');
+    if (userProfileEl) {
+        try {
+            const payloadBase64 = token.split('.')[1];
+            const payloadDecoded = JSON.parse(atob(payloadBase64));
+            userProfileEl.textContent = payloadDecoded["email"] || "Kullanıcı";
+        } catch (e) {
+            userProfileEl.textContent = "Kullanıcı";
+        }
+    }
+});
 
 // Initial load
 loadNotifications();

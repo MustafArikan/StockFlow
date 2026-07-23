@@ -33,7 +33,7 @@ public class SuppliersController : ControllerBase
 
     // Yeni Tedarikçi Ekle
     [HttpPost]
-    [Authorize(Roles = "admin")] 
+    [Authorize(Roles = "admin")] //access token kontrolune cevir
     public async Task<IActionResult> Create([FromBody] stok_takip.DTOs.CreateSupplierDto dto)
     {
         if (string.IsNullOrWhiteSpace(dto.Name))

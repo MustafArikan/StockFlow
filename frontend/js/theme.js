@@ -4,6 +4,7 @@
     const theme = savedTheme || (systemPrefersDark ? 'dark' : 'light');
 
     document.documentElement.setAttribute('data-theme', theme);
+    document.documentElement.setAttribute('data-bs-theme', theme);
 
     document.addEventListener('DOMContentLoaded', () => {
         const themeToggleBtn = document.getElementById('themeToggleBtn');
@@ -15,6 +16,7 @@
                 const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
 
                 document.documentElement.setAttribute('data-theme', newTheme);
+                document.documentElement.setAttribute('data-bs-theme', newTheme);
                 localStorage.setItem('theme', newTheme);
                 updateThemeToggleIcon(themeToggleBtn, newTheme);
             });

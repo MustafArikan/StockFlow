@@ -1,0 +1,332 @@
+document.addEventListener("DOMContentLoaded", () => {
+    // Sadece superadmin erişebilir, değilse anasayfaya yönlendir
+    const token = localStorage.getItem("token");
+    if (!token) {
+        window.location.href = "login.html";
+        return;
+    }
+    try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        if (payload.role !== "superadmin") {
+            Swal.fire({
+                icon: 'error',
+                title: 'Yetkisiz Erişim',
+                text: 'Kullanıcı yönetimi sayfasına sadece Süper Adminler erişebilir.'
+            }).then(() => {
+                window.location.href = "index.html";
+            });
+            return;
+        }
+    } catch (e) {
+        console.error("Token çözümlenemedi", e);
+    }
+
+    kullanicilariGetir();
+
+    document.getElementById("kullaniciFormu").addEventListener("submit", kullaniciKaydet);
+
+    const btnYeni = document.getElementById("btnYeniKullanici");
+    if (btnYeni) btnYeni.addEventListener("click", kullaniciModalSifirla);
+
+    document.addEventListener("click", (e) => {
+        const btnDuzenle = e.target.closest(".btn-duzenle");
+        if (btnDuzenle) {
+            kullaniciDuzenle(btnDuzenle.getAttribute("data-id"));
+            return;
+        }
+
+        const btnSil = e.target.closest(".btn-sil");
+        if (btnSil) {
+            kullaniciSil(btnSil.getAttribute("data-id"));
+            return;
+        }
+
+        const btnLog = e.target.closest(".btn-loglar");
+        if (btnLog) {
+            kullaniciGecmisiniGoster(btnLog.getAttribute("data-id"), btnLog.getAttribute("data-ad"));
+            return;
+        }
+    });
+});
+
+let currentPage = 1;
+let pageSize = 10;
+
+async function kullanicilariGetir() {
+    try {
+        const response = await fetch(`${CONFIG.API_BASE_URL}/users?pageNumber=${currentPage}&pageSize=${pageSize}`, {
+            headers: {
+                "Authorization": `Bearer ${localStorage.getItem("token")}`
+            }
+        });
+
+        if (response.status === 403 || response.status === 401) {
+             throw new Error("Yetkisiz erişim. Lütfen tekrar giriş yapın.");
+        }
+
+        const text = await response.text();
+        if (!text) {
+             throw new Error(`Sunucu boş yanıt döndürdü (HTTP ${response.status})`);
+        }
+        
+        let data;
+        try {
+            data = JSON.parse(text);
+        } catch (e) {
+            console.error("Geçersiz JSON Yanıtı:", text);
+            throw new Error("Sunucudan geçersiz bir yanıt geldi (JSON hatası). Konsolu kontrol edin.");
+        }
+
+        if (!response.ok) {
+            throw new Error(data.message || `Sunucu hatası: HTTP ${response.status}`);
+        }
+
+        tabloyuDoldur(data.items || []);
+        buildPagination("kullanicilarPaginationContainer", data.totalRecords || 0, data.currentPage || 1, pageSize, (newPage) => {
+            currentPage = newPage;
+            kullanicilariGetir();
+        }, (newSize) => {
+            pageSize = newSize;
+            currentPage = 1;
+            kullanicilariGetir();
+        });
+    } catch (error) {
+        Swal.fire('Hata', error.message, 'error');
+    }
+}
+
+function tabloyuDoldur(users) {
+    const tbody = document.getElementById("kullaniciTablosuGovdesi");
+    tbody.innerHTML = "";
+
+    if (users.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7" class="text-center text-muted">Hiç kullanıcı bulunamadı.</td></tr>`;
+        return;
+    }
+
+    users.forEach(user => {
+        const tr = document.createElement("tr");
+        const kayitTarihi = new Date(user.createdAt).toLocaleString("tr-TR");
+
+        let rolRenk = "bg-secondary";
+        if (user.role === "superadmin") rolRenk = "bg-danger";
+        else if (user.role === "admin") rolRenk = "bg-warning text-dark";
+        else if (user.role === "operator") rolRenk = "bg-info text-dark";
+
+        tr.innerHTML = `
+            <td class="fw-bold">#${user.id}</td>
+            <td>${escapeHtml(user.firstName)} ${escapeHtml(user.lastName)}</td>
+            <td>${escapeHtml(user.email)}</td>
+            <td>${escapeHtml(user.phoneNumber || "-")}</td>
+            <td><span class="badge ${rolRenk}">${user.role.toUpperCase()}</span></td>
+            <td>${kayitTarihi}</td>
+            <td class="text-end">
+                <button class="btn btn-sm btn-info text-white shadow-sm me-1 btn-loglar" data-id="${user.id}" data-ad="${escapeHtml(user.firstName)} ${escapeHtml(user.lastName)}">
+                    <i class="bi bi-clock-history"></i> Loglar
+                </button>
+                <button class="btn btn-sm btn-outline-primary shadow-sm me-1 btn-duzenle" data-id="${user.id}">
+                    <i class="bi bi-pencil-square"></i> Düzenle
+                </button>
+                <button class="btn btn-sm btn-outline-danger shadow-sm btn-sil" data-id="${user.id}">
+                    <i class="bi bi-trash3"></i> Sil
+                </button>
+            </td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+function kullaniciModalSifirla() {
+    document.getElementById("kullaniciFormu").reset();
+    document.getElementById("kullaniciId").value = "";
+    document.getElementById("modalBaslik").innerHTML = `<i class="bi bi-person-plus me-2 text-primary"></i> Yeni Kullanıcı`;
+    document.getElementById("password").required = true;
+    document.getElementById("passwordLabel").innerHTML = `Şifre <span class="text-danger">*</span>`;
+    document.getElementById("passwordHelp").classList.add("d-none");
+}
+
+async function kullaniciDuzenle(id) {
+    kullaniciModalSifirla();
+    
+    try {
+        const response = await fetch(`${CONFIG.API_BASE_URL}/users/${id}`, {
+            headers: { "Authorization": `Bearer ${localStorage.getItem("token")}` }
+        });
+        
+        const text = await response.text();
+        if (!text) throw new Error("Sunucu boş yanıt döndürdü.");
+        const user = JSON.parse(text);
+
+        document.getElementById("kullaniciId").value = user.id;
+        document.getElementById("firstName").value = user.firstName;
+        document.getElementById("lastName").value = user.lastName;
+        document.getElementById("email").value = user.email;
+        document.getElementById("phoneNumber").value = user.phoneNumber || "";
+        document.getElementById("role").value = user.role;
+
+        document.getElementById("modalBaslik").innerHTML = `<i class="bi bi-pencil-square me-2 text-primary"></i> Kullanıcı Düzenle`;
+        
+        // Düzenlerken şifre zorunlu değil
+        document.getElementById("password").required = false;
+        document.getElementById("passwordLabel").innerHTML = `Yeni Şifre`;
+        document.getElementById("passwordHelp").classList.remove("d-none");
+
+        const modal = new bootstrap.Modal(document.getElementById('kullaniciModal'));
+        modal.show();
+    } catch (error) {
+        Swal.fire('Hata', 'Kullanıcı bilgileri alınamadı.', 'error');
+    }
+}
+
+async function kullaniciKaydet(e) {
+    e.preventDefault();
+
+    const id = document.getElementById("kullaniciId").value;
+    const isUpdate = !!id;
+
+    const dto = {
+        firstName: document.getElementById("firstName").value,
+        lastName: document.getElementById("lastName").value,
+        email: document.getElementById("email").value,
+        phoneNumber: document.getElementById("phoneNumber").value,
+        role: document.getElementById("role").value
+    };
+
+    const pwd = document.getElementById("password").value;
+    if (pwd) dto.password = pwd;
+
+    const url = isUpdate ? `${CONFIG.API_BASE_URL}/users/${id}` : `${CONFIG.API_BASE_URL}/users`;
+    const method = isUpdate ? 'PUT' : 'POST';
+
+    try {
+        const response = await fetch(url, {
+            method: method,
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${localStorage.getItem("token")}`
+            },
+            body: JSON.stringify(dto)
+        });
+
+        const text = await response.text();
+        let data = {};
+        if (text) {
+            try { data = JSON.parse(text); } catch (e) { console.error("JSON Hatası:", text); }
+        }
+        
+        if (!response.ok) {
+            // Validasyon hatası gelirse (örn: ASP.NET 400 Bad Request nesnesi)
+            let errorMsg = data.message || `İşlem başarısız (HTTP ${response.status}).`;
+            if (data.errors) {
+                const keys = Object.keys(data.errors);
+                if (keys.length > 0) errorMsg = data.errors[keys[0]][0];
+            }
+            throw new Error(errorMsg);
+        }
+
+        const modal = bootstrap.Modal.getInstance(document.getElementById('kullaniciModal'));
+        if(modal) modal.hide();
+
+        Swal.fire('Başarılı', data.message, 'success');
+        kullanicilariGetir();
+    } catch (error) {
+        Swal.fire('Hata', error.message, 'error');
+    }
+}
+
+async function kullaniciSil(id) {
+    const result = await Swal.fire({
+        title: 'Emin misiniz?',
+        text: "Bu kullanıcıyı silmek istediğinize emin misiniz?",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#3085d6',
+        confirmButtonText: 'Evet, sil!',
+        cancelButtonText: 'İptal'
+    });
+
+    if (result.isConfirmed) {
+        try {
+            const response = await fetch(`${CONFIG.API_BASE_URL}/users/${id}`, {
+                method: 'DELETE',
+                headers: { "Authorization": `Bearer ${localStorage.getItem("token")}` }
+            });
+            
+            const text = await response.text();
+            let data = {};
+            if (text) {
+                try { data = JSON.parse(text); } catch (e) {}
+            }
+            
+            if (!response.ok) throw new Error(data.message || "Silme başarısız.");
+            
+            Swal.fire('Silindi!', data.message || 'Başarıyla silindi.', 'success');
+            kullanicilariGetir();
+        } catch (error) {
+            Swal.fire('Hata', error.message, 'error');
+        }
+    }
+}
+
+async function kullaniciGecmisiniGoster(id, adSoyad) {
+    document.getElementById("gecmisKullaniciAdSoyad").innerText = adSoyad;
+    document.getElementById("gecmisTabloGovdesi").innerHTML = `<tr><td colspan="6" class="text-center">Loglar yükleniyor...</td></tr>`;
+    
+    const modal = new bootstrap.Modal(document.getElementById('kullaniciGecmisModal'));
+    modal.show();
+
+    try {
+        const response = await fetch(`${CONFIG.API_BASE_URL}/audit-logs/user/${id}`, {
+            headers: { "Authorization": `Bearer ${localStorage.getItem("token")}` }
+        });
+        
+        if (response.status === 404) {
+            document.getElementById("gecmisTabloGovdesi").innerHTML = `<tr><td colspan="6" class="text-center text-muted">Bu kullanıcıya ait herhangi bir işlem kaydı bulunamadı.</td></tr>`;
+            return;
+        }
+
+        const text = await response.text();
+        if (!text) {
+            document.getElementById("gecmisTabloGovdesi").innerHTML = `<tr><td colspan="6" class="text-center text-muted">Bu kullanıcıya ait herhangi bir işlem kaydı bulunamadı.</td></tr>`;
+            return;
+        }
+
+        const data = JSON.parse(text);
+        const logs = data.items || [];
+        
+        const tbody = document.getElementById("gecmisTabloGovdesi");
+        tbody.innerHTML = "";
+
+        if (logs.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="6" class="text-center text-muted">Bu kullanıcıya ait herhangi bir işlem kaydı bulunamadı.</td></tr>`;
+            return;
+        }
+
+        logs.forEach(log => {
+            const tr = document.createElement("tr");
+            tr.innerHTML = `
+                <td class="small">${new Date(log.timestamp).toLocaleString("tr-TR")}</td>
+                <td class="fw-bold text-primary">${escapeHtml(log.actionType)}</td>
+                <td>${escapeHtml(log.entityName)} <span class="badge bg-secondary">#${log.entityId}</span></td>
+                <td class="small text-muted">${escapeHtml(log.ipAddress)}</td>
+                <td class="small text-break" style="max-width: 200px;">${log.oldValues ? escapeHtml(log.oldValues) : "-"}</td>
+                <td class="small text-break" style="max-width: 200px;">${log.newValues ? escapeHtml(log.newValues) : "-"}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+    } catch (error) {
+        document.getElementById("gecmisTabloGovdesi").innerHTML = `<tr><td colspan="6" class="text-center text-danger">Loglar yüklenirken hata oluştu: ${error.message}</td></tr>`;
+    }
+}
+
+// XSS Koruması için basit HTML Escape fonksiyonu
+function escapeHtml(unsafe) {
+    if (!unsafe) return "";
+    return unsafe.toString()
+         .replace(/&/g, "&amp;")
+         .replace(/</g, "&lt;")
+         .replace(/>/g, "&gt;")
+         .replace(/"/g, "&quot;")
+         .replace(/'/g, "&#039;");
+}

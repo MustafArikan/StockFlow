@@ -6,13 +6,13 @@ using stok_takip.Data;
 using stok_takip.DTOs;
 using stok_takip.Models;
 using System.Security.Claims;
+using ClosedXML.Excel; // Excel kütüphanesi
 
 namespace stok_takip.Controllers;
 
 [ApiController]
 [Route("api/products")]
 [Authorize] // Tüm eylemler için yetkilendirme gerektirir
-
 public class ProductsController : ControllerBase
 {
     private readonly AppDbContext _context;
@@ -21,6 +21,7 @@ public class ProductsController : ControllerBase
     {
         _context = context;
     }
+    
     // GET /api/products : tüm ürünleri listele
     [HttpGet]
     public async Task<IActionResult> GetAll([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
@@ -168,6 +169,103 @@ public class ProductsController : ControllerBase
         return Ok(new ProductResponseDto(product.Id, product.Name, product.Barcode, product.MinStockLevel, product.CategoryId, product.Attributes));
     }
 
+    // =========================================================================
+    // 🎯 YENİ EKLENEN TOPLU İÇE AKTARMA (EXCEL) - YENİ DTO DOSYASI GEREKTİRMEZ
+    // =========================================================================
+    [HttpPost("import")]
+    [Authorize] 
+    public async Task<IActionResult> ImportExcel(IFormFile file)
+    {
+        if (file == null || file.Length == 0)
+            return BadRequest(new { message = "Geçerli bir dosya yükleyin." });
+
+        if (!file.FileName.EndsWith(".xlsx"))
+            return BadRequest(new { message = "Sadece .xlsx formatında dosyalar desteklenmektedir." });
+
+        // Yeni DTO dosyası açmamak için değişkenleri burada tutuyoruz
+        int totalRows = 0;
+        int successCount = 0;
+        int errorCount = 0;
+        var errorsList = new List<object>();
+        
+        var existingBarcodes = new HashSet<string>(await _context.Products.Where(p => !p.IsDeleted).Select(p => p.Barcode).ToListAsync());
+        var validCategories = await _context.Categories.ToDictionaryAsync(c => c.Name.ToLower(), c => c.Id);
+        
+        var newProducts = new List<Product>();
+        
+        using (var stream = new MemoryStream())
+        {
+            await file.CopyToAsync(stream);
+            using (var workbook = new XLWorkbook(stream))
+            {
+                var worksheet = workbook.Worksheet(1); 
+                var usedRange = worksheet.RangeUsed(); 
+                
+                if (usedRange == null) return BadRequest(new { message = "Yüklenen Excel dosyası tamamen boş veya formatı hatalı." });
+
+                var rows = usedRange.RowsUsed().Skip(1); // Başlık satırını atla
+                
+                int rowIndex = 2; 
+                foreach (var row in rows)
+                {
+                    totalRows++;
+                    var name = row.Cell(1).GetString().Trim();
+                    var barcode = row.Cell(2).GetString().Trim();
+                    var minStockStr = row.Cell(3).GetString().Trim();
+                    var categoryName = row.Cell(4).GetString().Trim();
+
+                    var rowErrors = new List<string>();
+
+                    if (string.IsNullOrEmpty(name)) rowErrors.Add("Ürün adı boş olamaz.");
+                    if (string.IsNullOrEmpty(barcode)) rowErrors.Add("Barkod boş olamaz.");
+                    
+                    if (existingBarcodes.Contains(barcode) || newProducts.Any(p => p.Barcode == barcode))
+                        rowErrors.Add($"'{barcode}' barkodu sistemde veya excel içinde mükerrer.");
+
+                    int categoryId = 0;
+                    if (!validCategories.TryGetValue(categoryName.ToLower(), out categoryId))
+                        rowErrors.Add($"'{categoryName}' adlı kategori sistemde tanımsız.");
+
+                    if (!int.TryParse(minStockStr, out int minStock))
+                        rowErrors.Add("Kritik stok seviyesi tam sayı olmalıdır.");
+
+                    if (rowErrors.Any())
+                    {
+                        errorCount++;
+                        errorsList.Add(new { RowNumber = rowIndex, Errors = rowErrors });
+                    }
+                    else
+                    {
+                        newProducts.Add(new Product 
+                        { 
+                            Name = name, 
+                            Barcode = barcode, 
+                            MinStockLevel = minStock, 
+                            CategoryId = categoryId,
+                            Attributes = "[]" 
+                        });
+                        successCount++;
+                    }
+                    rowIndex++;
+                }
+            }
+        }
+
+        if (newProducts.Any())
+        {
+            await _context.Products.AddRangeAsync(newProducts);
+            await _context.SaveChangesAsync();
+        }
+
+        // Frontend'in okuyabileceği formatta DTO olmadan dinamik nesne dönüyoruz
+        return Ok(new {
+            TotalRows = totalRows,
+            SuccessCount = successCount,
+            ErrorCount = errorCount,
+            Errors = errorsList
+        });
+    }
+
     // PUT /api/products/5 : mecvut ürünü güncelle 
     [HttpPut("{id}")]
     [Authorize(Roles = "admin")] 
@@ -286,5 +384,4 @@ public class ProductsController : ControllerBase
 
         return Ok(products);    
     }
-
 }

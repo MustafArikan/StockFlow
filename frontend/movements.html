@@ -5,6 +5,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Stok Hareketleri - StockFlow</title>
+
+    <!-- Sayfa stil ve ikon kütüphanelerini yükler -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
@@ -13,61 +15,35 @@
 </head>
 
 <body>
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm">
-        <div class="container">
-            <a class="navbar-brand fw-bold text-primary" href="index.html">Stock<span class="text-white">Flow</span></a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                                <ul class="navbar-nav me-auto">
-                    <li class="nav-item"><a class="nav-link" href="index.html">Ana Sayfa</a></li>
-                    <li class="nav-item"><a class="nav-link" href="categories.html">Kategoriler</a></li>
-                    <li class="nav-item"><a class="nav-link" href="products.html">Ürünler</a></li>
-                    <li class="nav-item"><a class="nav-link" href="movements.html">Stok Hareketleri</a></li>
-                    <li class="nav-item"><a class="nav-link" href="warehouses.html">Depolar</a></li>
-                    <li class="nav-item"><a class="nav-link" href="suppliers.html">Tedarikçiler</a></li>
-                    <li class="nav-item"><a class="nav-link" href="audit-logs.html">Sistem Logları</a></li>
-                    <li class="nav-item"><a class="nav-link" href="test-scanner.html">Barkod Okuyucu</a></li>
-                </ul>
-                <div class="d-flex align-items-center text-white-50">
-                    <button id="themeToggleBtn" class="theme-toggle-btn border-0 me-3 text-white-50"
-                        title="Temayı Değiştir" style="background: transparent; font-size: 1.2rem;">
-                        <i class="bi bi-moon-fill" id="themeIcon"></i>
-                    </button>
-                    <span id="userProfile" class="me-3 small fw-bold text-white-50"></span>
-                    <button id="btnNavbarLogout" class="btn btn-sm btn-outline-danger rounded-pill px-3">Çıkış
-                        Yap</button>
-                </div>
-            </div>
-        </div>
-    </nav>
-
+    <!-- Ana içerik alanını oluşturur -->
     <div class="container my-5">
+
+        <!-- Sayfa başlığı ve yeni işlem butonunu hizalar -->
         <div class="d-flex justify-content-between align-items-center mb-4">
             <div>
                 <h1 class="fw-bold">Stok Hareketleri</h1>
                 <p class="text-muted mb-0">Ürün giriş ve çıkış kayıtları</p>
             </div>
-            <button class="btn btn-primary rounded-pill px-4 shadow-sm" data-bs-toggle="modal"
-                data-bs-target="#stokIslemModal">
+            <button class="btn btn-primary rounded-pill px-4 shadow-sm" data-bs-toggle="modal" data-bs-target="#stokIslemModal">
+            <button class="btn btn-primary rounded-pill px-4 shadow-sm" data-bs-toggle="modal" data-bs-target="#stokIslemModal">
                 + Yeni İşlem Ekle
             </button>
         </div>
 
         <div class="card border-0 shadow-sm rounded-3">
             <div class="card-body p-4 pt-2">
+
+                <!-- Arama ve filtreleme alanlarını oluşturur -->
                 <div class="row mb-4 align-items-center mt-3">
                     <div class="col-md-6">
                         <div class="position-relative">
-                            <span
-                                class="position-absolute top-50 translate-middle-y ms-3 text-muted pointer-events-none">🔍</span>
-                            <input type="text" id="aramaKutusu" class="form-control rounded-pill ps-5"
-                                placeholder="Ürün Adı, Kodu veya Personel Ara...">
+                            <span class="position-absolute top-50 translate-middle-y ms-3 text-muted pointer-events-none">🔍</span>
+                            <input type="text" id="aramaKutusu" class="form-control rounded-pill ps-5" placeholder="Ürün Adı, Kodu veya Personel Ara...">
+                            <span class="position-absolute top-50 translate-middle-y ms-3 text-muted pointer-events-none">🔍</span>
+                            <input type="text" id="aramaKutusu" class="form-control rounded-pill ps-5" placeholder="Ürün Adı, Kodu veya Personel Ara...">
                         </div>
                     </div>
                     <div class="col-md-6 text-md-end mt-3 mt-md-0 d-flex gap-2 justify-content-md-end">
-
                         <button id="btnTumu"
                             class="btn btn-secondary btn-sm rounded-pill px-3 shadow-sm filtre-elemani">Tümü</button>
                         <button id="btnGirisler"
@@ -76,9 +52,14 @@
                         <button id="btnCikislar"
                             class="btn btn-outline-danger btn-sm rounded-pill px-3 shadow-sm filtre-elemani">Stok
                             Çıkışları</button>
+                        <button id="btnTransferler"
+                            class="btn btn-outline-info btn-sm rounded-pill px-3 shadow-sm filtre-elemani">Stok
+                            Transferleri</button>
                     </div>
                 </div>
 
+                <!-- Stok hareketlerini listeleyen tabloyu tanımlar -->
+                <!-- Stok hareketlerini listeleyen tabloyu tanımlar -->
                 <div class="table-responsive">
                     <table class="table table-hover align-middle mb-0 min-w-700">
                         <thead>
@@ -87,7 +68,6 @@
                                     style="cursor: pointer;">Tarih ↕</th>
                                 <th id="thUrunKodu" class="text-center d-none d-md-table-cell col-kod user-select-none"
                                     style="cursor: pointer;">Ürün Kodu ↕</th>
-
                                 <th id="thUrunAdi" class="col-ad user-select-none" style="cursor: pointer;">Ürün Adı ↕
                                 </th>
                                 <th id="thIslemTipi" class="text-center col-tip user-select-none"
@@ -101,11 +81,15 @@
                         <tbody id="hareketTablosuGövdesi"></tbody>
                     </table>
                 </div>
+
+                <!-- Sayfalama butonlarını barındırır -->
                 <div id="paginationContainer"></div>
             </div>
         </div>
     </div>
 
+    <!-- Yeni stok işlemi eklemek için kullanılan modalı (açılır pencere) tanımlar -->
+    <!-- Yeni stok işlemi eklemek için kullanılan modalı (açılır pencere) tanımlar -->
     <div class="modal fade" id="stokIslemModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content border-0 shadow rounded-3">
@@ -113,62 +97,153 @@
                     <h5 class="modal-title fw-bold" id="modalBaslik">Yeni Stok İşlemi</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Kapat"></button>
                 </div>
-                <div class="modal-body p-4">
+                <div class="modal-body p-4 bg-light">
+                <div class="modal-body p-4 bg-light">
                     <form id="stokIslemFormu">
                         <input type="hidden" id="hareketId">
-                        <div class="mb-3">
-                            <label class="form-label text-muted small fw-bold">İşlem Tipi</label>
-                            <select class="form-select" id="islemTipi">
+
+                        <!-- 1. ADIM: İşlem tipini belirler -->
+                        <div class="mb-4 bg-white p-3 border rounded-3 shadow-sm">
+                            <label class="form-label text-muted small fw-bold">1. İşlem Tipi Seçin</label>
+                            <select class="form-select rounded-3 border-secondary" id="islemTipi" required>
+
+                        <!-- 1. ADIM: İşlem tipini belirler -->
+                        <div class="mb-4 bg-white p-3 border rounded-3 shadow-sm">
+                            <label class="form-label text-muted small fw-bold">1. İşlem Tipi Seçin</label>
+                            <select class="form-select rounded-3 border-secondary" id="islemTipi" required>
                                 <option value="" selected disabled>Lütfen işlem tipi seçiniz...</option>
                                 <option value="GIRIS">Stok Girişi (Tedarik)</option>
                                 <option value="CIKIS">Stok Çıkışı (Satış/Kullanım)</option>
-                                <option value="TRANSFER">Stok Transferi (Raf Arası)</option>
+                                <option value="TRANSFER">Stok Transferi (Depo/Raf Arası)</option>
+                                <option value="TRANSFER">Stok Transferi (Depo/Raf Arası)</option>
                             </select>
                         </div>
-                        <div class="mb-3">
-                            <div class="d-flex justify-content-between align-items-end mb-1">
-                                <label class="form-label text-muted small fw-bold mb-0">Ürünü Seçin</label>
-                                <button type="button" class="btn btn-sm btn-outline-light rounded-pill py-0 px-2"
-                                    id="btnKameraAc">
-                                    📷 Barkod Okut
+
+                        <!-- 2. ADIM: Ürün seçimini ve barkod okuma alanını içerir -->
+                        <div class="mb-4 p-3 bg-white border rounded-3 shadow-sm">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <label class="form-label text-muted small fw-bold mb-0">2. İşlem Yapılacak Ürün</label>
+                                <button type="button" class="btn btn-sm btn-outline-primary rounded-pill py-0 px-3 fw-bold" id="btnKameraAc">
+                                    <i class="bi bi-upc-scan me-1"></i> Barkod Okut
+
+                        <!-- 2. ADIM: Ürün seçimini ve barkod okuma alanını içerir -->
+                        <div class="mb-4 p-3 bg-white border rounded-3 shadow-sm">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <label class="form-label text-muted small fw-bold mb-0">2. İşlem Yapılacak Ürün</label>
+                                <button type="button" class="btn btn-sm btn-outline-primary rounded-pill py-0 px-3 fw-bold" id="btnKameraAc">
+                                    <i class="bi bi-upc-scan me-1"></i> Barkod Okut
                                 </button>
                             </div>
-                            <div id="kameraAlani"
-                                class="d-none mb-2 rounded-3 overflow-hidden border border-2 border-dark">
+
+                            <!-- Barkod okuyucu kamerasının tasarım kurallarını belirler -->
+                            <style>
+                                #kameraAlani {
+                                    background: #000;
+                                    border: 2px dashed #6c757d;
+                                }
+
+                                #reader {
+                                    width: 100% !important;
+                                    border: none !important;
+                                }
+
+                                #reader video {
+                                    object-fit: cover;
+                                    border-radius: 8px;
+                                }
+
+                                [data-theme="dark"] #kameraAlani {
+                                    border-color: #40424c;
+                                }
+                            </style>
+
+                            <div id="kameraAlani" class="d-none mb-3 rounded-3 overflow-hidden position-relative">
                                 <div id="reader"></div>
-                                <button type="button" class="btn btn-sm btn-danger w-100 rounded-0"
-                                    id="btnKameraKapat">Taramayı İptal Et</button>
+                                <button type="button"
+                                    class="btn btn-sm btn-danger position-absolute bottom-0 start-50 translate-middle-x mb-2 rounded-pill px-4 shadow"
+                                    id="btnKameraKapat" style="z-index: 999;">Kapat</button>
+                            </div> 
+                            <select class="form-select" id="urunSecimi" required>
+                                <option value="" selected disabled>Yükleniyor...</option>
+                            </select>
+                        </div>
+
+                        <!-- 3. ADIM: Kaynak lokasyon alanını gösterir -->
+                        <div class="mb-4 d-none p-3 bg-white border rounded-3 shadow-sm" id="sourceLocationGroup">
+                            <h6 class="fw-bold text-danger mb-3"><i class="bi bi-box-arrow-up me-2"></i>3. Çıkış
+                                (Kaynak) Konumu</h6>
+                            <label class="form-label text-muted small fw-bold">Depo Seçin</label>
+                            <select class="form-select mb-2" id="sourceWarehouseId">
+                                <option value="">Seçiniz...</option>
+                            </select>
+                            <label class="form-label text-muted small fw-bold">Raf Seçin</label>
+                            <select class="form-select" id="sourceLocationId" disabled>
+                                <option value="">Önce depo seçin...</option>
+                            </select>
+                        </div>
+
+                        <!-- 3. ADIM: Hedef lokasyon alanını gösterir -->
+                        <div class="mb-4 d-none p-3 bg-white border rounded-3 shadow-sm" id="targetLocationGroup">
+                            <h6 class="fw-bold text-success mb-3"><i class="bi bi-box-arrow-in-down me-2"></i>3. Giriş
+                                (Hedef) Konumu</h6>
+                            <label class="form-label text-muted small fw-bold">Depo Seçin</label>
+                            <select class="form-select mb-2" id="targetWarehouseId">
+                                <option value="">Seçiniz...</option>
+                            </select>
+                            <label class="form-label text-muted small fw-bold">Raf Seçin</label>
+                            <select class="form-select" id="targetLocationId" disabled>
+                                <option value="">Önce depo seçin...</option>
+                            </select>
+                        </div>
+
+                        <!-- EK BİLGİLER (OPSİYONEL) alanını gösterir -->
+                        <div class="mb-4 p-3 bg-white border rounded-3 shadow-sm">
+                            <h6 class="fw-bold text-secondary mb-3"><i class="bi bi-info-circle me-2"></i>Ek Bilgiler
+                                (Opsiyonel)</h6>
+
+                            <div class="mb-3 d-none" id="tedarikciGroup">
+                                <label class="form-label text-muted small fw-bold">Tedarikçi</label>
+                                <select class="form-select" id="tedarikciSecimi">
+                                    <option value="" selected disabled>Tedarikçi yükleniyor...</option>
+                                </select>
                             </div>
-                            <select class="form-select" id="urunSecimi">
-                                <option value="" selected disabled>Ürün yükleniyor...</option>
-                            </select>
+                            <div class="mb-3 d-none" id="cikisNoktasiGroup">
+                                <label class="form-label text-muted small fw-bold">Çıkış/Teslim Noktası</label>
+                                <input type="text" class="form-control" id="cikisNoktasi"
+                                    placeholder="Örn: Müşteri Adı, Şantiye vb.">
+                            </div>
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label text-muted small fw-bold">Birim Fiyat</label>
+                                    <input type="number" step="0.01" class="form-control" id="birimFiyat"
+                                        placeholder="Örn: 150.50">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label text-muted small fw-bold">Fatura/İrsaliye No</label>
+                                    <input type="text" class="form-control" id="faturaNo"
+                                        placeholder="Örn: FAT-2023-001">
+                                </div>
+                            </div>
                         </div>
-                        <div class="mb-3 d-none" id="sourceLocationGroup">
-                            <label class="form-label text-muted small fw-bold">Kaynak Lokasyon (Raf)</label>
-                            <select class="form-select" id="sourceLocationId">
-                                <option value="" selected disabled>Kaynak raf seçiniz...</option>
-                            </select>
-                        </div>
-                        <div class="mb-3 d-none" id="targetLocationGroup">
-                            <label class="form-label text-muted small fw-bold">Hedef Lokasyon (Raf)</label>
-                            <select class="form-select" id="targetLocationId">
-                                <option value="" selected disabled>Hedef raf seçiniz...</option>
-                            </select>
-                        </div>
-                        <div class="mb-4">
-                            <label class="form-label text-muted small fw-bold">İşlem Adedi (Max: 100.000)</label>
+
+                        <!-- 4. ADIM: Miktar girişi alanını barındırır -->
+                        <div class="mb-4 p-3 bg-white border rounded-3 shadow-sm">
+                            <label class="form-label text-muted small fw-bold">4. İşlem Adedi (Max: 100.000)</label>
                             <input type="number" class="form-control" id="islemAdedi" placeholder="Örn: 10" min="1"
-                                max="100000">
+                                max="100000" required>
                         </div>
-                        <button type="submit" id="btnKaydet" class="btn btn-primary w-100 rounded-pill py-2 fw-bold"
-                            disabled>Ekle ve Onayla</button>
+
+                        <button type="submit" id="btnKaydet"
+                            class="btn btn-primary w-100 rounded-pill py-3 fw-bold shadow-sm" disabled>İşlemi Onayla ve
+                            Kaydet</button>
                     </form>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Kullanıcı Profili Modalı -->
+    <!-- Kullanıcı profilini gösteren açılır pencereyi tanımlar -->
+    <!-- Kullanıcı profilini gösteren açılır pencereyi tanımlar -->
     <div class="modal fade" id="userProfileModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content border-0 shadow">
@@ -201,6 +276,8 @@
         </div>
     </div>
 
+    <!-- Gerekli kütüphaneleri ve sayfa scriptlerini yükler -->
+    <!-- Gerekli kütüphaneleri ve sayfa scriptlerini yükler -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
     <script src="js/config.js"></script>

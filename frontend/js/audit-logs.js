@@ -1,4 +1,4 @@
-﻿const API_URL = `${CONFIG.API_BASE_URL}/audit-logs`;
+const API_URL = `${CONFIG.API_BASE_URL}/audit-logs`;
 const token = localStorage.getItem('token');
 if (!token) {
     window.location.href = 'login.html';
@@ -6,13 +6,16 @@ if (!token) {
 }
 
 let logsData = [];
+let currentPage = 1;
+let pageSize = 50;
 
-async function loglariYukle() {
+async function loglariYukle(page = 1) {
+    currentPage = page;
     try {
-        const cevap = await fetch(API_URL, { headers: { "Authorization": `Bearer ${token}` } });
-        if (!cevap.ok) throw new Error("Loglar alınamadı");
-        logsData = await cevap.json();
+        const responseData = await apiRequest(`/audit-logs?pageNumber=${page}&pageSize=${pageSize}`, 'GET');
+        logsData = responseData.items || responseData; // Geriye dönük uyumluluk
         tabloyuCiz(logsData);
+        sayfalamaCiz(responseData.totalRecords || 0, responseData.currentPage || 1);
     } catch (e) {
         console.error(e);
     }
@@ -56,18 +59,28 @@ function tabloyuCiz(veriler) {
     govde.innerHTML = mHtml;
 }
 
+function sayfalamaCiz(totalRecords, current) {
+    buildPagination(
+        "paginationContainer", 
+        totalRecords, 
+        current, 
+        pageSize, 
+        (newPage) => {
+            loglariYukle(newPage);
+        },
+        (newSize) => {
+            pageSize = newSize;
+            loglariYukle(1);
+        }
+    );
+}
+
 async function kullaniciProfiliGoster(userId) {
     try {
-        const yanit = await fetch(`${CONFIG.API_BASE_URL}/users/${userId}`, {
-            headers: {
-                "Authorization": `Bearer ${localStorage.getItem("token")}`
-            }
-        });
-        if (!yanit.ok) throw new Error("Kullanıcı bilgileri alınamadı.");
-        const user = await yanit.json();
+        const user = await apiRequest(`/users/${userId}`, 'GET');
         
         document.getElementById('upmName').textContent = `${user.firstName || ''} ${user.lastName || ''}`;
-        document.getElementById('upmEmail').textContent = user.email || '';
+        document.getElementById('upmEmail').textContent = (user.email || '') + (user.phoneNumber ? ' | 📞 ' + user.phoneNumber : '');
         document.getElementById('upmRole').textContent = user.role || 'viewer';
         document.getElementById('upmDate').textContent = new Date(user.createdAt).toLocaleDateString("tr-TR");
         
@@ -136,13 +149,13 @@ function detayGoster(log) {
     } else if (log.actionType === "Added") {
         html += `<h5>Eklenen Veri:</h5><div class="bg-light p-3 rounded mt-2 border"><table class="table table-sm table-borderless mb-0"><tbody>`;
         Object.keys(newData).forEach(key => {
-            html += `<tr><td class="fw-bold" style="width:150px">${escapeHtml(key)}</td><td>${escapeHtml(newData[key] !== null ? newData[key] : 'null')}</td></tr>`;
+            html += `<tr><td class="fw-bold w-150px">${escapeHtml(key)}</td><td>${escapeHtml(newData[key] !== null ? newData[key] : 'null')}</td></tr>`;
         });
         html += `</tbody></table></div>`;
     } else if (log.actionType === "Deleted") {
         html += `<h5>Silinen Veri (Eski Durum):</h5><div class="bg-light p-3 rounded mt-2 border"><table class="table table-sm table-borderless mb-0"><tbody>`;
         Object.keys(oldData).forEach(key => {
-            html += `<tr><td class="fw-bold" style="width:150px">${escapeHtml(key)}</td><td class="text-danger">${escapeHtml(oldData[key] !== null ? oldData[key] : 'null')}</td></tr>`;
+            html += `<tr><td class="fw-bold w-150px">${escapeHtml(key)}</td><td class="text-danger">${escapeHtml(oldData[key] !== null ? oldData[key] : 'null')}</td></tr>`;
         });
         html += `</tbody></table></div>`;
     }
@@ -177,6 +190,8 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
+
+    // Pagination Click Listener is handled by buildPagination
 });
 
 

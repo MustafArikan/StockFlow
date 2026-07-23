@@ -1,148 +1,220 @@
 <!DOCTYPE html>
 <html lang="tr">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Kontrol Paneli - StockFlow</title>
-    <!-- Bootstrap 5 CSS-->
+
+    <!-- Bootstrap 5 CSS dosyasını yükler -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Bootstrap Icons (Zil ve temalar için) -->
+    <!-- İkonları ve görsel simgeleri sayfaya dahil eder -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
-    <!-- Google Fonts (Inter)-->
+    <!-- Arayüzdeki metinler için Inter yazı tipini çeker -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
-    <!-- Özel Tema CSS'imiz -->
-    <link href="css/style.css" rel="stylesheet">
-    <!-- Tema Yönetim Script'i (Sayfa parlamasını önlemek için başta yüklenmeli) -->
+    
+    <!-- İŞTE BURASI HAYAT KURTARAN YER: ?v=5 sayesinde tarayıcı eski CSS'i unutup yenisini çekecek! -->
+    <link href="css/style.css?v=5" rel="stylesheet">
+    
+    <!-- Sayfa yüklenirken tema parlamasını önlemek için scripti en başta çalıştırır -->
     <script src="js/theme.js"></script>
+
+    <!-- Token kontrolünü sayfa yüklenmeden önce yap (CSP Uyumlu) -->
+    <script src="js/auth-check.js"></script>
 </head>
+
 <body>  
-
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm">
-        <div class="container">
-            <!-- Logo-->
-            <a class="navbar-brand fw-bold text-primary" href="index.html">
-                Stock<span class="text-white">Flow</span>    
-            </a>
-
-            <!-- Mobile Görünüm için Hamburger Buton-->
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Menüyü Aç/Kapat">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-
-            <!-- Menü İçeriği-->
-            <div class="collapse navbar-collapse" id="navbarNav">
-                                <ul class="navbar-nav me-auto">
-                    <li class="nav-item"><a class="nav-link" href="index.html">Ana Sayfa</a></li>
-                    <li class="nav-item"><a class="nav-link" href="categories.html">Kategoriler</a></li>
-                    <li class="nav-item"><a class="nav-link" href="products.html">Ürünler</a></li>
-                    <li class="nav-item"><a class="nav-link" href="movements.html">Stok Hareketleri</a></li>
-                    <li class="nav-item"><a class="nav-link" href="warehouses.html">Depolar</a></li>
-                    <li class="nav-item"><a class="nav-link" href="suppliers.html">Tedarikçiler</a></li>
-                    <li class="nav-item"><a class="nav-link" href="audit-logs.html">Sistem Logları</a></li>
-                    <li class="nav-item"><a class="nav-link" href="test-scanner.html">Barkod Okuyucu</a></li>
-                </ul>
-
-                <!-- Sağ Üst Profil & Bildirimler & Tema Butonu -->
-                <div class="d-flex align-items-center text-white-50">
-                    <!-- Tema Değiştirme Butonu -->
-                    <button id="themeToggleBtn" class="theme-toggle-btn border-0 me-3 text-white-50" title="Temayı Değiştir"></button>
-
-                    <!-- Bildirim Zili Dropdown -->
-                    <div class="dropdown me-3 position-relative">
-                        <a class="text-white-50 position-relative text-decoration-none dropdown-toggle no-caret" href="#" role="button" id="notificationDropdown" data-bs-toggle="dropdown" aria-expanded="false">
-                            <i class="bi bi-bell-fill fs-5"></i>
-                            <!-- Bildirim Sayaç Rozeti (Başlangıçta gizli) -->
-                            <span id="notificationBadge" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger d-none">
-                                0
-                            </span>
-                        </a>
-                        <ul class="dropdown-menu dropdown-menu-end shadow border-0 p-2 notification-dropdown-menu" aria-labelledby="notificationDropdown">
-                            <li class="dropdown-header border-bottom pb-2 mb-2 d-flex justify-content-between align-items-center">
-                                <span class="fw-bold ">Son Bildirimler</span>
-                                <button id="btnNavbarReadAll" class="btn btn-link btn-xs text-primary p-0 text-decoration-none small">Tümünü Oku</button>
-                            </li>
-                            <!-- Bildirimlerin JS ile dolacağı alan -->
-                            <div id="navbarNotificationList" class="d-flex flex-column gap-2">
-                                <li class="text-center text-muted py-3 small">Bildirimler yükleniyor...</li>
-                            </div>
-                            <li class="border-top mt-2 pt-2 text-center">
-                                <a href="notifications.html" class="text-primary small text-decoration-none fw-bold">Tüm Bildirimleri Gör →</a>
-                            </li>
-                        </ul>
-                    </div>
-
-                    <!-- Giriş yapan kullanıcının mail adresi -->
-                    <span id="userProfile" class="me-3 small fw-bold text-white-50"></span>
-                    <!-- Çıkış Yap butonu -->
-                    <button id="btnNavbarLogout" class="btn btn-sm btn-outline-danger rounded-pill px-3">Çıkış Yap</button>
-                </div>
-            </div>
-        </div>
-    </nav> 
-
     <div class="container my-5">
-        
-        <div class="row mb-4">
-            <div class="col-12">
+        <!-- Sayfa başlığı ve rapor indirme butonlarını hizalar -->
+        <!-- Sayfa başlığı ve rapor indirme butonlarını hizalar -->
+        <div class="row mb-4 align-items-center">
+            <div class="col-12 col-md-7">
                 <h1 class="fw-bold ">Kontrol Paneli</h1>
                 <p class="text-muted">StockFlow - Stok Takip Sistemi</p>
             </div>
-        </div>
-
-        <div class="row g-4 mb-5">
-            
-            <div class="col-12 col-md-4">
-                <div class="card border-0 shadow-sm rounded-3 p-3 bg-white">
-                    <div class="card-body">
-                        <h6 class="text-uppercase text-muted fw-bold small">Toplam Ürün</h6>
-                        <h2 id="totalProductsText" class="fw-bold  mb-0">Yükleniyor...</h2>
-                        <span class="text-success small fw-semibold">↑ %12 (Bu Ay)</span>
-                    </div>
-                </div>
-            </div>
-
-            <div class="col-12 col-md-4">
-                <div class="card border-0 shadow-sm rounded-3 p-3 bg-white">
-                    <div class="card-body">
-                        <h6 class="text-uppercase text-muted fw-bold small">Aktif Depolar</h6>
-                        <h2 id="activeWarehousesText" class="fw-bold  mb-0">Yükleniyor...</h2>
-                        <span class="text-muted small">Merkez, Şube ve Lokasyonlar</span>
-                    </div>
-                </div>
-            </div>
-
-            <div class="col-12 col-md-4">
-                <div class="card border-0 shadow-sm rounded-3 p-3 bg-danger bg-opacity-10 border-start border-danger border-3">
-                    <div class="card-body">
-                        <h6 class="text-uppercase text-danger fw-bold small">Kritik Stok Alarmları</h6>
-                        <h2 id="criticalAlertsText" class="fw-bold text-danger mb-0">Yükleniyor...</h2>
-                        <span class="text-danger small fw-semibold">Hemen Tedarik Edilmeli!</span>
-                    </div>
-                </div>
+            <div class="col-12 col-md-5 text-md-end">
+                <button id="btnExportPdf" class="btn btn-outline-danger rounded-pill px-3 shadow-sm me-2">
+                    <i class="bi bi-file-earmark-pdf"></i> PDF İndir
+                </button>
+                <button id="btnExportCsv" class="btn btn-outline-success rounded-pill px-3 shadow-sm">
+                    <i class="bi bi-file-earmark-excel"></i> Excel İndir
+                </button>
             </div>
         </div>
+
+        <!-- PDF'e aktarılacak olan asıl dashboard alanını belirler -->
+        <div id="dashboardExportArea">
+
+            <!-- 4'lü Özet Bilgi Kartlarını listeler -->
+            <style>
+                .saas-card {
+                    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+                    border: 1px solid var(--border-color) !important;
+                    background-color: var(--card-bg) !important;
+                }
+
+                .saas-card:hover {
+                    transform: translateY(-4px);
+                    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.06) !important;
+                    border-color: #0d6efd !important;
+                }
+
+                [data-theme="dark"] .saas-card:hover {
+                    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.4) !important;
+                    border-color: #3d8bfd !important;
+                }
+
+                .saas-card a.stretched-link {
+                    outline: none !important;
+                    -webkit-tap-highlight-color: transparent !important;
+                    text-decoration: none !important;
+                }
+            </style>
+
+            <div class="row g-4 mb-5">
+                <!-- Ürün Çeşidi Kartı -->
+                <div class="col-12 col-md-6 col-lg-3">
+                    <div class="card saas-card border-0 shadow-sm rounded-4 p-4 h-100 position-relative">
+
+                        <a href="products.html" class="stretched-link"></a>
+
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <span class="text-muted fw-bold" style="font-size: 0.80rem; letter-spacing: 0.5px;">TOPLAM
+                                ÜRÜN ÇEŞİDİ</span>
+                            <i class="bi bi-box-seam text-primary fs-4"></i>
+                        </div>
+                        <h2 id="totalProductsText" class="fw-bold mb-0"
+                            style="font-size: 2.2rem; color: var(--text-primary);">0</h2>
+                    </div>
+                </div>
+
+                <!-- Fiziksel Stok Kartı -->
+                <div class="col-12 col-md-6 col-lg-3">
+                    <div class="card saas-card border-0 shadow-sm rounded-4 p-4 h-100 position-relative">
+                        <a href="movements.html" class="stretched-link"></a>
+
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <span class="text-muted fw-bold" style="font-size: 0.80rem; letter-spacing: 0.5px;">TOPLAM
+                                STOK</span>
+                            <i class="bi bi-boxes text-success fs-4"></i>
+                        </div>
+                        <h2 id="totalStockText" class="fw-bold mb-0 text-success" style="font-size: 2.2rem;">0 <span
+                                class="fs-6 text-muted">Adet</span></h2>
+                    </div>
+                </div>
+
+                <!-- Aktif Depo Kartı -->
+                <div class="col-12 col-md-6 col-lg-3">
+                    <div class="card saas-card border-0 shadow-sm rounded-4 p-4 h-100 position-relative">
+                        <a href="warehouses.html" class="stretched-link"></a>
+
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <span class="text-muted fw-bold" style="font-size: 0.80rem; letter-spacing: 0.5px;">AKTİF
+                                DEPO SAYISI</span>
+                            <i class="bi bi-building text-info fs-4"></i>
+                        </div>
+                        <h2 id="activeWarehousesText" class="fw-bold mb-0"
+                            style="font-size: 2.2rem; color: var(--text-primary);">0</h2>
+                    </div>
+                </div>
+
+                <!-- Kritik Stok Kartı -->
+                <div class="col-12 col-md-6 col-lg-3">
+                    <div class="card saas-card border-0 shadow-sm rounded-4 p-4 h-100 position-relative">
+                        <a href="notifications.html" class="stretched-link"></a>
+
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <span class="text-danger fw-bold" style="font-size: 0.80rem; letter-spacing: 0.5px;">KRİTİK
+                                STOK UYARISI</span>
+                            <i class="bi bi-exclamation-triangle-fill text-danger fs-4"></i>
+                        </div>
+                        <h2 id="criticalAlertsText" class="fw-bold text-danger mb-0" style="font-size: 2.2rem;">0</h2>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row g-4 mb-5">
+
+                <!-- Stok Hareket Trendi Çizgi Grafiği -->
+                <div class="col-12">
+                    <div class="card border-0 shadow-sm rounded-3 p-4">
+                        <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
+                            <h5 class="fw-bold text-muted mb-0" style="letter-spacing: 0.5px;">SON 30 GÜN STOK HAREKET
+                                TRENDİ</h5>
+                            <select id="trendProductFilter"
+                                class="form-select form-select-sm w-auto shadow-sm border-secondary rounded-pill px-3 fw-bold text-primary">
+                                <option value="" selected>Tümü (Genel Trend)</option>
+                            </select>
+                        </div>
+                        <div class="custom-chart-wrapper trend-wrapper">
+                            <canvas id="trendChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-12 col-lg-6">
+                    <div class="card border-0 shadow-sm rounded-3 p-4 h-100">
+                        <h5 class="fw-bold mb-3">Hareket Özeti (Giriş/Çıkış/Transfer)</h5>
+                        <div class="custom-chart-wrapper summary-wrapper">
+                            <canvas id="movementSummaryChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Kategori Dağılımı Halka Grafiği -->
+                <div class="col-12 col-lg-6">
+                    <div class="card border-0 shadow-sm rounded-3 p-4 h-100">
+                        <h5 class="fw-bold mb-3">Kategoriye Göre Stok Dağılımı</h5>
+                        <div class="custom-chart-wrapper category-wrapper">
+                            <canvas id="categoryChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- En Çok Hareket Görenler Yatay Çubuk Grafiği -->
+                <div class="col-12">
+                    <div class="card border-0 shadow-sm rounded-3 p-4">
+                        <h5 class="fw-bold mb-3">En Çok Hareket Gören 7 Ürün</h5>
+                        <div class="custom-chart-wrapper top-products-wrapper">
+                            <canvas id="topProductsChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Hızlı işlem kısayollarını ekrana basar -->
         <div class="row">
             <div class="col-12">
-                <div class="card border-0 shadow-sm rounded-3 p-4 bg-white">
-                    <h4 class="fw-bold  mb-3">Hızlı İşlemler</h4>
+                <div class="card border-0 shadow-sm rounded-3 p-4">
+                    <h4 class="fw-bold mb-3">Hızlı İşlemler</h4>
                     <div class="d-flex flex-wrap gap-3">
-                         <a href="test-scanner.html" class="btn btn-primary btn-lg rounded-pill px-4 shadow-sm">
+                        <a href="test-scanner.html" class="btn btn-primary btn-lg rounded-pill px-4 shadow-sm">
                             Barkod/QR Okuyucu Aç
                         </a>
-                         <a href="products.html" class="btn btn-outline-secondary btn-lg rounded-pill px-4">
+                        <a href="products.html" class="btn btn-outline-secondary btn-lg rounded-pill px-4">
                             Ürün Kataloğu
-                         </a>
+                        </a>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!--Bootstrap 5 JS Bundle-->
+    <!-- Sistem gereksinimleri olan dış kütüphaneleri yükler -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jspdf@4.2.1/dist/jspdf.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+
+    <!-- Excel çıktılarına özel renk ve kenarlık verebilmek için gelişmiş sürümü yükler -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
+
+    <!-- Uygulamanın kendi iş kurallarını barındıran scriptleri çalıştırır -->
     <script src="js/config.js"></script>
     <script src="js/auth.js"></script>
     <script src="js/index.js"></script>
 
 </body>
+
 </html>
