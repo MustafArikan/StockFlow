@@ -89,8 +89,7 @@
                                 <th id="thBarkod" style="cursor: pointer;" class="user-select-none">Barkod ↕</th>
                                 <th id="thMinStok" style="cursor: pointer;" class="user-select-none">Min. Stok ↕</th>
                                 <th id="thKategori" style="cursor: pointer;" class="user-select-none">Kategori ↕</th>
-                                <th id="thMevcutStok" style="cursor: pointer;" class="user-select-none">Mevcut Stok ↕
-                                </th>
+                                <th id="thMevcutStok" style="cursor: pointer;" class="user-select-none">Mevcut Stok ↕</th>
                                 <th class="text-end" id="islemSutunuBasligi">İşlemler</th>
                             </tr>
                         </thead>
@@ -263,6 +262,23 @@
                         <table class="table table-sm table-borderless mb-0" id="detayUrunOzellikler">
                             <tr><td class="text-muted fst-italic">Özel nitelik bulunamadı.</td></tr>
                         </table>
+                    </div>
+
+                    <h6 class="fw-bold text-secondary text-uppercase small mb-3 border-bottom pb-2"> Tedarikçiler</h6>
+                    <div class="bg-white p-3 rounded-3 shadow-sm border border-light">
+                        <table class="table table-sm table-borderless mb-0" id="detayTedarikciListesi">
+                            <tr><td class="text-muted fst-italic">Tedarikçi bulunamadı.</td></tr>
+                        </table>
+                        <div class="d-flex gap-3 mb-3 align-items-center">
+                            <div class="flex-grow-1">
+                                <select class="form-select mb-2" id="detayTedarikciSelect">
+                                    <option value="">Tedarikçi seçin...</option>
+                                </select>
+                                <input type="number" class="form-control" id="detayTedarikciFiyat" placeholder="Alış Fiyatı" min="0">
+                            </div>
+                                <button type="button" id="btnDetayTedarikciEkle" class="btn btn-primary w-25 rounded-pill py-2 fw-bold">Bağla</button>
+                        </div>
+
                     </div>
                 </div>
             </div>

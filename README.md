@@ -4,7 +4,7 @@ Tam kapsamlı, 5 geliştirici için tasarlanmış stok ve envanter yönetim uygu
 
 ---
 
-## 🛠️ Sistem Mimarisi
+## 🛠️ SISTEM MIMARISI
 
 ```
 stok_takip/
