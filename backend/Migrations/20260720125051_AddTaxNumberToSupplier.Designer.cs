@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using stok_takip.Data;
 
@@ -11,9 +12,11 @@ using stok_takip.Data;
 namespace backend.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260720125051_AddTaxNumberToSupplier")]
+    partial class AddTaxNumberToSupplier
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -42,10 +45,6 @@ namespace backend.Migrations
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("bit")
                         .HasColumnName("is_deleted");
-
-                    b.Property<DateTime?>("NextMaintenanceDate")
-                        .HasColumnType("datetime2")
-                        .HasColumnName("next_maintenance_date");
 
                     b.Property<string>("Notes")
                         .HasColumnType("nvarchar(max)")
@@ -162,10 +161,6 @@ namespace backend.Migrations
                         .HasColumnType("nvarchar(100)")
                         .HasColumnName("data_type");
 
-                    b.Property<int>("DisplayOrder")
-                        .HasColumnType("int")
-                        .HasColumnName("display_order");
-
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("bit")
                         .HasColumnName("is_deleted");
@@ -173,26 +168,6 @@ namespace backend.Migrations
                     b.Property<bool>("IsRequired")
                         .HasColumnType("bit")
                         .HasColumnName("is_required");
-
-                    b.Property<decimal?>("MaxValue")
-                        .HasColumnType("decimal(18,2)")
-                        .HasColumnName("max_value");
-
-                    b.Property<decimal?>("MinValue")
-                        .HasColumnType("decimal(18,2)")
-                        .HasColumnName("min_value");
-
-                    b.Property<string>("TargetLevel")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)")
-                        .HasColumnName("target_level");
-
-                    b.Property<string>("UiComponent")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)")
-                        .HasColumnName("ui_component");
 
                     b.HasKey("Id")
                         .HasName("pk_attribute_rules");
@@ -380,62 +355,6 @@ namespace backend.Migrations
                     b.ToTable("products");
                 });
 
-            modelBuilder.Entity("stok_takip.Models.ProductSupplier", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int")
-                        .HasColumnName("id");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2")
-                        .HasColumnName("created_at");
-
-                    b.Property<bool>("IsDeleted")
-                        .HasColumnType("bit")
-                        .HasColumnName("is_deleted");
-
-                    b.Property<bool>("IsPreferred")
-                        .HasColumnType("bit")
-                        .HasColumnName("is_preferred");
-
-                    b.Property<int?>("LeadTimeDays")
-                        .HasColumnType("int")
-                        .HasColumnName("lead_time_days");
-
-                    b.Property<int>("ProductId")
-                        .HasColumnType("int")
-                        .HasColumnName("product_id");
-
-                    b.Property<decimal?>("PurchasePrice")
-                        .HasColumnType("decimal(18,2)")
-                        .HasColumnName("purchase_price");
-
-                    b.Property<int>("SupplierId")
-                        .HasColumnType("int")
-                        .HasColumnName("supplier_id");
-
-                    b.Property<string>("SupplierProductCode")
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)")
-                        .HasColumnName("supplier_product_code");
-
-                    b.HasKey("Id")
-                        .HasName("pk_product_suppliers");
-
-                    b.HasIndex("SupplierId")
-                        .HasDatabaseName("ix_product_suppliers_supplier_id");
-
-                    b.HasIndex("ProductId", "SupplierId")
-                        .IsUnique()
-                        .HasDatabaseName("ix_product_suppliers_product_id_supplier_id")
-                        .HasFilter("[is_deleted] = 0");
-
-                    b.ToTable("product_suppliers");
-                });
-
             modelBuilder.Entity("stok_takip.Models.SecurityAuditLog", b =>
                 {
                     b.Property<int>("Id")
@@ -590,16 +509,6 @@ namespace backend.Migrations
                         .HasColumnType("int")
                         .HasColumnName("supplier_id");
 
-                    b.Property<string>("SupplierName")
-                        .HasMaxLength(150)
-                        .HasColumnType("nvarchar(150)")
-                        .HasColumnName("supplier_name");
-
-                    b.Property<string>("SupplierTaxNumber")
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)")
-                        .HasColumnName("supplier_tax_number");
-
                     b.Property<decimal>("TotalPrice")
                         .HasColumnType("decimal(18,2)")
                         .HasColumnName("total_price");
@@ -706,10 +615,6 @@ namespace backend.Migrations
                         .HasColumnType("nvarchar(max)")
                         .HasColumnName("email_confirmation_code");
 
-                    b.Property<int>("FailedLoginAttempts")
-                        .HasColumnType("int")
-                        .HasColumnName("failed_login_attempts");
-
                     b.Property<string>("FirstName")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)")
@@ -722,10 +627,6 @@ namespace backend.Migrations
                     b.Property<bool>("IsEmailConfirmed")
                         .HasColumnType("bit")
                         .HasColumnName("is_email_confirmed");
-
-                    b.Property<DateTime?>("LastFailedLoginAttempt")
-                        .HasColumnType("datetime2")
-                        .HasColumnName("last_failed_login_attempt");
 
                     b.Property<string>("LastName")
                         .IsRequired()
@@ -744,10 +645,6 @@ namespace backend.Migrations
                     b.Property<DateTime?>("PasswordResetCodeExpiry")
                         .HasColumnType("datetime2")
                         .HasColumnName("password_reset_code_expiry");
-
-                    b.Property<string>("PhoneNumber")
-                        .HasColumnType("nvarchar(max)")
-                        .HasColumnName("phone_number");
 
                     b.Property<string>("Role")
                         .IsRequired()
@@ -980,27 +877,6 @@ namespace backend.Migrations
                     b.Navigation("Category");
                 });
 
-            modelBuilder.Entity("stok_takip.Models.ProductSupplier", b =>
-                {
-                    b.HasOne("stok_takip.Models.Product", "Product")
-                        .WithMany("ProductSuppliers")
-                        .HasForeignKey("ProductId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired()
-                        .HasConstraintName("fk_product_suppliers_products_product_id");
-
-                    b.HasOne("stok_takip.Models.Supplier", "Supplier")
-                        .WithMany("ProductSuppliers")
-                        .HasForeignKey("SupplierId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired()
-                        .HasConstraintName("fk_product_suppliers_suppliers_supplier_id");
-
-                    b.Navigation("Product");
-
-                    b.Navigation("Supplier");
-                });
-
             modelBuilder.Entity("stok_takip.Models.SecurityAuditLog", b =>
                 {
                     b.HasOne("stok_takip.Models.User", "User")
@@ -1107,8 +983,6 @@ namespace backend.Migrations
                 {
                     b.Navigation("Assets");
 
-                    b.Navigation("ProductSuppliers");
-
                     b.Navigation("StockLevels");
 
                     b.Navigation("StockMovements");
@@ -1116,8 +990,6 @@ namespace backend.Migrations
 
             modelBuilder.Entity("stok_takip.Models.Supplier", b =>
                 {
-                    b.Navigation("ProductSuppliers");
-
                     b.Navigation("StockMovements");
                 });
 

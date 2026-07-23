@@ -12,8 +12,8 @@
     <script src="js/theme.js"></script>
 </head>
 
-<body>  
-    <div class="container my-5">
+<body>
+       <div class="container my-5">
         <div class="d-flex justify-content-between align-items-center mb-4">
             <div>
                 <h1 class="fw-bold">Tedarikçiler</h1>
@@ -27,7 +27,7 @@
             <div class="card-body p-4">
                 <div class="mb-4">
                     <input type="text" id="aramaKutusu" class="form-control rounded-pill"
-                        placeholder="Tedarikçi Adı veya ID ile Ara...">
+                        placeholder="Ad, İlgili Kişi, Telefon veya Vergi No ile Ara...">
                 </div>
 
                 <div class="table-responsive">
@@ -36,14 +36,15 @@
                             <tr class="text-muted small text-uppercase">
                                 <th id="thId" style="cursor: pointer;" class="user-select-none">ID ↕</th>
                                 <th id="thAd" style="cursor: pointer;" class="user-select-none">Tedarikçi Adı ↕</th>
-                                <th class="user-select-none">İletişim</th>
-                                <th class="text-center user-select-none">Vergi No</th>
-                                <th class="text-end" id="durumBasligi">Durum</th>
+                                <th class="user-select-none">İlgili Kişi</th>
+                                <th class="user-select-none">Telefon</th>
+                                <th class="user-select-none">Vergi No</th>
+                                <th class="text-end" id="islemSutunuBasligi">İşlem</th>
                             </tr>
                         </thead>
-                        <tbody id="tedarikciTablosuGövdesi">
+                        <tbody id="tedarikciTablosuGovdesi">
                             <tr>
-                                <td colspan="4" class="text-center text-muted py-4"> Yükleniyor... </td>
+                                <td colspan="6" class="text-center text-muted py-4"> Yükleniyor... </td>
                             </tr>
                         </tbody>
                     </table>
@@ -62,19 +63,34 @@
                 </div>
                 <div class="modal-body p-4">
                     <form id="tedarikciFormu">
+                        <input type="hidden" id="tedarikciId">
                         <div class="mb-3">
-                            <label class="form-label text-muted small fw-bold">Tedarikçi Adı</label>
-                            <input type="text" class="form-control" id="tedarikciAdi" placeholder="Örn: ABC A.S." required>
+                            <label class="form-label text-muted small fw-bold">Tedarikçi Adı <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="tedarikciAdi" placeholder="Örn: ABC Ltd. Şti." required>
                         </div>
                         <div class="mb-3">
-                            <label class="form-label text-muted small fw-bold">İletişim Bilgisi</label>
-                            <input type="text" class="form-control" id="tedarikciIletisim" placeholder="Örn: 0555...">
+                            <label class="form-label text-muted small fw-bold">İlgili Kişi</label>
+                            <input type="text" class="form-control" id="tedarikciIlgiliKisi" placeholder="Örn: Ad Soyad">
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label text-muted small fw-bold">Telefon</label>
+                                <input type="text" class="form-control" id="tedarikciTelefon" placeholder="Örn: 0555 555 55 55">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label text-muted small fw-bold">E-posta</label>
+                                <input type="text" class="form-control" id="tedarikciEposta" placeholder="Örn: info@abc.com">
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label text-muted small fw-bold">Adres</label>
+                            <textarea class="form-control" id="tedarikciAdres" rows="2" placeholder="Firma adresi..."></textarea>
                         </div>
                         <div class="mb-4">
                             <label class="form-label text-muted small fw-bold">Vergi No</label>
                             <input type="text" class="form-control" id="tedarikciVergiNo" placeholder="Örn: 1234567890">
                         </div>
-                        <button type="submit" id="btnTedarikciKaydet"
+                        <button type="button" id="btnTedarikciKaydet"
                             class="btn btn-primary w-100 rounded-pill py-2 fw-bold">Ekle ve Kaydet</button>
                     </form>
                 </div>
@@ -82,12 +98,37 @@
         </div>
     </div>
 
+    <div class="modal fade" id="tedarikciUrunModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow rounded-3">
+                <div class="modal-header border-bottom-0 rounded-top-3">
+                    <h5 class="modal-title fw-bold" id="tedarikciUrunModalBaslik">Tedarikçi Ürünleri</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Kapat"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <table class="table table-sm table-hover align-middle mb-0">
+                        <thead>
+                            <tr class="text-muted small text-uppercase">
+                                <th>Ürün Adı</th>
+                                <th>Barkod</th>
+                                <th>Alış Fiyatı</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tedarikciUrunListesi">
+                            <tr><td colspan="3" class="text-muted fst-italic">Yükleniyor...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="js/config.js"></script>
-    <script src="js/suppliers.js"></script>
     <script src="js/auth.js"></script>
+    <script src="js/product-detail.js"></script>
+    <script src="js/suppliers.js"></script>
 </body>
 
 </html>
-
-

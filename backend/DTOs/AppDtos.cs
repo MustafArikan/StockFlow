@@ -1,7 +1,7 @@
 namespace stok_takip.DTOs;
 
 // --- REQUEST DTOs ---
-public record CreateSupplierDto(string Name, string? ContactName, string? ContactEmail, string? ContactPhone, string? Address);
+public record CreateSupplierDto(string Name, string? ContactName, string? ContactEmail, string? ContactPhone, string? Address, string? TaxNumber);
 public record CreateAttributeRuleDto(int? CategoryId, string AttributeKey, string DataType, bool IsRequired, string? AllowedValues, string UiComponent = "textbox", decimal? MinValue = null, decimal? MaxValue = null, string TargetLevel = "Product");
 
 // --- RESPONSE DTOs ---
@@ -9,7 +9,7 @@ public record CategoryResponseDto(int Id, string Name, int? ParentId);
 public record ProductResponseDto(int Id, string Name, string Barcode, int MinStockLevel, int CategoryId, string? Attributes);
 public record WarehouseResponseDto(int Id, string Name, string? Address);
 public record LocationResponseDto(int Id, string Code, int WarehouseId);
-public record SupplierResponseDto(int Id, string Name, string? ContactName, string? ContactEmail, string? ContactPhone, string? Address);
+public record SupplierResponseDto(int Id, string Name, string? ContactName, string? ContactEmail, string? ContactPhone, string? Address, string? TaxNumber);
 public record AttributeRuleResponseDto(int Id, int? CategoryId, string AttributeKey, string DataType, bool IsRequired, string? AllowedValues, string UiComponent, decimal? MinValue, decimal? MaxValue, string TargetLevel, int DisplayOrder);
 public record UpdateRuleOrderDto(int Id, int DisplayOrder);
 public record AssetResponseDto(int Id, string SerialNumber, int ProductId, int? AssignedToId, string Status, string? Notes);
@@ -17,3 +17,7 @@ public record AssetHistoryResponseDto(int Id, int AssetId, int? UserId, string E
 public record NotificationResponseDto(int Id, string Message, string Type, string Severity, bool IsRead, System.DateTime CreatedAt);
 public record StockMovementResponseDto(int Id, int ProductId, int? UserId, string MovementType, decimal Quantity, string? Description, decimal UnitPrice, decimal TotalPrice, int? SupplierId, string? Destination, string? DocumentNumber);
 public record AuditLogResponseDto(int Id, int? UserId, string ActionType, string EntityName, int? EntityId, string? OldValues, string? NewValues, string IpAddress, System.DateTime CreatedAt);
+public record CreateProductSupplierDto(int SupplierId, decimal? PurchasePrice, string? SupplierProductCode, int? LeadTimeDays, bool IsPreferred);
+public record ProductSupplierResponseDto(int Id, int SupplierId, string SupplierName, decimal? PurchasePrice, string? SupplierProductCode, int? LeadTimeDays, bool IsPreferred);
+public record SupplierProductResponseDto(int Id, int ProductId, string ProductName, string ProductBarcode, decimal? PurchasePrice, bool IsPreferred);
+

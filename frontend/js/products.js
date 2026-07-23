@@ -11,6 +11,7 @@ let pageSize = 10;
 let aktifArama = '';
 let siralamaSutunu = 'id';
 let siralamaYonu = 'asc';
+let aktifDetayUrunId = null;
 
 // 1. URL'den search parametresini güvenli ve tek bir noktadan yakala
 const urlParams = new URLSearchParams(window.location.search);
@@ -506,6 +507,123 @@ async function dropdownKategorileriniYukle() {
         console.error("Kategori dropdown yükleme hatası:", hata);
     }
 }
+//
+async function dropdownTedarikcileriYukle() {
+    try {
+        const cevap = await fetch(`${CONFIG.API_BASE_URL}/suppliers?pageSize=1000`, {
+            method: "GET",
+            headers: { "Authorization": `Bearer ${token}` }
+        });
+
+        if (!cevap.ok) throw new Error("Tedarikçiler alınamadı.");
+
+        const data = await cevap.json();
+        const tedarikciler = data.items || data;
+        const select = document.getElementById("detayTedarikciSelect");
+
+        if (select) {
+            select.innerHTML = '<option value="">Tedarikçi seçin...</option>';
+            tedarikciler.forEach(tedarikci => {
+                const option = document.createElement("option");
+                option.value = tedarikci.id;
+                option.textContent = tedarikci.name;
+                select.appendChild(option);
+            });
+        }
+    } catch (hata) {
+        console.error("Tedarikçi dropdown yükleme hatası:", hata);
+    }
+}
+
+async function detayTedarkciYukle(productId) {
+    const tablo = document.getElementById("detayTedarikciListesi");
+    try{
+        const cevap = await fetch(`${CONFIG.API_BASE_URL}/products/${productId}/suppliers`, {
+            method: "GET",
+            headers: { "Authorization": `Bearer ${token}` }
+        });
+        if (!cevap.ok) throw new Error("Tedarikçiler alınamadı.");
+        
+        const liste = await cevap.json();
+        tablo.innerHTML = "";
+
+        if (liste.length === 0) { 
+            tablo.innerHTML = `<tr><td class="text-muted fst-italic">Bu ürüne bağlı tedarikçi yok.</td></tr>`; return; 
+        }
+
+        liste.forEach(ps => {
+            tablo.innerHTML += `<tr><td class="fw-semibold">${escapeHtml(ps.supplierName)}</td>
+                <td class="text-muted small">${ps.purchasePrice != null ? ps.purchasePrice + ' ₺' : '-'}</td>
+                <td class="text-end">
+                    <button class="btn btn-sm btn-outline-danger rounded-pill btn-tedarikci-kaldir" data-sid="${ps.supplierId}">Kaldır</button>
+                </td>
+            </tr>`;
+                
+        });
+    }catch(hata) {
+        tablo.innerHTML = `<tr><td class="text-danger">${hata.message}</td></tr>`;
+
+    }
+}
+
+document.getElementById("btnDetayTedarikciEkle").addEventListener("click", async() => {
+
+    const supplierId = document.getElementById("detayTedarikciSelect").value;
+    const fiyat = document.getElementById("detayTedarikciFiyat").value;
+    
+    if (!supplierId) {
+        alert("Lütfen tedarikçi seçin."); 
+        return;
+    }
+    const veri ={
+        supplierId: parseInt(supplierId),
+        purchasePrice: fiyat ? parseFloat(fiyat): null,
+        supplierProductCode: null,
+        leadTimeDays: null,
+        isPreferred: false
+    };
+    try{
+    const cevap = await fetch(`${CONFIG.API_BASE_URL}/products/${aktifDetayUrunId}/suppliers`, {
+        method:"POST",
+        headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify(veri)
+    });
+
+    if(!cevap.ok) throw new Error(await cevap.text() || "Bağlama başarısız.");
+
+    detayTedarkciYukle(aktifDetayUrunId);
+    document.getElementById("detayTedarikciSelect").value = "";
+    document.getElementById("detayTedarikciFiyat").value  = "";
+
+    }catch(hata){
+        alert("Hata: " + hata.message);
+    }
+});
+
+document.getElementById("detayTedarikciListesi").addEventListener("click", async(e) =>{
+    const btn = e.target.closest(".btn-tedarikci-kaldir");
+    if(!btn) return;
+    if(!confirm("Bu tedarikçi bağını kaldırmak istiyor musunuz?")) return;
+
+    const sid = btn.getAttribute("data-sid");
+    try{
+        const cevap = await fetch(`${CONFIG.API_BASE_URL}/products/${aktifDetayUrunId}/suppliers/${sid}`, {
+            method: "DELETE",
+            headers: { "Authorization": `Bearer ${token}` }
+        });
+
+        if (!cevap.ok) throw new Error("Silme başarısız.");
+        detayTedarkciYukle(aktifDetayUrunId)
+    } catch (hata) {
+        alert("Tedarikçi silinemedi: " + hata.message);
+    }
+
+})
+
+//
 
 const urunDepoSelect = document.getElementById("urunDepoId");
 if (urunDepoSelect) {
@@ -1071,6 +1189,9 @@ function urunDetayGoster(id) {
 
     const modalElement = document.getElementById("urunDetayModal");
     const modalInstance = bootstrap.Modal.getOrCreateInstance(modalElement);
+    aktifDetayUrunId = urun.id;
+    dropdownTedarikcileriYukle();
+    detayTedarkciYukle(urun.id);
     modalInstance.show();
 }
 

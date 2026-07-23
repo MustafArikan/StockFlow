@@ -192,6 +192,10 @@ namespace stok_takip.Controllers
                 using var transaction = await _context.Database.BeginTransactionAsync();
                 try
                 {
+                    Supplier? supplier = null;
+                    if (dto.SupplierId.HasValue)
+                        supplier = await _context.Suppliers.FindAsync(dto.SupplierId.Value);
+                    
                     var targetStock = await _context.StockLevels
                         .FirstOrDefaultAsync(s => s.ProductId == product.Id && s.LocationId == dto.TargetLocationId);
 
@@ -218,6 +222,8 @@ namespace stok_takip.Controllers
                             UnitPrice = dto.UnitPrice,
                             TotalPrice = dto.UnitPrice * dto.Quantity,
                             SupplierId = dto.SupplierId,
+                            SupplierName = supplier?.Name,
+                            SupplierTaxNumber = supplier?.TaxNumber,
                             DocumentNumber = dto.DocumentNumber,
                             Description = dto.Description ?? "Stock IN operation"
                         };

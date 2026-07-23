@@ -9,6 +9,10 @@ public class Supplier : BaseEntity
     [MaxLength(100)]
     public string Name { get; set; } = string.Empty;
 
+    [MaxLength(50)]
+    public string? TaxNumber {get; set;}
+
+
     [MaxLength(100)]
     public string? ContactName { get; set; }
 
@@ -21,5 +25,8 @@ public class Supplier : BaseEntity
     public string? Address { get; set; }
 
     public ICollection<StockMovement>? StockMovements { get; set; } = new List<StockMovement>();
+
+    public ICollection<ProductSupplier> ProductSuppliers{ get; set; } = new List<ProductSupplier>();
+
     
 }
