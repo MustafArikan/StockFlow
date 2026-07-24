@@ -1,4 +1,4 @@
-﻿function escapeHTML(str) {
+function escapeHTML(str) {
     return String(str)
         .replace(/&/g, "&amp;")
         .replace(/</g, "&lt;")
@@ -99,7 +99,7 @@ class DynamicUI {
                 let rMax = parseFloat(rule.maxValue);
                 if (isNaN(rMax)) rMax = 100;
                 if (rMin >= rMax) rMax = rMin + 100;
-                let decimals = rule.decimals ?? ((rule.dataType === 'decimal' || uiType === 'range_slider_decimal') ? 2 : 0);
+                let decimals = (rule.dataType === 'decimal' || uiType === 'range_slider_decimal') ? 1 : 0;
                 let rStep = decimals > 0 ? 1 / Math.pow(10, decimals) : 1;
                 inputHtml = `<div class="d-flex align-items-center dynamic-rule-input" data-rule-id="${rule.id}" data-rule-key="${escapeHtml(rule.attributeKey)}" data-rule-type="range_slider" data-min="${rMin}" data-max="${rMax}">
                                 <input type="range" class="form-range flex-grow-1 dynamic-decimal-slider-form" data-rule-id="${rule.id}" data-decimals="${decimals}" min="${rMin}" max="${rMax}" step="${rStep}" value="${rMin}" id="rule_${rule.id}">
@@ -146,7 +146,7 @@ class DynamicUI {
             inputHtml = `<input type="number" step="1" class="form-control dynamic-rule-input" data-rule-id="${rule.id}" data-rule-key="${escapeHtml(rule.attributeKey)}" data-rule-type="number" ${requiredAttr}>`;
         } 
         else if (rule.dataType === 'decimal') {
-            inputHtml = `<input type="number" step="0.01" class="form-control dynamic-rule-input" data-rule-id="${rule.id}" data-rule-key="${escapeHtml(rule.attributeKey)}" data-rule-type="decimal" ${requiredAttr}>`;
+            inputHtml = `<input type="number" step="0.1" class="form-control dynamic-rule-input" data-rule-id="${rule.id}" data-rule-key="${escapeHtml(rule.attributeKey)}" data-rule-type="decimal" ${requiredAttr}>`;
         }
         else { 
             inputHtml = `<input type="text" class="form-control dynamic-rule-input" data-rule-id="${rule.id}" data-rule-key="${escapeHtml(rule.attributeKey)}" data-rule-type="text" ${requiredAttr}>`;
@@ -216,7 +216,7 @@ class DynamicUI {
                 let rMax = parseFloat(rule.maxValue);
                 if (isNaN(rMax)) rMax = 1000;
                 if (rMin >= rMax) rMax = rMin + 1000;
-                let decimals = rule.decimals ?? ((rule.dataType === 'decimal' || uiType === 'range_slider_decimal') ? 2 : 0);
+                let decimals = (rule.dataType === 'decimal' || uiType === 'range_slider_decimal') ? 1 : 0;
                 let rStep = decimals > 0 ? 1 / Math.pow(10, decimals) : 1;
 
                 inputHtml = `<div class="px-2 pb-3 pt-1">
@@ -306,7 +306,7 @@ class DynamicUI {
                                 <input type="text" class="form-control form-control-sm text-center ms-2" style="width:100px;" id="prev_num" value="${escapeHTML(secenekler[0])}" readonly>
                              </div>`;
             } else {
-                let step = (uiType === 'range_slider_decimal') ? 0.01 : 1;
+                let step = (uiType === 'range_slider_decimal') ? 0.1 : 1;
                 inputHtml = `<div class="d-flex align-items-center w-100">
                                 <span class="small text-muted me-2">${minVal}</span>
                                 <input type="range" class="form-range flex-grow-1 dynamic-preview-decimal-slider" min="${minVal}" max="${maxVal}" step="${step}" value="${minVal}">
