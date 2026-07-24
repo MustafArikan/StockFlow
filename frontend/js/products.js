@@ -59,12 +59,28 @@ function veriyiGuncelle() {
     // Aktif dinamik filtreleri topla
     const dynamicFilters = [];
     document.querySelectorAll('.kural-filtresi').forEach(input => {
+        const filterType = input.getAttribute('data-filter-type') || 'text';
+
+        if (filterType === 'multi_select') {
+            let secilenler = [];
+            try { secilenler = JSON.parse(input.value || '[]'); } catch (e) { secilenler = []; }
+            if (secilenler.length > 0) {
+                dynamicFilters.push({
+                    ruleId: parseInt(input.getAttribute('data-rule-id') || '0'),
+                    key: input.getAttribute('data-rule-key'),
+                    type: 'multi_select',
+                    value: secilenler.map(v => String(v).toLocaleLowerCase("tr-TR").trim())
+                });
+            }
+            return;
+        }
+
         if (input.value && input.value.trim() !== '') {
             dynamicFilters.push({
                 ruleId: parseInt(input.getAttribute('data-rule-id') || '0'),
                 key: input.getAttribute('data-rule-key'),
-                type: input.getAttribute('data-filter-type') || 'text',
-                value: input.value.toLowerCase().trim()
+                type: filterType,
+                value: input.value.toLocaleLowerCase("tr-TR").trim()
             });
         }
     });
@@ -115,8 +131,10 @@ function veriyiGuncelle() {
                     } catch(e) {
                         return false;
                     }
+                } else if (filter.type === 'multi_select') {
+                    const selectedValues = filter.value; if (selectedValues.length > 0) { const attrVal = (attr.value ?? "").toString().toLocaleLowerCase("tr-TR"); const match = selectedValues.some(v => attrVal.includes(v)); if (!match) return false; }
                 } else {
-                    if (!(attr.value ?? '').toString().toLowerCase().includes(filter.value)) {
+                    if (!(attr.value ?? "").toString().toLocaleLowerCase("tr-TR").includes(filter.value)) {
                         return false;
                     }
                 }
@@ -661,76 +679,6 @@ if (urunDepoSelect) {
             console.error("Raf dropdown yükleme hatası:", hata);
             rafSelect.innerHTML = '<option value="">Hata oluştu</option>';
         }
-    });
-}
-
-// =========================================================================
-// FİLTRELEME (TABLE ÜSTÜ) İÇİN DİNAMİK KURALLARIN YÜKLENMESİ
-// =========================================================================
-document.getElementById('filtreKategoriId')?.addEventListener('change', async function () {
-    const categoryId = this.value;
-    const filterArea = document.getElementById('dynamicFilterArea');
-    const filterContainer = document.getElementById('dynamicFilterContainer');
-
-    currentPage = 1;
-    veriyiGuncelle();
-
-    if (!categoryId) {
-        if (filterArea) filterArea.classList.add('d-none');
-        if (filterContainer) filterContainer.innerHTML = '';
-        return;
-    }
-
-    try {
-        if (filterArea) filterArea.classList.remove('d-none');
-        if (filterContainer) filterContainer.innerHTML = '<div class="col-12 text-center text-muted"><div class="spinner-border spinner-border-sm me-2"></div>Özellikler yükleniyor...</div>';
-
-        const rules = await apiRequest(`/attribute-rules/category/${categoryId}`, 'GET');
-
-        filterContainer.innerHTML = '';
-
-        const validRules = rules.filter(r => r.targetLevel !== "Asset");
-
-        if (validRules.length === 0) {
-            filterContainer.innerHTML = '<div class="col-12 text-muted fst-italic">Bu kategoriye ait filtrelenebilir özellik bulunamadı.</div>';
-            return;
-        }
-
-        validRules.forEach(rule => {
-            let options = [];
-            if (rule.allowedValues && rule.allowedValues !== "[]") {
-                try { options = JSON.parse(rule.allowedValues); }
-                catch (e) { options = rule.allowedValues.split(',').map(s => s.trim()); }
-            }
-
-            let inputHtml = DynamicUI.renderFilterInput(rule, options, escapeHtml);
-
-            const div = document.createElement('div');
-            div.className = 'col-md-3 mb-2';
-            div.innerHTML = `<label class="form-label small fw-bold mb-1">${escapeHtml(rule.attributeKey)}</label>${inputHtml}`;
-            filterContainer.appendChild(div);
-        });
-
-        document.querySelectorAll('.kural-filtresi').forEach(el => {
-            el.addEventListener('input', () => { currentPage = 1; veriyiGuncelle(); });
-            el.addEventListener('change', () => { currentPage = 1; veriyiGuncelle(); });
-        });
-
-    } catch (e) {
-        console.error("Filtre kuralları yüklenirken hata:", e);
-        if (filterContainer) filterContainer.innerHTML = '<div class="col-12 text-danger">Özellikler yüklenemedi.</div>';
-    }
-});
-
-const btnFiltreleriTemizle = document.getElementById("btnFiltreleriTemizle");
-if (btnFiltreleriTemizle) {
-    btnFiltreleriTemizle.addEventListener("click", () => {
-        document.getElementById("aramaKutusu").value = "";
-        aktifArama = "";
-        buildCategoryCascader('filtreKategoriContainer', 'filtreKategoriId', null, true);
-        document.querySelectorAll('.kural-filtresi').forEach(input => { input.value = ""; });
-        currentPage = 1;
-        veriyiGuncelle();
     });
 }
 
@@ -1347,41 +1295,6 @@ async function dropdownDepolariYukle() {
     }
 }
 
-document.getElementById("urunDepoId").addEventListener("change", async function () {
-    const warehouseId = this.value;
-    const rafSelect = document.getElementById("urunRafId");
-
-    if (!warehouseId) {
-        rafSelect.innerHTML = '<option value="">Depo bekleniyor...</option>';
-        rafSelect.disabled = true;
-        return;
-    }
-
-    try {
-        rafSelect.disabled = false;
-        rafSelect.innerHTML = '<option value="">Yükleniyor...</option>';
-        const data = await apiRequest(`/locations/by-warehouse/${warehouseId}?pageSize=1000`, 'GET');
-        const raflar = data.items || data;
-
-        rafSelect.innerHTML = '<option value="">Raf seçin...</option>';
-        if (raflar.length === 0) {
-            rafSelect.innerHTML = '<option value="">Bu depoda raf yok</option>';
-            rafSelect.disabled = true;
-            return;
-        }
-
-        raflar.forEach(raf => {
-            const option = document.createElement("option");
-            option.value = raf.id;
-            option.textContent = escapeHtml(raf.code);
-            rafSelect.appendChild(option);
-        });
-    } catch (hata) {
-        console.error("Raf dropdown yükleme hatası:", hata);
-        rafSelect.innerHTML = '<option value="">Hata oluştu</option>';
-    }
-});
-
 dropdownDepolariYukle();
 
 
@@ -1472,8 +1385,12 @@ document.getElementById('filtreKategoriId')?.addEventListener('change', async fu
                         if (handle === 0 && lblMin) lblMin.innerText = optionsArr[minIdx];
                         if (handle === 1 && lblMax) lblMax.innerText = optionsArr[maxIdx];
 
-                        let validValues = optionsArr.slice(minIdx, maxIdx + 1).map(v => String(v).toLowerCase());
-                        hidden.value = JSON.stringify(validValues);
+                        if (minIdx === 0 && maxIdx === optionsArr.length - 1) {
+                            hidden.value = "";
+                        } else {
+                            let validValues = optionsArr.slice(minIdx, maxIdx + 1).map(v => String(v).toLowerCase());
+                            hidden.value = JSON.stringify(validValues);
+                        }
                     });
 
                     el.noUiSlider.on('change', function () {
@@ -1502,7 +1419,14 @@ document.getElementById('filtreKategoriId')?.addEventListener('change', async fu
                     el.noUiSlider.on('update', function (values, handle) {
                         if (handle === 0) { if(minIn) minIn.value = values[0]; }
                         else { if(maxIn) maxIn.value = values[1]; }
-                        hidden.value = `${minIn ? minIn.value : values[0]}-${maxIn ? maxIn.value : values[1]}`;
+                        
+                        let currentMin = parseFloat(values[0]);
+                        let currentMax = parseFloat(values[1]);
+                        if (currentMin === min && currentMax === max) {
+                            hidden.value = "";
+                        } else {
+                            hidden.value = `${minIn ? minIn.value : values[0]}-${maxIn ? maxIn.value : values[1]}`;
+                        }
                     });
                     
                     el.noUiSlider.on('change', function () {
