@@ -656,6 +656,61 @@ async function kurallariYukle(categoryId) {
     }
 }
 
+// ==========================================
+// KURAL TİPİ VE ÖNİZLEME TETİKLEYİCİLERİ
+// ==========================================
+function gorselOnizlemeGuncelle() {
+    const tip = document.getElementById("kuralTip").value;
+    const seceneklerStr = document.getElementById("kuralSecenekler").value;
+    let secenekler = [];
+    if (seceneklerStr.trim() !== "") {
+        secenekler = seceneklerStr.split(',').map(s => s.trim()).filter(s => s.length > 0);
+    }
+    const minVal = document.getElementById("kuralMin").value || 0;
+    const maxVal = document.getElementById("kuralMax").value || 100;
+    
+    const previewHtml = DynamicUI.renderPreviewInput(tip, secenekler, minVal, maxVal, escapeHtml);
+    
+    const previewBox = document.getElementById("inlinePreviewBox");
+    const previewContent = document.getElementById("inlinePreviewContent");
+    
+    if (previewHtml) {
+        previewContent.innerHTML = previewHtml;
+        previewBox.classList.remove("d-none");
+    } else {
+        previewBox.classList.add("d-none");
+    }
+}
+
+document.getElementById("kuralTip").addEventListener("change", function() {
+    const tip = this.value;
+    const seceneklerDiv = document.getElementById("kuralSeceneklerDiv");
+    const minDiv = document.getElementById("kuralMinDiv");
+    const maxDiv = document.getElementById("kuralMaxDiv");
+    
+    seceneklerDiv.classList.add("d-none");
+    minDiv.classList.add("d-none");
+    maxDiv.classList.add("d-none");
+    
+    const secenekliTipler = ["dropdown", "icon_dropdown", "searchable_dropdown", "radio", "segmented_button", "checkbox_group", "color_picker"];
+    const rangeTipler = ["slider", "range_slider_integer", "range_slider_decimal"];
+    
+    if (secenekliTipler.includes(tip)) {
+        seceneklerDiv.classList.remove("d-none");
+    }
+    
+    if (rangeTipler.includes(tip)) {
+        minDiv.classList.remove("d-none");
+        maxDiv.classList.remove("d-none");
+    }
+    
+    gorselOnizlemeGuncelle();
+});
+
+document.getElementById("kuralSecenekler").addEventListener("input", gorselOnizlemeGuncelle);
+document.getElementById("kuralMin").addEventListener("input", gorselOnizlemeGuncelle);
+document.getElementById("kuralMax").addEventListener("input", gorselOnizlemeGuncelle);
+
 document.getElementById("btnKuralEkle").addEventListener("click", async () => {
     const categoryId = document.getElementById("aktifKuralKategoriId").value;
     const attributeKey = document.getElementById("kuralAd").value.trim();
