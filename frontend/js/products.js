@@ -712,7 +712,8 @@ if (urunKategoriSelectForm) {
 
             let validRuleIndex = 0;
             rules.forEach(rule => {
-                if (rule.targetLevel === "Asset") return;
+                const tl = rule.targetLevel ? rule.targetLevel.toLowerCase().trim() : "";
+                if (tl === "asset" || tl === "demirbaş" || tl === "demirbas") return;
 
                 let inputHtml = '';
                 let requiredAttr = rule.isRequired ? 'required' : '';

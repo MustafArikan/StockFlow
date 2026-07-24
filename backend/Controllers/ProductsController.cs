@@ -591,6 +591,9 @@ public class ProductsController : ControllerBase
 
         foreach (var rule in rules.Where(r => r.IsRequired))
         {
+            var tl = rule.TargetLevel?.ToLower().Trim() ?? "";
+            if (tl == "asset" || tl == "demirbaş" || tl == "demirbas") continue;
+
             var exists = attributes.Any(a => a.RuleId == rule.Id && !string.IsNullOrWhiteSpace(a.Value));
             if (!exists) return $"'{rule.AttributeKey}' zorunlu bir alandır, boş bırakılamaz.";
         }
