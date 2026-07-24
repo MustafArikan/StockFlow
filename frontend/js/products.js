@@ -1185,9 +1185,11 @@ function urunDuzenle(id) {
                     } else if (type === 'range_slider') {
                         const range = input.querySelector(`input[type="range"]`);
                         if (range) {
-                            range.value = attr.value;
+                            let decimals = parseInt(range.getAttribute('data-decimals')) || 0;
+                            let formattedValue = Number(attr.value).toFixed(decimals);
+                            range.value = formattedValue;
                             const numberInput = document.getElementById(`val_${attr.ruleId}`);
-                            if(numberInput) numberInput.value = attr.value;
+                            if(numberInput) numberInput.value = formattedValue;
                         }
                     } else if (type === 'discrete_slider') {
                         const range = input.querySelector(`input[type="range"]`);
@@ -1209,6 +1211,10 @@ function urunDuzenle(id) {
                             const colorInput = input.querySelector(`input[type="color"]`);
                             if (colorInput) colorInput.value = attr.value;
                         }
+                    } else if (type === 'decimal') {
+                        input.value = Number(attr.value).toFixed(1);
+                    } else if (type === 'number') {
+                        input.value = Number(attr.value).toFixed(0);
                     } else {
                         input.value = attr.value;
                     }
