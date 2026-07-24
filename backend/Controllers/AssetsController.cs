@@ -21,7 +21,7 @@ public class AssetsController : ControllerBase
     }
 
     [HttpPost]
-    [Authorize(Roles = "admin")] 
+    [Authorize(Roles = "admin")]
     public async Task<IActionResult> CreateAsset([FromBody] CreateAssetDto dto)
     {
         var existingAsset = await _context.Assets
@@ -39,7 +39,7 @@ public class AssetsController : ControllerBase
         {
             return NotFound(new { message = "Belirtilen ürün modeli bulunamadı." });
         }
-        
+
         var newAsset = new Asset
         {
             ProductId = dto.ProductId,
@@ -47,7 +47,7 @@ public class AssetsController : ControllerBase
             Notes = dto.Notes,
             Status = "Available"
         };
-        
+
         var userIdString = User.FindFirstValue(ClaimTypes.NameIdentifier);
         int? currentUserId = null;
         if (int.TryParse(userIdString, out int uid))
@@ -69,10 +69,10 @@ public class AssetsController : ControllerBase
         await _context.SaveChangesAsync();
 
         return Ok(new { message = "Ürün başarıyla oluşturuldu.", assetId = newAsset.Id });
-    } 
+    }
 
     [HttpPut("{id}/assign")]
-    [Authorize(Roles = "admin")] 
+    [Authorize(Roles = "admin")]
     public async Task<IActionResult> AssignAsset(int id, [FromBody] AssignAssetDto dto)
     {
         var asset = await _context.Assets.FindAsync(id);
@@ -145,13 +145,13 @@ public class AssetsController : ControllerBase
             })
             .ToListAsync();
 
-            return Ok(new
-            {
-                TotalRecords = totalRecords,
-                PageNumber = pageNumber,
-                PageSize = pageSize,
-                Assets = assets
-            });
+        return Ok(new
+        {
+            TotalRecords = totalRecords,
+            PageNumber = pageNumber,
+            PageSize = pageSize,
+            Assets = assets
+        });
     }
 
     [HttpGet("{serialNumber}/timeline")]
@@ -164,22 +164,24 @@ public class AssetsController : ControllerBase
                 .ThenInclude(h => h.User)
             .AsNoTracking()
             .FirstOrDefaultAsync(a => a.SerialNumber == serialNumber);
-        
+
         if (asset == null)
         {
-            return NotFound(new {message = "Belirtilen seri numarasına/QR koda sahip ürün bulunamadı."});
+            return NotFound(new { message = "Belirtilen seri numarasına/QR koda sahip ürün bulunamadı." });
         }
 
         var timeline = asset.History
             .OrderByDescending(h => h.CreatedAt)
             .Select(h => new
-        {
-            Id = h.Id,
-            Date = h.CreatedAt,
-            EventType = h.EventType,
-            Notes = h.Notes,
-            UserName = h.User != null ? $"{h.User.FirstName} {h.User.LastName}" : "Sistem",
-        });
+            {
+                Id = h.Id,
+                Date = h.CreatedAt,
+                EventType = h.EventType,
+                Notes = h.Notes,
+                UserName = h.User != null ? $"{h.User.FirstName} {h.User.LastName}" : "Sistem",
+            }).ToList();
+        // Veriler filtrelendikten sonra .ToList() ile bellekte somut bir liste olarak alınır,
+        // böylece JSON dönüştürücü hatasız çalışır.       
 
         return Ok(new
         {
@@ -190,10 +192,10 @@ public class AssetsController : ControllerBase
                 ProductName = asset.Product != null ? asset.Product.Name : "Bilinmeyen Ürün",
                 Status = asset.Status,
                 AssignedTo = asset.AssignedTo != null ? $"{asset.AssignedTo.FirstName} {asset.AssignedTo.LastName}" : "Şu an Boşta",
-                Notes = asset.Notes,
-               },
+                Notes = asset.Notes
+            },
             Timeline = timeline
-        });
+        });        
     }
 
     [HttpPut("{id}/return")]
@@ -201,10 +203,10 @@ public class AssetsController : ControllerBase
 
     public async Task<IActionResult> ReturnAsset(int id, [FromBody] ReturnAssetDto dto)
     {
-        var asset = await _context.Assets.Include(a => a.AssignedTo).FirstOrDefaultAsync(a => a.Id ==id);
+        var asset = await _context.Assets.Include(a => a.AssignedTo).FirstOrDefaultAsync(a => a.Id == id);
         if (asset == null || asset.AssignedToId == null)
         {
-            return BadRequest(new {message = "Cihaz bulunamadı veya kimseye zimmetli değil."});
+            return BadRequest(new { message = "Cihaz bulunamadı veya kimseye zimmetli değil." });
         }
 
         var historyRecord = new AssetHistory
@@ -220,17 +222,17 @@ public class AssetsController : ControllerBase
 
         _context.AssetHistories.Add(historyRecord);
         await _context.SaveChangesAsync();
-        return Ok(new {message = "Cihaz başarıyla teslim alındı."});
+        return Ok(new { message = "Cihaz başarıyla teslim alındı." });
     }
 
-    [HttpPut("{id}/breakdown")]
+    [HttpPost("{id}/breakdown")]
     [Authorize]
-    public async Task <IActionResult> ReportBreakdown(int id, [FromBody] ReportBreakdownDto dto)
+    public async Task<IActionResult> ReportBreakdown(int id, [FromBody] ReportBreakdownDto dto)
     {
         var asset = await _context.Assets.FindAsync(id);
-        if (asset == null) return NotFound(new {message = "Cihaz bulunamadı."});
+        if (asset == null) return NotFound(new { message = "Cihaz bulunamadı." });
 
-        asset.Status = "Broken"; 
+        asset.Status = "Broken";
 
         var historyRecord = new AssetHistory
         {
@@ -243,7 +245,7 @@ public class AssetsController : ControllerBase
         _context.AssetHistories.Add(historyRecord);
         await _context.SaveChangesAsync();
 
-        return Ok(new {message = "Arıza bildirimi başarıyla kaydedildi."});
+        return Ok(new { message = "Arıza bildirimi başarıyla kaydedildi." });
     }
 
     [HttpPost("{id}/resolve")]
@@ -251,7 +253,7 @@ public class AssetsController : ControllerBase
     public async Task<IActionResult> ResolveBreakdown(int id, [FromBody] ResolveBreakdownDto dto)
     {
         var asset = await _context.Assets.FindAsync(id);
-        if (asset == null) return NotFound(new {message = "Cihaz bulunamadı."});
+        if (asset == null) return NotFound(new { message = "Cihaz bulunamadı." });
 
         asset.Status = asset.AssignedToId != null ? "In Use" : "Available";
 
@@ -266,9 +268,9 @@ public class AssetsController : ControllerBase
         _context.AssetHistories.Add(historyRecord);
         await _context.SaveChangesAsync();
 
-        return Ok(new {message = "Arıza çözümü başarıyla kaydedildi, cihaz aktif hale getirildi."});
+        return Ok(new { message = "Arıza çözümü başarıyla kaydedildi, cihaz aktif hale getirildi." });
     }
-    
+
     [HttpPost("{id}/maintenance")]
     [Authorize]
     public async Task<IActionResult> LogMaintenance(int id, [FromBody] LogMaintenanceDto dto)
@@ -293,6 +295,6 @@ public class AssetsController : ControllerBase
         _context.AssetHistories.Add(historyRecord);
         await _context.SaveChangesAsync();
 
-        return Ok(new {message = "Bakım kaydı başarıyla eklendi."});
+        return Ok(new { message = "Bakım kaydı başarıyla eklendi." });
     }
 }
