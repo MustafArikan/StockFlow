@@ -301,7 +301,7 @@ public class ProductsController : ControllerBase
 
         await _context.SaveChangesAsync();
 
-        // 🎯 Kritik Stok Kontrolü (Limit güncellendiğinde geriye dönük tarama yapar)
+        //  Kritik Stok Kontrolü (Limit güncellendiğinde geriye dönük tarama yapar)
         var totalStock = await _context.StockLevels
             .Where(sl => sl.ProductId == product.Id && !sl.IsDeleted)
             .SumAsync(sl => (int?)sl.Quantity) ?? 0;
@@ -398,7 +398,139 @@ public class ProductsController : ControllerBase
     }
 
     // =========================================================================
-    // 🎯 YENİ EKLENEN ARKA YÜZ (BACKEND) KURAL DENETİMLERİ (MD Dosyasına Göre)
+    // SKU (BARKOD) OTOMATİK ÜRETİM (Generate SKU)
+    // =========================================================================
+    [HttpPost("generate-sku")]
+    [Authorize]
+    public async Task<IActionResult> GenerateSku([FromBody] GenerateSkuDto dto)
+    {
+        var category = await _context.Categories.FindAsync(dto.CategoryId);
+        if (category == null) return BadRequest(new { message = "Kategori bulunamadı." });
+
+        // Ana (Level 2) kategoriyi bulmak için hiyerarşiyi çıkar
+        var hierarchy = new List<Category> { category };
+        var current = category;
+        while (current.ParentId.HasValue)
+        {
+            var parent = await _context.Categories.FindAsync(current.ParentId.Value);
+            if (parent == null) break;
+            hierarchy.Add(parent);
+            current = parent;
+        }
+
+        // Seçili olan kategorinin (leaf) doğrudan bir üstündeki ebeveynini baz al
+        // (Eğer zaten tek seviyeli bir kategoriyse kendisini alır)
+        var targetCategory = hierarchy.Count > 1 ? hierarchy[1] : hierarchy[0];
+
+        // Kategori adından tamamen algoritmik ve evrensel prefix (Sessiz harfleri alarak: Örn: Telefon -> TLF, Giyim -> GYM, Laptop -> LPT)
+        string prefix = ShortenValue(targetCategory.Name, 3);
+
+        // SKU'da yer alması mantıklı olan temel nitelikleri frontend'den gelen veriden direkt filtrele
+        var primaryKeywords = new[] { "marka", "model", "koleksiyon", "renk", "beden", "numara", "sezon" };
+        
+        var selectedAttrs = dto.Attributes
+            .Where(a => primaryKeywords.Any(k => a.Key.ToLower(new System.Globalization.CultureInfo("tr-TR")).Contains(k) && !a.Key.ToLower(new System.Globalization.CultureInfo("tr-TR")).Contains("ekran")))
+            .ToList();
+        
+        // Eğer hiçbir temel nitelik eşleşmediyse veya sayıca çok azsa (Örn: Sadece Marka varsa), en baştaki özellikleri ekleyerek tamamla
+        if (selectedAttrs.Count < 2 && dto.Attributes.Any())
+        {
+            var additional = dto.Attributes.Where(a => !selectedAttrs.Contains(a)).Take(3 - selectedAttrs.Count);
+            selectedAttrs.AddRange(additional);
+            
+            // Eğer display order'ı bozduysak tekrar orijinal sıraya göre diz
+            selectedAttrs = dto.Attributes.Where(a => selectedAttrs.Contains(a)).ToList();
+        }
+
+        var parts = new List<string> { prefix };
+
+        // Seçilen özellikleri kısaltarak ekle
+        foreach (var attr in selectedAttrs)
+        {
+            if (!string.IsNullOrWhiteSpace(attr.Value))
+            {
+                // Uzun metinler yerine daha mantıklı bir kırpma
+                parts.Add(ShortenValue(attr.Value, 4));
+            }
+        }
+
+        // Parçaları birleştir (Örn: TLF-APPL-İ16P-SYH)
+        string skuBase = string.Join("-", parts).ToUpper(new System.Globalization.CultureInfo("tr-TR"));
+        if (string.IsNullOrEmpty(skuBase)) skuBase = "GEN";
+
+        // Mükerrerliği önlemek için her zaman 4 haneli Sıra No ekle
+        var latestProduct = await _context.Products
+            .Where(p => p.Barcode.StartsWith(skuBase))
+            .OrderByDescending(p => p.Barcode)
+            .FirstOrDefaultAsync();
+
+        int nextSiraNo = 1;
+        if (latestProduct != null)
+        {
+            var existingParts = latestProduct.Barcode.Split('-');
+            if (existingParts.Length > 0 && int.TryParse(existingParts.Last(), out int lastSiraNo))
+            {
+                nextSiraNo = lastSiraNo + 1;
+            }
+        }
+
+        string generatedSku = $"{skuBase}-{nextSiraNo:D4}";
+
+        return Ok(new { sku = generatedSku });
+    }
+
+    private string ShortenValue(string val, int maxLength = 4)
+    {
+        if (string.IsNullOrWhiteSpace(val)) return "XXX";
+        val = val.Trim().ToUpper(new System.Globalization.CultureInfo("tr-TR"))
+                 .Replace("İ", "I").Replace("Ş", "S").Replace("Ğ", "G")
+                 .Replace("Ç", "C").Replace("Ö", "O").Replace("Ü", "U");
+        
+        if (val.Length <= maxLength) return val;
+
+        string[] words = val.Split(new[] { ' ', '-' }, StringSplitOptions.RemoveEmptyEntries);
+        var stopWords = new[] { "VE", "VEYA", "ILE", "ICIN", "&", "YADA" };
+        var filteredWords = words.Where(w => !stopWords.Contains(w)).ToArray();
+        
+        // Eğer (ve, ile gibi kelimeler atıldıktan sonra) birden fazla kelime varsa, baş harfleri al
+        if (filteredWords.Length > 1)
+        {
+            string initials = "";
+            foreach (var w in filteredWords)
+            {
+                if (char.IsDigit(w[0])) 
+                {
+                    string digits = new string(w.TakeWhile(char.IsDigit).ToArray());
+                    initials += digits;
+                }
+                else 
+                {
+                    initials += w[0];
+                }
+            }
+            if (initials.Length <= maxLength) return initials;
+            return initials.Substring(0, maxLength);
+        }
+
+        // Tek kelimeyse ilk harfi koru, sonrasındaki sesli harfleri at
+        string singleWord = filteredWords.Length == 1 ? filteredWords[0] : words[0];
+        
+        char firstChar = singleWord[0];
+        string rest = singleWord.Substring(1);
+        string restNoVowels = new string(rest.Replace(" ", "").Where(c => !"AEIOU".Contains(c)).ToArray());
+        string combined = firstChar + restNoVowels;
+
+        if (combined.Length >= 3)
+        {
+            return combined.Length > maxLength ? combined.Substring(0, maxLength) : combined;
+        }
+        
+        return singleWord.Substring(0, Math.Min(maxLength, singleWord.Length));
+    }
+
+
+    // =========================================================================
+    // YENİ EKLENEN KURAL DENETİMLERİ 
     // =========================================================================
 
     private async Task<string?> ValidateAndNormalizeAttributesAsync(List<ProductAttributeDto> attributes, int categoryId)
@@ -453,12 +585,10 @@ public class ProductsController : ControllerBase
                 if (rule.MinValue.HasValue && d < (decimal)rule.MinValue.Value) return $"'{rule.AttributeKey}' minimum {rule.MinValue} olabilir.";
                 if (rule.MaxValue.HasValue && d > (decimal)rule.MaxValue.Value) return $"'{rule.AttributeKey}' maksimum {rule.MaxValue} olabilir.";
                 
-                // MD: Ondalık yuvarlama varsa burada da yapılabilir ancak UI'dan düzgün gelmesi beklenir.
                 attr.Value = d.ToString(System.Globalization.CultureInfo.InvariantCulture);
             }
         }
 
-        // MD Kuralı: Required Check
         foreach (var rule in rules.Where(r => r.IsRequired))
         {
             var exists = attributes.Any(a => a.RuleId == rule.Id && !string.IsNullOrWhiteSpace(a.Value));

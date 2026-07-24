@@ -1492,3 +1492,83 @@ document.getElementById('btnFiltreleriTemizle')?.addEventListener('click', () =>
         }
     }
 });
+
+// =========================================================================
+// SKU ÜRETME FONKSİYONU
+// =========================================================================
+async function generateSku() {
+    const categoryId = document.getElementById("urunKategoriId")?.value;
+    if (!categoryId) {
+        alert("Lütfen SKU üretmeden önce bir kategori seçin.");
+        return;
+    }
+
+    const attributes = [];
+    const dinamikInputlar = document.querySelectorAll('.dynamic-rule-input');
+    dinamikInputlar.forEach(input => {
+        const ruleId = parseInt(input.getAttribute('data-rule-id'));
+        const key = input.getAttribute('data-rule-key');
+        const type = input.getAttribute('data-rule-type');
+        let val = "";
+        
+        if (type === "radio") {
+            const checked = input.querySelector('input[type="radio"]:checked');
+            if (checked) val = checked.value;
+        } else if (type === "checkbox_group") {
+            const checkedBoxes = Array.from(input.querySelectorAll('input[type="checkbox"]:checked')).map(cb => cb.value);
+            if (checkedBoxes.length > 0) val = checkedBoxes.join(", ");
+        } else if (type === "boolean") {
+            const checkbox = input.querySelector('input[type="checkbox"]');
+            if (checkbox) val = checkbox.checked ? "true" : "false";
+        } else if (type === "range_slider") {
+            const range = input.querySelector('input[type="range"]');
+            if (range) val = range.value;
+        } else if (type === "discrete_slider") {
+            const hidden = input.querySelector('input[type="hidden"]');
+            if (hidden) val = hidden.value;
+        } else if (type === "color_picker") {
+            const checkedRb = input.querySelector('.color-radio-item:checked');
+            if (checkedRb) val = checkedRb.value;
+            else {
+                const cPick = input.querySelector('input[type="color"]');
+                if (cPick) val = cPick.value;
+            }
+        } else {
+            val = input.value;
+        }
+        
+        if (ruleId && key && val !== "") {
+            attributes.push({ ruleId: ruleId, key: key, value: val });
+        }
+    });
+
+    const btn = document.getElementById("btnSkuUret");
+    if(btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Üretiliyor...';
+    }
+
+    try {
+        const response = await apiRequest('/products/generate-sku', 'POST', {
+            categoryId: parseInt(categoryId),
+            attributes: attributes
+        });
+
+        if (response && response.sku) {
+            document.getElementById("urunBarkod").value = response.sku;
+        }
+    } catch (hata) {
+        alert("SKU üretilirken hata oluştu: " + hata.message);
+    } finally {
+        if(btn) {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-magic"></i> SKU Üret';
+        }
+    }
+}
+
+// Event Listener for SKU Generate Button
+const btnSkuUretEl = document.getElementById('btnSkuUret');
+if (btnSkuUretEl) {
+    btnSkuUretEl.addEventListener('click', generateSku);
+}
