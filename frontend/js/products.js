@@ -1474,5 +1474,10 @@ document.getElementById('btnFiltreleriTemizle')?.addEventListener('click', () =>
         catSelect.value = '';
         const event = new Event('change');
         catSelect.dispatchEvent(event);
+        
+        // Kategori arayüzünü (Cascader) görsel olarak baştan çizerek sıfırla
+        if (typeof buildCategoryCascader === 'function') {
+            buildCategoryCascader('filtreKategoriContainer', 'filtreKategoriId', null, true);
+        }
     }
 });

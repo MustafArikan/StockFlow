@@ -1,3 +1,12 @@
+﻿function escapeHTML(str) {
+    return String(str)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+}
+
 class DynamicUI {
     // --- YENİ ÜRÜN / DÜZENLEME FORMU İÇİN (PIM) ---
     static renderFormInput(rule, options, escapeHtml) {
@@ -485,60 +494,12 @@ class DynamicUI {
         setTimeout(() => {
             if (!hiddenId.value) {
                 inputEl.value = '';
-                let rMax = secenekler.length - 1;
-                let encodedOptions = escapeHTML(JSON.stringify(secenekler));
-                inputHtml = `<div class="d-flex align-items-center w-100" data-options='${encodedOptions}'>
-                                <input type="range" class="form-range flex-grow-1 dynamic-preview-discrete-slider" min="${rMin}" max="${rMax}" step="1" value="${rMin}">
-                                <input type="text" class="form-control form-control-sm text-center ms-2" style="width:100px;" id="prev_num" value="${escapeHTML(secenekler[0])}" readonly>
-                             </div>`;
+                inputEl.classList.add('is-invalid');
             } else {
-                let step = (uiType === 'range_slider_decimal') ? 0.01 : 1;
-                inputHtml = `<div class="d-flex align-items-center w-100">
-                                <span class="small text-muted me-2">${minVal}</span>
-                                <input type="range" class="form-range flex-grow-1 dynamic-preview-decimal-slider" min="${minVal}" max="${maxVal}" step="${step}" value="${minVal}">
-                                <span class="small text-muted ms-2 me-2">${maxVal}</span>
-                                <input type="number" class="form-control form-control-sm text-center w-75px dynamic-preview-decimal-box" id="prev_num" value="${minVal}" min="${minVal}" max="${maxVal}" step="${step}">
-                             </div>`;
+                inputEl.classList.remove('is-invalid');
             }
-        }
-        else if (uiType === 'color_picker') {
-            if (secenekler && secenekler.length > 0) {
-                inputHtml = `<div class="d-flex flex-wrap">`;
-                secenekler.forEach((opt, idx) => {
-                    inputHtml += `<div class="form-check form-check-inline m-0 me-2 p-0">
-                                    <label class="form-check-label d-flex align-items-center p-1 border rounded" style="cursor:pointer;" for="prev_color_${idx}">
-                                        <input class="form-check-input ms-1 me-2" type="radio" name="prev_color" id="prev_color_${idx}">
-                                        <span class="d-inline-block rounded-circle shadow-sm" title="${escapeHTML(opt)}" style="width:20px; height:20px; background-color:${escapeHTML(opt)}; border:1px solid #ddd;"></span>
-                                    </label>
-                                  </div>`;
-                });
-                inputHtml += `</div>`;
-            } else {
-                inputHtml = `<div class="d-flex align-items-center">
-                                <input type="color" class="form-control form-control-color form-control-sm me-2" value="#ff0000" title="Örnek Renk">
-                                <span class="small text-muted">Örnek</span>
-                             </div>`;
-            }
-        }
-        else if (uiType === 'toggle_switch') {
-            inputHtml = `<div class="form-check form-switch mt-1">
-                            <input class="form-check-input" type="checkbox" id="prev_ts">
-                            <label class="form-check-label small text-muted" for="prev_ts">Evet / Açık</label>
-                         </div>`;
-        }
-        else if (uiType === 'checkbox' || uiType === 'boolean') {
-            inputHtml = `<div class="form-check mt-1">
-                            <input class="form-check-input" type="checkbox" id="prev_chk">
-                            <label class="form-check-label small text-muted" for="prev_chk">Evet / Doğru</label>
-                         </div>`;
-        }
-        else if (uiType === 'masked_textbox') {
-            inputHtml = `<input type="text" class="form-control form-control-sm" placeholder="Örn: XXXX-XXXX">`;
-        }
-        else {
-            inputHtml = `<input type="text" class="form-control form-control-sm" placeholder="Serbest metin giriniz...">`;
-        }
-        return inputHtml;
+            if(resultsUl) resultsUl.style.display = 'none';
+        }, 150);
     }
 
     // --- HELPER METHODS FOR NEW MD RULES ---
@@ -791,6 +752,27 @@ class DynamicUI {
         });
     }
 
+    static searchableFilterInput(inputEl, ruleId) {
+        try {
+            let hiddenId = document.getElementById('filter_hidden_' + ruleId);
+            let resultsUl = document.getElementById('results_filter_' + ruleId);
+            if (!hiddenId || !resultsUl) return;
+
+            let parent = inputEl.closest('.position-relative');
+            let optionsStr = parent ? parent.dataset.options : '[]';
+            
+            hiddenId.value = inputEl.value;
+            hiddenId.dispatchEvent(new Event('input', { bubbles: true }));
+
+            let q = (inputEl.value || "").toLocaleLowerCase("tr-TR").trim();
+            let options = [];
+            try { options = JSON.parse(optionsStr || '[]'); } catch(e){ }
+            
+            resultsUl.innerHTML = '';
+            if (!options || !Array.isArray(options)) options = [];
+
+            let matches = options.filter(opt => String(opt).toLocaleLowerCase("tr-TR").includes(q));
+
             matches.forEach(m => {
                 let li = document.createElement('li');
                 li.className = 'list-group-item list-group-item-action py-1 small';
@@ -888,6 +870,7 @@ if (typeof document !== 'undefined') {
         }
     });
 }
+
 
 
 
