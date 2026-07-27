@@ -181,11 +181,22 @@ function kategoriOzetiniGuncelle(filtreliListe) {
             paginationContainer.parentNode.insertBefore(ozetContainer, paginationContainer);
         }
     }
-    const aramaTerimi = document.getElementById("aramaKutusu")?.value || "Tümü";
+    
+    // Kategori adını id üzerinden bul
+    let kategoriAdi = "Tümü";
+    const seciliKategoriId = document.getElementById("filtreKategoriId")?.value;
+    
+    if (seciliKategoriId && window.tumKategoriler) {
+        const seciliKategori = window.tumKategoriler.find(c => c.id == seciliKategoriId);
+        if (seciliKategori && seciliKategori.name) {
+            kategoriAdi = seciliKategori.name;
+        }
+    }
+
     const urunCesidi = filtreliListe.length;
     const toplamFizikselStok = filtreliListe.reduce((toplam, urun) => toplam + (urun.stockQuantity || 0), 0);
 
-    ozetContainer.innerHTML = `<i class="bi bi-info-circle me-1"></i> Görüntülenen Kriter / Kategori ("${escapeHtml(aramaTerimi)}") için toplam <span class="text-primary">${urunCesidi}</span> ürün çeşidi, Toplam Stok: <span class="text-success">${toplamFizikselStok} Adet</span> listeleniyor.`;
+    ozetContainer.innerHTML = `<i class="bi bi-info-circle me-1"></i> Kategori ("${escapeHtml(kategoriAdi)}") için toplam <span class="text-primary">${urunCesidi}</span> ürün çeşidi, Toplam Stok: <span class="text-success">${toplamFizikselStok} Adet</span> listeleniyor.`;
 }
 
 // =========================================================================
