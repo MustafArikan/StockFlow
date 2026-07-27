@@ -28,7 +28,7 @@ function onScanError(errorMessage) {
 function copyResult() {
     const text = document.getElementById('result-text').innerText;
     navigator.clipboard.writeText(text).then(() => {
-        alert("Kod panoya kopyalandı!");
+        basariToast("Kod panoya kopyalandı!");
     });
 }
 

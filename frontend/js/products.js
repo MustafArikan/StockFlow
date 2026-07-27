@@ -204,7 +204,7 @@ function kategoriOzetiniGuncelle(filtreliListe) {
 // =========================================================================
 function exportProductsToExcel() {
     const productData = filtreliUrunler;
-    if (!productData || productData.length === 0) return alert("Dışa aktarılacak ürün bulunamadı.");
+    if (!productData || productData.length === 0) return uyariGoster("Dışa aktarılacak ürün bulunamadı.");
 
     const flattenedData = productData.map(p => ({
         "Sistem ID": p.id,
@@ -223,7 +223,7 @@ function exportProductsToExcel() {
 
 function exportProductsToPDF() {
     const productData = filtreliUrunler;
-    if (!productData || productData.length === 0) return alert("Dışa aktarılacak ürün bulunamadı.");
+    if (!productData || productData.length === 0) return uyariGoster("Dışa aktarılacak ürün bulunamadı.");
 
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF();
@@ -241,7 +241,7 @@ function exportProductsToPDF() {
 
 function exportProductsToCSV() {
     const productData = filtreliUrunler;
-    if (!productData || productData.length === 0) return alert("Dışa aktarılacak ürün bulunamadı.");
+    if (!productData || productData.length === 0) return uyariGoster("Dışa aktarılacak ürün bulunamadı.");
 
     let csvContent = "\uFEFF";
     csvContent += "ID;Ürün Adı;Barkod;Kritik Stok;Kategori;Mevcut Stok\n";
@@ -534,6 +534,8 @@ async function dropdownKategorileriniYukle() {
         buildCategoryCascader('filtreKategoriContainer', 'filtreKategoriId', null, true);
     } catch (hata) {
         console.error("Kategori dropdown yükleme hatası:", hata);
+        const c = document.getElementById('urunKategoriContainer');
+        if (c) c.innerHTML = '<div class="text-danger small">Kategoriler yüklenemedi!</div>';
     }
 }
 //
@@ -561,6 +563,8 @@ async function dropdownTedarikcileriYukle() {
         }
     } catch (hata) {
         console.error("Tedarikçi dropdown yükleme hatası:", hata);
+        const select = document.getElementById("detayTedarikciSelect");
+        if(select) select.innerHTML = '<option value="" disabled>Yüklenemedi!</option>';
     }
 }
 
@@ -601,7 +605,7 @@ document.getElementById("btnDetayTedarikciEkle").addEventListener("click", async
     const fiyat = document.getElementById("detayTedarikciFiyat").value;
     
     if (!supplierId) {
-        alert("Lütfen tedarikçi seçin."); 
+        uyariGoster("Lütfen tedarikçi seçin."); 
         return;
     }
     const veri ={
@@ -628,15 +632,14 @@ document.getElementById("btnDetayTedarikciEkle").addEventListener("click", async
     document.getElementById("detayTedarikciFiyat").value  = "";
 
     }catch(hata){
-        alert("Hata: " + hata.message);
+        hataGoster("Hata: " + hata.message);
     }
 });
 
 document.getElementById("detayTedarikciListesi").addEventListener("click", async(e) =>{
     const btn = e.target.closest(".btn-tedarikci-kaldir");
     if(!btn) return;
-    if(!confirm("Bu tedarikçi bağını kaldırmak istiyor musunuz?")) return;
-
+    if (!(await onayla("Bu tedarikçi bağını kaldırmak istiyor musunuz?", "Evet, kaldır"))) return;
     const sid = btn.getAttribute("data-sid");
     try{
         const cevap = await fetch(`${CONFIG.API_BASE_URL}/products/${aktifDetayUrunId}/suppliers/${sid}`, {
@@ -647,7 +650,7 @@ document.getElementById("detayTedarikciListesi").addEventListener("click", async
         if (!cevap.ok) throw new Error("Silme başarısız.");
         detayTedarkciYukle(aktifDetayUrunId)
     } catch (hata) {
-        alert("Tedarikçi silinemedi: " + hata.message);
+        hataGoster("Tedarikçi silinemedi: " + hata.message);
     }
 
 })
@@ -1072,6 +1075,7 @@ if (btnUrunKaydetEl) {
 
             document.getElementById("urunFormu").reset();
             document.getElementById("urunId").value = "";
+            basariToast(id ? "Ürün güncellendi" : "Ürün eklendi");
 
             aktifArama = "";
             window.history.pushState({}, document.title, window.location.pathname);
@@ -1080,9 +1084,9 @@ if (btnUrunKaydetEl) {
 
             urunleriYukle(currentPage);
             btnKaydet.disabled = false;
-            btnKaydet.innerText = "Ekle ve Kaydet";
+            btnKaydet.innerText = "Ekle ve Kaydet";            
         } catch (hata) {
-            alert("İşlem başarısız: " + hata.message);
+            hataGoster("İşlem başarısız: " + hata.message);
             btnKaydet.disabled = false;
             btnKaydet.innerText = id ? "Güncelle" : "Ekle ve Kaydet";
         }
@@ -1090,14 +1094,15 @@ if (btnUrunKaydetEl) {
 }
 
 async function urunSil(id) {
-    const onay = confirm("Bu ürünü silmek istediğinize emin misiniz?");
-    if (!onay) return;
+    if (!(await onayla("Bu ürünü silmek istediğinize emin misiniz?", "Evet, sil"))) return;
+
 
     try {
         await apiRequest(`/products/${id}`, 'DELETE');
         urunleriYukle(currentPage);
+        basariToast("Ürün silindi");
     } catch (hata) {
-        alert("Ürün silinemedi: " + hata.message);
+        hataGoster("Ürün silinemedi: " + hata.message);
     }
 }
 

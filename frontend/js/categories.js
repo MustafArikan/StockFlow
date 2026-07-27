@@ -403,7 +403,7 @@ document.getElementById("btnKategoriKaydet").addEventListener("click", async () 
     const btnKaydet = document.getElementById("btnKategoriKaydet");
 
     if (!name) {
-        alert("Lütfen kategori adı girin!");
+        uyariGoster("Lütfen kategori adı girin!");
         return;
     }
 
@@ -431,11 +431,12 @@ document.getElementById("btnKategoriKaydet").addEventListener("click", async () 
         if (aramaKutusu) aramaKutusu.value = "";
 
         kategorileriYukle();
+        basariToast(id ? "Kategori güncellendi" : "Kategori eklendi");
 
         btnKaydet.disabled = false;
         btnKaydet.innerText = "Ekle ve Kaydet";
     } catch (hata) {
-        alert("İşlem başarısız: " + hata.message);
+        hataGoster("İşlem başarısız: " + hata.message);
         btnKaydet.disabled = false;
         btnKaydet.innerText = id ? "Güncelle" : "Ekle ve Kaydet";
     }
@@ -460,21 +461,16 @@ async function kategoriSil(id) {
             }
             
             msg += `\nÜst kategoriyi silerseniz alt kategoriler ve bağlı ürünler de silinmiş gibi gizlenebilir!\nSilme işlemini ONAYLAMAK için alttaki kutucuğa ONAY yazın:`;
-            
-            const promptGiris = prompt(msg);
-            if (promptGiris !== "ONAY") {
-                alert("İşlem iptal edildi.");
-                return;
-            }
+            if (!(await onaylaYazarak(msg))) return;            
         } else {
-            const onay = confirm("Bu kategoriyi silmek istediğinize emin misiniz?");
-            if (!onay) return;
+            if (!(await onayla("Bu kategoriyi silmek istediğinize emin misiniz?", "Evet, sil"))) return;
         }
 
         await apiRequest(`/categories/${id}`, 'DELETE');
         kategorileriYukle();
+        basariToast("Kategori silindi");
     } catch (hata) {
-        alert("Kategori silinemedi: " + hata.message);
+        hataGoster("Kategori silinemedi: " + hata.message);
     }
 }
 
@@ -646,7 +642,7 @@ async function kurallariYukle(categoryId) {
                         await apiRequest('/attribute-rules/reorder', 'PUT', reorderData);
                     } catch (e) {
                         console.error(e);
-                        alert("Sıralama kaydedilirken hata oluştu.");
+                        hataGoster("Sıralama kaydedilirken hata oluştu.");
                     }
                 }
             });
@@ -744,14 +740,14 @@ document.getElementById("btnKuralEkle").addEventListener("click", async () => {
     }
     
     if (!attributeKey) {
-        alert("Lütfen kural (özellik) adını giriniz.");
+        uyariGoster("Lütfen kural (özellik) adını giriniz.");
         return;
     }
 
     let parsedAllowedValues = "[]";
     if (["dropdown", "icon_dropdown", "searchable_dropdown", "radio", "segmented_button", "checkbox_group", "color_picker"].includes(uiComponent)) {
         if (!allowedValues || allowedValues.trim() === "") {
-            alert("Bu tip için seçenekler zorunludur (virgülle ayırarak girin).");
+            uyariGoster("Bu tip için seçenekler zorunludur (virgülle ayırarak girin).");
             return;
         }
         if (allowedValues && allowedValues.trim() !== "") {
@@ -798,8 +794,9 @@ document.getElementById("btnKuralEkle").addEventListener("click", async () => {
         btnEkle.innerText = "+ Kuralı Ekle";
 
         kurallariYukle(categoryId);
+        basariToast("Kural kaydedildi");
     } catch (hata) {
-        alert("Hata: " + hata.message);
+        hataGoster("Hata: " + hata.message);
         btnEkle.innerText = ruleId ? "Güncelle" : "+ Kuralı Ekle";
     } finally {
         btnEkle.disabled = false;
@@ -858,8 +855,7 @@ document.getElementById("kurallarTabloGovdesi").addEventListener("click", async 
             btnEkle.innerText = "Güncelle";
         }
     } else if (btnSil) {
-        if (!confirm("Bu kuralı silmek istediğinize emin misiniz? (Ürünlerdeki veriler silinmez, sadece formdan kalkar)")) return;
-        
+        if (!(await onayla("Bu kuralı silmek istediğinize emin misiniz? (Ürünlerdeki veriler silinmez, sadece formdan kalkar)", "Evet, sil"))) return;        
         const kuralId = btnSil.getAttribute("data-id");
         btnSil.disabled = true;
         
@@ -868,9 +864,10 @@ document.getElementById("kurallarTabloGovdesi").addEventListener("click", async 
             
             const categoryId = document.getElementById("aktifKuralKategoriId").value;
             kurallariYukle(categoryId);
+            basariToast("Kural silindi");
             
         } catch (hata) {
-            alert(hata.message);
+            hataGoster(hata.message);
             btnSil.disabled = false;
         }
     }

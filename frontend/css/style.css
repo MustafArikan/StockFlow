@@ -291,6 +291,8 @@ button:disabled, .btn:disabled, .btn.disabled { cursor: not-allowed !important; 
 .dual-range input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 4px; background: transparent; border-radius: 2px; }
 .dual-range input[type=range]:first-child::-webkit-slider-runnable-track { background: #dee2e6; }
 
+/*Alertlerdeki /n için*/
+.swal2-html-container { white-space: pre-line; }
 /* Premium noUiSlider Overrides */
 .noUi-target {
     border: none;
