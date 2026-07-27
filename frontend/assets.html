@@ -5,6 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Ekipman Yönetimi - Stockflow</title>
+    <link rel="icon" href="data:;base64,iVBORw0KGgo=">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
@@ -15,45 +16,64 @@
 <body>
     <div class="container-fluid mt-4">
         <!-- Ekipman Ekleme Butonu -->
-        <div class="row justify-content-center mb-3">
-            <div class="col-md-8 col-lg-6 text-end">
-                <button class="btn btn-success fw-bold shadow-sm" data-bs-toggle="modal"
-                    data-bs-target="#createAssetModal">
-                    <i class="bi bi-plus-circle"></i> Yeni Ekipman Kaydet
-                </button>
+        <!-- ÜST BAŞLIK VE EKLEME BUTONU -->
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h1 class="fw-bold text-dark mb-0">Ekipman Yönetimi</h1>
+                <p class="text-muted mb-0">Şirket varlıklarını ve ekipman durumlarını yönetin</p>
             </div>
+            <button class="btn btn-success rounded-pill px-4 shadow-sm fw-bold" id="btnYeniEkipman"
+                data-bs-toggle="modal" data-bs-target="#createAssetModal">
+                + Yeni Ekipman Kaydet
+            </button>
         </div>
 
-        <div class="row justify-content-center">
-            <!-- 1. Cihaz Arama / QR Okutma Alanı -->
-            <div class="col-md-8 col-lg-6 mb-4">
-                <div class="card shadow-sm border-0 rounded-4">
-                    <div class="card-body p-4 text-center">
-                        <h5 class="fw-bold mb-3"><i class="bi bi-qr-code-scan"></i> Ekipman / Cihaz Sorgulama</h5>
-                        <div class="input-group input-group-lg">
-                            <span class="input-group-text bg-white"><i class="bi bi-upc-scan"></i></span>
-                            <input type="text" id="serialSearchInput" class="form-control"
-                                placeholder="Cihazın QR/Seri Numarasını okutun...">
-                            <button class="btn btn-primary" id="btnSearchAsset" type="button">Sorgula</button>
-
-                            <!-- Tüm listeyi açar -->
-                            <button class="btn btn-outline-secondary px-4 bg-white" type="button" data-bs-toggle="modal"
-                                data-bs-target="#allAssetsListModal" onclick="loadAllAssetsList()">
-                                <i class="bi bi-card-list me-1"></i> Listeden Bul
-                            </button>
+        <!-- 1. Ekipman Arama Kutusu / QR Okutma Alanı -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card bg-white border-0 shadow-sm rounded-4 p-3">
+                    <div class="row align-items-center g-2">
+                        <div class="col-md-9">
+                            <div class="position-relative">
+                                <span class="position-absolute top-50 translate-middle-y ms-3 text-muted">
+                                    <i class="bi bi-qr-code-scan"></i>
+                                </span>
+                                <input type="text" id="serialSearchInput"
+                                    class="form-control form-control-lg rounded-pill ps-5 bg-light border-0"
+                                    placeholder="Ekipmanın seri numarasını, IMEI veya QR kodunu okutun...">
+                            </div>
                         </div>
-                        <small class="text-muted d-block mt-2">İmleci kutuya bırakın ve barkod okuyucuyu
-                            tetikleyin.</small>
+                        <div class="col-md-3 d-grid">
+                            <button class="btn btn-primary btn-lg rounded-pill fw-bold shadow-sm" id="btnSearchAsset"
+                                type="button">Sorgula</button>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
 
+        <!-- ADMİNLER İÇİN GRİD (IZGARA) ALANI -->
+        <div id="adminGridContainer" class="d-none mb-4">
+            <h5 class="fw-bold mb-3 text-secondary"><i class="bi bi-grid-fill me-2"></i>Tüm Ekipmanlar</h5>
+            <div class="row g-4" id="equipmentGridCards">
+                <!-- JS ile Kartlar Buraya Dolacak -->
+            </div>
+        </div>
+
         <!-- 2. Sonuçların Gösterildiği Alan (Başlangıçta Gizli) -->
         <div class="row justify-content-center d-none" id="assetResultContainer">
-            <!-- Sol: Cihaz Özeti -->
+
+            <!-- Geri Dön Butonu -->
+            <div class="col-12 mb-3">
+                <button class="btn btn-sm btn-outline-secondary rounded-pill px-3 fw-bold" id="btnGeriDonGrid">
+                    <i class="bi bi-arrow-left"></i> Listeye Dön
+                </button>
+            </div>
+
+            <!-- Sol: Ekipman Özeti -->
             <div class="col-md-4 mb-4">
                 <div class="card shadow-sm border-0 rounded-4 sticky-top sticky-offset">
+
                     <div class="card-body p-4">
                         <div class="text-center mb-4">
                             <div class="display-1 text-primary mb-2"><i class="bi bi-laptop"></i></div>
@@ -64,10 +84,10 @@
                         <hr>
                         <div class="mb-3">
                             <small class="text-muted fw-bold d-block mb-1">Mevcut Durum</small>
-                            <h6 id="resStatus">-</h6>
+                            <div id="resStatus"> <!-- JS Buraya renkli rozet atacak --> </div>
                         </div>
                         <div>
-                            <small class="text-muted fw-bold d-block mb-1">Zimmetli Personel</small>
+                            <small class="text-muted fw-bold d-block mb-1">Kullanan Kişi</small>
                             <h6 class="text-primary fw-bold" id="resAssignedTo">-</h6>
                         </div>
                         <hr>
@@ -102,7 +122,7 @@
             <div class="col-md-6 mb-4">
                 <div class="card shadow-sm border-0 rounded-4">
                     <div class="card-header bg-white border-0 pt-4 pb-0">
-                        <h5 class="fw-bold"><i class="bi bi-clock-history"></i> Cihaz Yaşam Döngüsü</h5>
+                        <h5 class="fw-bold"><i class="bi bi-clock-history"></i> Ekipman Yaşam Döngüsü</h5>
                     </div>
                     <div class="card-body p-4">
                         <ul class="timeline" id="assetTimelineList">
@@ -114,12 +134,12 @@
         </div>
     </div>
 
-    <!-- Yeni Demirbaş Ekle Modalı -->
+    <!-- Yeni Ekipman Ekle Modalı -->
     <div class="modal fade" id="createAssetModal" tabindex="-1">
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title text-success"><i class="bi bi-plus-circle"></i> Yeni Demirbaş Kaydet</h5>
+                    <h5 class="modal-title text-success"><i class="bi bi-plus-circle"></i> Yeni Ekipman Kaydet</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
@@ -137,7 +157,7 @@
                         <label class="form-label">Seri Numarası / IMEI / Barkod <span
                                 class="text-danger">*</span></label>
                         <input type="text" id="newAssetSerial" class="form-control"
-                            placeholder="Cihazın üzerindeki benzersiz kod...">
+                            placeholder="Ekipmanın üzerindeki benzersiz kod...">
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Ek Notlar (Opsiyonel)</label>
@@ -153,17 +173,18 @@
         </div>
     </div>
 
-    <!-- Zimmetle Modalı -->
+    <!-- Kullanıcı Atama (Teslim Etme) Modalı -->
     <div class="modal fade" id="assignAssetModal" tabindex="-1">
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title text-primary"><i class="bi bi-person-plus"></i> Personele Zimmetle</h5>
+                    <h5 class="modal-title text-primary"><i class="bi bi-person-plus"></i> Kullanıcı Ata (Teslim Et)
+                    </h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
                     <div class="mb-3">
-                        <label class="form-label">Zimmetlenecek Personel <span class="text-danger">*</span></label>
+                        <label class="form-label">Atanacak Kullanıcı <span class="text-danger">*</span></label>
                         <select id="assignUserSelect" class="form-select">
                             <option value="">Yükleniyor...</option>
                         </select>
@@ -175,29 +196,31 @@
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" id="btnSubmitAssign" class="btn btn-primary w-100">Zimmeti Onayla</button>
+                    <button type="button" id="btnSubmitAssign" class="btn btn-primary w-100">Atamayı Onayla</button>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- İade Modalı -->
+    <!-- Teslim Alma Modalı -->
     <div class="modal fade" id="returnAssetModal" tabindex="-1">
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">Zimmet İadesi Al</h5>
+                    <h5 class="modal-title fw-bold text-warning"><i class="bi bi-arrow-return-left me-2"></i>
+                        Kullanıcıdan Al (Teslim Al)</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
                     <div class="mb-3">
-                        <label class="form-label">İade Notu (Opsiyonel)</label>
+                        <label class="form-label text-muted small fw-bold">Teslim Alma Notu (Opsiyonel)</label>
                         <textarea id="returnNotes" class="form-control" rows="2"
-                            placeholder="Örn: Personel işten ayrıldı, sorunsuz alındı..."></textarea>
+                            placeholder="Örn: Kullanıcı işten ayrıldı, ekipman sorunsuz teslim alındı..."></textarea>
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" id="btnSubmitReturn" class="btn btn-warning w-100">İadeyi Onayla</button>
+                    <button type="button" id="btnSubmitReturn" class="btn btn-warning w-100 fw-bold">Teslim Almayı
+                        Onayla</button>
                 </div>
             </div>
         </div>
@@ -274,43 +297,11 @@
         </div>
     </div>
 
-    <!-- Tüm Cihazları Listeden Bulma Modalı -->
-    <div class="modal fade" id="allAssetsListModal" tabindex="-1">
-        <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
-            <div class="modal-content border-0 shadow-lg rounded-4">
-                <div class="modal-header bg-light border-bottom-0 rounded-top-4">
-                    <h5 class="modal-title fw-bold text-dark"><i class="bi bi-list-ul text-primary me-2"></i> Sistemdeki
-                        Tüm Ekipmanlar</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body p-0">
-                    <div class="table-responsive">
-                        <table class="table table-hover align-middle mb-0">
-                            <thead class="table-light">
-                                <tr>
-                                    <th class="ps-4 text-muted small">SERİ NO / IMEI</th>
-                                    <th class="text-muted small">EKİPMAN ADI</th>
-                                    <th class="text-muted small">DURUM</th>
-                                    <th class="text-muted small">KULLANAN KİŞİ</th>
-                                    <th class="pe-4 text-end text-muted small">İŞLEM</th>
-                                </tr>
-                            </thead>
-                            <tbody id="allAssetsTableBody">
-                                <tr>
-                                    <td colspan="5" class="text-center text-muted py-4">Yükleniyor...</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
+    <!-- Temel JavaScript Kütüphaneleri ve Proje Scriptleri -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="js/config.js"></script>
-    <script src="js/assets.js"></script>
     <script src="js/auth.js"></script>
+    <script src="js/assets.js"></script>
 </body>
 
 </html>
