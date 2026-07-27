@@ -1,3 +1,4 @@
+using stok_takip.Constants;
  using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -33,7 +34,7 @@ public class SuppliersController : ControllerBase
 
     // Yeni Tedarikçi Ekle
     [HttpPost]
-    [Authorize(Roles = "admin")] //access token kontrolune cevir
+    [Authorize(Policy = Policies.AdminOnly)] //access token kontrolune cevir
     public async Task<IActionResult> Create([FromBody] stok_takip.DTOs.CreateSupplierDto dto)
     {
         if (string.IsNullOrWhiteSpace(dto.Name))
@@ -63,7 +64,7 @@ public class SuppliersController : ControllerBase
 
     // PUT mevcut tedarikçiyi güncelleme
     [HttpPut("{id}")]
-    [Authorize(Roles = "admin")]
+    [Authorize(Policy = Policies.AdminOnly)]
 
     public async Task<IActionResult> Update(int id, CreateSupplierDto dto)
     {
@@ -84,7 +85,7 @@ public class SuppliersController : ControllerBase
 
     // DELETE tedarikçiyi silme
     [HttpDelete("{id}")]
-    [Authorize(Roles = "admin")] 
+    [Authorize(Policy = Policies.AdminOnly)] 
     public async Task<IActionResult> Delete(int id)
     {
         var supplier = await _context.Suppliers.FindAsync(id);

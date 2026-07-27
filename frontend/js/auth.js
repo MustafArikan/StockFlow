@@ -126,6 +126,7 @@ document.addEventListener('click', async (e) => {
         } catch(e) {
             btn.disabled = false;
             btn.innerText = "SONUCUNU ANLIYORUM";
+            hataGoster(e.message);
         }
     }
 });

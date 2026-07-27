@@ -281,11 +281,12 @@ function renderProfessionalLayout() {
             <h6 class="sidebar-heading text-uppercase text-muted fw-bold px-4 mb-2 fs-07rem ls-1px">Yönetim</h6>
             <a href="warehouses.html" class="sidebar-link ${currentPath === 'warehouses.html' ? 'active' : ''}"><i class="bi bi-building"></i> <span>Depolar</span></a>
             <a href="suppliers.html" class="sidebar-link ${currentPath === 'suppliers.html' ? 'active' : ''}"><i class="bi bi-truck"></i> <span>Tedarikçiler</span></a>
-            <a href="assets.html" class="sidebar-link ${currentPath === 'assets.html' ? 'active' : ''}"><i class="bi bi-pc-display"></i> <span>Demirbaşlar</span></a>
+            <a href="assets.html" class="sidebar-link ${currentPath === 'assets.html' ? 'active' : ''}"><i class="bi bi-pc-display"></i> <span>Ekipman Yönetimi</span></a>
             
             <h6 class="sidebar-heading text-uppercase text-muted fw-bold px-4 mb-2 fs-07rem ls-1px">Sistem</h6>
             <a href="users.html" id="navUsersItem" class="sidebar-link d-none ${currentPath === 'users.html' ? 'active' : ''}"><i class="bi bi-people"></i> <span>Kullanıcılar</span></a>
-            <a href="audit-logs.html" class="sidebar-link ${currentPath === 'audit-logs.html' ? 'active' : ''}"><i class="bi bi-shield-lock"></i> <span>Sistem Logları</span></a>
+            <a href="roles.html" id="navRolesItem" class="sidebar-link d-none ${currentPath === 'roles.html' ? 'active' : ''}"><i class="bi bi-shield-lock"></i> <span>Rol ve Yetki Yönetimi</span></a>
+            <a href="audit-logs.html" class="sidebar-link ${currentPath === 'audit-logs.html' ? 'active' : ''}"><i class="bi bi-journal-text"></i> <span>Sistem Logları</span></a>
             <a href="test-scanner.html" class="sidebar-link ${currentPath === 'test-scanner.html' ? 'active' : ''}"><i class="bi bi-upc-scan"></i> <span>Barkod Okuyucu</span></a>
         </div>
     `;
@@ -367,8 +368,12 @@ function renderProfessionalLayout() {
         const role = userData.role || getUserRole();
         if (role === 'superadmin') {
             const navUsersItem = document.getElementById('navUsersItem');
+            const navRolesItem = document.getElementById('navRolesItem');
             if (navUsersItem) {
                 navUsersItem.classList.remove('d-none');
+            }
+            if (navRolesItem) {
+                navRolesItem.classList.remove('d-none');
             }
         }
     }).catch((error) => {

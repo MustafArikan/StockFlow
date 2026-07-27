@@ -181,11 +181,22 @@ function kategoriOzetiniGuncelle(filtreliListe) {
             paginationContainer.parentNode.insertBefore(ozetContainer, paginationContainer);
         }
     }
-    const aramaTerimi = document.getElementById("aramaKutusu")?.value || "Tümü";
+    
+    // Kategori adını id üzerinden bul
+    let kategoriAdi = "Tümü";
+    const seciliKategoriId = document.getElementById("filtreKategoriId")?.value;
+    
+    if (seciliKategoriId && window.tumKategoriler) {
+        const seciliKategori = window.tumKategoriler.find(c => c.id == seciliKategoriId);
+        if (seciliKategori && seciliKategori.name) {
+            kategoriAdi = seciliKategori.name;
+        }
+    }
+
     const urunCesidi = filtreliListe.length;
     const toplamFizikselStok = filtreliListe.reduce((toplam, urun) => toplam + (urun.stockQuantity || 0), 0);
 
-    ozetContainer.innerHTML = `<i class="bi bi-info-circle me-1"></i> Görüntülenen Kriter / Kategori ("${escapeHtml(aramaTerimi)}") için toplam <span class="text-primary">${urunCesidi}</span> ürün çeşidi, Toplam Stok: <span class="text-success">${toplamFizikselStok} Adet</span> listeleniyor.`;
+    ozetContainer.innerHTML = `<i class="bi bi-info-circle me-1"></i> Kategori ("${escapeHtml(kategoriAdi)}") için toplam <span class="text-primary">${urunCesidi}</span> ürün çeşidi, Toplam Stok: <span class="text-success">${toplamFizikselStok} Adet</span> listeleniyor.`;
 }
 
 // =========================================================================
@@ -193,7 +204,7 @@ function kategoriOzetiniGuncelle(filtreliListe) {
 // =========================================================================
 function exportProductsToExcel() {
     const productData = filtreliUrunler;
-    if (!productData || productData.length === 0) return alert("Dışa aktarılacak ürün bulunamadı.");
+    if (!productData || productData.length === 0) return uyariGoster("Dışa aktarılacak ürün bulunamadı.");
 
     const flattenedData = productData.map(p => ({
         "Sistem ID": p.id,
@@ -212,7 +223,7 @@ function exportProductsToExcel() {
 
 function exportProductsToPDF() {
     const productData = filtreliUrunler;
-    if (!productData || productData.length === 0) return alert("Dışa aktarılacak ürün bulunamadı.");
+    if (!productData || productData.length === 0) return uyariGoster("Dışa aktarılacak ürün bulunamadı.");
 
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF();
@@ -230,7 +241,7 @@ function exportProductsToPDF() {
 
 function exportProductsToCSV() {
     const productData = filtreliUrunler;
-    if (!productData || productData.length === 0) return alert("Dışa aktarılacak ürün bulunamadı.");
+    if (!productData || productData.length === 0) return uyariGoster("Dışa aktarılacak ürün bulunamadı.");
 
     let csvContent = "\uFEFF";
     csvContent += "ID;Ürün Adı;Barkod;Kritik Stok;Kategori;Mevcut Stok\n";
@@ -523,6 +534,8 @@ async function dropdownKategorileriniYukle() {
         buildCategoryCascader('filtreKategoriContainer', 'filtreKategoriId', null, true);
     } catch (hata) {
         console.error("Kategori dropdown yükleme hatası:", hata);
+        const c = document.getElementById('urunKategoriContainer');
+        if (c) c.innerHTML = '<div class="text-danger small">Kategoriler yüklenemedi!</div>';
     }
 }
 //
@@ -550,6 +563,8 @@ async function dropdownTedarikcileriYukle() {
         }
     } catch (hata) {
         console.error("Tedarikçi dropdown yükleme hatası:", hata);
+        const select = document.getElementById("detayTedarikciSelect");
+        if(select) select.innerHTML = '<option value="" disabled>Yüklenemedi!</option>';
     }
 }
 
@@ -590,7 +605,7 @@ document.getElementById("btnDetayTedarikciEkle").addEventListener("click", async
     const fiyat = document.getElementById("detayTedarikciFiyat").value;
     
     if (!supplierId) {
-        alert("Lütfen tedarikçi seçin."); 
+        uyariGoster("Lütfen tedarikçi seçin."); 
         return;
     }
     const veri ={
@@ -617,15 +632,14 @@ document.getElementById("btnDetayTedarikciEkle").addEventListener("click", async
     document.getElementById("detayTedarikciFiyat").value  = "";
 
     }catch(hata){
-        alert("Hata: " + hata.message);
+        hataGoster("Hata: " + hata.message);
     }
 });
 
 document.getElementById("detayTedarikciListesi").addEventListener("click", async(e) =>{
     const btn = e.target.closest(".btn-tedarikci-kaldir");
     if(!btn) return;
-    if(!confirm("Bu tedarikçi bağını kaldırmak istiyor musunuz?")) return;
-
+    if (!(await onayla("Bu tedarikçi bağını kaldırmak istiyor musunuz?", "Evet, kaldır"))) return;
     const sid = btn.getAttribute("data-sid");
     try{
         const cevap = await fetch(`${CONFIG.API_BASE_URL}/products/${aktifDetayUrunId}/suppliers/${sid}`, {
@@ -636,7 +650,7 @@ document.getElementById("detayTedarikciListesi").addEventListener("click", async
         if (!cevap.ok) throw new Error("Silme başarısız.");
         detayTedarkciYukle(aktifDetayUrunId)
     } catch (hata) {
-        alert("Tedarikçi silinemedi: " + hata.message);
+        hataGoster("Tedarikçi silinemedi: " + hata.message);
     }
 
 })
@@ -712,7 +726,8 @@ if (urunKategoriSelectForm) {
 
             let validRuleIndex = 0;
             rules.forEach(rule => {
-                if (rule.targetLevel === "Asset") return;
+                const tl = rule.targetLevel ? rule.targetLevel.toLowerCase().trim() : "";
+                if (tl === "asset" || tl === "demirbaş" || tl === "demirbas") return;
 
                 let inputHtml = '';
                 let requiredAttr = rule.isRequired ? 'required' : '';
@@ -1060,6 +1075,7 @@ if (btnUrunKaydetEl) {
 
             document.getElementById("urunFormu").reset();
             document.getElementById("urunId").value = "";
+            basariToast(id ? "Ürün güncellendi" : "Ürün eklendi");
 
             aktifArama = "";
             window.history.pushState({}, document.title, window.location.pathname);
@@ -1068,9 +1084,9 @@ if (btnUrunKaydetEl) {
 
             urunleriYukle(currentPage);
             btnKaydet.disabled = false;
-            btnKaydet.innerText = "Ekle ve Kaydet";
+            btnKaydet.innerText = "Ekle ve Kaydet";            
         } catch (hata) {
-            alert("İşlem başarısız: " + hata.message);
+            hataGoster("İşlem başarısız: " + hata.message);
             btnKaydet.disabled = false;
             btnKaydet.innerText = id ? "Güncelle" : "Ekle ve Kaydet";
         }
@@ -1078,14 +1094,15 @@ if (btnUrunKaydetEl) {
 }
 
 async function urunSil(id) {
-    const onay = confirm("Bu ürünü silmek istediğinize emin misiniz?");
-    if (!onay) return;
+    if (!(await onayla("Bu ürünü silmek istediğinize emin misiniz?", "Evet, sil"))) return;
+
 
     try {
         await apiRequest(`/products/${id}`, 'DELETE');
         urunleriYukle(currentPage);
+        basariToast("Ürün silindi");
     } catch (hata) {
-        alert("Ürün silinemedi: " + hata.message);
+        hataGoster("Ürün silinemedi: " + hata.message);
     }
 }
 
@@ -1492,3 +1509,83 @@ document.getElementById('btnFiltreleriTemizle')?.addEventListener('click', () =>
         }
     }
 });
+
+// =========================================================================
+// SKU ÜRETME FONKSİYONU
+// =========================================================================
+async function generateSku() {
+    const categoryId = document.getElementById("urunKategoriId")?.value;
+    if (!categoryId) {
+        alert("Lütfen SKU üretmeden önce bir kategori seçin.");
+        return;
+    }
+
+    const attributes = [];
+    const dinamikInputlar = document.querySelectorAll('.dynamic-rule-input');
+    dinamikInputlar.forEach(input => {
+        const ruleId = parseInt(input.getAttribute('data-rule-id'));
+        const key = input.getAttribute('data-rule-key');
+        const type = input.getAttribute('data-rule-type');
+        let val = "";
+        
+        if (type === "radio") {
+            const checked = input.querySelector('input[type="radio"]:checked');
+            if (checked) val = checked.value;
+        } else if (type === "checkbox_group") {
+            const checkedBoxes = Array.from(input.querySelectorAll('input[type="checkbox"]:checked')).map(cb => cb.value);
+            if (checkedBoxes.length > 0) val = checkedBoxes.join(", ");
+        } else if (type === "boolean") {
+            const checkbox = input.querySelector('input[type="checkbox"]');
+            if (checkbox) val = checkbox.checked ? "true" : "false";
+        } else if (type === "range_slider") {
+            const range = input.querySelector('input[type="range"]');
+            if (range) val = range.value;
+        } else if (type === "discrete_slider") {
+            const hidden = input.querySelector('input[type="hidden"]');
+            if (hidden) val = hidden.value;
+        } else if (type === "color_picker") {
+            const checkedRb = input.querySelector('.color-radio-item:checked');
+            if (checkedRb) val = checkedRb.value;
+            else {
+                const cPick = input.querySelector('input[type="color"]');
+                if (cPick) val = cPick.value;
+            }
+        } else {
+            val = input.value;
+        }
+        
+        if (ruleId && key && val !== "") {
+            attributes.push({ ruleId: ruleId, key: key, value: val });
+        }
+    });
+
+    const btn = document.getElementById("btnSkuUret");
+    if(btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Üretiliyor...';
+    }
+
+    try {
+        const response = await apiRequest('/products/generate-sku', 'POST', {
+            categoryId: parseInt(categoryId),
+            attributes: attributes
+        });
+
+        if (response && response.sku) {
+            document.getElementById("urunBarkod").value = response.sku;
+        }
+    } catch (hata) {
+        alert("SKU üretilirken hata oluştu: " + hata.message);
+    } finally {
+        if(btn) {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-magic"></i> SKU Üret';
+        }
+    }
+}
+
+// Event Listener for SKU Generate Button
+const btnSkuUretEl = document.getElementById('btnSkuUret');
+if (btnSkuUretEl) {
+    btnSkuUretEl.addEventListener('click', generateSku);
+}

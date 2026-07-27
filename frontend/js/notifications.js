@@ -124,7 +124,7 @@ async function markNotificationAsRead(id) {
 
         loadNotifications();
     } catch (error) {
-        alert("Bağlantı hatası: " + error.message);
+        hataGoster("Bağlantı hatası: " + error.message);
     }
 }
 
@@ -135,7 +135,7 @@ async function markAllNotificationsAsRead() {
         
         loadNotifications();
     } catch (error) {
-        alert("Hata: " + error.message);
+        hataGoster("Hata: " + error.message);
     }
 }
 

@@ -1,3 +1,4 @@
+using stok_takip.Constants;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -17,7 +18,7 @@ public class ProductSuppliersController : ControllerBase
 
     // ürüne tedarikçi bağla
      [HttpPost("products/{productId}/suppliers")]
-     [Authorize(Roles = "admin")]
+     [Authorize(Policy = Policies.AdminOnly)]
      public async Task<IActionResult> Link(int productId, [FromBody] CreateProductSupplierDto dto)
     {
         if (!await _context.Products.AnyAsync(p => p.Id == productId))
@@ -68,7 +69,7 @@ public class ProductSuppliersController : ControllerBase
 
     // DELETE tedarikçiye bağlı ürünü silme
     [HttpDelete("products/{productId}/suppliers/{supplierId}")]
-    [Authorize(Roles = "admin")] 
+    [Authorize(Policy = Policies.AdminOnly)] 
     public async Task<IActionResult> Delete(int productId, int supplierId)
     {
         var productSupplier = await _context.ProductSuppliers.FirstOrDefaultAsync(ps => ps.ProductId == productId && ps.SupplierId == supplierId);
