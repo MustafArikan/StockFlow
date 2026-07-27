@@ -64,11 +64,18 @@ body {
     font-size: 1.25rem;
 }
 
-/* DİKKAT: Karanlık modda sayfaların (Örn: Depolar) beyazlamasını engeller. */
+/* Karanlık modda arkaplanların beyazlamasını ve butonları düzeltir */
 [data-theme="dark"] .bg-white,
 [data-theme="dark"] .bg-light,
 [data-theme="dark"] .bg-body {
-    background-color: var(--bg-primary) !important;
+    background-color: var(--card-bg) !important;
+    color: var(--text-primary) !important;
+    border-color: var(--border-color) !important;
+}
+
+[data-theme="dark"] .btn-outline-dark {
+    color: #ececec !important;
+    border-color: #585a66 !important;
 }
 
 /* Karanlık modda metin renklerini okunabilir parlak tonlara dönüştürür. */
@@ -474,12 +481,29 @@ body {
    HTML içinde satır içi (inline) CSS yazımını engelleyerek güvenliği sağlar.
    ========================================================= */
 /* Tablo Sütun Genişliklerini Ayarlar */
-.col-tarih { width: 15%; }
-.col-kod { width: 15%; }
-.col-ad { width: 25%; }
-.col-tip { width: 15%; }
-.col-adet { width: 10%; }
-.col-personel { width: 20%; }
+.col-tarih {
+    width: 15%;
+}
+
+.col-kod {
+    width: 15%;
+}
+
+.col-ad {
+    width: 25%;
+}
+
+.col-tip {
+    width: 15%;
+}
+
+.col-adet {
+    width: 10%;
+}
+
+.col-personel {
+    width: 20%;
+}
 
 /* Sabit Ölçü ve Hizalamaları Belirler */
 .w-40px {
@@ -746,14 +770,17 @@ button:disabled,
     transition: all 0.2s;
     border-left: 4px solid transparent;
 }
+
 .role-item:hover {
     background-color: var(--bs-light);
 }
+
 .role-item.active {
     background-color: rgba(13, 110, 253, 0.05);
     border-left-color: #0d6efd;
     font-weight: 600;
 }
+
 .permission-module-card {
     border: 1px solid var(--border-color);
     background-color: var(--card-bg);
@@ -764,12 +791,14 @@ button:disabled,
     transition: transform 0.2s, box-shadow 0.2s;
     overflow: hidden;
 }
+
 .permission-module-card:hover {
     transform: translateY(-2px);
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
 }
+
 .permission-module-header {
-    background-color: rgba(0,0,0,0.02);
+    background-color: rgba(0, 0, 0, 0.02);
     border-bottom: 1px solid var(--border-color);
     padding: 1rem 1.5rem;
     border-top-left-radius: 0.75rem;
@@ -778,9 +807,11 @@ button:disabled,
     justify-content: space-between;
     align-items: center;
 }
+
 [data-theme="dark"] .permission-module-header {
-    background-color: rgba(255,255,255,0.02);
+    background-color: rgba(255, 255, 255, 0.02);
 }
+
 .permission-item {
     padding: 0.75rem 1.25rem;
     border-bottom: 1px solid var(--border-color);
@@ -789,9 +820,167 @@ button:disabled,
     align-items: center;
     transition: background-color 0.2s;
 }
+
 .permission-item:hover {
-    background-color: rgba(0,0,0,0.01);
+    background-color: rgba(0, 0, 0, 0.01);
 }
+
 .permission-item:last-child {
     border-bottom: none;
+}
+
+/* =========================================================
+   6. MODERN MOBİL UYGULAMA (APP-LIKE) OPTİMİZASYONLARI
+   ========================================================= */
+@media (max-width: 768px) {
+
+    /* --- GENEL İSKELET VE FERAH KARTLAR --- */
+    .container,
+    .container-fluid {
+        padding-left: 12px !important;
+        padding-right: 12px !important;
+    }
+
+    .card {
+        border-radius: 16px !important;
+        border: none !important;
+        box-shadow: 0 6px 18px rgba(0, 0, 0, 0.04) !important;
+        margin-bottom: 1.2rem;
+    }
+
+    [data-theme="dark"] .card {
+        background-color: #1c1d22 !important;
+        box-shadow: 0 6px 18px rgba(0, 0, 0, 0.3) !important;
+        border: 1px solid #2b2d35 !important;
+    }
+
+    .card-body,
+    .modal-body {
+        padding: 1.25rem !important;
+    }
+
+    /* --- ÜST BİRİM VE İSİM GÖRÜNÜRLÜĞÜ --- */
+    /* Mobilde ismin gizlenmesini engeller, taşarsa üç nokta yapar */
+    #userProfile {
+        display: inline-block !important;
+        max-width: 120px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        margin-left: 6px;
+        font-size: 0.8rem;
+    }
+
+    /* --- ÜST BAŞLIKLAR VE DOSYA YÜKLEME ALANI (EXCEL) --- */
+    .d-flex.justify-content-between.align-items-center.mb-4 {
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: 15px !important;
+    }
+
+    .d-flex.justify-content-between.align-items-center.mb-4>div {
+        width: 100% !important;
+    }
+
+    /* Excel yükleme input grubunun mobilde parçalanmasını engeller */
+    .d-flex.justify-content-between.align-items-center.mb-4 .input-group {
+        flex-wrap: nowrap !important;
+        width: 100% !important;
+        margin-bottom: 5px;
+    }
+
+    .d-flex.justify-content-between.align-items-center.mb-4 .input-group .form-control {
+        width: 1% !important;
+    }
+
+    .d-flex.justify-content-between.align-items-center.mb-4 button {
+        width: 100% !important;
+        padding: 12px !important;
+        border-radius: 12px !important;
+        font-weight: 600;
+    }
+
+    /* --- YATAY KAYDIRILABİLİR FİLTRE ÇİPLERİ --- */
+    .col-md-6.text-md-end.mt-3.mt-md-0.d-flex.gap-2.justify-content-md-end {
+        flex-wrap: nowrap !important;
+        overflow-x: auto;
+        padding-bottom: 8px;
+        justify-content: flex-start !important;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+    }
+
+    .col-md-6.text-md-end::-webkit-scrollbar {
+        display: none;
+    }
+
+    .filtre-elemani {
+        flex: 0 0 auto !important;
+        white-space: nowrap !important;
+        border-radius: 20px !important;
+        padding: 8px 16px !important;
+        margin: 0 !important;
+    }
+
+    /* --- TABLOLAR VE SAYFALAMA --- */
+    .table-responsive {
+        border-radius: 12px;
+        border: 1px solid var(--border-color);
+        margin-bottom: 1rem;
+        box-shadow: none !important;
+    }
+
+    .table {
+        white-space: nowrap !important;
+    }
+
+    .table th {
+        font-size: 0.75rem !important;
+        letter-spacing: 0.5px;
+        padding: 1rem 0.75rem !important;
+        background-color: rgba(0, 0, 0, 0.02) !important;
+    }
+
+    [data-theme="dark"] .table th {
+        background-color: rgba(255, 255, 255, 0.02) !important;
+    }
+
+    .table td {
+        font-size: 0.85rem !important;
+        padding: 0.85rem 0.75rem !important;
+        vertical-align: middle;
+    }
+
+    .pagination {
+        flex-wrap: wrap !important;
+        justify-content: center;
+        gap: 5px;
+    }
+
+    .page-item .page-link {
+        border-radius: 8px !important;
+        margin: 0;
+    }
+
+    .d-flex.justify-content-between.align-items-center.mt-3 {
+        flex-direction: column;
+        gap: 15px;
+        text-align: center;
+    }
+
+    /* --- GRAFİKLER VE KAMERA --- */
+    .custom-chart-wrapper {
+        min-height: 320px !important;
+        padding-bottom: 10px;
+    }
+
+    .top-products-wrapper {
+        min-height: 450px !important;
+    }
+
+    #reader video {
+        max-height: 50vh !important;
+        object-fit: cover !important;
+        border-radius: 12px;
+    }
 }
