@@ -1,3 +1,4 @@
+using stok_takip.Constants;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -9,7 +10,7 @@ namespace stok_takip.Controllers
 {
     [ApiController]
     [Route("api/audit-logs")]
-    [Authorize(Roles = "admin,superadmin")]
+    [Authorize(Policy = Policies.SuperAdminOnly)]
     public class AuditLogsController : ControllerBase
     {
         private readonly AppDbContext _context;
@@ -56,7 +57,7 @@ namespace stok_takip.Controllers
         }
 
         [HttpGet("user/{userId}")]
-        [Authorize(Roles = "superadmin")] // Sadece Super Admin rolüne sahip kullanıcılar erişebilir
+        [Authorize(Policy = Policies.SuperAdminOnly)] // Sadece Super Admin rolüne sahip kullanıcılar erişebilir
         public async Task<IActionResult> GetByUserId(int userId, [FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 50)
         {
             var query = _context.SecurityAuditLogs.AsNoTracking().Where(l => l.UserId == userId);

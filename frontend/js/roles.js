@@ -1,0 +1,463 @@
+document.addEventListener("DOMContentLoaded", () => {
+    RolesUI.init();
+    RolesUI.attachEventListeners();
+});
+
+const RolesUI = {
+    roles: [],
+    allPermissions: {},
+    selectedRoleId: null,
+    modalInstance: null,
+
+    init: async function() {
+        this.modalInstance = new bootstrap.Modal(document.getElementById('newRoleModal'));
+        await this.loadPermissions();
+        await this.loadRoles();
+    },
+
+    loadPermissions: async function() {
+        try {
+            const response = await fetch(`${CONFIG.API_BASE_URL}/roles/permissions`, {
+                headers: { "Authorization": `Bearer ${localStorage.getItem('token')}` }
+            });
+            if (!response.ok) throw new Error("Yetkiler yüklenemedi");
+            
+            // Backend might return grouped or flat array. Let's assume flat array and group it here.
+            const data = await response.json();
+            
+            if (Array.isArray(data)) {
+                this.allPermissions = {};
+                if (data.length > 0 && data[0].permissions !== undefined) {
+                    data.forEach(group => {
+                        this.allPermissions[group.module || "Genel"] = group.permissions;
+                    });
+                } else {
+                    data.forEach(p => {
+                        if (!this.allPermissions[p.module]) this.allPermissions[p.module] = [];
+                        this.allPermissions[p.module].push(p);
+                    });
+                }
+            } else {
+                this.allPermissions = data;
+            }
+            this.renderPermissionModules();
+        } catch (error) {
+            Swal.fire("Hata", error.message, "error");
+        }
+    },
+
+    loadRoles: async function() {
+        try {
+            const response = await fetch(`${CONFIG.API_BASE_URL}/roles`, {
+                headers: { "Authorization": `Bearer ${localStorage.getItem('token')}` }
+            });
+            if (!response.ok) throw new Error("Roller yüklenemedi");
+            this.roles = await response.json();
+            this.renderRolesList();
+            
+            if (this.selectedRoleId) {
+                this.selectRole(this.selectedRoleId);
+            }
+        } catch (error) {
+            document.getElementById('rolesListContainer').innerHTML = `<div class="p-3 text-danger text-center">Yükleme hatası</div>`;
+        }
+    },
+
+    renderRolesList: function() {
+        const container = document.getElementById('rolesListContainer');
+        container.innerHTML = '';
+
+        if (this.roles.length === 0) {
+            container.innerHTML = '<div class="p-4 text-center text-muted">Henüz rol bulunmuyor.</div>';
+            return;
+        }
+
+        const roleOrder = ["superadmin", "admin", "muhasebe", "operator", "depo_sorumlusu", "viewer"];
+        
+        const sortedRoles = [...this.roles].sort((a, b) => {
+            const indexA = roleOrder.indexOf(a.name.toLowerCase());
+            const indexB = roleOrder.indexOf(b.name.toLowerCase());
+            
+            if (indexA === -1 && indexB === -1) return a.name.localeCompare(b.name);
+            if (indexA === -1) return 1;
+            if (indexB === -1) return -1;
+            return indexA - indexB;
+        });
+
+        sortedRoles.forEach(role => {
+            const isSelected = this.selectedRoleId === role.id ? 'active' : '';
+            const systemBadge = role.isSystemRole ? `<span class="badge bg-danger ms-2" style="font-size: 0.65rem">Sistem</span>` : '';
+            
+            const el = document.createElement('div');
+            el.className = `role-item p-3 border-bottom d-flex justify-content-between align-items-center ${isSelected}`;
+            el.setAttribute('data-id', role.id);
+            el.innerHTML = `
+                <div>
+                    <h6 class="mb-1 fw-bold">${escapeHTML(role.name)} ${systemBadge}</h6>
+                    <small class="text-muted">${escapeHTML(role.description || '')}</small>
+                </div>
+                <span class="badge bg-light text-dark border">${role.userCount || 0} Kişi</span>
+            `;
+            container.appendChild(el);
+        });
+    },
+
+    renderPermissionModules: function() {
+        const container = document.getElementById('permissionsContainer');
+        container.innerHTML = '';
+
+        const moduleIcons = {
+            'Ana Sayfa': 'bi-house-door',
+            'Ürünler': 'bi-box-seam',
+            'Kategoriler': 'bi-tags',
+            'Stok Hareketleri': 'bi-arrow-left-right',
+            'Depolar': 'bi-buildings',
+            'Konumlar': 'bi-geo-alt',
+            'Tedarikçiler': 'bi-truck',
+            'Demirbaşlar': 'bi-pc-display',
+            'Sistem Araçları': 'bi-upc-scan',
+            'Raporlar': 'bi-file-earmark-bar-graph',
+            'Kullanıcı Yönetimi': 'bi-people',
+            'Yetkilendirme': 'bi-shield-lock',
+            'Bildirimler': 'bi-bell',
+            'Sistem': 'bi-gear',
+            'Güvenlik': 'bi-shield-check'
+        };
+
+        const logicalOrder = [
+            'Ana Sayfa', 
+            'Kategoriler', 
+            'Ürünler', 
+            'Stok Hareketleri', 
+            'Depolar', 
+            'Konumlar', 
+            'Tedarikçiler', 
+            'Demirbaşlar', 
+            'Kullanıcı Yönetimi', 
+            'Yetkilendirme', 
+            'Güvenlik',
+            'Sistem Araçları',
+            'Raporlar',
+            'Bildirimler', 
+            'Sistem'
+        ];
+
+        const modules = Object.keys(this.allPermissions).sort((a, b) => {
+            const indexA = logicalOrder.indexOf(a);
+            const indexB = logicalOrder.indexOf(b);
+            if (indexA === -1 && indexB === -1) return a.localeCompare(b);
+            if (indexA === -1) return 1;
+            if (indexB === -1) return -1;
+            return indexA - indexB;
+        });
+
+        for (const moduleName of modules) {
+            const permissions = this.allPermissions[moduleName];
+            const moduleSlug = moduleName.replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+            const iconClass = moduleIcons[moduleName] || 'bi-box';
+            
+            let html = `
+                <div class="col-12 col-lg-6">
+                    <div class="permission-module-card h-100 d-flex flex-column">
+                        <div class="permission-module-header">
+                            <h6 class="mb-0 fw-bold text-primary"><i class="bi ${iconClass} me-2 fs-5 align-middle"></i>${escapeHTML(moduleName)}</h6>
+                            <div class="form-check form-switch m-0">
+                                <input class="form-check-input" type="checkbox" id="selectAll_${moduleSlug}">
+                            </div>
+                        </div>
+                        <div class="permission-module-body flex-grow-1" id="module_body_${moduleSlug}">
+            `;
+
+            permissions.forEach(p => {
+                html += `
+                    <div class="permission-item">
+                        <div class="pe-3">
+                            <span class="fw-semibold d-block text-dark">${escapeHTML(p.name)}</span>
+                            <small class="text-muted d-block" style="font-size: 0.75rem; line-height: 1.2;">${escapeHTML(p.description || '')}</small>
+                        </div>
+                        <div class="form-check form-switch m-0 flex-shrink-0">
+                            <input class="form-check-input perm-cb module-cb-${moduleSlug}" type="checkbox" value="${p.id}" id="perm_${p.id}">
+                        </div>
+                    </div>
+                `;
+            });
+
+            html += `
+                        </div>
+                    </div>
+                </div>
+            `;
+            container.insertAdjacentHTML('beforeend', html);
+        }
+    },
+
+    toggleModule: function(moduleSlug, isChecked) {
+        const checkboxes = document.querySelectorAll(`.module-cb-${moduleSlug}`);
+        checkboxes.forEach(cb => {
+            if (!cb.disabled) cb.checked = isChecked;
+        });
+    },
+
+    checkModuleToggle: function(moduleSlug) {
+        const checkboxes = document.querySelectorAll(`.module-cb-${moduleSlug}`);
+        const selectAllToggle = document.getElementById(`selectAll_${moduleSlug}`);
+        if (!selectAllToggle) return;
+        
+        const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+        selectAllToggle.checked = allChecked;
+    },
+
+    selectRole: function(roleId) {
+        this.selectedRoleId = roleId;
+        this.renderRolesList(); // To highlight active
+
+        const role = this.roles.find(r => r.id === roleId);
+        if (!role) return;
+
+        const emptyCard = document.getElementById('emptySelectionCard');
+        const detailsCard = document.getElementById('roleDetailsCard');
+
+        emptyCard.classList.remove('d-flex');
+        emptyCard.classList.add('d-none');
+
+        detailsCard.classList.remove('d-none');
+        detailsCard.classList.add('d-flex');
+
+        document.getElementById('selectedRoleName').textContent = role.name;
+        document.getElementById('selectedRoleUserCount').textContent = `${role.userCount || 0} Kullanıcı`;
+        document.getElementById('roleId').value = role.id;
+        document.getElementById('roleDescription').value = role.description || '';
+
+        const sysBadge = document.getElementById('selectedRoleSystemBadge');
+        const delBtn = document.getElementById('btnDeleteRole');
+        
+        if (role.isSystemRole) {
+            sysBadge.classList.remove('d-none');
+            delBtn.disabled = true;
+            delBtn.title = "Sistem rolleri silinemez";
+        } else {
+            sysBadge.classList.add('d-none');
+            delBtn.disabled = false;
+            delBtn.title = "";
+        }
+
+        // Reset all checkboxes
+        document.querySelectorAll('.perm-cb').forEach(cb => {
+            cb.checked = false;
+        });
+        document.querySelectorAll('input[id^="selectAll_"]').forEach(cb => {
+            cb.checked = false;
+        });
+
+        // Check assigned permissions
+        if (role.permissionIds) {
+            role.permissionIds.forEach(permissionId => {
+                const cb = document.getElementById(`perm_${permissionId}`);
+                if (cb) cb.checked = true;
+            });
+        }
+
+        // Trigger module toggle checks
+        for (const moduleName of Object.keys(this.allPermissions)) {
+            const moduleSlug = moduleName.replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+            this.checkModuleToggle(moduleSlug);
+        }
+    },
+
+    showNewRoleModal: function() {
+        document.getElementById('newRoleForm').reset();
+        this.modalInstance.show();
+    },
+
+    createNewRole: async function() {
+        const name = document.getElementById('newRoleName').value.trim();
+        const desc = document.getElementById('newRoleDesc').value.trim();
+        
+        if (!name) return;
+
+        try {
+            const response = await fetch(`${CONFIG.API_BASE_URL}/roles`, {
+                method: 'POST',
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${localStorage.getItem('token')}`
+                },
+                body: JSON.stringify({ name: name, description: desc, permissionIds: [] })
+            });
+
+            if (!response.ok) throw new Error("Rol oluşturulamadı");
+            const newRole = await response.json();
+            
+            this.modalInstance.hide();
+            Swal.fire({
+                title: "Başarılı!",
+                text: "Yeni rol oluşturuldu. Şimdi yetkilerini ayarlayabilirsiniz.",
+                icon: "success",
+                toast: true,
+                position: 'top-end',
+                showConfirmButton: false,
+                timer: 3000
+            });
+
+            await this.loadRoles();
+            this.selectRole(newRole.id);
+
+        } catch (error) {
+            Swal.fire("Hata", error.message, "error");
+        }
+    },
+
+    saveRole: async function() {
+        const id = document.getElementById('roleId').value;
+        const desc = document.getElementById('roleDescription').value.trim();
+        const role = this.roles.find(r => r.id == id);
+        
+        if (!id || !role) return;
+
+        // Get selected permissions
+        const permissionIds = [];
+        document.querySelectorAll('.perm-cb:checked').forEach(cb => {
+            permissionIds.push(parseInt(cb.value));
+        });
+
+        try {
+            const response = await fetch(`${CONFIG.API_BASE_URL}/roles/${id}`, {
+                method: 'PUT',
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${localStorage.getItem('token')}`
+                },
+                body: JSON.stringify({ name: role.name, description: desc, permissionIds: permissionIds })
+            });
+
+            if (!response.ok) throw new Error("Rol yetkileri güncellenemedi");
+            
+            Swal.fire({
+                title: "Başarılı!",
+                text: "Rol ve yetkileri kaydedildi.",
+                icon: "success",
+                toast: true,
+                position: 'top-end',
+                showConfirmButton: false,
+                timer: 3000
+            });
+
+            await this.loadRoles();
+
+        } catch (error) {
+            Swal.fire("Hata", error.message, "error");
+        }
+    },
+
+    deleteSelectedRole: async function() {
+        const id = document.getElementById('roleId').value;
+        const role = this.roles.find(r => r.id == id);
+        
+        if (!id || !role) return;
+        
+        if (role.isSystemRole) {
+            Swal.fire("Uyarı", "Sistem rolleri silinemez.", "warning");
+            return;
+        }
+
+        if (role.userCount > 0) {
+            Swal.fire({
+                title: 'Uyarı!',
+                text: `Bu rol şu anda ${role.userCount} kullanıcıya atanmış durumda. Lütfen önce bu kullanıcıların rollerini değiştirin!`,
+                icon: 'warning',
+                confirmButtonText: 'Tamam'
+            });
+            return;
+        }
+
+        const result = await Swal.fire({
+            title: 'Emin misiniz?',
+            text: `"${role.name}" rolünü kalıcı olarak silmek üzeresiniz.`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#dc3545',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: 'Evet, Sil!',
+            cancelButtonText: 'İptal'
+        });
+
+        if (result.isConfirmed) {
+            try {
+                const response = await fetch(`${CONFIG.API_BASE_URL}/roles/${id}`, {
+                    method: 'DELETE',
+                    headers: { "Authorization": `Bearer ${localStorage.getItem('token')}` }
+                });
+
+                if (!response.ok) {
+                    const data = await response.json();
+                    throw new Error(data.message || "Silme işlemi başarısız");
+                }
+
+                Swal.fire("Silindi!", "Rol başarıyla silindi.", "success");
+                
+                this.selectedRoleId = null;
+                const emptyCard = document.getElementById('emptySelectionCard');
+                const detailsCard = document.getElementById('roleDetailsCard');
+                
+                emptyCard.classList.remove('d-none');
+                emptyCard.classList.add('d-flex');
+                
+                detailsCard.classList.remove('d-flex');
+                detailsCard.classList.add('d-none');
+                
+                await this.loadRoles();
+            } catch (error) {
+                Swal.fire("Hata", error.message, "error");
+            }
+        }
+    },
+
+    attachEventListeners: function() {
+        document.addEventListener('click', (e) => {
+            if (e.target.closest('#btnYeniRol')) {
+                this.showNewRoleModal();
+            } else if (e.target.closest('#btnDeleteRole')) {
+                this.deleteSelectedRole();
+            } else if (e.target.closest('#btnSavePermissions')) {
+                this.saveRole();
+            } else {
+                const roleItem = e.target.closest('.role-item');
+                if (roleItem) {
+                    const roleId = roleItem.getAttribute('data-id');
+                    if (roleId) this.selectRole(parseInt(roleId));
+                }
+            }
+        });
+
+        document.addEventListener('change', (e) => {
+            if (e.target.matches('input[id^="selectAll_"]')) {
+                const slug = e.target.id.replace('selectAll_', '');
+                this.toggleModule(slug, e.target.checked);
+            } else if (e.target.matches('.perm-cb')) {
+                const classes = Array.from(e.target.classList);
+                const moduleClass = classes.find(c => c.startsWith('module-cb-'));
+                if (moduleClass) {
+                    const slug = moduleClass.replace('module-cb-', '');
+                    this.checkModuleToggle(slug);
+                }
+            }
+        });
+
+        document.addEventListener('submit', (e) => {
+            if (e.target.id === 'newRoleForm') {
+                e.preventDefault();
+                this.createNewRole();
+            }
+        });
+    }
+};
+
+function escapeHTML(str) {
+    if (!str) return '';
+    return String(str)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+}

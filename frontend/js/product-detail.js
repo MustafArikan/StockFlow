@@ -75,7 +75,7 @@ const cevap = await fetch(`${CONFIG.API_BASE_URL}/products/${productId}`, {
 });
 
     if (!cevap.ok) {
-        alert("Ürün bilgisi alınamadı."); 
+        hataGoster("Ürün bilgisi alınamadı. ") 
         return; 
     }
 

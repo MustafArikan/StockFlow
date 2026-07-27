@@ -164,7 +164,7 @@ document.getElementById("btnTedarikciKaydet")?.addEventListener("click", async (
     const name = document.getElementById("tedarikciAdi").value.trim();
     const btn = document.getElementById("btnTedarikciKaydet");
 
-    if (!name) { alert("Lütfen tedarikçi adı girin!"); return; }
+    if (!name) { uyariGoster("Lütfen tedarikçi adı girin!"); return; }
 
     const veri = {
         name: name,
@@ -203,9 +203,10 @@ document.getElementById("btnTedarikciKaydet")?.addEventListener("click", async (
         const aramaKutusu = document.getElementById("aramaKutusu");
         if (aramaKutusu) aramaKutusu.value = "";
 
+        basariToast(id ? "Tedarikçi güncellendi" : "Tedarikçi eklendi");
         tedarikcileriYukle();
     } catch (hata) {
-        alert("İşlem başarısız: " + hata.message);
+        hataGoster("İşlem başarısız: " + hata.message);
     } finally {
         btn.disabled = false;
         btn.innerText = id ? "Güncelle" : "Ekle ve Kaydet";
@@ -230,7 +231,7 @@ function tedarikciDuzenle(id) {
 }
 
 async function tedarikciSil(id) {
-    if (!confirm("Bu tedarikçiyi silmek istediğinize emin misiniz?")) return;
+    if (!(await onayla("Bu tedarikçi kalıcı olarak silinecek.", "Evet, sil"))) return;
     try {
         const cevap = await fetch(`${API_URL}/${id}`, {
             method: "DELETE",
@@ -242,9 +243,11 @@ async function tedarikciSil(id) {
             return;
         }
         if (!cevap.ok) throw new Error("Silme başarısız.");
+        
+        basariToast("Tedarikçi silindi");
         tedarikcileriYukle();
     } catch (hata) {
-        alert("Tedarikçi silinemedi: " + hata.message);
+        hataGoster("Tedarikçi silinemedi: " + hata.message);
     }
 }
 
