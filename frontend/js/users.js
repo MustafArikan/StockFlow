@@ -21,6 +21,7 @@ document.addEventListener("DOMContentLoaded", () => {
         console.error("Token çözümlenemedi", e);
     }
 
+    rolleriGetir();
     kullanicilariGetir();
 
     document.getElementById("kullaniciFormu").addEventListener("submit", kullaniciKaydet);
@@ -51,6 +52,28 @@ document.addEventListener("DOMContentLoaded", () => {
 
 let currentPage = 1;
 let pageSize = 10;
+let sistemRolleri = [];
+
+async function rolleriGetir() {
+    try {
+        const response = await fetch(`${CONFIG.API_BASE_URL}/roles`, {
+            headers: { "Authorization": `Bearer ${localStorage.getItem("token")}` }
+        });
+        if (response.ok) {
+            sistemRolleri = await response.json();
+            const selectEl = document.getElementById("role");
+            if (selectEl) {
+                selectEl.innerHTML = '<option value="">Seçiniz...</option>';
+                sistemRolleri.forEach(r => {
+                    selectEl.innerHTML += `<option value="${r.id}">${escapeHtml(r.name)}</option>`;
+                });
+            }
+            kullanicilariGetir(); // Refresh if needed, or just let the main call do it
+        }
+    } catch (e) {
+        console.error("Roller getirilemedi", e);
+    }
+}
 
 async function kullanicilariGetir() {
     try {
@@ -108,17 +131,22 @@ function tabloyuDoldur(users) {
         const tr = document.createElement("tr");
         const kayitTarihi = new Date(user.createdAt).toLocaleString("tr-TR");
 
-        let rolRenk = "bg-secondary";
-        if (user.role === "superadmin") rolRenk = "bg-danger";
-        else if (user.role === "admin") rolRenk = "bg-warning text-dark";
-        else if (user.role === "operator") rolRenk = "bg-info text-dark";
+        let roleOptions = '';
+        sistemRolleri.forEach(r => {
+            const isSelected = r.id === user.roleId ? 'selected' : '';
+            roleOptions += `<option value="${r.id}" ${isSelected}>${escapeHtml(r.name)}</option>`;
+        });
 
         tr.innerHTML = `
             <td class="fw-bold">#${user.id}</td>
             <td>${escapeHtml(user.firstName)} ${escapeHtml(user.lastName)}</td>
             <td>${escapeHtml(user.email)}</td>
             <td>${escapeHtml(user.phoneNumber || "-")}</td>
-            <td><span class="badge ${rolRenk}">${user.role.toUpperCase()}</span></td>
+            <td>
+                <select class="form-select form-select-sm shadow-sm border-secondary" style="width: auto; min-width: 120px;" onchange="degistirKullaniciRolu(${user.id}, this.value)">
+                    ${roleOptions || `<option value="${user.roleId}">${escapeHtml(user.role)}</option>`}
+                </select>
+            </td>
             <td>${kayitTarihi}</td>
             <td class="text-end">
                 <button class="btn btn-sm btn-info text-white shadow-sm me-1 btn-loglar" data-id="${user.id}" data-ad="${escapeHtml(user.firstName)} ${escapeHtml(user.lastName)}">
@@ -134,6 +162,39 @@ function tabloyuDoldur(users) {
         `;
         tbody.appendChild(tr);
     });
+}
+
+async function degistirKullaniciRolu(userId, newRoleId) {
+    if(!newRoleId) return;
+    try {
+        const response = await fetch(`${CONFIG.API_BASE_URL}/users/${userId}/role`, {
+            method: 'PUT',
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${localStorage.getItem("token")}`
+            },
+            body: JSON.stringify({ roleId: parseInt(newRoleId) })
+        });
+        
+        const text = await response.text();
+        let data = {};
+        if (text) try { data = JSON.parse(text); } catch(e){}
+        
+        if (!response.ok) throw new Error(data.message || "Rol değiştirilemedi.");
+        
+        Swal.fire({
+            title: "Başarılı!",
+            text: "Kullanıcı rolü anında değiştirildi.",
+            icon: "success",
+            toast: true,
+            position: 'top-end',
+            showConfirmButton: false,
+            timer: 3000
+        });
+    } catch(err) {
+        Swal.fire('Hata', err.message, 'error');
+        kullanicilariGetir(); // Revert back the select
+    }
 }
 
 function kullaniciModalSifirla() {
@@ -162,7 +223,7 @@ async function kullaniciDuzenle(id) {
         document.getElementById("lastName").value = user.lastName;
         document.getElementById("email").value = user.email;
         document.getElementById("phoneNumber").value = user.phoneNumber || "";
-        document.getElementById("role").value = user.role;
+        document.getElementById("role").value = user.roleId || "";
 
         document.getElementById("modalBaslik").innerHTML = `<i class="bi bi-pencil-square me-2 text-primary"></i> Kullanıcı Düzenle`;
         
@@ -189,7 +250,7 @@ async function kullaniciKaydet(e) {
         lastName: document.getElementById("lastName").value,
         email: document.getElementById("email").value,
         phoneNumber: document.getElementById("phoneNumber").value,
-        role: document.getElementById("role").value
+        roleId: parseInt(document.getElementById("role").value)
     };
 
     const pwd = document.getElementById("password").value;

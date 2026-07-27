@@ -181,11 +181,22 @@ function kategoriOzetiniGuncelle(filtreliListe) {
             paginationContainer.parentNode.insertBefore(ozetContainer, paginationContainer);
         }
     }
-    const aramaTerimi = document.getElementById("aramaKutusu")?.value || "Tümü";
+    
+    // Kategori adını id üzerinden bul
+    let kategoriAdi = "Tümü";
+    const seciliKategoriId = document.getElementById("filtreKategoriId")?.value;
+    
+    if (seciliKategoriId && window.tumKategoriler) {
+        const seciliKategori = window.tumKategoriler.find(c => c.id == seciliKategoriId);
+        if (seciliKategori && seciliKategori.name) {
+            kategoriAdi = seciliKategori.name;
+        }
+    }
+
     const urunCesidi = filtreliListe.length;
     const toplamFizikselStok = filtreliListe.reduce((toplam, urun) => toplam + (urun.stockQuantity || 0), 0);
 
-    ozetContainer.innerHTML = `<i class="bi bi-info-circle me-1"></i> Görüntülenen Kriter / Kategori ("${escapeHtml(aramaTerimi)}") için toplam <span class="text-primary">${urunCesidi}</span> ürün çeşidi, Toplam Stok: <span class="text-success">${toplamFizikselStok} Adet</span> listeleniyor.`;
+    ozetContainer.innerHTML = `<i class="bi bi-info-circle me-1"></i> Kategori ("${escapeHtml(kategoriAdi)}") için toplam <span class="text-primary">${urunCesidi}</span> ürün çeşidi, Toplam Stok: <span class="text-success">${toplamFizikselStok} Adet</span> listeleniyor.`;
 }
 
 // =========================================================================
@@ -715,7 +726,8 @@ if (urunKategoriSelectForm) {
 
             let validRuleIndex = 0;
             rules.forEach(rule => {
-                if (rule.targetLevel === "Asset") return;
+                const tl = rule.targetLevel ? rule.targetLevel.toLowerCase().trim() : "";
+                if (tl === "asset" || tl === "demirbaş" || tl === "demirbas") return;
 
                 let inputHtml = '';
                 let requiredAttr = rule.isRequired ? 'required' : '';
@@ -773,7 +785,7 @@ if (urunKategoriSelectForm) {
                 else if (uiType === 'slider' || uiType === 'range_slider_integer' || uiType === 'range_slider_decimal') {
                     let rMin = rule.minValue !== null ? rule.minValue : 0;
                     let rMax = rule.maxValue !== null ? rule.maxValue : 100;
-                    let rStep = (rule.dataType === 'decimal' || uiType === 'range_slider_decimal') ? 0.01 : 1;
+                    let rStep = (rule.dataType === 'decimal' || uiType === 'range_slider_decimal') ? 0.1 : 1;
                     inputHtml = `<div class="d-flex align-items-center dynamic-rule-input" data-rule-id="${rule.id}" data-rule-key="${escapeHtml(rule.attributeKey)}" data-rule-type="range_slider" data-min="${rMin}" data-max="${rMax}">
                                     <input type="range" class="form-range flex-grow-1" min="${rMin}" max="${rMax}" step="${rStep}" value="${rMin}" id="rule_${rule.id}">
                                     <input type="number" class="form-control form-control-sm ms-2 text-center w-75px" id="val_${rule.id}" value="${rMin}" min="${rMin}" max="${rMax}" step="${rStep}">
@@ -830,7 +842,7 @@ if (urunKategoriSelectForm) {
                     inputHtml = `<input type="number" class="form-control dynamic-rule-input" data-rule-id="${rule.id}" data-rule-key="${escapeHtml(rule.attributeKey)}" data-rule-type="number" ${requiredAttr}>`;
                 }
                 else if (rule.dataType === 'decimal') {
-                    inputHtml = `<input type="number" step="0.01" class="form-control dynamic-rule-input" data-rule-id="${rule.id}" data-rule-key="${escapeHtml(rule.attributeKey)}" data-rule-type="decimal" ${requiredAttr}>`;
+                    inputHtml = `<input type="number" step="0.1" class="form-control dynamic-rule-input" data-rule-id="${rule.id}" data-rule-key="${escapeHtml(rule.attributeKey)}" data-rule-type="decimal" ${requiredAttr}>`;
                 }
                 else {
                     inputHtml = `<input type="text" class="form-control dynamic-rule-input" data-rule-id="${rule.id}" data-rule-key="${escapeHtml(rule.attributeKey)}" data-rule-type="text" ${requiredAttr}>`;
@@ -1190,9 +1202,11 @@ function urunDuzenle(id) {
                     } else if (type === 'range_slider') {
                         const range = input.querySelector(`input[type="range"]`);
                         if (range) {
-                            range.value = attr.value;
+                            let decimals = parseInt(range.getAttribute('data-decimals')) || 0;
+                            let formattedValue = Number(attr.value).toFixed(decimals);
+                            range.value = formattedValue;
                             const numberInput = document.getElementById(`val_${attr.ruleId}`);
-                            if(numberInput) numberInput.value = attr.value;
+                            if(numberInput) numberInput.value = formattedValue;
                         }
                     } else if (type === 'discrete_slider') {
                         const range = input.querySelector(`input[type="range"]`);
@@ -1214,6 +1228,10 @@ function urunDuzenle(id) {
                             const colorInput = input.querySelector(`input[type="color"]`);
                             if (colorInput) colorInput.value = attr.value;
                         }
+                    } else if (type === 'decimal') {
+                        input.value = Number(attr.value).toFixed(1);
+                    } else if (type === 'number') {
+                        input.value = Number(attr.value).toFixed(0);
                     } else {
                         input.value = attr.value;
                     }
@@ -1410,12 +1428,17 @@ document.getElementById('filtreKategoriId')?.addEventListener('change', async fu
                     if (min >= max) max = min + 100;
                     let step = parseFloat(el.dataset.step) || 1;
                     
+                    let isDec = step < 1;
                     noUiSlider.create(el, {
                         start: [min, max],
                         connect: true,
                         step: step,
                         range: { 'min': min, 'max': max },
-                        tooltips: true
+                        tooltips: true,
+                        format: {
+                            to: function (value) { return Number(value).toFixed(isDec ? 1 : 0); },
+                            from: function (value) { return Number(value); }
+                        }
                     });
                     
                     let minIn = document.getElementById(`filter_min_${id}`);
@@ -1479,5 +1502,90 @@ document.getElementById('btnFiltreleriTemizle')?.addEventListener('click', () =>
         catSelect.value = '';
         const event = new Event('change');
         catSelect.dispatchEvent(event);
+        
+        // Kategori arayüzünü (Cascader) görsel olarak baştan çizerek sıfırla
+        if (typeof buildCategoryCascader === 'function') {
+            buildCategoryCascader('filtreKategoriContainer', 'filtreKategoriId', null, true);
+        }
     }
 });
+
+// =========================================================================
+// SKU ÜRETME FONKSİYONU
+// =========================================================================
+async function generateSku() {
+    const categoryId = document.getElementById("urunKategoriId")?.value;
+    if (!categoryId) {
+        alert("Lütfen SKU üretmeden önce bir kategori seçin.");
+        return;
+    }
+
+    const attributes = [];
+    const dinamikInputlar = document.querySelectorAll('.dynamic-rule-input');
+    dinamikInputlar.forEach(input => {
+        const ruleId = parseInt(input.getAttribute('data-rule-id'));
+        const key = input.getAttribute('data-rule-key');
+        const type = input.getAttribute('data-rule-type');
+        let val = "";
+        
+        if (type === "radio") {
+            const checked = input.querySelector('input[type="radio"]:checked');
+            if (checked) val = checked.value;
+        } else if (type === "checkbox_group") {
+            const checkedBoxes = Array.from(input.querySelectorAll('input[type="checkbox"]:checked')).map(cb => cb.value);
+            if (checkedBoxes.length > 0) val = checkedBoxes.join(", ");
+        } else if (type === "boolean") {
+            const checkbox = input.querySelector('input[type="checkbox"]');
+            if (checkbox) val = checkbox.checked ? "true" : "false";
+        } else if (type === "range_slider") {
+            const range = input.querySelector('input[type="range"]');
+            if (range) val = range.value;
+        } else if (type === "discrete_slider") {
+            const hidden = input.querySelector('input[type="hidden"]');
+            if (hidden) val = hidden.value;
+        } else if (type === "color_picker") {
+            const checkedRb = input.querySelector('.color-radio-item:checked');
+            if (checkedRb) val = checkedRb.value;
+            else {
+                const cPick = input.querySelector('input[type="color"]');
+                if (cPick) val = cPick.value;
+            }
+        } else {
+            val = input.value;
+        }
+        
+        if (ruleId && key && val !== "") {
+            attributes.push({ ruleId: ruleId, key: key, value: val });
+        }
+    });
+
+    const btn = document.getElementById("btnSkuUret");
+    if(btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Üretiliyor...';
+    }
+
+    try {
+        const response = await apiRequest('/products/generate-sku', 'POST', {
+            categoryId: parseInt(categoryId),
+            attributes: attributes
+        });
+
+        if (response && response.sku) {
+            document.getElementById("urunBarkod").value = response.sku;
+        }
+    } catch (hata) {
+        alert("SKU üretilirken hata oluştu: " + hata.message);
+    } finally {
+        if(btn) {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-magic"></i> SKU Üret';
+        }
+    }
+}
+
+// Event Listener for SKU Generate Button
+const btnSkuUretEl = document.getElementById('btnSkuUret');
+if (btnSkuUretEl) {
+    btnSkuUretEl.addEventListener('click', generateSku);
+}

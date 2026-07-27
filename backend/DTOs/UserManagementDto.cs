@@ -23,7 +23,7 @@ namespace stok_takip.DTOs
     public string? PhoneNumber { get; set; }
 
     [Required]
-    public string Role { get; set; } = "viewer"; // admin, superadmin, operator, viewer
+    public int RoleId { get; set; }
     }
 
     public class UpdateUserDto
@@ -43,7 +43,7 @@ namespace stok_takip.DTOs
         public string? PhoneNumber { get; set; }
 
         [Required]
-        public string Role { get; set; } = "viewer"; // admin, superadmin, operator, viewer
+        public int RoleId { get; set; }
 
         // Şifre boş bırakılırsa güncellenmeyecek
         [StringLength(100, MinimumLength = 8, ErrorMessage = "Password must be at least 8 characters.")]

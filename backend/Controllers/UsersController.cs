@@ -1,3 +1,4 @@
+using stok_takip.Constants;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -10,7 +11,7 @@ namespace stok_takip.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-[Authorize(Roles = "superadmin")] // Sadece Super Admin rolüne sahip kullanıcılar erişebilir
+[Authorize(Policy = Policies.SuperAdminOnly)] // Sadece Super Admin rolüne sahip kullanıcılar erişebilir
 public class UsersController : ControllerBase
 {
     private readonly AppDbContext _context;
@@ -42,7 +43,8 @@ public class UsersController : ControllerBase
                 u.FirstName,
                 u.LastName,
                 u.PhoneNumber,
-                u.Role,
+                RoleId = u.RoleId,
+                Role = u.Role.Name,
                 u.IsEmailConfirmed,
                 u.CreatedAt
             })
@@ -70,7 +72,8 @@ public class UsersController : ControllerBase
                 u.FirstName,
                 u.LastName,
                 u.PhoneNumber,
-                u.Role,
+                RoleId = u.RoleId,
+                Role = u.Role.Name,
                 u.IsEmailConfirmed,
                 u.CreatedAt
             })
@@ -90,13 +93,16 @@ public class UsersController : ControllerBase
             return NotFound(new {message = "Kullanıcı bulunamadı."});
         }
 
+        var newRole = await _context.AppRoles.FindAsync(dto.RoleId);
+        if (newRole == null) return BadRequest(new { message = "Geçersiz rol." });
+
         var currentUserId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-        if (currentUserId == id.ToString() && dto.Role != "admin")
+        if (currentUserId == id.ToString() && newRole.Name != "admin")
         {
             return BadRequest(new {message = "Kendi rolünüzü admin'den farklı bir role değiştiremezsiniz."});
         }
 
-        user.Role = dto.Role;
+        user.RoleId = dto.RoleId;
 
         var activeSessions = await _context.UserSessions
             .Where(s => s.UserId == id && s.IsActive)
@@ -109,7 +115,7 @@ public class UsersController : ControllerBase
 
         await _context.SaveChangesAsync();
 
-        return Ok(new {message = $"Kullanıcı rolü başarıyla '{dto.Role}' güncellendi ve aktif oturumlar sonlandırıldı."});
+        return Ok(new {message = $"Kullanıcı rolü başarıyla '{newRole.Name}' güncellendi ve aktif oturumlar sonlandırıldı."});
     }
 
     [HttpPost]
@@ -124,7 +130,7 @@ public class UsersController : ControllerBase
             LastName = dto.LastName,
             Email = dto.Email,
             PhoneNumber = dto.PhoneNumber,
-            Role = dto.Role,
+            RoleId = dto.RoleId,
             IsEmailConfirmed = true, // Superadmin tarafından oluşturulan kullanıcılar için e-posta doğrulamasını atlıyoruz
             CreatedAt = DateTime.UtcNow
         };
@@ -153,7 +159,7 @@ public class UsersController : ControllerBase
         user.LastName = dto.LastName;
         user.Email = dto.Email;
         user.PhoneNumber = dto.PhoneNumber;
-        user.Role = dto.Role;
+        user.RoleId = dto.RoleId;
 
         if (!string.IsNullOrEmpty(dto.Password))
         {
