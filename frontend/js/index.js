@@ -116,7 +116,7 @@ async function markAllAsRead() {
         await apiRequest('/notifications/read-all', 'POST');
         loadNavbarNotifications();
     } catch (error) {
-        console.error("Bildirimler okundu işaretlenemedi:", error);
+        hataGoster("Bildirim işaretlenemedi: " + error.message);
     }
 }
 
@@ -611,8 +611,7 @@ async function exportDashboardAsPdf() {
 
         pdf.save(`StockFlow_Rapor_${new Date().toISOString().slice(0, 10)}.pdf`);
     } catch (error) {
-        console.error("PDF oluşturma hatası:", error);
-        alert("PDF oluşturulurken bir hata oluştu.");
+        hataGoster("PDF oluşturma hatası: " + error.message)
     } finally {
         btn.disabled = false;
         btn.innerHTML = originalText;
@@ -621,7 +620,7 @@ async function exportDashboardAsPdf() {
 
 async function exportDashboardAsExcel() {
     if (typeof XLSX === 'undefined') {
-        alert("Excel kütüphanesi yüklenemedi!");
+        hataGoster("Excel kütüphanesi yüklenemedi!" )
         return;
     }
 
@@ -689,7 +688,7 @@ async function exportDashboardAsExcel() {
         XLSX.writeFile(wb, `StockFlow_Analiz_${new Date().toISOString().slice(0, 10)}.xlsx`);
 
     } catch (error) {
-        alert("Excel raporu oluşturulurken hata: " + error.message);
+        hataGoster("Excel raporu oluşturulurken hata: " + error.message);
     } finally {
         btn.disabled = false;
         btn.innerHTML = originalText;

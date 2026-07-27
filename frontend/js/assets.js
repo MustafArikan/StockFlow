@@ -214,7 +214,7 @@ async function searchAsset() {
         document.getElementById('serialSearchInput').value = '';
 
     } catch (error) {
-        alert(error.message);
+        hataGoster(error.message);
         document.getElementById('assetResultContainer').classList.add('d-none');
     }
 }
@@ -279,11 +279,11 @@ async function sendAssetAction(url, method, body) {
         document.querySelectorAll('textarea, input[type="date"]').forEach(el => el.value = '');
 
         // Ekrana başarı mesajı ver ve Timeline'ı (Zaman çizelgesini) güncelle!
-        alert("Harika! " + (result.message || "İşlem başarıyla tamamlandı."));
-        searchAsset();
-
+        basariToast("Harika! " + (result.message || "İşlem başarıyla tamamlandı."));
+        searchAsset(); 
+        
     } catch (e) {
-        alert("Bağlantı hatası: " + e.message);
+        hataGoster("Bağlantı hatası: " + e.message);
     }
 }
 
@@ -294,7 +294,7 @@ async function submitCreateAsset() {
     const notes = document.getElementById('newAssetNotes').value.trim();
 
     if (!productId || !serialNumber) {
-        return alert("Lütfen Ürün seçin ve Seri Numarası girin!");
+        return uyariGoster("Lütfen Ürün seçin ve Seri Numarası girin!");
     }
 
     try {
@@ -303,9 +303,9 @@ async function submitCreateAsset() {
             serialNumber: serialNumber,
             notes: notes
         }) || {};
-
-        alert("Harika! Yeni Demirbaş başarıyla sisteme kaydedildi.");
-
+        
+        basariToast("Harika! Yeni Demirbaş başarıyla sisteme kaydedildi.");
+        
         // Modalı kapat
         const modalInstance = bootstrap.Modal.getInstance(document.getElementById('createAssetModal'));
         if (modalInstance) modalInstance.hide();
@@ -320,7 +320,8 @@ async function submitCreateAsset() {
         searchAsset();
 
     } catch (e) {
-        alert("Bağlantı hatası: " + e.message);
+        hataGoster("Bağlantı hatası: " + e.message);
+        
     }
 }
 

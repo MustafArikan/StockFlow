@@ -58,10 +58,11 @@ function initializeAndStart(elementId, onScanSuccess, onScanFailure) {
         }).catch((err) => {
             console.error("Failed to start camera: ", err);
             // Kullanıcıya uyarı göster
-            alert("Failed to access camera. Please check camera permissions.");
+            hataGoster("Failed to access camera. Please check camera permissions." + err.message) 
         });
     } catch (e) {
-        console.error("Failed to initialize scanner: ", e);
+        hataGoster("Tarayıcı başlatılamadı: " + e.message);
+
     }
 }
 
