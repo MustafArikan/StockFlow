@@ -8,11 +8,11 @@
     --text-primary: #1a1d23;
     --text-secondary: #5b6270;
     --border-color: #d8dce2;
-    
+
     /* İskelet (Layout) Ölçüleri */
     --sidebar-width: 260px;
-    --sidebar-bg: #181920; 
-    --topbar-bg: #ffffff;  
+    --sidebar-bg: #181920;
+    --topbar-bg: #ffffff;
     --topbar-height: 70px;
 }
 
@@ -20,11 +20,11 @@
 [data-theme="dark"],
 [data-bs-theme="dark"] {
     --bg-primary: #1c1d21;
-    --card-bg: #262730;    
+    --card-bg: #262730;
     --text-primary: #ececec;
     --text-secondary: #a3a6ad;
     --border-color: #40424c;
-    --sidebar-bg: #181920; 
+    --sidebar-bg: #181920;
     --topbar-bg: #262730;
 }
 
@@ -41,14 +41,28 @@ body {
    Bootstrap'in varsayılan tasarımlarını kendi temamıza göre yapılandırır.
    ========================================================= */
 /* Kartların ve açılır menülerin arka planlarını temaya bağlar ve gölge ekler. */
-.card, .dropdown-menu, .modal-content {
+.card,
+.dropdown-menu,
+.modal-content {
     background-color: var(--card-bg) !important;
     border: 1px solid var(--border-color) !important;
     color: var(--text-primary) !important;
 }
-.card { box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05) !important; }
-.no-caret::after { display: none !important; }
-.theme-toggle-btn { cursor: pointer; background: none; border: none; font-size: 1.25rem; }
+
+.card {
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05) !important;
+}
+
+.no-caret::after {
+    display: none !important;
+}
+
+.theme-toggle-btn {
+    cursor: pointer;
+    background: none;
+    border: none;
+    font-size: 1.25rem;
+}
 
 /* DİKKAT: Karanlık modda sayfaların (Örn: Depolar) beyazlamasını engeller. */
 [data-theme="dark"] .bg-white,
@@ -59,13 +73,27 @@ body {
 
 /* Karanlık modda metin renklerini okunabilir parlak tonlara dönüştürür. */
 [data-theme="dark"] .text-dark,
-[data-theme="dark"] h1, [data-theme="dark"] h2, [data-theme="dark"] h3, 
-[data-theme="dark"] h4, [data-theme="dark"] h5, [data-theme="dark"] h6, [data-theme="dark"] p {
+[data-theme="dark"] h1,
+[data-theme="dark"] h2,
+[data-theme="dark"] h3,
+[data-theme="dark"] h4,
+[data-theme="dark"] h5,
+[data-theme="dark"] h6,
+[data-theme="dark"] p {
     color: #ffffff !important;
 }
-[data-theme="dark"] .text-muted { color: var(--text-secondary) !important; }
-[data-theme="dark"] .text-danger { color: #ff6b6b !important; }
-[data-theme="dark"] .text-success { color: #4ade80 !important; }
+
+[data-theme="dark"] .text-muted {
+    color: var(--text-secondary) !important;
+}
+
+[data-theme="dark"] .text-danger {
+    color: #ff6b6b !important;
+}
+
+[data-theme="dark"] .text-success {
+    color: #4ade80 !important;
+}
 
 /* Form alanlarının karanlık tema renklerini düzenler ve odaklanma parlaklığını ayarlar. */
 [data-theme="dark"] .form-control,
@@ -74,7 +102,11 @@ body {
     color: #ffffff !important;
     border-color: #585a66 !important;
 }
-[data-theme="dark"] .form-control::placeholder { color: var(--text-secondary) !important; }
+
+[data-theme="dark"] .form-control::placeholder {
+    color: var(--text-secondary) !important;
+}
+
 [data-theme="dark"] .form-control:focus,
 [data-theme="dark"] .form-select:focus {
     background-color: #4a4c58 !important;
@@ -84,19 +116,56 @@ body {
 }
 
 /* Karanlık modda açılır pencerelerdeki çarpı (kapatma) butonunu beyazlatır. */
-[data-theme="dark"] .btn-close { filter: invert(1) grayscale(100%) brightness(200%); }
+[data-theme="dark"] .btn-close {
+    filter: invert(1) grayscale(100%) brightness(200%);
+}
 
 /* Tabloların karanlık mod renklerini ve vurgularını (hover) ayarlar. */
-[data-theme="dark"] .table { color: var(--text-primary) !important; border-color: var(--border-color) !important; }
-[data-theme="dark"] .table th, [data-theme="dark"] .table td { background-color: transparent !important; color: var(--text-primary) !important; border-bottom-color: var(--border-color) !important; }
-[data-theme="dark"] .table-light th { background-color: #2e2f39 !important; color: #ffffff !important; }
-[data-theme="dark"] .table-hover tbody tr:hover { background-color: var(--border-color) !important; color: #ffffff !important; }
+[data-theme="dark"] .table {
+    color: var(--text-primary) !important;
+    border-color: var(--border-color) !important;
+}
+
+[data-theme="dark"] .table th,
+[data-theme="dark"] .table td {
+    background-color: transparent !important;
+    color: var(--text-primary) !important;
+    border-bottom-color: var(--border-color) !important;
+}
+
+[data-theme="dark"] .table-light th {
+    background-color: #2e2f39 !important;
+    color: #ffffff !important;
+}
+
+[data-theme="dark"] .table-hover tbody tr:hover {
+    background-color: var(--border-color) !important;
+    color: #ffffff !important;
+}
 
 /* Sayfalama (Pagination) butonlarının karanlık mod uyumunu sağlar. */
-[data-theme="dark"] .page-link { background-color: var(--card-bg) !important; border-color: var(--border-color) !important; color: var(--text-primary) !important; }
-[data-theme="dark"] .page-item.active .page-link { background-color: #0d6efd !important; border-color: #0d6efd !important; color: #ffffff !important; }
-[data-theme="dark"] .page-item.disabled .page-link { background-color: var(--bg-primary) !important; color: #6c757d !important; border-color: var(--border-color) !important; }
-[data-theme="dark"] .page-link:hover:not(.active) { background-color: var(--border-color) !important; color: #ffffff !important; }
+[data-theme="dark"] .page-link {
+    background-color: var(--card-bg) !important;
+    border-color: var(--border-color) !important;
+    color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] .page-item.active .page-link {
+    background-color: #0d6efd !important;
+    border-color: #0d6efd !important;
+    color: #ffffff !important;
+}
+
+[data-theme="dark"] .page-item.disabled .page-link {
+    background-color: var(--bg-primary) !important;
+    color: #6c757d !important;
+    border-color: var(--border-color) !important;
+}
+
+[data-theme="dark"] .page-link:hover:not(.active) {
+    background-color: var(--border-color) !important;
+    color: #ffffff !important;
+}
 
 /* =========================================================
    3. PROFESYONEL İSKELET (SIDEBAR VE TOPBAR)
@@ -116,7 +185,10 @@ body {
     display: flex;
     flex-direction: column;
 }
-#sidebar.collapsed { transform: translateX(-100%); }
+
+#sidebar.collapsed {
+    transform: translateX(-100%);
+}
 
 /* Yan Menü üst kısmını (Logo Alanı) hizalar. */
 .sidebar-header {
@@ -124,9 +196,12 @@ body {
     display: flex;
     align-items: center;
     padding: 0 1.5rem;
-    border-bottom: 1px solid rgba(255,255,255,0.05);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 }
-.sidebar-logo-text { color: #ffffff; }
+
+.sidebar-logo-text {
+    color: #ffffff;
+}
 
 /* Menü bağlantılarının görünümünü, boşluklarını ve üzerine gelme (hover) efektlerini ayarlar. */
 .sidebar-link {
@@ -141,12 +216,29 @@ body {
     border-radius: 8px;
     transition: all 0.2s ease-in-out;
 }
-.sidebar-link i { font-size: 1.15rem; margin-right: 14px; transition: all 0.2s ease-in-out; }
-.sidebar-link:hover { color: #ffffff !important; background-color: rgba(255, 255, 255, 0.05); }
+
+.sidebar-link i {
+    font-size: 1.15rem;
+    margin-right: 14px;
+    transition: all 0.2s ease-in-out;
+}
+
+.sidebar-link:hover {
+    color: #ffffff !important;
+    background-color: rgba(255, 255, 255, 0.05);
+}
 
 /* Aktif (bulunulan) sayfanın menüdeki rengini saks mavisi yapar ve hafif gölge ekler. */
-.sidebar-link.active { background-color: #0d6efd !important; color: #ffffff !important; font-weight: 600; box-shadow: 0 4px 6px rgba(13, 110, 253, 0.2); }
-.sidebar-link.active i { color: #ffffff !important; }
+.sidebar-link.active {
+    background-color: #0d6efd !important;
+    color: #ffffff !important;
+    font-weight: 600;
+    box-shadow: 0 4px 6px rgba(13, 110, 253, 0.2);
+}
+
+.sidebar-link.active i {
+    color: #ffffff !important;
+}
 
 /* Sağ taraftaki ana içerik kutusunu yan menüye göre esnetir ve hizalar. */
 #main-wrapper {
@@ -156,7 +248,10 @@ body {
     flex-direction: column;
     transition: margin-left 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
 }
-#main-wrapper.expanded { margin-left: 0; }
+
+#main-wrapper.expanded {
+    margin-left: 0;
+}
 
 /* Üst navigasyon çubuğunu (Topbar) sabitler ve elemanlarını hizalar. */
 .topbar {
@@ -171,136 +266,443 @@ body {
     top: 0;
     z-index: 1030;
 }
-.topbar .btn, .topbar .text-muted { color: var(--text-secondary) !important; }
-.topbar .btn:hover, .topbar .text-muted:hover { color: var(--text-primary) !important; }
-.profile-icon-wrapper { width: 35px; height: 35px; display: flex; justify-content: center; align-items: center; }
+
+.topbar .btn,
+.topbar .text-muted {
+    color: var(--text-secondary) !important;
+}
+
+.topbar .btn:hover,
+.topbar .text-muted:hover {
+    color: var(--text-primary) !important;
+}
+
+.profile-icon-wrapper {
+    width: 35px;
+    height: 35px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
 
 /* Mobil ekranlarda yan menüyü gizler ve açılır formata dönüştürür. */
 @media (max-width: 991.98px) {
-    #sidebar { transform: translateX(-100%); }
-    #sidebar.show-mobile { transform: translateX(0); box-shadow: 10px 0 30px rgba(0,0,0,0.5); }
-    #main-wrapper { margin-left: 0; }
+    #sidebar {
+        transform: translateX(-100%);
+    }
+
+    #sidebar.show-mobile {
+        transform: translateX(0);
+        box-shadow: 10px 0 30px rgba(0, 0, 0, 0.5);
+    }
+
+    #main-wrapper {
+        margin-left: 0;
+    }
 }
 
 /* =========================================================
    4. SİSTEME ÖZEL MODÜLLER (GRAFİK, KAMERA, TİMELİNE, TABLO)
    ========================================================= */
 /* Dashboard İstatistik Kartlarındaki özel ikonları hizalar. */
-.stat-icon { width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; }
+.stat-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+}
 
 /* Bildirim listesinin sınırlarını çizer. */
-.notification-dropdown-menu { width: 320px; max-height: 400px; overflow-y: auto; }
+.notification-dropdown-menu {
+    width: 320px;
+    max-height: 400px;
+    overflow-y: auto;
+}
 
 /* Grafik Kutularının Yüksekliklerini Sabitler (Grafiklerin çökmesini engeller). */
-.custom-chart-wrapper { position: relative; width: 100%; }
-.trend-wrapper { height: 420px; }
-.summary-wrapper { height: 400px; }
-.category-wrapper { height: 400px; }
-.top-products-wrapper { height: 500px; }
+.custom-chart-wrapper {
+    position: relative;
+    width: 100%;
+}
+
+.trend-wrapper {
+    height: 420px;
+}
+
+.summary-wrapper {
+    height: 400px;
+}
+
+.category-wrapper {
+    height: 400px;
+}
+
+.top-products-wrapper {
+    height: 500px;
+}
 
 /* Barkod Okuyucu (Kamera) arayüzünü şekillendirir. */
-#kameraAlani, .scanner-wrapper { background-color: #000; min-height: 200px; border: 2px dashed var(--border-color); }
-#reader { width: 100% !important; border: none !important; }
-#reader video { border-radius: 8px; object-fit: cover; }
-#reader__dashboard_section_csr span, #reader__dashboard_section_swaplink { color: var(--text-primary) !important; font-size: 14px; text-decoration: none; }
-[data-theme="dark"] #reader { background-color: var(--card-bg) !important; border-color: #40424c !important; }
-[data-theme="dark"] #kameraAlani { border-color: #40424c !important; }
-[data-theme="dark"] #reader__dashboard_section_csr { background-color: var(--card-bg) !important; color: #ececec !important; }
+#kameraAlani,
+.scanner-wrapper {
+    background-color: #000;
+    min-height: 200px;
+    border: 2px dashed var(--border-color);
+}
+
+#reader {
+    width: 100% !important;
+    border: none !important;
+}
+
+#reader video {
+    border-radius: 8px;
+    object-fit: cover;
+}
+
+#reader__dashboard_section_csr span,
+#reader__dashboard_section_swaplink {
+    color: var(--text-primary) !important;
+    font-size: 14px;
+    text-decoration: none;
+}
+
+[data-theme="dark"] #reader {
+    background-color: var(--card-bg) !important;
+    border-color: #40424c !important;
+}
+
+[data-theme="dark"] #kameraAlani {
+    border-color: #40424c !important;
+}
+
+[data-theme="dark"] #reader__dashboard_section_csr {
+    background-color: var(--card-bg) !important;
+    color: #ececec !important;
+}
 
 /* Demirbaş Zaman Çizelgesinin (Timeline) iskeletini ve dikey çizgisini çizer. */
-.sticky-offset { top: 80px; }
-.timeline { position: relative; padding-left: 30px; margin-top: 20px; list-style-type: none; }
-.timeline::before { content: ''; position: absolute; top: 0; bottom: 0; left: 10px; width: 2px; background-color: var(--border-color); }
-.timeline-item { position: relative; margin-bottom: 25px; }
+.sticky-offset {
+    top: 80px;
+}
+
+.timeline {
+    position: relative;
+    padding-left: 30px;
+    margin-top: 20px;
+    list-style-type: none;
+}
+
+.timeline::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 10px;
+    width: 2px;
+    background-color: var(--border-color);
+}
+
+.timeline-item {
+    position: relative;
+    margin-bottom: 25px;
+}
 
 /* Timeline İşlem Noktalarının (Dot) dinamik renklerini belirler. */
 .timeline-item::before {
-    content: ''; position: absolute; top: 5px; left: -26px; width: 14px; height: 14px;
-    border-radius: 50%; background-color: #0d6efd; border: 3px solid var(--card-bg);
-    box-shadow: 0 0 0 2px #0d6efd; z-index: 1;
+    content: '';
+    position: absolute;
+    top: 5px;
+    left: -26px;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background-color: #0d6efd;
+    border: 3px solid var(--card-bg);
+    box-shadow: 0 0 0 2px #0d6efd;
+    z-index: 1;
 }
-.timeline-item.dot-success::before { background-color: #198754; box-shadow: 0 0 0 2px #198754; }
-.timeline-item.dot-warning::before { background-color: #ffc107; box-shadow: 0 0 0 2px #ffc107; }
-.timeline-item.dot-danger::before { background-color: #dc3545; box-shadow: 0 0 0 2px #dc3545; }
+
+.timeline-item.dot-success::before {
+    background-color: #198754;
+    box-shadow: 0 0 0 2px #198754;
+}
+
+.timeline-item.dot-warning::before {
+    background-color: #ffc107;
+    box-shadow: 0 0 0 2px #ffc107;
+}
+
+.timeline-item.dot-danger::before {
+    background-color: #dc3545;
+    box-shadow: 0 0 0 2px #dc3545;
+}
+
 .timeline-content {
-    background-color: var(--card-bg); padding: 15px; border-radius: 8px;
-    border: 1px solid var(--border-color); box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    background-color: var(--card-bg);
+    padding: 15px;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 }
 
 /* Ayar Çubuklarını (Range Slider) açık ve karanlık temaya uydurur. */
-.form-range::-webkit-slider-runnable-track { background-color: #adb5bd !important; height: 6px; border-radius: 1rem; }
-.form-range::-moz-range-track { background-color: #adb5bd !important; height: 6px; border-radius: 1rem; }
-[data-theme="dark"] .form-range::-webkit-slider-runnable-track { background-color: #555658 !important; }
-[data-theme="dark"] .form-range::-moz-range-track { background-color: #555658 !important; }
+.form-range::-webkit-slider-runnable-track {
+    background-color: #adb5bd !important;
+    height: 6px;
+    border-radius: 1rem;
+}
+
+.form-range::-moz-range-track {
+    background-color: #adb5bd !important;
+    height: 6px;
+    border-radius: 1rem;
+}
+
+[data-theme="dark"] .form-range::-webkit-slider-runnable-track {
+    background-color: #555658 !important;
+}
+
+[data-theme="dark"] .form-range::-moz-range-track {
+    background-color: #555658 !important;
+}
 
 /* =========================================================
    5. YARDIMCI SINIFLAR (UTILITIES - CSP UYUMLU)
    HTML içinde satır içi (inline) CSS yazımını engelleyerek güvenliği sağlar.
    ========================================================= */
 /* Tablo Sütun Genişliklerini Ayarlar */
-.col-tarih { width: 18%; }
-.col-kod { width: 15%; }
-.col-ad { width: 32%; }
-.col-tip { width: 15%; }
-.col-adet { width: 10%; }
-.col-personel { width: 20%; }
+.col-tarih {
+    width: 18%;
+}
+
+.col-kod {
+    width: 15%;
+}
+
+.col-ad {
+    width: 32%;
+}
+
+.col-tip {
+    width: 15%;
+}
+
+.col-adet {
+    width: 10%;
+}
+
+.col-personel {
+    width: 20%;
+}
 
 /* Sabit Ölçü ve Hizalamaları Belirler */
-.w-40px { width: 40px; } .w-60px { width: 60px; } .w-75px { width: 75px; } .w-150px { width: 150px; }
-.h-60px { height: 60px; } .w-40 { width: 40%; }
-.min-w-700 { min-width: 700px; }
-.flex-1-min-0 { flex: 1; min-width: 0; }
-.pointer-events-none { pointer-events: none; }
+.w-40px {
+    width: 40px;
+}
+
+.w-60px {
+    width: 60px;
+}
+
+.w-75px {
+    width: 75px;
+}
+
+.w-150px {
+    width: 150px;
+}
+
+.h-60px {
+    height: 60px;
+}
+
+.w-40 {
+    width: 40%;
+}
+
+.min-w-700 {
+    min-width: 700px;
+}
+
+.flex-1-min-0 {
+    flex: 1;
+    min-width: 0;
+}
+
+.pointer-events-none {
+    pointer-events: none;
+}
 
 /* Yazı Tipi ve Boşlukları (Typography) Düzenler */
-.fs-065rem { font-size: 0.65rem !important; }
-.fs-07rem { font-size: 0.7rem !important; }
-.fs-075 { font-size: 0.75rem !important; }
-.fs-080rem { font-size: 0.80rem !important; }
-.fs-085 { font-size: 0.85rem !important; }
-.fs-2-2rem { font-size: 2.2rem !important; }
-.fs-24px { font-size: 24px !important; }
-.ls-05px { letter-spacing: 0.5px !important; }
-.ls-1px { letter-spacing: 1px !important; }
+.fs-065rem {
+    font-size: 0.65rem !important;
+}
+
+.fs-07rem {
+    font-size: 0.7rem !important;
+}
+
+.fs-075 {
+    font-size: 0.75rem !important;
+}
+
+.fs-080rem {
+    font-size: 0.80rem !important;
+}
+
+.fs-085 {
+    font-size: 0.85rem !important;
+}
+
+.fs-2-2rem {
+    font-size: 2.2rem !important;
+}
+
+.fs-24px {
+    font-size: 24px !important;
+}
+
+.ls-05px {
+    letter-spacing: 0.5px !important;
+}
+
+.ls-1px {
+    letter-spacing: 1px !important;
+}
 
 /* Bildirim ve Kart Özel Renklendirmelerini Yönetir */
-.text-theme-primary { color: var(--text-primary) !important; }
-.text-orange-custom { color: #fd7e14 !important; }
-.notification-card { border-left: 4px solid transparent !important; }
-.alert-border-warning { border-left-color: #ffc107 !important; }
-.alert-border-critical { border-left-color: #fd7e14 !important; }
-.alert-border-danger { border-left-color: #dc3545 !important; }
-.border-b-eee { border-bottom: 1px solid var(--border-color); }
+.text-theme-primary {
+    color: var(--text-primary) !important;
+}
+
+.text-orange-custom {
+    color: #fd7e14 !important;
+}
+
+.notification-card {
+    border-left: 4px solid transparent !important;
+}
+
+.alert-border-warning {
+    border-left-color: #ffc107 !important;
+}
+
+.alert-border-critical {
+    border-left-color: #fd7e14 !important;
+}
+
+.alert-border-danger {
+    border-left-color: #dc3545 !important;
+}
+
+.border-b-eee {
+    border-bottom: 1px solid var(--border-color);
+}
 
 /* İmleç (Cursor) Davranışlarını ve Etkileşimleri Ayarlar */
-.cursor-pointer, .filtre-elemani, .page-action, .page-link, #tarihBaslik, [data-bs-toggle], [role="button"], th[style*="cursor: pointer"], .notification-card .btn-read:not(:disabled) { 
-    cursor: pointer !important; 
+.cursor-pointer,
+.filtre-elemani,
+.page-action,
+.page-link,
+#tarihBaslik,
+[data-bs-toggle],
+[role="button"],
+th[style*="cursor: pointer"],
+.notification-card .btn-read:not(:disabled) {
+    cursor: pointer !important;
 }
-.filtre-elemani:hover { filter: brightness(1.1); }
-button:disabled, .btn:disabled, .btn.disabled { cursor: not-allowed !important; }
+
+.filtre-elemani:hover {
+    filter: brightness(1.1);
+}
+
+button:disabled,
+.btn:disabled,
+.btn.disabled {
+    cursor: not-allowed !important;
+}
 
 /* Dinamik Renk Paleti İkonlarını Şekillendirir */
-.emoji-icon-lg { font-size: 3rem; }
-.color-dot { display: inline-block; width: 18px; height: 18px; border: 1px solid var(--border-color); border-radius: 50%; }
-.svg-color-circle { margin-right: 8px; }
-.scrollable-card { max-height: 200px; overflow-y: auto; background-color: var(--bg-primary); }
+.emoji-icon-lg {
+    font-size: 3rem;
+}
+
+.color-dot {
+    display: inline-block;
+    width: 18px;
+    height: 18px;
+    border: 1px solid var(--border-color);
+    border-radius: 50%;
+}
+
+.svg-color-circle {
+    margin-right: 8px;
+}
+
+.scrollable-card {
+    max-height: 200px;
+    overflow-y: auto;
+    background-color: var(--bg-primary);
+}
+
 /* Dual Range Slider Fix */
-.dual-range input[type=range] { pointer-events: none; -webkit-appearance: none; appearance: none; background: transparent; }
-.dual-range input[type=range]::-webkit-slider-thumb { pointer-events: auto; -webkit-appearance: none; appearance: none; width: 16px; height: 16px; background: #0d6efd; border-radius: 50%; cursor: pointer; margin-top: -6px; }
-.dual-range input[type=range]::-moz-range-thumb { pointer-events: auto; width: 16px; height: 16px; background: #0d6efd; border-radius: 50%; cursor: pointer; border: none; }
-.dual-range input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 4px; background: transparent; border-radius: 2px; }
-.dual-range input[type=range]:first-child::-webkit-slider-runnable-track { background: #dee2e6; }
+.dual-range input[type=range] {
+    pointer-events: none;
+    -webkit-appearance: none;
+    appearance: none;
+    background: transparent;
+}
+
+.dual-range input[type=range]::-webkit-slider-thumb {
+    pointer-events: auto;
+    -webkit-appearance: none;
+    appearance: none;
+    width: 16px;
+    height: 16px;
+    background: #0d6efd;
+    border-radius: 50%;
+    cursor: pointer;
+    margin-top: -6px;
+}
+
+.dual-range input[type=range]::-moz-range-thumb {
+    pointer-events: auto;
+    width: 16px;
+    height: 16px;
+    background: #0d6efd;
+    border-radius: 50%;
+    cursor: pointer;
+    border: none;
+}
+
+.dual-range input[type=range]::-webkit-slider-runnable-track {
+    width: 100%;
+    height: 4px;
+    background: transparent;
+    border-radius: 2px;
+}
+
+.dual-range input[type=range]:first-child::-webkit-slider-runnable-track {
+    background: #dee2e6;
+}
 
 /*Alertlerdeki /n için*/
-.swal2-html-container { white-space: pre-line; }
+.swal2-html-container {
+    white-space: pre-line;
+}
+
 /* Premium noUiSlider Overrides */
 .noUi-target {
     border: none;
     background: #e9ecef;
-    box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
     height: 6px;
     border-radius: 10px;
-    margin: 15px 10px 30px 10px; /* prevent overlapping */
+    margin: 15px 10px 30px 10px;
+    /* prevent overlapping */
 }
 
 .noUi-connect {
@@ -314,7 +716,7 @@ button:disabled, .btn:disabled, .btn.disabled { cursor: not-allowed !important; 
     border: 3px solid #fff;
     background: #0d6efd;
     border-radius: 50%;
-    box-shadow: 0 3px 6px rgba(0,0,0,0.2);
+    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.2);
     width: 22px !important;
     height: 22px !important;
     right: -11px !important;
@@ -323,8 +725,10 @@ button:disabled, .btn:disabled, .btn.disabled { cursor: not-allowed !important; 
     transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), background 0.2s;
 }
 
-.noUi-handle:before, .noUi-handle:after {
-    display: none; /* Hide default lines inside handle */
+.noUi-handle:before,
+.noUi-handle:after {
+    display: none;
+    /* Hide default lines inside handle */
 }
 
 .noUi-handle:hover {
@@ -351,4 +755,58 @@ button:disabled, .btn:disabled, .btn.disabled { cursor: not-allowed !important; 
 /* Fix overlapping in dynamic filter container */
 #dynamicFilterContainer .double-slider {
     margin-bottom: 25px;
+}
+
+/* =========================================================
+   6. MOBİL EKRAN OPTİMİZASYONLARI
+   ========================================================= */
+@media (max-width: 768px) {
+
+    /* Üst Başlıklar ve Yeni Ekle Butonları: Sıkışmayı önler, alt alta dizer */
+    .d-flex.justify-content-between.align-items-center.mb-4 {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 15px;
+    }
+
+    .d-flex.justify-content-between.align-items-center.mb-4 button {
+        width: 100%;
+        /* Parmakla basmayı kolaylaştırmak için tam ekran genişliği */
+    }
+
+    /* Tablo Ezilmesini Önleme: Excel gibi yatay kaydırma sağlar */
+    .table-responsive {
+        border: 1px solid var(--border-color);
+        border-radius: 0.5rem;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .table {
+        white-space: nowrap !important;
+        /* Hücrelerin alt satıra geçip dikeyde uzamasını önler */
+    }
+
+    .table td,
+    .table th {
+        padding: 1rem 0.75rem !important;
+        /* Dokunmatik ekran için hücreleri genişletir */
+    }
+
+    /* Filtre Butonları (Stok Hareketleri Sayfası vb.) */
+    .col-md-6.text-md-end.mt-3.mt-md-0.d-flex.gap-2.justify-content-md-end {
+        flex-wrap: wrap !important;
+        justify-content: flex-start !important;
+    }
+
+    .filtre-elemani {
+        flex: 1 1 calc(50% - 10px);
+        /* 4 butonu 2'şerli ızgara (grid) sistemine böler */
+        margin-bottom: 5px;
+    }
+
+    /* Modal (Açılır Pencere) İç Boşlukları */
+    .modal-body,
+    .card-body {
+        padding: 1.25rem !important;
+    }
 }
