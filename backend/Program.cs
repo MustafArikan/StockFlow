@@ -12,6 +12,7 @@ using stok_takip.Data;
 using stok_takip.DTOs;
 using stok_takip.Models;
 using stok_takip.Middlewares;
+using stok_takip.Constants;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -98,6 +99,9 @@ builder.Services.AddAuthentication(options =>
 
             var session = await dbContext.UserSessions
                 .Include(s => s.User)
+                    .ThenInclude(u => u.Role)
+                        .ThenInclude(r => r.RolePermissions)
+                            .ThenInclude(rp => rp.Permission)
                 .AsNoTracking()
                 .FirstOrDefaultAsync(s => s.SessionToken == sessionToken);
 
@@ -118,13 +122,29 @@ builder.Services.AddAuthentication(options =>
                         identity.RemoveClaim(role);
                     }
 
-                    var userRole = session.User.Role.ToLower();
+                    var userRole = session.User.Role.Name.ToLower();
 
                     identity.AddClaim(new Claim(ClaimTypes.Role, userRole));
 
                     if (userRole == "superadmin")
                     {
                         identity.AddClaim(new Claim(ClaimTypes.Role, "admin"));
+                    }
+                    
+                    var existingPermClaims = identity.FindAll("Permission").ToList();
+                    foreach (var perm in existingPermClaims)
+                    {
+                        identity.RemoveClaim(perm);
+                    }
+                    if (session.User.Role?.RolePermissions != null)
+                    {
+                        foreach (var rp in session.User.Role.RolePermissions)
+                        {
+                            if (rp.Permission != null)
+                            {
+                                identity.AddClaim(new Claim("Permission", rp.Permission.Name));
+                            }
+                        }
                     }
                 }
             }
@@ -137,6 +157,21 @@ builder.Services.AddAuthorization(options =>
     options.FallbackPolicy = new Microsoft.AspNetCore.Authorization.AuthorizationPolicyBuilder()
         .RequireAuthenticatedUser()
         .Build();
+
+    options.AddPolicy(Policies.SuperAdminOnly, policy => policy.RequireRole("superadmin"));
+    options.AddPolicy(Policies.AdminOnly, policy => policy.RequireRole("admin", "superadmin"));
+    
+    // Permission policies for future dynamic expansion
+    options.AddPolicy(Policies.RequireAssetWrite, policy => policy.RequireClaim("Permission", "Assets.Write"));
+    options.AddPolicy(Policies.RequireAuditLogRead, policy => policy.RequireClaim("Permission", "AuditLogs.Read"));
+    options.AddPolicy(Policies.RequireCategoryWrite, policy => policy.RequireClaim("Permission", "Categories.Write"));
+    options.AddPolicy(Policies.RequireLocationWrite, policy => policy.RequireClaim("Permission", "Locations.Write"));
+    options.AddPolicy(Policies.RequireProductWrite, policy => policy.RequireClaim("Permission", "Products.Write"));
+    options.AddPolicy(Policies.RequireProductSupplierWrite, policy => policy.RequireClaim("Permission", "ProductSuppliers.Write"));
+    options.AddPolicy(Policies.RequireStockMovementWrite, policy => policy.RequireClaim("Permission", "StockMovements.Write"));
+    options.AddPolicy(Policies.RequireSupplierWrite, policy => policy.RequireClaim("Permission", "Suppliers.Write"));
+    options.AddPolicy(Policies.RequireWarehouseWrite, policy => policy.RequireClaim("Permission", "Warehouses.Write"));
+    options.AddPolicy(Policies.RequireUserManage, policy => policy.RequireClaim("Permission", "Users.Manage"));
 });
 
 builder.Services.AddCors(options =>

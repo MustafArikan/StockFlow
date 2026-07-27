@@ -28,8 +28,12 @@ public class AppDbContext : DbContext
     public DbSet<SecurityAuditLog> SecurityAuditLogs { get; set; } = null!;
     public DbSet<AttributeRule> AttributeRules { get; set; } = null!;
     public DbSet<Supplier> Suppliers { get; set; } = null!;
-
     public DbSet<ProductSupplier> ProductSuppliers { get; set; } = null!;
+
+    // RBAC Entities
+    public DbSet<AppRole> AppRoles { get; set; } = null!;
+    public DbSet<AppPermission> AppPermissions { get; set; } = null!;
+    public DbSet<AppRolePermission> AppRolePermissions { get; set; } = null!;
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -50,12 +54,46 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<AttributeRule>().HasQueryFilter(e => !e.IsDeleted);
         modelBuilder.Entity<Supplier>().HasQueryFilter(e => !e.IsDeleted);
         modelBuilder.Entity<ProductSupplier>().HasQueryFilter(e => !e.IsDeleted);
+        modelBuilder.Entity<AppRole>().HasQueryFilter(e => !e.IsDeleted);
+        modelBuilder.Entity<AppPermission>().HasQueryFilter(e => !e.IsDeleted);
+        modelBuilder.Entity<AppRolePermission>().HasQueryFilter(e => !e.IsDeleted);
 
 
 
 
         modelBuilder.Entity<User>()
             .HasIndex(u => u.Email)
+            .IsUnique();
+        
+        modelBuilder.Entity<User>()
+            .HasOne(u => u.Role)
+            .WithMany(r => r.Users)
+            .HasForeignKey(u => u.RoleId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        // RBAC Relationships
+        modelBuilder.Entity<AppRolePermission>()
+            .HasOne(rp => rp.Role)
+            .WithMany(r => r.RolePermissions)
+            .HasForeignKey(rp => rp.RoleId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<AppRolePermission>()
+            .HasOne(rp => rp.Permission)
+            .WithMany(p => p.RolePermissions)
+            .HasForeignKey(rp => rp.PermissionId)
+            .OnDelete(DeleteBehavior.Restrict);
+        
+        modelBuilder.Entity<AppRolePermission>()
+            .HasIndex(rp => new { rp.RoleId, rp.PermissionId })
+            .IsUnique();
+
+        modelBuilder.Entity<AppRole>()
+            .HasIndex(r => r.Name)
+            .IsUnique();
+        
+        modelBuilder.Entity<AppPermission>()
+            .HasIndex(p => p.Name)
             .IsUnique();
 
         modelBuilder.Entity<Category>()

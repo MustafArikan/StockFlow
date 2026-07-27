@@ -51,6 +51,9 @@ public async Task<IActionResult> Register([FromBody] RegisterDto dto)
             return BadRequest(new {message = "The email you have provided is already associated with an account. Sign in or reset your password."});
         }
 
+        var viewerRole = await _context.AppRoles.FirstOrDefaultAsync(r => r.Name == "viewer");
+        if (viewerRole == null) return BadRequest(new { message = "Varsayılan rol bulunamadı." });
+
         var verificationCode = System.Security.Cryptography.RandomNumberGenerator.GetInt32(100000, 1000000).ToString();  // 6 haneli doğrulama kodu
 
         var newUser = new User
@@ -58,7 +61,7 @@ public async Task<IActionResult> Register([FromBody] RegisterDto dto)
             FirstName = dto.FirstName,
             LastName = dto.LastName,
             Email = dto.Email,
-            Role = "viewer",  // Varsayılan rol
+            RoleId = viewerRole.Id,  // Varsayılan rol
             IsEmailConfirmed = false,
             EmailConfirmationCode = _passwordHasher.HashPassword(null, verificationCode),
             ConfirmationCodeExpiry = DateTime.UtcNow.AddMinutes(10)  // Kodun geçerlilik süresi 10 dakika
@@ -129,7 +132,11 @@ public async Task<IActionResult> Login([FromBody] LoginDto dto)
             return BadRequest(new { message = "Email and Password cannot be empty." });
         }
 
-        var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == dto.Email);
+        var user = await _context.Users
+            .Include(u => u.Role)
+                .ThenInclude(r => r.RolePermissions)
+                    .ThenInclude(rp => rp.Permission)
+            .FirstOrDefaultAsync(u => u.Email == dto.Email);
         if (user == null)
         {
             return Unauthorized(new { message = "Invalid email or password." });
@@ -202,7 +209,7 @@ public async Task<IActionResult> Login([FromBody] LoginDto dto)
            message = "Login successful.",
            token = token,
            email = user.Email,
-           role = user.Role 
+           role = user.Role.Name 
         });
     }
 
@@ -215,7 +222,7 @@ public async Task<IActionResult> GetMe()
             return Unauthorized(new { message = "Invalid token claims."});
         }
 
-        var user = await _context.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == userID);
+        var user = await _context.Users.Include(u => u.Role).AsNoTracking().FirstOrDefaultAsync(u => u.Id == userID);
         if (user == null)
         {
             return NotFound(new { message = "User not found." });
@@ -228,7 +235,7 @@ public async Task<IActionResult> GetMe()
             firstName = user.FirstName,
             lastName = user.LastName,
             phoneNumber = user.PhoneNumber,
-            role = user.Role,
+            role = user.Role.Name,
             createdAt = user.CreatedAt,
         });
     }
@@ -301,15 +308,28 @@ public async Task<IActionResult> Logout()
         
         var key = Encoding.UTF8.GetBytes(secretKey);
 
+        var claims = new List<Claim>
+        {
+            new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
+            new Claim(ClaimTypes.Email, user.Email),
+            new Claim(ClaimTypes.Role, user.Role.Name),
+            new Claim(JwtRegisteredClaimNames.Jti, sessionToken)
+        };
+
+        if (user.Role?.RolePermissions != null)
+        {
+            foreach (var rp in user.Role.RolePermissions)
+            {
+                if (rp.Permission != null)
+                {
+                    claims.Add(new Claim("Permission", rp.Permission.Name));
+                }
+            }
+        }
+
         var tokenDescriptor = new SecurityTokenDescriptor
         {
-            Subject = new ClaimsIdentity(new[]
-            {
-                new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
-                new Claim(ClaimTypes.Email, user.Email),
-                new Claim(ClaimTypes.Role, user.Role),
-                new Claim(JwtRegisteredClaimNames.Jti, sessionToken)
-            }),
+            Subject = new ClaimsIdentity(claims),
             Expires = DateTime.UtcNow.AddHours(1), // Token geçerlilik süresi -- 1 saat
             Issuer = _configuration["JwtSettings:Issuer"] ?? "StockFlowBackend",
             Audience = _configuration["JwtSettings:Audience"] ?? "StockFlowFrontend",

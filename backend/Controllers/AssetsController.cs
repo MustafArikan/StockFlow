@@ -1,3 +1,4 @@
+using stok_takip.Constants;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -21,7 +22,7 @@ public class AssetsController : ControllerBase
     }
 
     [HttpPost]
-    [Authorize(Roles = "admin")] 
+    [Authorize(Policy = Policies.AdminOnly)] 
     public async Task<IActionResult> CreateAsset([FromBody] CreateAssetDto dto)
     {
         var existingAsset = await _context.Assets
@@ -72,7 +73,7 @@ public class AssetsController : ControllerBase
     } 
 
     [HttpPut("{id}/assign")]
-    [Authorize(Roles = "admin")] 
+    [Authorize(Policy = Policies.AdminOnly)] 
     public async Task<IActionResult> AssignAsset(int id, [FromBody] AssignAssetDto dto)
     {
         var asset = await _context.Assets.FindAsync(id);
@@ -197,7 +198,7 @@ public class AssetsController : ControllerBase
     }
 
     [HttpPut("{id}/return")]
-    [Authorize(Roles = "admin")]
+    [Authorize(Policy = Policies.AdminOnly)]
 
     public async Task<IActionResult> ReturnAsset(int id, [FromBody] ReturnAssetDto dto)
     {

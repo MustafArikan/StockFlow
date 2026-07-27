@@ -1,3 +1,4 @@
+using stok_takip.Constants;
 using Microsoft.AspNetCore.Authorization;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Mvc;
@@ -98,7 +99,7 @@ namespace stok_takip.Controllers
 
         // 2. POST: Create a new stock movement (IN, OUT, or TRANSFER)
         [HttpPost]
-        [Authorize(Roles = "admin")] 
+        [Authorize(Policy = Policies.AdminOnly)] 
         public async Task<IActionResult> CreateMovement([FromBody] StockMovementRequestDto dto)
         {
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
