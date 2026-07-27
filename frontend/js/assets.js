@@ -82,6 +82,80 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById('btnSubmitBreakdown').addEventListener('click', submitBreakdown);
     document.getElementById('btnSubmitResolve').addEventListener('click', submitResolve);
     document.getElementById('btnSubmitMaintenance').addEventListener('click', submitMaintenance);
+
+    // 7. KAMERA VE QR OKUYUCU DİNLEYİCİLERİ (MODAL VERSİYONU)
+    const btnKameraAcAsset = document.getElementById("btnKameraAcAsset");
+    const scannerModalEl = document.getElementById("scannerModalAsset");
+    let scannerModalInstance = null;
+
+    if (btnKameraAcAsset && scannerModalEl) {
+        // ASYNC eklendi çünkü kamera izni bekleyeceğiz
+        btnKameraAcAsset.addEventListener("click", async () => {
+            const durumEl = document.getElementById('kameraDurumAsset');
+
+            // 7.1. GÜVENLİK: Önce İzin Kontrolü Yap
+            const originalHtml = btnKameraAcAsset.innerHTML;
+            btnKameraAcAsset.disabled = true;
+            btnKameraAcAsset.innerHTML = `<span class="spinner-border spinner-border-sm"></span>`;
+
+            try {
+                // Kameraya erişmeyi dene
+                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                // Başarılı olursa arkada çalışan testi hemen kapat
+                stream.getTracks().forEach(track => track.stop());
+
+                // İzin alındı Butonu eski haline getir ve Modalı Aç
+                btnKameraAcAsset.disabled = false;
+                btnKameraAcAsset.innerHTML = originalHtml;
+
+                scannerModalInstance = bootstrap.Modal.getOrCreateInstance(scannerModalEl);
+                scannerModalInstance.show();
+
+                if (durumEl) {
+                    durumEl.textContent = "Kamera başlatılıyor...";
+                    durumEl.className = "text-center text-muted small mt-3 fw-bold";
+                }
+
+                // Kamerayı Başlat
+                startScanner("readerAsset", (scannedText) => {
+                    // BAŞARILI OKUMA
+                    let audio = new Audio('https://www.soundjay.com/button/beep-07.wav');
+                    audio.play().catch(() => { });
+
+                    document.getElementById('serialSearchInput').value = scannedText;
+
+                    if (durumEl) {
+                        durumEl.textContent = "Barkod Okundu! Yönlendiriliyor...";
+                        durumEl.className = "text-center text-success small mt-3 fw-bold";
+                    }
+
+                    searchAsset();
+
+                    setTimeout(() => {
+                        scannerModalInstance.hide();
+                    }, 600);
+
+                }, (errorMessage) => {
+                    // HATA DURUMU (Kameraya gösterilmediğinde)
+                    if (durumEl && durumEl.className.includes("text-muted")) {
+                        durumEl.textContent = "Karekod veya Barkod aranıyor, kameraya gösterin...";
+                    }
+                });
+
+            } catch (error) {
+                // 7.2. İZİN REDDEDİLDİ VEYA KAMERA YOK (Modal hiç açılmaz)
+                btnKameraAcAsset.disabled = false;
+                btnKameraAcAsset.innerHTML = originalHtml;
+                alert("Kameraya erişilemedi! Lütfen tarayıcı adres çubuğundaki kilit simgesinden kamera izni verin veya bilgisayarınıza bir kamera bağlayın.");
+            }
+        });
+
+        // Modal dışarı tıklanarak kapatılırsa kamerayı kesinlikle durdur
+        scannerModalEl.addEventListener('hidden.bs.modal', () => {
+            stopScanner();
+        });
+    }
+
 });
 
 // Grid Listesine Geri Dönüş Fonksiyonu
