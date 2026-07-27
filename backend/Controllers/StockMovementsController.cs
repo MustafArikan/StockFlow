@@ -99,7 +99,7 @@ namespace stok_takip.Controllers
 
         // 2. POST: Create a new stock movement (IN, OUT, or TRANSFER)
         [HttpPost]
-        [Authorize(Policy = Policies.AdminOnly)] 
+        [Authorize(Policy = Policies.RequireStockMovementWrite)] 
         public async Task<IActionResult> CreateMovement([FromBody] StockMovementRequestDto dto)
         {
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;

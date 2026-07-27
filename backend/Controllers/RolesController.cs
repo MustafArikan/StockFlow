@@ -12,7 +12,7 @@ namespace stok_takip.Controllers;
 
 [Route("api/[controller]")]
 [ApiController]
-[Authorize(Policy = Policies.SuperAdminOnly)]
+[Authorize]
 public class RolesController : ControllerBase
 {
     private readonly AppDbContext _context;
@@ -48,11 +48,29 @@ public class RolesController : ControllerBase
     }
 
     [HttpGet]
+    [Authorize]
     public async Task<IActionResult> GetRoles()
     {
-        var roles = await _context.AppRoles
+        var currentUserIdStr = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        int currentUserLevel = 100;
+        if (int.TryParse(currentUserIdStr, out int uid))
+        {
+            var currentUser = await _context.Users.Include(u => u.Role).FirstOrDefaultAsync(u => u.Id == uid);
+            currentUserLevel = currentUser?.Role?.Level ?? 0;
+        }
+
+        var query = _context.AppRoles
             .Include(r => r.Users)
             .Include(r => r.RolePermissions)
+            .Where(r => r.Level <= currentUserLevel)
+            .AsQueryable();
+
+        if (!User.IsInRole("superadmin"))
+        {
+            query = query.Where(r => r.Name != "superadmin");
+        }
+
+        var roles = await query
             .Select(r => new AppRoleResponseDto
             {
                 Id = r.Id,
@@ -68,6 +86,7 @@ public class RolesController : ControllerBase
     }
 
     [HttpGet("permissions")]
+    [Authorize(Policy = Policies.SuperAdminOnly)]
     public async Task<IActionResult> GetPermissions()
     {
         var permissions = await _context.AppPermissions
@@ -83,6 +102,7 @@ public class RolesController : ControllerBase
     }
 
     [HttpGet("{id}")]
+    [Authorize(Policy = Policies.SuperAdminOnly)]
     public async Task<IActionResult> GetRole(int id)
     {
         var role = await _context.AppRoles
@@ -106,6 +126,7 @@ public class RolesController : ControllerBase
     }
 
     [HttpPost]
+    [Authorize(Policy = Policies.SuperAdminOnly)]
     public async Task<IActionResult> CreateRole([FromBody] CreateAppRoleDto dto)
     {
         if (await _context.AppRoles.AnyAsync(r => r.Name == dto.Name))
@@ -147,6 +168,7 @@ public class RolesController : ControllerBase
     }
 
     [HttpPut("{id}")]
+    [Authorize(Policy = Policies.SuperAdminOnly)]
     public async Task<IActionResult> UpdateRole(int id, [FromBody] UpdateAppRoleDto dto)
     {
         var role = await _context.AppRoles
@@ -200,6 +222,7 @@ public class RolesController : ControllerBase
     }
 
     [HttpDelete("{id}")]
+    [Authorize(Policy = Policies.SuperAdminOnly)]
     public async Task<IActionResult> DeleteRole(int id)
     {
         var role = await _context.AppRoles

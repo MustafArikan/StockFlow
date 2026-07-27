@@ -23,7 +23,7 @@ public class AssetsController : ControllerBase
 
     // --- 1. YENİ EKİPMAN KAYIT İŞLEMİ ---
     [HttpPost]
-    [Authorize(Policy = Policies.AdminOnly)] 
+    [Authorize(Policy = Policies.RequireAssetWrite)] 
     public async Task<IActionResult> CreateAsset([FromBody] CreateAssetDto dto)
     {
         // Aynı seri numarasına sahip Ekipman var mı kontrolü
@@ -72,7 +72,7 @@ public class AssetsController : ControllerBase
     }
 
     [HttpPut("{id}/assign")]
-    [Authorize(Policy = Policies.AdminOnly)] 
+    [Authorize(Policy = Policies.RequireAssetWrite)] 
     public async Task<IActionResult> AssignAsset(int id, [FromBody] AssignAssetDto dto)
     {
         var asset = await _context.Assets.FindAsync(id);
@@ -200,7 +200,7 @@ public class AssetsController : ControllerBase
     }
 
     [HttpPut("{id}/return")]
-    [Authorize(Policy = Policies.AdminOnly)]
+    [Authorize(Policy = Policies.RequireAssetWrite)]
 
     public async Task<IActionResult> ReturnAsset(int id, [FromBody] ReturnAssetDto dto)
     {
