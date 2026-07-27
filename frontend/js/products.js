@@ -773,7 +773,7 @@ if (urunKategoriSelectForm) {
                 else if (uiType === 'slider' || uiType === 'range_slider_integer' || uiType === 'range_slider_decimal') {
                     let rMin = rule.minValue !== null ? rule.minValue : 0;
                     let rMax = rule.maxValue !== null ? rule.maxValue : 100;
-                    let rStep = (rule.dataType === 'decimal' || uiType === 'range_slider_decimal') ? 0.01 : 1;
+                    let rStep = (rule.dataType === 'decimal' || uiType === 'range_slider_decimal') ? 0.1 : 1;
                     inputHtml = `<div class="d-flex align-items-center dynamic-rule-input" data-rule-id="${rule.id}" data-rule-key="${escapeHtml(rule.attributeKey)}" data-rule-type="range_slider" data-min="${rMin}" data-max="${rMax}">
                                     <input type="range" class="form-range flex-grow-1" min="${rMin}" max="${rMax}" step="${rStep}" value="${rMin}" id="rule_${rule.id}">
                                     <input type="number" class="form-control form-control-sm ms-2 text-center w-75px" id="val_${rule.id}" value="${rMin}" min="${rMin}" max="${rMax}" step="${rStep}">
@@ -830,7 +830,7 @@ if (urunKategoriSelectForm) {
                     inputHtml = `<input type="number" class="form-control dynamic-rule-input" data-rule-id="${rule.id}" data-rule-key="${escapeHtml(rule.attributeKey)}" data-rule-type="number" ${requiredAttr}>`;
                 }
                 else if (rule.dataType === 'decimal') {
-                    inputHtml = `<input type="number" step="0.01" class="form-control dynamic-rule-input" data-rule-id="${rule.id}" data-rule-key="${escapeHtml(rule.attributeKey)}" data-rule-type="decimal" ${requiredAttr}>`;
+                    inputHtml = `<input type="number" step="0.1" class="form-control dynamic-rule-input" data-rule-id="${rule.id}" data-rule-key="${escapeHtml(rule.attributeKey)}" data-rule-type="decimal" ${requiredAttr}>`;
                 }
                 else {
                     inputHtml = `<input type="text" class="form-control dynamic-rule-input" data-rule-id="${rule.id}" data-rule-key="${escapeHtml(rule.attributeKey)}" data-rule-type="text" ${requiredAttr}>`;
@@ -1190,9 +1190,11 @@ function urunDuzenle(id) {
                     } else if (type === 'range_slider') {
                         const range = input.querySelector(`input[type="range"]`);
                         if (range) {
-                            range.value = attr.value;
+                            let decimals = parseInt(range.getAttribute('data-decimals')) || 0;
+                            let formattedValue = Number(attr.value).toFixed(decimals);
+                            range.value = formattedValue;
                             const numberInput = document.getElementById(`val_${attr.ruleId}`);
-                            if(numberInput) numberInput.value = attr.value;
+                            if(numberInput) numberInput.value = formattedValue;
                         }
                     } else if (type === 'discrete_slider') {
                         const range = input.querySelector(`input[type="range"]`);
@@ -1214,6 +1216,10 @@ function urunDuzenle(id) {
                             const colorInput = input.querySelector(`input[type="color"]`);
                             if (colorInput) colorInput.value = attr.value;
                         }
+                    } else if (type === 'decimal') {
+                        input.value = Number(attr.value).toFixed(1);
+                    } else if (type === 'number') {
+                        input.value = Number(attr.value).toFixed(0);
                     } else {
                         input.value = attr.value;
                     }
@@ -1410,12 +1416,17 @@ document.getElementById('filtreKategoriId')?.addEventListener('change', async fu
                     if (min >= max) max = min + 100;
                     let step = parseFloat(el.dataset.step) || 1;
                     
+                    let isDec = step < 1;
                     noUiSlider.create(el, {
                         start: [min, max],
                         connect: true,
                         step: step,
                         range: { 'min': min, 'max': max },
-                        tooltips: true
+                        tooltips: true,
+                        format: {
+                            to: function (value) { return Number(value).toFixed(isDec ? 1 : 0); },
+                            from: function (value) { return Number(value); }
+                        }
                     });
                     
                     let minIn = document.getElementById(`filter_min_${id}`);
@@ -1479,5 +1490,10 @@ document.getElementById('btnFiltreleriTemizle')?.addEventListener('click', () =>
         catSelect.value = '';
         const event = new Event('change');
         catSelect.dispatchEvent(event);
+        
+        // Kategori arayüzünü (Cascader) görsel olarak baştan çizerek sıfırla
+        if (typeof buildCategoryCascader === 'function') {
+            buildCategoryCascader('filtreKategoriContainer', 'filtreKategoriId', null, true);
+        }
     }
 });
