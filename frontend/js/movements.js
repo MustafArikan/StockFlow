@@ -360,6 +360,8 @@ async function dropdownIslemDepolariYukle() {
         });
     } catch (hata) {
         console.error("Depo yükleme hatası:", hata);
+        if (sourceSelect) sourceSelect.innerHTML = '<option value="" selected disabled>Depolar yüklenemedi!</option>';
+        if (targetSelect) targetSelect.innerHTML = '<option value="" selected disabled>Depolar yüklenemedi!</option>';
     }
 }
 
@@ -514,9 +516,10 @@ if (stokIslemFormu) {
             if (targetGroup) targetGroup.classList.add("d-none");
 
             await hareketleriYukle();
+            basariToast("Stok hareketi kaydedildi");
             kaydetButonu.innerText = orjinalMetin;
         } catch (hata) {
-            alert("Hata: " + hata.message);
+            hataGoster("Hata: " + hata.message);
             kaydetButonu.disabled = false;
             kaydetButonu.innerText = "Ekle ve Onayla";
         }
@@ -584,13 +587,13 @@ if (btnOpenCamera) {
                     formuDenetle();
                     closeCamera();
                 } else {
-                    alert(`Taranan barkod (${scannedText}) bulunamadı!`);
+                    uyariGoster(`Taranan barkod (${scannedText}) bulunamadı!`);
                 }
             }, () => { });
 
         } catch (error) {
             // 4. İZİN REDDEDİLDİ VEYA KAMERA YOKSA (SİYAH KUTU ASLA AÇILMAZ)
-            alert("Kameraya erişilemedi! Lütfen tarayıcı adres çubuğundaki kilit/kamera simgesinden izin verin.");
+            uyariGoster("Kameraya erişilemedi! Lütfen tarayıcı adres çubuğundaki kilit/kamera simgesinden izin verin.");
             btnOpenCamera.disabled = false; // Buton kilidini aç
             btnOpenCamera.innerHTML = originalText;
         }
@@ -660,6 +663,6 @@ async function kullaniciProfiliGoster(userId) {
 
         bootstrap.Modal.getOrCreateInstance(document.getElementById('userProfileModal')).show();
     } catch (hata) {
-        alert("Profil yüklenirken bir hata oluştu: " + hata.message);
+        hataGoster("Profil yüklenirken bir hata oluştu: " + hata.message);
     }
 }

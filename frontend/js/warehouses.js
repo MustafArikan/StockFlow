@@ -154,7 +154,7 @@ document.getElementById("btnDepoKaydet")?.addEventListener("click", async () => 
     const managerId = document.getElementById("depoYoneticiId")?.value;
     const btnKaydet = document.getElementById("btnDepoKaydet");
 
-    if (!name) return alert("Lütfen depo adı girin!");
+    if (!name) return uyariGoster("Lütfen depo adı girin!");
 
     const depoVerisi = { name, address, managerId: managerId || null };
     const metod = id ? "PUT" : "POST";
@@ -171,10 +171,11 @@ document.getElementById("btnDepoKaydet")?.addEventListener("click", async () => 
         document.getElementById("depoId").value = "";
         
         depolariYukle();
+        basariToast(id ? "Depo güncellendi" : "Depo eklendi");
         btnKaydet.disabled = false;
         btnKaydet.innerText = id ? "Güncelle" : "Ekle ve Kaydet";
     } catch (hata) {
-        alert("İşlem başarısız: " + hata.message);
+        hataGoster("İşlem başarısız: " + hata.message);
         btnKaydet.disabled = false;
     }
 });
@@ -196,15 +197,16 @@ function depoDuzenle(id) {
 
 async function depoSil(id, depoAdi) {
     const onayMsg = `DİKKAT!\n\n"${depoAdi}" isimli depoyu sildiğinizde, bu depoya bağlı:\n- TÜM RAFLAR\n- RAFLARIN İÇİNDEKİ TÜM ÜRÜNLER\nve stok hareketleri kalıcı olarak silinecektir.\n\nBu işlem KESİNLİKLE geri alınamaz. Onaylıyor musunuz?`;
-    if (!confirm(onayMsg)) return;
+    if (!(await onayla(onayMsg, "Evet, sil"))) return;
+
 
     try {
         await apiRequest(`/warehouses/${id}`, 'DELETE');
         
-        alert("Depo ve içindeki tüm bileşenler veritabanından başarıyla temizlendi.");
+        basariToast("Depo ve içindeki tüm bileşenler veritabanından başarıyla temizlendi.");
         depolariYukle();
     } catch (hata) {
-        alert("Depo silinemedi: " + hata.message);
+        hataGoster("Depo silinemedi: " + hata.message);
     }
 }
 
@@ -336,15 +338,16 @@ function sayfalamayiCizRaflar(totalItems, currentPage, depoId) {
 
 async function rafSil(rafId, rafKodu) {
     const onayMsg = `DİKKAT!\n\n"${rafKodu}" kodlu rafı sildiğinizde, bu rafın içinde bulunan TÜM ÜRÜNLER ve stok kayıtları kalıcı olarak silinecektir.\n\nBu işlem KESİNLİKLE geri alınamaz. Onaylıyor musunuz?`;
-    if (!confirm(onayMsg)) return;
+    if (!(await onayla(onayMsg, "Evet, sil"))) return;
+
 
     try {
         await apiRequest(`/locations/${rafId}`, 'DELETE');
         
-        alert("Raf ve içindeki ürünler başarıyla temizlendi.");
+        basariToast("Raf ve içindeki ürünler başarıyla temizlendi.");
         raflariSayfaliYukle(aktifDepoId, rafPage);
     } catch (hata) {
-        alert(hata.message);
+        hataGoster(hata.message);
     }
 }
 
@@ -352,7 +355,7 @@ const btnRafKaydetModal = document.getElementById("btnRafKaydetModal");
 if (btnRafKaydetModal) {
     btnRafKaydetModal.addEventListener("click", async (e) => {
         const code = document.getElementById("modalRafKodu")?.value || document.getElementById("modalRafKodu")?.value;
-        if (!code) return alert("Raf kodu giriniz!");
+        if (!code) return uyariGoster("Raf kodu giriniz!");
 
         try {
             await apiRequest('/locations', 'POST', { WarehouseId: aktifDepoId, Code: code });
@@ -365,7 +368,7 @@ if (btnRafKaydetModal) {
             
             raflariSayfaliYukle(aktifDepoId, 1);
         } catch (h) {
-            alert("Hata: " + h.message);
+            hataGoster("Hata: " + h.message);
         }
     });
 }
@@ -467,7 +470,7 @@ async function stokGecmisiniAc(productId, productName) {
         gecmisTablosunuGuncelle();
         bootstrap.Modal.getOrCreateInstance(document.getElementById("stokGecmisiModal")).show();
     } catch (hata) {
-        alert("Ürün geçmişi yüklenirken hata oluştu.");
+        hataGoster ("Ürün geçmişi yüklenirken hata oluştu.");
     }
 }
 
@@ -540,7 +543,7 @@ function modalIcinSifirla() {
 
 // 1. Durum: Depo Ekranından (+ Yeni Ürün Girişi) Butonuna Basıldığında
 document.getElementById("btnDepoyaUrunEkleModalAc")?.addEventListener("click", async () => {
-    if (!aktifDepoId) return alert("Lütfen önce bir depo seçin.");
+    if (!aktifDepoId) return uyariGoster("Lütfen önce bir depo seçin.");
     
     modalIcinSifirla();
     await depoIciKategorileriYukle();
@@ -559,7 +562,7 @@ document.getElementById("btnDepoyaUrunEkleModalAc")?.addEventListener("click", a
 
 // 2. Durum: Raf Ekranından (+ Bu Rafa Ürün Ekle) Butonuna Basıldığında
 document.getElementById("btnRafaUrunEkleModalAc")?.addEventListener("click", async () => {
-    if (!aktifDepoId || !aktifRafId) return alert("Hata: Raf seçimi bulunamadı!");
+    if (!aktifDepoId || !aktifRafId) return uyariGoster("Hata: Raf seçimi bulunamadı!");
     
     modalIcinSifirla();
     await depoIciKategorileriYukle();
@@ -612,13 +615,13 @@ async function depoIciKategorileriYukle() {
 
 async function hizliKategoriKaydet() {
     const ad = document.getElementById("yeniKategoriAdi").value.trim();
-    if(!ad) return alert("Kategori adı boş olamaz!");
+    if(!ad) return uyariGoster("Kategori adı boş olamaz!");
     try {
         const data = await apiRequest('/categories', 'POST', { Name: ad, ParentId: 0 });
         await depoIciKategorileriYukle();
         if(data.id) document.getElementById("depoIciUrunKategoriId").value = data.id; 
         document.getElementById("yeniKategoriAlani")?.classList.add("d-none");
-    } catch(e) { alert("Hata: " + e.message); }
+    } catch(e) { hataGoster("Hata: " + e.message); }
 }
 
 function hizliKategoriIptal() {
@@ -662,7 +665,7 @@ async function depoIciRaflariYukle(depoId) {
 
 async function hizliRafKaydet() {
     const kod = document.getElementById("yeniRafKodu").value.trim();
-    if(!kod) return alert("Raf kodu boş olamaz!");
+    if(!kod) return uyariGoster("Raf kodu boş olamaz!");
     try {
         const data = await apiRequest('/locations', 'POST', { WarehouseId: aktifDepoId, Code: kod });
         await depoIciRaflariYukle(aktifDepoId); 
@@ -672,7 +675,7 @@ async function hizliRafKaydet() {
         
         document.getElementById("yeniRafAlani")?.classList.add("d-none");
         raflariSayfaliYukle(aktifDepoId, rafPage);
-    } catch(e) { alert("Hata: " + e.message); }
+    } catch(e) { hataGoster("Hata: " + e.message); }
 }
 
 function hizliRafIptal() {
@@ -693,7 +696,7 @@ document.getElementById("btnDepoIciUrunKaydet")?.addEventListener("click", async
     const minStockLevel = document.getElementById("depoIciUrunMinStok").value;
 
     if (!name || !barcode || !categoryId || !targetLocationId || categoryId === "YENI_KATEGORI" || targetLocationId === "YENI_RAF") {
-        return alert("Lütfen tüm zorunlu alanları eksiksiz doldurun!");
+        return uyariGoster("Lütfen tüm zorunlu alanları eksiksiz doldurun!");
     }
 
     const urunPayload = {
@@ -709,14 +712,14 @@ document.getElementById("btnDepoIciUrunKaydet")?.addEventListener("click", async
         await apiRequest('/products', 'POST', urunPayload);
 
         bootstrap.Modal.getInstance(document.getElementById("depoIciUrunModal"))?.hide();
-        alert("Ürün başarıyla tanımlandı ve stok işlendi!");
+        basariToast("Ürün başarıyla tanımlandı ve stok işlendi!");
         
         // Eğer Raf ekranındaysak, ürünleri otomatik yenileyelim
         if (aktifRafId) {
             raftakiUrunleriGoruntule(aktifRafId, document.getElementById("seciliRafKoduUrunlerIcin").innerText);
         }
 
-    } catch (hata) { alert("Ürün Eklenemedi:\n" + hata.message); }
+    } catch (hata) { hataGoster("Ürün Eklenemedi:\n" + hata.message); }
 
 });
 
