@@ -34,7 +34,7 @@ public class SuppliersController : ControllerBase
 
     // Yeni Tedarikçi Ekle
     [HttpPost]
-    [Authorize(Policy = Policies.AdminOnly)] //access token kontrolune cevir
+    [Authorize(Policy = Policies.RequireSupplierWrite)] //access token kontrolune cevir
     public async Task<IActionResult> Create([FromBody] stok_takip.DTOs.CreateSupplierDto dto)
     {
         if (string.IsNullOrWhiteSpace(dto.Name))
@@ -64,7 +64,7 @@ public class SuppliersController : ControllerBase
 
     // PUT mevcut tedarikçiyi güncelleme
     [HttpPut("{id}")]
-    [Authorize(Policy = Policies.AdminOnly)]
+    [Authorize(Policy = Policies.RequireSupplierWrite)]
 
     public async Task<IActionResult> Update(int id, CreateSupplierDto dto)
     {
@@ -85,7 +85,7 @@ public class SuppliersController : ControllerBase
 
     // DELETE tedarikçiyi silme
     [HttpDelete("{id}")]
-    [Authorize(Policy = Policies.AdminOnly)] 
+    [Authorize(Policy = Policies.RequireSupplierWrite)] 
     public async Task<IActionResult> Delete(int id)
     {
         var supplier = await _context.Suppliers.FindAsync(id);

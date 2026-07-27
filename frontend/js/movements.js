@@ -1,4 +1,4 @@
-﻿// API adresi ve yetkilendirme token bilgisini ayarlar
+// API adresi ve yetkilendirme token bilgisini ayarlar
 const API_URL = `${CONFIG.API_BASE_URL}/stock/movements`;
 const token = localStorage.getItem('token');
 
@@ -666,3 +666,11 @@ async function kullaniciProfiliGoster(userId) {
         hataGoster("Profil yüklenirken bir hata oluştu: " + hata.message);
     }
 }
+
+// Yetkiye göre buton/kolon gizleme
+document.addEventListener("DOMContentLoaded", () => {
+    if (typeof hasPermission === "function" && !hasPermission("Movement.Add")) {
+        const btnYeniIslem = document.getElementById("btnYeniIslem");
+        if (btnYeniIslem) btnYeniIslem.classList.add('d-none');
+    }
+});

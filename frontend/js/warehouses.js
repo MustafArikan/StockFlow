@@ -752,6 +752,22 @@ document.getElementById("btnGeriDonRaflara")?.addEventListener("click", () => {
 document.addEventListener("DOMContentLoaded", () => {
     kullaniciBilgisiniDoldur();
     depolariYukle();
+
+    // Yetki kontrolü ile butonları gizle
+    if (typeof hasPermission === "function") {
+        if (!hasPermission("Warehouse.Add")) {
+            const btnYeniDepo = document.getElementById("btnYeniDepo");
+            if (btnYeniDepo) btnYeniDepo.classList.add("d-none");
+        }
+        if (!hasPermission("Location.Add")) {
+            const btnYeniRaf = document.getElementById("btnYeniRaf");
+            if (btnYeniRaf) btnYeniRaf.classList.add("d-none");
+        }
+        if (!hasPermission("Warehouse.Edit")) {
+            const btnYeniUrunGiris = document.getElementById("btnDepoyaUrunEkleModalAc");
+            if (btnYeniUrunGiris) btnYeniUrunGiris.classList.add("d-none");
+        }
+    }
 });
 
 // --- EVENT DELEGATION ---

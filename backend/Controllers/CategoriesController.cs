@@ -58,7 +58,7 @@ public class CategoriesController : ControllerBase
 
     // POST /api/categories : yeni kategori ekle
     [HttpPost]
-    [Authorize(Policy = Policies.AdminOnly)] // Sadece Admin rolüne sahip kullanıcılar kategori ekleyebilir
+    [Authorize(Policy = Policies.RequireCategoryWrite)] // Sadece Admin rolüne sahip kullanıcılar kategori ekleyebilir
     public async Task<IActionResult> Create(CreateCategoryDto dto)
     {
         var mevcut = await _context.Categories.FirstOrDefaultAsync(c=> c.Name == dto.Name);
@@ -125,7 +125,7 @@ public class CategoriesController : ControllerBase
     }
 
     [HttpDelete("{id}")]
-    [Authorize(Policy = Policies.AdminOnly)] // Sadece Admin rolüne sahip kullanıcılar kategori silebilir
+    [Authorize(Policy = Policies.RequireCategoryWrite)] // Sadece Admin rolüne sahip kullanıcılar kategori silebilir
     public async Task<IActionResult> Delete(int id)
     {
         var category = await _context.Categories.FindAsync(id);
@@ -140,7 +140,7 @@ public class CategoriesController : ControllerBase
 
     // PUT /api/categories/5 : kategori güncelle
     [HttpPut("{id}")]
-    [Authorize(Policy = Policies.AdminOnly)] // Sadece Admin rolüne sahip kullanıcılar kategori güncelleyebilir
+    [Authorize(Policy = Policies.RequireCategoryWrite)] // Sadece Admin rolüne sahip kullanıcılar kategori güncelleyebilir
     public async Task<IActionResult> Update(int id, CreateCategoryDto dto)
     {
         var category = await _context.Categories.FindAsync(id);

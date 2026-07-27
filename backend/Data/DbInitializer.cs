@@ -16,16 +16,46 @@ public static class DbInitializer
         {
             var roles = new List<AppRole>
             {
-                new AppRole { Name = "superadmin", Description = "Süper Yönetici - Tüm yetkilere sahip", IsSystemRole = true },
-                new AppRole { Name = "admin", Description = "Yönetici - Sistem yöneticisi", IsSystemRole = true },
-                new AppRole { Name = "muhasebe", Description = "Muhasebe - Finans ve raporlama", IsSystemRole = true },
-                new AppRole { Name = "operator", Description = "Operatör - Stok hareketleri", IsSystemRole = true },
-                new AppRole { Name = "depo_sorumlusu", Description = "Depo Sorumlusu - Depo ve raf yönetimi", IsSystemRole = true },
-                new AppRole { Name = "viewer", Description = "Görüntüleyici - Sadece okuma", IsSystemRole = true }
+                new AppRole { Name = "superadmin", Description = "Süper Yönetici - Tüm yetkilere sahip", IsSystemRole = true, Level = 100 },
+                new AppRole { Name = "admin", Description = "Yönetici - Sistem yöneticisi", IsSystemRole = true, Level = 90 },
+                new AppRole { Name = "muhasebe", Description = "Muhasebe - Finans ve raporlama", IsSystemRole = true, Level = 50 },
+                new AppRole { Name = "operator", Description = "Operatör - Stok hareketleri", IsSystemRole = true, Level = 40 },
+                new AppRole { Name = "depo_sorumlusu", Description = "Depo Sorumlusu - Depo ve raf yönetimi", IsSystemRole = true, Level = 30 },
+                new AppRole { Name = "viewer", Description = "Görüntüleyici - Sadece okuma", IsSystemRole = true, Level = 10 }
             };
             context.AppRoles.AddRange(roles);
             context.SaveChanges();
             
+        }
+        else
+        {
+            // Update existing roles that might have Level = 0 from before the migration
+            var existingRoles = context.AppRoles.ToList();
+            var updatesNeeded = false;
+            
+            var roleLevels = new Dictionary<string, int>
+            {
+                { "superadmin", 100 },
+                { "admin", 90 },
+                { "muhasebe", 50 },
+                { "operator", 40 },
+                { "depo_sorumlusu", 30 },
+                { "viewer", 10 }
+            };
+
+            foreach (var role in existingRoles)
+            {
+                if (roleLevels.TryGetValue(role.Name, out int targetLevel) && role.Level != targetLevel)
+                {
+                    role.Level = targetLevel;
+                    updatesNeeded = true;
+                }
+            }
+
+            if (updatesNeeded)
+            {
+                context.SaveChanges();
+            }
         }
 
         var permissions = new List<(string Name, string Description, string Module)>

@@ -158,20 +158,32 @@ builder.Services.AddAuthorization(options =>
         .RequireAuthenticatedUser()
         .Build();
 
-    options.AddPolicy(Policies.SuperAdminOnly, policy => policy.RequireRole("superadmin"));
+    options.AddPolicy(Policies.SuperAdminOnly, policy => policy.RequireAssertion(context => 
+        context.User.IsInRole("superadmin") || 
+        context.User.HasClaim("Permission", "Role.View") ||
+        context.User.HasClaim("Permission", "Role.Add") ||
+        context.User.HasClaim("Permission", "Role.Edit") ||
+        context.User.HasClaim("Permission", "Role.Delete")
+    ));
     options.AddPolicy(Policies.AdminOnly, policy => policy.RequireRole("admin", "superadmin"));
     
     // Permission policies for future dynamic expansion
-    options.AddPolicy(Policies.RequireAssetWrite, policy => policy.RequireClaim("Permission", "Assets.Write"));
-    options.AddPolicy(Policies.RequireAuditLogRead, policy => policy.RequireClaim("Permission", "AuditLogs.Read"));
-    options.AddPolicy(Policies.RequireCategoryWrite, policy => policy.RequireClaim("Permission", "Categories.Write"));
-    options.AddPolicy(Policies.RequireLocationWrite, policy => policy.RequireClaim("Permission", "Locations.Write"));
-    options.AddPolicy(Policies.RequireProductWrite, policy => policy.RequireClaim("Permission", "Products.Write"));
-    options.AddPolicy(Policies.RequireProductSupplierWrite, policy => policy.RequireClaim("Permission", "ProductSuppliers.Write"));
-    options.AddPolicy(Policies.RequireStockMovementWrite, policy => policy.RequireClaim("Permission", "StockMovements.Write"));
-    options.AddPolicy(Policies.RequireSupplierWrite, policy => policy.RequireClaim("Permission", "Suppliers.Write"));
-    options.AddPolicy(Policies.RequireWarehouseWrite, policy => policy.RequireClaim("Permission", "Warehouses.Write"));
-    options.AddPolicy(Policies.RequireUserManage, policy => policy.RequireClaim("Permission", "Users.Manage"));
+    options.AddPolicy(Policies.RequireAssetWrite, policy => policy.RequireAssertion(context => context.User.IsInRole("superadmin") || context.User.HasClaim("Permission", "Asset.Add") || context.User.HasClaim("Permission", "Asset.Edit")));
+    options.AddPolicy(Policies.RequireAuditLogRead, policy => policy.RequireAssertion(context => context.User.IsInRole("superadmin") || context.User.HasClaim("Permission", "System.AuditLogs")));
+    options.AddPolicy(Policies.RequireCategoryWrite, policy => policy.RequireAssertion(context => context.User.IsInRole("superadmin") || context.User.HasClaim("Permission", "Category.Add") || context.User.HasClaim("Permission", "Category.Edit")));
+    options.AddPolicy(Policies.RequireLocationWrite, policy => policy.RequireAssertion(context => context.User.IsInRole("superadmin") || context.User.HasClaim("Permission", "Location.Add")));
+    options.AddPolicy(Policies.RequireProductWrite, policy => policy.RequireAssertion(context => context.User.IsInRole("superadmin") || context.User.HasClaim("Permission", "Product.Add") || context.User.HasClaim("Permission", "Product.Edit")));
+    options.AddPolicy(Policies.RequireProductSupplierWrite, policy => policy.RequireAssertion(context => context.User.IsInRole("superadmin") || context.User.HasClaim("Permission", "Supplier.Edit")));
+    options.AddPolicy(Policies.RequireStockMovementWrite, policy => policy.RequireAssertion(context => context.User.IsInRole("superadmin") || context.User.HasClaim("Permission", "Movement.Add")));
+    options.AddPolicy(Policies.RequireSupplierWrite, policy => policy.RequireAssertion(context => context.User.IsInRole("superadmin") || context.User.HasClaim("Permission", "Supplier.Add") || context.User.HasClaim("Permission", "Supplier.Edit")));
+    options.AddPolicy(Policies.RequireWarehouseWrite, policy => policy.RequireAssertion(context => context.User.IsInRole("superadmin") || context.User.HasClaim("Permission", "Warehouse.Add") || context.User.HasClaim("Permission", "Warehouse.Edit")));
+    options.AddPolicy(Policies.RequireUserManage, policy => policy.RequireAssertion(context => 
+        context.User.IsInRole("superadmin") || 
+        context.User.HasClaim("Permission", "User.View") ||
+        context.User.HasClaim("Permission", "User.Add") ||
+        context.User.HasClaim("Permission", "User.Edit") ||
+        context.User.HasClaim("Permission", "User.Delete")
+    ));
 });
 
 builder.Services.AddCors(options =>

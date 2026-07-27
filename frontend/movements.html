@@ -24,7 +24,7 @@
                 <h1 class="fw-bold">Stok Hareketleri</h1>
                 <p class="text-muted mb-0">Ürün giriş ve çıkış kayıtları</p>
             </div>
-            <button class="btn btn-primary rounded-pill px-4 shadow-sm" data-bs-toggle="modal"
+            <button id="btnYeniIslem" class="btn btn-primary rounded-pill px-4 shadow-sm" data-bs-toggle="modal"
                 data-bs-target="#stokIslemModal">
                 + Yeni İşlem Ekle
             </button>
@@ -63,17 +63,17 @@
                     <table class="table table-hover align-middle mb-0 min-w-700">
                         <thead>
                             <tr class="text-muted small text-uppercase">
-                                <th id="tarihBaslik" class="text-center col-tarih user-select-none"
+                                <th id="tarihBaslik" class="text-center user-select-none"
                                     style="cursor: pointer;">Tarih ↕</th>
-                                <th id="thUrunKodu" class="text-center d-none d-md-table-cell col-kod user-select-none"
+                                <th id="thUrunKodu" class="text-center d-none d-md-table-cell user-select-none"
                                     style="cursor: pointer;">Ürün Kodu ↕</th>
-                                <th id="thUrunAdi" class="col-ad user-select-none" style="cursor: pointer;">Ürün Adı ↕
+                                <th id="thUrunAdi" class="user-select-none" style="cursor: pointer;">Ürün Adı ↕
                                 </th>
-                                <th id="thIslemTipi" class="text-center col-tip user-select-none"
+                                <th id="thIslemTipi" class="text-center user-select-none"
                                     style="cursor: pointer;">İşlem Tipi ↕</th>
-                                <th id="thAdet" class="text-center col-adet user-select-none" style="cursor: pointer;">
+                                <th id="thAdet" class="text-center user-select-none" style="cursor: pointer;">
                                     Adet ↕</th>
-                                <th id="thPersonel" class="text-center col-personel user-select-none"
+                                <th id="thPersonel" class="text-center user-select-none"
                                     style="cursor: pointer;">Personel ↕</th>
                             </tr>
                         </thead>

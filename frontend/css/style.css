@@ -226,21 +226,14 @@ body {
     background-color: var(--card-bg); padding: 15px; border-radius: 8px;
     border: 1px solid var(--border-color); box-shadow: 0 2px 4px rgba(0,0,0,0.05);
 }
-
-/* Ayar Çubuklarını (Range Slider) açık ve karanlık temaya uydurur. */
-.form-range::-webkit-slider-runnable-track { background-color: #adb5bd !important; height: 6px; border-radius: 1rem; }
-.form-range::-moz-range-track { background-color: #adb5bd !important; height: 6px; border-radius: 1rem; }
-[data-theme="dark"] .form-range::-webkit-slider-runnable-track { background-color: #555658 !important; }
-[data-theme="dark"] .form-range::-moz-range-track { background-color: #555658 !important; }
-
 /* =========================================================
    5. YARDIMCI SINIFLAR (UTILITIES - CSP UYUMLU)
    HTML içinde satır içi (inline) CSS yazımını engelleyerek güvenliği sağlar.
    ========================================================= */
 /* Tablo Sütun Genişliklerini Ayarlar */
-.col-tarih { width: 18%; }
+.col-tarih { width: 15%; }
 .col-kod { width: 15%; }
-.col-ad { width: 32%; }
+.col-ad { width: 25%; }
 .col-tip { width: 15%; }
 .col-adet { width: 10%; }
 .col-personel { width: 20%; }
@@ -351,4 +344,60 @@ button:disabled, .btn:disabled, .btn.disabled { cursor: not-allowed !important; 
 /* Fix overlapping in dynamic filter container */
 #dynamicFilterContainer .double-slider {
     margin-bottom: 25px;
+}
+
+/* Roles Page Styles */
+.role-item {
+    cursor: pointer;
+    transition: all 0.2s;
+    border-left: 4px solid transparent;
+}
+.role-item:hover {
+    background-color: var(--bs-light);
+}
+.role-item.active {
+    background-color: rgba(13, 110, 253, 0.05);
+    border-left-color: #0d6efd;
+    font-weight: 600;
+}
+.permission-module-card {
+    border: 1px solid var(--border-color);
+    background-color: var(--card-bg);
+    border-radius: 1rem;
+    margin-bottom: 0;
+    height: fit-content;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+    transition: transform 0.2s, box-shadow 0.2s;
+    overflow: hidden;
+}
+.permission-module-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
+}
+.permission-module-header {
+    background-color: rgba(0,0,0,0.02);
+    border-bottom: 1px solid var(--border-color);
+    padding: 1rem 1.5rem;
+    border-top-left-radius: 0.75rem;
+    border-top-right-radius: 0.75rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+[data-theme="dark"] .permission-module-header {
+    background-color: rgba(255,255,255,0.02);
+}
+.permission-item {
+    padding: 0.75rem 1.25rem;
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: background-color 0.2s;
+}
+.permission-item:hover {
+    background-color: rgba(0,0,0,0.01);
+}
+.permission-item:last-child {
+    border-bottom: none;
 }

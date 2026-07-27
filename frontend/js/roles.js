@@ -1,4 +1,4 @@
-document.addEventListener("DOMContentLoaded", () => {
+﻿document.addEventListener("DOMContentLoaded", () => {
     RolesUI.init();
     RolesUI.attachEventListeners();
 });
@@ -42,7 +42,7 @@ const RolesUI = {
             }
             this.renderPermissionModules();
         } catch (error) {
-            Swal.fire("Hata", error.message, "error");
+            hataGoster(error.message);
         }
     },
 
@@ -159,10 +159,11 @@ const RolesUI = {
             let html = `
                 <div class="col-12 col-lg-6">
                     <div class="permission-module-card h-100 d-flex flex-column">
-                        <div class="permission-module-header">
+                        <div class="permission-module-header d-flex justify-content-between align-items-center mb-2 pb-2 border-bottom">
                             <h6 class="mb-0 fw-bold text-primary"><i class="bi ${iconClass} me-2 fs-5 align-middle"></i>${escapeHTML(moduleName)}</h6>
-                            <div class="form-check form-switch m-0">
-                                <input class="form-check-input" type="checkbox" id="selectAll_${moduleSlug}">
+                            <div class="form-check form-switch m-0 d-flex align-items-center" title="Bu modüldeki (Örn: ${escapeHTML(moduleName)}) tüm yetkileri tek tuşla verir veya kaldırır.">
+                                <label class="form-check-label me-2 small text-muted" style="cursor: pointer;" for="selectAll_${moduleSlug}">Tümünü Seç</label>
+                                <input class="form-check-input m-0" style="cursor: pointer;" type="checkbox" id="selectAll_${moduleSlug}">
                             </div>
                         </div>
                         <div class="permission-module-body flex-grow-1" id="module_body_${moduleSlug}">
@@ -215,30 +216,32 @@ const RolesUI = {
         if (!role) return;
 
         const emptyCard = document.getElementById('emptySelectionCard');
-        const detailsCard = document.getElementById('roleDetailsCard');
+        document.getElementById('emptySelectionCard').classList.add('d-none');
+        document.getElementById('roleDetailsCard').classList.remove('d-none');
+        document.getElementById('roleDetailsCard').classList.add('d-flex');
 
-        emptyCard.classList.remove('d-flex');
-        emptyCard.classList.add('d-none');
-
-        detailsCard.classList.remove('d-none');
-        detailsCard.classList.add('d-flex');
-
-        document.getElementById('selectedRoleName').textContent = role.name;
-        document.getElementById('selectedRoleUserCount').textContent = `${role.userCount || 0} Kullanıcı`;
+        document.getElementById('selectedRoleNameDisplay').textContent = role.name;
+        document.getElementById('roleName').value = role.name;
         document.getElementById('roleId').value = role.id;
+        document.getElementById('selectedRoleUserCount').textContent = `${role.userCount || 0} Kullanıcı`;
         document.getElementById('roleDescription').value = role.description || '';
 
         const sysBadge = document.getElementById('selectedRoleSystemBadge');
         const delBtn = document.getElementById('btnDeleteRole');
+        const nameInput = document.getElementById('roleName');
         
         if (role.isSystemRole) {
             sysBadge.classList.remove('d-none');
             delBtn.disabled = true;
             delBtn.title = "Sistem rolleri silinemez";
+            nameInput.disabled = true;
+            nameInput.title = "Sistem rollerinin adı değiştirilemez";
         } else {
             sysBadge.classList.add('d-none');
             delBtn.disabled = false;
             delBtn.title = "";
+            nameInput.disabled = false;
+            nameInput.title = "";
         }
 
         // Reset all checkboxes
@@ -289,30 +292,26 @@ const RolesUI = {
             const newRole = await response.json();
             
             this.modalInstance.hide();
-            Swal.fire({
-                title: "Başarılı!",
-                text: "Yeni rol oluşturuldu. Şimdi yetkilerini ayarlayabilirsiniz.",
-                icon: "success",
-                toast: true,
-                position: 'top-end',
-                showConfirmButton: false,
-                timer: 3000
-            });
+            basariToast("Yeni rol oluşturuldu. Şimdi yetkilerini ayarlayabilirsiniz.");
 
             await this.loadRoles();
             this.selectRole(newRole.id);
 
         } catch (error) {
-            Swal.fire("Hata", error.message, "error");
+            hataGoster(error.message);
         }
     },
 
     saveRole: async function() {
         const id = document.getElementById('roleId').value;
+        const name = document.getElementById('roleName').value.trim();
         const desc = document.getElementById('roleDescription').value.trim();
         const role = this.roles.find(r => r.id == id);
         
-        if (!id || !role) return;
+        if (!id || !role || !name) return;
+
+        const confirmed = await onayla(`"${name}" rolünün bilgilerini ve yetkilerini güncellemek üzeresiniz.`, "Evet, Güncelle");
+        if (!confirmed) return;
 
         // Get selected permissions
         const permissionIds = [];
@@ -327,25 +326,17 @@ const RolesUI = {
                     "Content-Type": "application/json",
                     "Authorization": `Bearer ${localStorage.getItem('token')}`
                 },
-                body: JSON.stringify({ name: role.name, description: desc, permissionIds: permissionIds })
+                body: JSON.stringify({ name: name, description: desc, permissionIds: permissionIds })
             });
 
             if (!response.ok) throw new Error("Rol yetkileri güncellenemedi");
             
-            Swal.fire({
-                title: "Başarılı!",
-                text: "Rol ve yetkileri kaydedildi.",
-                icon: "success",
-                toast: true,
-                position: 'top-end',
-                showConfirmButton: false,
-                timer: 3000
-            });
+            basariToast("Rol ve yetkileri kaydedildi.");
 
             await this.loadRoles();
 
         } catch (error) {
-            Swal.fire("Hata", error.message, "error");
+            hataGoster(error.message);
         }
     },
 
@@ -356,32 +347,17 @@ const RolesUI = {
         if (!id || !role) return;
         
         if (role.isSystemRole) {
-            Swal.fire("Uyarı", "Sistem rolleri silinemez.", "warning");
+            uyariGoster("Sistem rolleri silinemez.");
             return;
         }
 
         if (role.userCount > 0) {
-            Swal.fire({
-                title: 'Uyarı!',
-                text: `Bu rol şu anda ${role.userCount} kullanıcıya atanmış durumda. Lütfen önce bu kullanıcıların rollerini değiştirin!`,
-                icon: 'warning',
-                confirmButtonText: 'Tamam'
-            });
+            uyariGoster(`Bu rol şu anda ${role.userCount} kullanıcıya atanmış durumda. Lütfen önce bu kullanıcıların rollerini değiştirin!`);
             return;
         }
 
-        const result = await Swal.fire({
-            title: 'Emin misiniz?',
-            text: `"${role.name}" rolünü kalıcı olarak silmek üzeresiniz.`,
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: '#dc3545',
-            cancelButtonColor: '#6c757d',
-            confirmButtonText: 'Evet, Sil!',
-            cancelButtonText: 'İptal'
-        });
-
-        if (result.isConfirmed) {
+        const confirmed = await onayla(`"${role.name}" rolünü kalıcı olarak silmek üzeresiniz.`, "Evet, Sil!");
+        if (confirmed) {
             try {
                 const response = await fetch(`${CONFIG.API_BASE_URL}/roles/${id}`, {
                     method: 'DELETE',
@@ -393,7 +369,7 @@ const RolesUI = {
                     throw new Error(data.message || "Silme işlemi başarısız");
                 }
 
-                Swal.fire("Silindi!", "Rol başarıyla silindi.", "success");
+                basariToast("Rol başarıyla silindi.");
                 
                 this.selectedRoleId = null;
                 const emptyCard = document.getElementById('emptySelectionCard');
@@ -407,7 +383,7 @@ const RolesUI = {
                 
                 await this.loadRoles();
             } catch (error) {
-                Swal.fire("Hata", error.message, "error");
+                hataGoster(error.message);
             }
         }
     },
@@ -461,3 +437,6 @@ function escapeHTML(str) {
         .replace(/"/g, "&quot;")
         .replace(/'/g, "&#39;");
 }
+
+
+

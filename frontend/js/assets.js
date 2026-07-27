@@ -22,19 +22,33 @@ document.addEventListener("DOMContentLoaded", () => {
     loadProductsForDropdown();
     loadUsersForDropdown();
 
-    // 2. Rol Kontrolü ve Grid Yüklemesi
-    const isAdminOrSuper = ["admin", "superadmin"].includes(userRole);
+    // Herkes asset listesini görebilir, sadece butonlar yetkilere göre gizlenir
+    document.getElementById("adminGridContainer").classList.remove("d-none");
+    loadGridCards();
 
-    if (isAdminOrSuper) {
-        // Adminse gridi göster ve verileri yükle
-        document.getElementById("adminGridContainer").classList.remove("d-none");
-        loadGridCards();
-    } else {
-        // Normal kullanıcıysa "Listeden Bul" ve "Yeni Ekipman" butonlarını gizle
-        const btnList = document.getElementById("btnListedenBul");
-        const btnYeni = document.getElementById("btnYeniEkipman");
-        if (btnList) btnList.classList.add("d-none");
-        if (btnYeni) btnYeni.classList.add("d-none");
+    // Yetkiye Göre Buton Gizleme
+    if (!hasPermission("Asset.Add")) {
+        const btnEkle = document.querySelector('[data-bs-target="#createAssetModal"]');
+        if (btnEkle) btnEkle.classList.add('d-none');
+    }
+
+    if (!hasPermission("Asset.Edit")) {
+        const btnAriza = document.querySelector('[data-bs-target="#breakdownModal"]');
+        if (btnAriza) btnAriza.classList.add('d-none');
+        
+        const btnCozum = document.querySelector('[data-bs-target="#resolveModal"]');
+        if (btnCozum) btnCozum.classList.add('d-none');
+        
+        const btnBakim = document.querySelector('[data-bs-target="#maintenanceModal"]');
+        if (btnBakim) btnBakim.classList.add('d-none');
+    }
+
+    if (!hasPermission("Asset.Assign")) {
+        const btnAta = document.querySelector('[data-bs-target="#assignAssetModal"]');
+        if (btnAta) btnAta.classList.add('d-none');
+        
+        const btnAl = document.querySelector('[data-bs-target="#returnAssetModal"]');
+        if (btnAl) btnAl.classList.add('d-none');
     }
 
     // 3. Arama ve Klavye Dinleyicileri
