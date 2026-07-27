@@ -135,7 +135,7 @@ async function searchAsset() {
         document.getElementById('serialSearchInput').value = '';
         
     } catch (error) {
-        alert(error.message);
+        hataGoster(error.message);
         document.getElementById('assetResultContainer').classList.add('d-none');
     }
 }
@@ -150,7 +150,7 @@ async function submitAssignAsset() {
     if(!currentAssetId) return;
     const userId = document.getElementById('assignUserSelect').value;
     const notes = document.getElementById('assignNotes').value;
-    if(!userId) return alert("Lütfen zimmetlenecek personeli seçin!");
+    if(!userId) return uyariGoster("Lütfen zimmetlenecek personeli seçin!");
     
     await sendAssetAction(`${CONFIG.API_BASE_URL}/assets/${currentAssetId}/assign`, 'PUT', { 
         userId: parseInt(userId), 
@@ -167,14 +167,14 @@ async function submitReturnAsset() {
 async function submitBreakdown() {
     if(!currentAssetId) return;
     const description = document.getElementById('breakdownDesc').value;
-    if(!description) return alert("Lütfen arıza açıklamasını yazın!");
+    if(!description) return uyariGoster("Lütfen arıza açıklamasını yazın!");
     await sendAssetAction(`${CONFIG.API_BASE_URL}/assets/${currentAssetId}/breakdown`, 'POST', { description });
 }
 
 async function submitResolve() {
     if(!currentAssetId) return;
     const solution = document.getElementById('resolveSolution').value;
-    if(!solution) return alert("Lütfen çözüm detaylarını yazın!");
+    if(!solution) return uyariGoster("Lütfen çözüm detaylarını yazın!");
     await sendAssetAction(`${CONFIG.API_BASE_URL}/assets/${currentAssetId}/resolve`, 'POST', { solution });
 }
 
@@ -182,7 +182,8 @@ async function submitMaintenance() {
     if(!currentAssetId) return;
     const details = document.getElementById('maintenanceDetails').value;
     const nextDate = document.getElementById('maintenanceNextDate').value;
-    if(!details) return alert("Lütfen yapılan bakımın detaylarını girin!");
+    if(!details) return uyariGoster("Lütfen yapılan bakımın detaylarını girin!");
+
     
     const payload = { details };
     if(nextDate) payload.nextMaintenanceDate = new Date(nextDate).toISOString();
@@ -206,11 +207,11 @@ async function sendAssetAction(url, method, body) {
         document.querySelectorAll('textarea, input[type="date"]').forEach(el => el.value = '');
         
         // Ekrana başarı mesajı ver ve Timeline'ı (Zaman çizelgesini) güncelle!
-        alert("Harika! " + (result.message || "İşlem başarıyla tamamlandı."));
+        basariToast("Harika! " + (result.message || "İşlem başarıyla tamamlandı."));
         searchAsset(); 
         
     } catch (e) {
-        alert("Bağlantı hatası: " + e.message);
+        hataGoster("Bağlantı hatası: " + e.message);
     }
 }
 
@@ -221,7 +222,7 @@ async function submitCreateAsset() {
     const notes = document.getElementById('newAssetNotes').value.trim();
     
     if (!productId || !serialNumber) {
-        return alert("Lütfen Ürün seçin ve Seri Numarası girin!");
+        return uyariGoster("Lütfen Ürün seçin ve Seri Numarası girin!");
     }
     
     try {
@@ -231,7 +232,7 @@ async function submitCreateAsset() {
             notes: notes
         }) || {};
         
-        alert("Harika! Yeni Demirbaş başarıyla sisteme kaydedildi.");
+        basariToast("Harika! Yeni Demirbaş başarıyla sisteme kaydedildi.");
         
         // Modalı kapat
         const modalInstance = bootstrap.Modal.getInstance(document.getElementById('createAssetModal'));
@@ -247,6 +248,7 @@ async function submitCreateAsset() {
         searchAsset();
         
     } catch (e) {
-        alert("Bağlantı hatası: " + e.message);
+        hataGoster("Bağlantı hatası: " + e.message);
+        
     }
 }

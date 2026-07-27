@@ -93,7 +93,7 @@ async function kullaniciProfiliGoster(userId) {
         
         bootstrap.Modal.getOrCreateInstance(document.getElementById('userProfileModal')).show();
     } catch (hata) {
-        alert("Profil yüklenirken bir hata oluştu: " + hata.message);
+        hataGoster("Profil yüklenirken bir hata oluştu: " + hata.message)
     }
 }
 
