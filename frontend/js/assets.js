@@ -18,145 +18,153 @@ if (!token) window.location.href = 'login.html';
 // SAYFA YÜKLENDİĞİNDE ÇALIŞACAKLAR 
 // ==========================================
 document.addEventListener("DOMContentLoaded", () => {
-    // 1. Sayfa açıldığında dropdown için ürünleri güvenli şekilde yükle
+    applyPermissions();
+    initEventListeners();
+
     loadProductsForDropdown();
     loadUsersForDropdown();
 
-    // Herkes asset listesini görebilir, sadece butonlar yetkilere göre gizlenir
-    document.getElementById("adminGridContainer").classList.remove("d-none");
-    loadGridCards();
+    document.getElementById("adminGridContainer")?.classList.remove("d-none");
+    loadGridCards(1); // Parametre olarak 1. sayfa diyoruz
+});
 
-    // Yetkiye Göre Buton Gizleme
-    if (!hasPermission("Asset.Add")) {
-        const btnEkle = document.querySelector('[data-bs-target="#createAssetModal"]');
-        if (btnEkle) btnEkle.classList.add('d-none');
-    }
+// YETKİLENDİRME (RBAC) KONTROLLERİ
+function applyPermissions() {
+    if (!hasPermission("Asset.Add")) document.querySelector('[data-bs-target="#createAssetModal"]')?.classList.add('d-none');
 
     if (!hasPermission("Asset.Edit")) {
-        const btnAriza = document.querySelector('[data-bs-target="#breakdownModal"]');
-        if (btnAriza) btnAriza.classList.add('d-none');
-        
-        const btnCozum = document.querySelector('[data-bs-target="#resolveModal"]');
-        if (btnCozum) btnCozum.classList.add('d-none');
-        
-        const btnBakim = document.querySelector('[data-bs-target="#maintenanceModal"]');
-        if (btnBakim) btnBakim.classList.add('d-none');
+        document.querySelector('[data-bs-target="#breakdownModal"]')?.classList.add('d-none');
+        document.querySelector('[data-bs-target="#resolveModal"]')?.classList.add('d-none');
+        document.querySelector('[data-bs-target="#maintenanceModal"]')?.classList.add('d-none');
     }
 
     if (!hasPermission("Asset.Assign")) {
-        const btnAta = document.querySelector('[data-bs-target="#assignAssetModal"]');
-        if (btnAta) btnAta.classList.add('d-none');
-        
-        const btnAl = document.querySelector('[data-bs-target="#returnAssetModal"]');
-        if (btnAl) btnAl.classList.add('d-none');
+        document.querySelector('[data-bs-target="#assignAssetModal"]')?.classList.add('d-none');
+        document.querySelector('[data-bs-target="#returnAssetModal"]')?.classList.add('d-none');
     }
+}
 
-    // 3. Arama ve Klavye Dinleyicileri
-    document.getElementById('btnSearchAsset').addEventListener('click', searchAsset);
-    document.getElementById('serialSearchInput').addEventListener('keyup', function (e) {
-        if (e.key === 'Enter') searchAsset();
+// MERKEZİ OLAY DİNLEYİCİLERİ
+function initEventListeners() {
+    document.getElementById('btnSearchAsset')?.addEventListener('click', searchAsset);
+    document.getElementById('serialSearchInput')?.addEventListener('keyup', e => { if (e.key === 'Enter') searchAsset(); });
+    document.getElementById('btnGeriDonGrid')?.addEventListener('click', goBackToGrid);
+
+    document.getElementById('equipmentGridCards')?.addEventListener('click', (e) => {
+        const cardLink = e.target.closest('.grid-asset-link');
+        if (cardLink) {
+            e.preventDefault();
+            document.getElementById('serialSearchInput').value = cardLink.getAttribute('data-serial');
+            searchAsset();
+        }
     });
 
-    // 4. Listeye Dön Butonu Dinleyicisi
-    const btnGeri = document.getElementById('btnGeriDonGrid');
-    if (btnGeri) btnGeri.addEventListener('click', goBackToGrid);
+    document.getElementById('btnSubmitCreateAsset')?.addEventListener('click', submitCreateAsset);
+    document.getElementById('btnSubmitAssign')?.addEventListener('click', submitAssignAsset);
+    document.getElementById('btnSubmitReturn')?.addEventListener('click', submitReturnAsset);
+    document.getElementById('btnSubmitBreakdown')?.addEventListener('click', submitBreakdown);
+    document.getElementById('btnSubmitResolve')?.addEventListener('click', submitResolve);
+    document.getElementById('btnSubmitMaintenance')?.addEventListener('click', submitMaintenance);
 
-    // 5. Grid Kartlarına Tıklama Dinleyicisi
-    const gridContainerBox = document.getElementById('equipmentGridCards');
-    if (gridContainerBox) {
-        gridContainerBox.addEventListener('click', (e) => {
-            const cardLink = e.target.closest('.grid-asset-link');
-            if (cardLink) {
-                e.preventDefault(); // Sayfanın üste kaymasını engelle
-                const serial = cardLink.getAttribute('data-serial');
-                document.getElementById('serialSearchInput').value = serial;
-                searchAsset();
-            }
-        });
-    }
+    // KAMERA 1: ARAMA EKRANI İÇİN
+    initSearchCamera();
 
-    // 6. Aksiyon Modalları (İşlem Butonları) Dinleyicileri
-    document.getElementById('btnSubmitCreateAsset').addEventListener('click', submitCreateAsset);
-    document.getElementById('btnSubmitAssign').addEventListener('click', submitAssignAsset);
-    document.getElementById('btnSubmitReturn').addEventListener('click', submitReturnAsset);
-    document.getElementById('btnSubmitBreakdown').addEventListener('click', submitBreakdown);
-    document.getElementById('btnSubmitResolve').addEventListener('click', submitResolve);
-    document.getElementById('btnSubmitMaintenance').addEventListener('click', submitMaintenance);
+    // KAMERA 2: YENİ EKİPMAN EKLEME EKRANI İÇİN
+    initAddAssetCamera();
+}
 
-    // 7. KAMERA VE QR OKUYUCU DİNLEYİCİLERİ (MODAL VERSİYONU)
+
+function initSearchCamera() {
     const btnKameraAcAsset = document.getElementById("btnKameraAcAsset");
     const scannerModalEl = document.getElementById("scannerModalAsset");
-    let scannerModalInstance = null;
 
-    if (btnKameraAcAsset && scannerModalEl) {
-        // ASYNC eklendi çünkü kamera izni bekleyeceğiz
-        btnKameraAcAsset.addEventListener("click", async () => {
-            const durumEl = document.getElementById('kameraDurumAsset');
+    btnKameraAcAsset?.addEventListener("click", async () => {
+        const durumEl = document.getElementById('kameraDurumAsset');
+        const originalHtml = btnKameraAcAsset.innerHTML;
+        btnKameraAcAsset.disabled = true;
+        btnKameraAcAsset.innerHTML = `<span class="spinner-border spinner-border-sm"></span>`;
 
-            // 7.1. GÜVENLİK: Önce İzin Kontrolü Yap
-            const originalHtml = btnKameraAcAsset.innerHTML;
-            btnKameraAcAsset.disabled = true;
-            btnKameraAcAsset.innerHTML = `<span class="spinner-border spinner-border-sm"></span>`;
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+            stream.getTracks().forEach(track => track.stop());
 
-            try {
-                // Kameraya erişmeyi dene
-                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-                // Başarılı olursa arkada çalışan testi hemen kapat
-                stream.getTracks().forEach(track => track.stop());
+            btnKameraAcAsset.disabled = false;
+            btnKameraAcAsset.innerHTML = originalHtml;
 
-                // İzin alındı Butonu eski haline getir ve Modalı Aç
-                btnKameraAcAsset.disabled = false;
-                btnKameraAcAsset.innerHTML = originalHtml;
+            const scannerModalInstance = bootstrap.Modal.getOrCreateInstance(scannerModalEl);
+            scannerModalInstance.show();
 
-                scannerModalInstance = bootstrap.Modal.getOrCreateInstance(scannerModalEl);
-                scannerModalInstance.show();
-
-                if (durumEl) {
-                    durumEl.textContent = "Kamera başlatılıyor...";
-                    durumEl.className = "text-center text-muted small mt-3 fw-bold";
-                }
-
-                // Kamerayı Başlat
-                startScanner("readerAsset", (scannedText) => {
-                    // BAŞARILI OKUMA
-                    let audio = new Audio('https://www.soundjay.com/button/beep-07.wav');
-                    audio.play().catch(() => { });
-
-                    document.getElementById('serialSearchInput').value = scannedText;
-
-                    if (durumEl) {
-                        durumEl.textContent = "Barkod Okundu! Yönlendiriliyor...";
-                        durumEl.className = "text-center text-success small mt-3 fw-bold";
-                    }
-
-                    searchAsset();
-
-                    setTimeout(() => {
-                        scannerModalInstance.hide();
-                    }, 600);
-
-                }, (errorMessage) => {
-                    // HATA DURUMU (Kameraya gösterilmediğinde)
-                    if (durumEl && durumEl.className.includes("text-muted")) {
-                        durumEl.textContent = "Karekod veya Barkod aranıyor, kameraya gösterin...";
-                    }
-                });
-
-            } catch (error) {
-                // 7.2. İZİN REDDEDİLDİ VEYA KAMERA YOK (Modal hiç açılmaz)
-                btnKameraAcAsset.disabled = false;
-                btnKameraAcAsset.innerHTML = originalHtml;
-                alert("Kameraya erişilemedi! Lütfen tarayıcı adres çubuğundaki kilit simgesinden kamera izni verin veya bilgisayarınıza bir kamera bağlayın.");
+            if (durumEl) {
+                durumEl.textContent = "Kamera başlatılıyor...";
+                durumEl.className = "text-center text-muted small mt-3 fw-bold";
             }
-        });
 
-        // Modal dışarı tıklanarak kapatılırsa kamerayı kesinlikle durdur
-        scannerModalEl.addEventListener('hidden.bs.modal', () => {
-            stopScanner();
-        });
+            startScanner("readerAsset", (scannedText) => {
+                new Audio('https://www.soundjay.com/button/beep-07.wav').play().catch(() => { });
+                document.getElementById('serialSearchInput').value = scannedText;
+                if (durumEl) {
+                    durumEl.textContent = "Barkod Okundu! Yönlendiriliyor...";
+                    durumEl.className = "text-center text-success small mt-3 fw-bold";
+                }
+                searchAsset();
+                setTimeout(() => scannerModalInstance.hide(), 600);
+            }, () => {
+                if (durumEl && durumEl.className.includes("text-muted")) durumEl.textContent = "Karekod veya Barkod aranıyor, kameraya gösterin...";
+            });
+        } catch (error) {
+            btnKameraAcAsset.disabled = false;
+            btnKameraAcAsset.innerHTML = originalHtml;
+            uyariGoster("Kameraya erişilemedi! Lütfen tarayıcı izinlerini kontrol edin.");
+        }
+    });
+
+    scannerModalEl?.addEventListener('hidden.bs.modal', stopScanner);
+}
+
+function initAddAssetCamera() {
+    const btnKameraAcEkle = document.getElementById("btnKameraAcEkle");
+    const btnKameraKapatEkle = document.getElementById("btnKameraKapatEkle");
+    const kameraAlaniEkle = document.getElementById("kameraAlaniEkle");
+    const inputNewAssetSerial = document.getElementById("newAssetSerial");
+
+    btnKameraAcEkle?.addEventListener("click", async () => {
+        if (btnKameraAcEkle.disabled) return;
+        const originalText = btnKameraAcEkle.innerHTML;
+        btnKameraAcEkle.disabled = true;
+        btnKameraAcEkle.innerHTML = `<span class="spinner-border spinner-border-sm"></span> Bekleniyor...`;
+
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+            stream.getTracks().forEach(track => track.stop());
+
+            kameraAlaniEkle.classList.remove("d-none");
+            btnKameraAcEkle.innerHTML = originalText;
+
+            startScanner("readerEkle", (scannedText) => {
+                new Audio('https://www.soundjay.com/button/beep-07.wav').play().catch(() => { });
+                inputNewAssetSerial.value = scannedText;
+                closeScannerEkle();
+                basariToast("Barkod başarıyla okundu!");
+            }, () => { });
+        } catch (error) {
+            uyariGoster("Kameraya erişilemedi!");
+            btnKameraAcEkle.disabled = false;
+            btnKameraAcEkle.innerHTML = originalText;
+        }
+    });
+
+    btnKameraKapatEkle?.addEventListener("click", closeScannerEkle);
+    document.getElementById('createAssetModal')?.addEventListener('hidden.bs.modal', closeScannerEkle);
+
+    function closeScannerEkle() {
+        kameraAlaniEkle?.classList.add("d-none");
+        if (btnKameraAcEkle) {
+            btnKameraAcEkle.disabled = false;
+            btnKameraAcEkle.innerHTML = `<i class="bi bi-upc-scan me-1"></i> Barkod Okut`;
+        }
+        stopScanner();
     }
-
-});
+}
 
 // Grid Listesine Geri Dönüş Fonksiyonu
 function goBackToGrid() {
@@ -165,7 +173,7 @@ function goBackToGrid() {
 
     if (["admin", "superadmin"].includes(userRole)) {
         document.getElementById('adminGridContainer').classList.remove('d-none');
-        loadGridCards(); // Güncel durumu yansıtmak için yeniden yükle
+        loadGridCards(currentGridPage); // Güncel sayfayı koruyarak geri dön
     }
 }
 
@@ -250,6 +258,26 @@ async function searchAsset() {
 
         document.getElementById('resAssignedTo').textContent = data.assetInfo.assignedTo;
 
+        // Cihazın durumuna göre mantıksız olan butonları gizle
+        const btnAssign = document.querySelector('[data-bs-target="#assignAssetModal"]');
+        const btnReturn = document.querySelector('[data-bs-target="#returnAssetModal"]');
+        const btnBreakdown = document.querySelector('[data-bs-target="#breakdownModal"]');
+        const btnResolve = document.querySelector('[data-bs-target="#resolveModal"]');
+
+        const status = data.assetInfo.status;
+
+        // Müsait değilse "Ata" butonunu gizle
+        if (btnAssign) btnAssign.classList.toggle('d-none', status !== 'Available');
+
+        // Kullanımda değilse "Teslim Al" butonunu gizle
+        if (btnReturn) btnReturn.classList.toggle('d-none', status !== 'In Use');
+
+        // Zaten arızalıysa "Arıza Bildir" butonunu gizle
+        if (btnBreakdown) btnBreakdown.classList.toggle('d-none', status === 'Broken');
+
+        // Arızalı değilse "Çözüm Gir (Tamir)" butonunu gizle
+        if (btnResolve) btnResolve.classList.toggle('d-none', status !== 'Broken');
+
         // 2. Timeline (Zaman Çizelgesini) Çiz
         const timelineUl = document.getElementById('assetTimelineList');
         timelineUl.innerHTML = ''; // Önce temizle
@@ -311,9 +339,14 @@ async function submitAssignAsset() {
     if (!currentAssetId) return;
     const userId = document.getElementById('assignUserSelect').value;
     const notes = document.getElementById('assignNotes').value;
-    if (!userId) return alert("Lütfen atanacak kullanıcıyı seçiniz!");
 
-    await sendAssetAction(`${CONFIG.API_BASE_URL}/assets/${currentAssetId}/assign`, 'POST', {
+    if (!userId) {
+        uyariGoster("Lütfen atanacak kullanıcıyı seçiniz!");
+        return;
+    }
+
+    // C# controller [HttpPut] beklediği için 'PUT' kullanıyoruz
+    await sendAssetAction(`${CONFIG.API_BASE_URL}/assets/${currentAssetId}/assign`, 'PUT', {
         userId: parseInt(userId),
         notes: notes
     });
@@ -322,20 +355,34 @@ async function submitAssignAsset() {
 async function submitReturnAsset() {
     if (!currentAssetId) return;
     const notes = document.getElementById('returnNotes').value;
-    await sendAssetAction(`${CONFIG.API_BASE_URL}/assets/${currentAssetId}/return`, 'POST', { notes });
+
+    // C# controller [HttpPut] beklediği için 'PUT' kullanıyoruz
+    await sendAssetAction(`${CONFIG.API_BASE_URL}/assets/${currentAssetId}/return`, 'PUT', { notes });
 }
 
 async function submitBreakdown() {
     if (!currentAssetId) return;
     const description = document.getElementById('breakdownDesc').value;
-    if (!description) return alert("Lütfen arıza açıklamasını yazın!");
+
+    if (!description) {
+        uyariGoster("Lütfen arıza açıklamasını yazın!");
+        return;
+    }
+
+    // C# controller [HttpPost] beklediği için 'POST' kullanıyoruz
     await sendAssetAction(`${CONFIG.API_BASE_URL}/assets/${currentAssetId}/breakdown`, 'POST', { description });
 }
 
 async function submitResolve() {
     if (!currentAssetId) return;
     const solution = document.getElementById('resolveSolution').value;
-    if (!solution) return alert("Lütfen çözüm detaylarını yazın!");
+
+    if (!solution) {
+        uyariGoster("Lütfen çözüm detaylarını yazın!");
+        return;
+    }
+
+    // C# controller [HttpPost] beklediği için 'POST' kullanıyoruz
     await sendAssetAction(`${CONFIG.API_BASE_URL}/assets/${currentAssetId}/resolve`, 'POST', { solution });
 }
 
@@ -343,11 +390,16 @@ async function submitMaintenance() {
     if (!currentAssetId) return;
     const details = document.getElementById('maintenanceDetails').value;
     const nextDate = document.getElementById('maintenanceNextDate').value;
-    if (!details) return alert("Lütfen yapılan bakımın detaylarını girin!");
+
+    if (!details) {
+        uyariGoster("Lütfen yapılan bakımın detaylarını girin!");
+        return;
+    }
 
     const payload = { details };
     if (nextDate) payload.nextMaintenanceDate = new Date(nextDate).toISOString();
 
+    // C# controller [HttpPost] beklediği için 'POST' kullanıyoruz
     await sendAssetAction(`${CONFIG.API_BASE_URL}/assets/${currentAssetId}/maintenance`, 'POST', payload);
 }
 
@@ -368,14 +420,14 @@ async function sendAssetAction(url, method, body) {
 
         // Ekrana başarı mesajı ver ve Timeline'ı (Zaman çizelgesini) güncelle!
         basariToast("Harika! " + (result.message || "İşlem başarıyla tamamlandı."));
-        searchAsset(); 
-        
+        searchAsset();
+
     } catch (e) {
         hataGoster("Bağlantı hatası: " + e.message);
     }
 }
 
-// YENİ DEMİRBAŞ OLUŞTURMA FONKSİYONU
+// YENİ EKİPMAN OLUŞTURMA FONKSİYONU
 async function submitCreateAsset() {
     const productId = document.getElementById('newAssetProduct').value;
     const serialNumber = document.getElementById('newAssetSerial').value.trim();
@@ -391,9 +443,9 @@ async function submitCreateAsset() {
             serialNumber: serialNumber,
             notes: notes
         }) || {};
-        
+
         basariToast("Harika! Yeni Demirbaş başarıyla sisteme kaydedildi.");
-        
+
         // Modalı kapat
         const modalInstance = bootstrap.Modal.getInstance(document.getElementById('createAssetModal'));
         if (modalInstance) modalInstance.hide();
@@ -403,13 +455,15 @@ async function submitCreateAsset() {
         document.getElementById('newAssetSerial').value = '';
         document.getElementById('newAssetNotes').value = '';
 
+        loadGridCards(1); // Cihaz eklendiği için listeyi ve sayfalamayı yenile
+
         // Cihazı otomatik olarak ara ve ekranda göster!
         document.getElementById('serialSearchInput').value = serialNumber;
         searchAsset();
 
     } catch (e) {
         hataGoster("Bağlantı hatası: " + e.message);
-        
+
     }
 }
 

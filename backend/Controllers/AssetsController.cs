@@ -23,7 +23,7 @@ public class AssetsController : ControllerBase
 
     // --- 1. YENİ EKİPMAN KAYIT İŞLEMİ ---
     [HttpPost]
-    [Authorize(Policy = Policies.RequireAssetWrite)] 
+    [Authorize(Policy = Policies.RequireAssetWrite)]
     public async Task<IActionResult> CreateAsset([FromBody] CreateAssetDto dto)
     {
         // Aynı seri numarasına sahip Ekipman var mı kontrolü
@@ -35,14 +35,46 @@ public class AssetsController : ControllerBase
             return BadRequest(new { message = "Bu seri numarasına/QR koda sahip bir ekipman zaten kayıtlı." });
         }
 
-        // Ekipmanın bağlı olduğu ürün (katalog) modelinin doğrulanması
+        // Ekipmanın bağlı olduğu ürün (katalog) modelinin doğrulanması 
         var product = await _context.Products
-            .AsNoTracking()
             .FirstOrDefaultAsync(p => p.Id == dto.ProductId);
+
         if (product == null)
         {
             return NotFound(new { message = "Belirtilen ürün modeli bulunamadı." });
         }
+
+        // STOK KONTROLÜ (Toplam Miktar Kontrolü)
+        // Ürünün mevcut toplam stoğunu hesaplıyoruz
+        var totalStock = await _context.StockLevels
+            .Where(sl => sl.ProductId == product.Id)
+            .SumAsync(sl => sl.Quantity);
+
+        if (totalStock < 1)
+        {
+            return BadRequest(new { message = $"Stok yetersiz! Depoda hiç '{product.Name}' bulunmuyor. Lütfen önce stok girişi yapın." });
+        }
+
+        // Depodaki ilk müsait raftan/stoktan 1 adet düşürüyoruz
+        var stockLevel = await _context.StockLevels
+            .FirstOrDefaultAsync(sl => sl.ProductId == product.Id && sl.Quantity > 0);
+
+        if (stockLevel != null)
+        {
+            stockLevel.Quantity -= 1;
+        }
+
+        // STOK HAREKETİNİ (LOG) KAYDET
+        var stockMovement = new StockMovement
+        {
+            ProductId = product.Id,
+            MovementType = "OUT", // Stok çıkışı
+            Quantity = 1,
+            Description = $"Ekipman Sisteme Kaydedildi (Seri No: {dto.SerialNumber})",
+            CreatedAt = DateTime.UtcNow,
+            UserId = GetCurrentUserId()
+        };
+        _context.StockMovements.Add(stockMovement);
 
         // Yeni Ekipman (Asset) nesnesinin oluşturulması
         var newAsset = new Asset
@@ -59,20 +91,21 @@ public class AssetsController : ControllerBase
             Asset = newAsset,
             UserId = GetCurrentUserId(), // Yardımcı metot kullanıldı
             EventType = "Sisteme Giriş",
-            Notes = "Ekipman sisteme ilk kez eklendi."
+            Notes = "Ekipman sisteme eklendi ve stoktan 1 adet düşüldü."
         };
 
         _context.Assets.Add(newAsset);
         _context.AssetHistories.Add(historyRecord);
 
-        // Transaction (İşlem) mantığı: İkisi de aynı anda kaydedilir
+        // Transaction (İşlem) mantığı: EF Core stok düşme, stok hareketi ve ekipman kaydını TEK seferde güvenle işler.
         await _context.SaveChangesAsync();
 
-        return Ok(new { message = "Ekipman başarıyla oluşturuldu.", assetId = newAsset.Id });
+        return Ok(new { message = "Ekipman başarıyla oluşturuldu ve stoktan düşüldü.", assetId = newAsset.Id });
     }
 
+    // --- 2. EKİPMAN ATAMA İŞLEMİ ---
     [HttpPut("{id}/assign")]
-    [Authorize(Policy = Policies.RequireAssetWrite)] 
+    [Authorize(Policy = Policies.RequireAssetWrite)]
     public async Task<IActionResult> AssignAsset(int id, [FromBody] AssignAssetDto dto)
     {
         var asset = await _context.Assets.FindAsync(id);
@@ -99,13 +132,15 @@ public class AssetsController : ControllerBase
         asset.AssignedToId = dto.UserId;
         asset.Status = "In Use";
 
-        // Atama işlem logunun oluşturulması
+        // Atama işlem logunun oluşturulması  
+        string notEki = !string.IsNullOrWhiteSpace(dto.Notes) ? $" Ek not: {dto.Notes}" : "";
+
         var historyRecord = new AssetHistory
         {
             AssetId = asset.Id,
             UserId = GetCurrentUserId(), // Yardımcı metot kullanıldı
             EventType = "Kullanıcıya Atandı",
-            Notes = $"{targetUser.Email} kullanıcısına atandı. Ek not: {dto.Notes}."
+            Notes = $"{targetUser.Email} kullanıcısına atandı.{notEki}"
         };
 
         _context.AssetHistories.Add(historyRecord);
@@ -199,6 +234,7 @@ public class AssetsController : ControllerBase
         });
     }
 
+    // --- 5. EKİPMAN TESLİM ALMA İŞLEMİ ---
     [HttpPut("{id}/return")]
     [Authorize(Policy = Policies.RequireAssetWrite)]
 
@@ -210,12 +246,15 @@ public class AssetsController : ControllerBase
             return BadRequest(new { message = "Ekipman bulunamadı veya şu an kimseye atanmamış." });
         }
 
+
+        string notEki = !string.IsNullOrWhiteSpace(dto.Notes) ? $" Ek not: {dto.Notes}" : "";
+
         var historyRecord = new AssetHistory
         {
             AssetId = asset.Id,
             UserId = GetCurrentUserId(), // Yardımcı metot kullanıldı
             EventType = "Teslim Alındı",
-            Notes = $"{asset.AssignedTo?.FirstName} {asset.AssignedTo?.LastName} tarafından iade edildi. Ek not: {dto.Notes}"
+            Notes = $"{asset.AssignedTo?.FirstName} {asset.AssignedTo?.LastName} tarafından iade edildi.{notEki}"
         };
 
         asset.AssignedToId = null;
@@ -228,7 +267,7 @@ public class AssetsController : ControllerBase
 
     // --- 6. ARIZA BİLDİRİMİ İŞLEMİ ---
     [HttpPost("{id}/breakdown")]
-    [Authorize]
+    [Authorize(Policy = Policies.RequireAssetWrite)]
     public async Task<IActionResult> ReportBreakdown(int id, [FromBody] ReportBreakdownDto dto)
     {
         var asset = await _context.Assets.FindAsync(id);
@@ -252,7 +291,7 @@ public class AssetsController : ControllerBase
 
     // --- 7. ARIZA ÇÖZÜMÜ / TAMİR İŞLEMİ ---
     [HttpPost("{id}/resolve")]
-    [Authorize]
+    [Authorize(Policy = Policies.RequireAssetWrite)]
     public async Task<IActionResult> ResolveBreakdown(int id, [FromBody] ResolveBreakdownDto dto)
     {
         var asset = await _context.Assets.FindAsync(id);
@@ -277,11 +316,12 @@ public class AssetsController : ControllerBase
 
     // --- 8. BAKIM İŞLEME ---
     [HttpPost("{id}/maintenance")]
-    [Authorize]
+    [Authorize(Policy = Policies.RequireAssetWrite)]
     public async Task<IActionResult> LogMaintenance(int id, [FromBody] LogMaintenanceDto dto)
     {
         var asset = await _context.Assets.FindAsync(id);
-        if (asset == null) return NotFound();
+
+        if (asset == null) return NotFound(new { message = "Ekipman bulunamadı." });
 
         // Eğer yeni bir bakım tarihi seçildiyse varlığa (Asset) işle
         if (dto.NextMaintenanceDate.HasValue)
