@@ -10,6 +10,8 @@ function escapeHtml(text) {
 }
 
 let currentAssetId = null;
+let currentGridPage = 1;
+let currentGridPageSize = 8; // Izgara tasarımı için varsayılan 8
 const userRole = typeof getUserRole === "function" ? getUserRole() : "User";
 const token = localStorage.getItem('token');
 if (!token) window.location.href = 'login.html';
@@ -24,8 +26,11 @@ document.addEventListener("DOMContentLoaded", () => {
     loadProductsForDropdown();
     loadUsersForDropdown();
 
-    document.getElementById("adminGridContainer")?.classList.remove("d-none");
-    loadGridCards(1); // Parametre olarak 1. sayfa diyoruz
+    // 'goBackToGrid' fonksiyonu ile aynı güvenlik kuralı buraya da eklendi.
+    if (["admin", "superadmin"].includes(userRole)) {
+        document.getElementById("adminGridContainer")?.classList.remove("d-none");
+        loadGridCards(1);
+    }
 });
 
 // YETKİLENDİRME (RBAC) KONTROLLERİ
@@ -167,28 +172,29 @@ function initAddAssetCamera() {
 }
 
 // Grid Listesine Geri Dönüş Fonksiyonu
-function goBackToGrid() {
+async function goBackToGrid() {
     document.getElementById('assetResultContainer').classList.add('d-none');
     document.getElementById('serialSearchInput').value = '';
 
     if (["admin", "superadmin"].includes(userRole)) {
         document.getElementById('adminGridContainer').classList.remove('d-none');
-        loadGridCards(currentGridPage); // Güncel sayfayı koruyarak geri dön
+        await loadGridCards(currentGridPage); // Beklenerek çiziliyor      
     }
 }
 
 async function loadProductsForDropdown() {
-    const token = localStorage.getItem('token');
     try {
         const data = await apiRequest('/products?pageNumber=1&pageSize=1000', 'GET');
-
         const select = document.getElementById('newAssetProduct');
-        select.innerHTML = '<option value="">-- Bir Ürün Seçin --</option>';
 
         if (data.items && data.items.length > 0) {
-            data.items.forEach(p => {
-                select.innerHTML += `<option value="${p.id}">${escapeHtml(p.name)} (Stok: ${p.stockQuantity})</option>`;
-            });
+            // Döngü yerine map ve join ile tek satırlık string üretiyoruz, DOM'a 1 kere basıyoruz.
+            const optionsHtml = data.items.map(product =>
+                `<option value="${product.id}">${escapeHtml(product.name)} (Stok: ${product.stockQuantity})</option>`
+            ).join('');
+
+            // Başlık ve veriler, DOM'a TEK SEFERDE basıldı.
+            select.innerHTML = '<option value="">-- Bir Ürün Seçin --</option>' + optionsHtml;
         } else {
             select.innerHTML = '<option value="">Kayıtlı ürün bulunamadı!</option>';
         }
@@ -198,28 +204,31 @@ async function loadProductsForDropdown() {
 }
 
 async function loadUsersForDropdown() {
-    const token = localStorage.getItem('token');
     try {
         // API'ye sayfalama parametrelerini gönderiyoruz
         const response = await apiRequest('/users?pageNumber=1&pageSize=1000', 'GET');
 
         // Gelen verinin içindeki diziyi güvenli şekilde yakalıyoruz
         const users = response.items || response.data || response;
-
         const select = document.getElementById('assignUserSelect');
-        select.innerHTML = '<option value="">-- Kullanıcıyı Seçiniz --</option>';
 
         if (users && users.length > 0) {
-            users.forEach(u => {
-                const fname = u.firstName || u.FirstName || "";
-                const lname = u.lastName || u.LastName || "";
-                const email = u.email || u.Email || "Bilinmiyor";
+            // Tüm kullanıcıları dönüp, arka planda dev bir HTML metni oluşturuyoruz
+            const optionsHtml = users.map(user => {
+                const fname = user.firstName || user.FirstName || "";
+                const lname = user.lastName || user.LastName || "";
+                const email = user.email || user.Email || "Bilinmiyor";
                 let displayName = `${fname} ${lname}`.trim();
-                if (!displayName) displayName = email; // İsim yoksa E-posta göster
+                if (!displayName) displayName = email;
 
-                const id = u.id || u.Id;
-                select.innerHTML += `<option value="${id}">${escapeHtml(displayName)}</option>`;
-            });
+                const id = user.id || user.Id;
+                // Değeri doğrudan DOM'a yazmak yerine 'return' ile geriye döndürüyoruz
+                return `<option value="${id}">${escapeHtml(displayName)}</option>`;
+            }).join(''); // .join('') ile tüm parçaları aralarında boşluk olmadan tek bir metne dönüştürüyoruz.
+
+            // Ana başlık ile arka planda ürettiğimiz metni birleştirip, DOM'a TEK SEFERDE yazdırıyoruz
+            select.innerHTML = '<option value="">-- Kullanıcıyı Seçiniz --</option>' + optionsHtml;
+
         } else {
             select.innerHTML = '<option value="">Kullanıcı bulunamadı!</option>';
         }
@@ -283,7 +292,7 @@ async function searchAsset() {
         timelineUl.innerHTML = ''; // Önce temizle
 
         if (data.timeline && data.timeline.length > 0) {
-            data.timeline.forEach(event => {
+            const timelineHtml = data.timeline.map(event => {
                 // Etkinlik tipine göre timeline nokta rengini ve ikonunu belirle
                 let dotClass = "dot-primary";
                 let iconHtml = '<i class="bi bi-info-circle text-primary"></i>';
@@ -305,22 +314,23 @@ async function searchAsset() {
                 // Tarihi formatla
                 const dateString = event.date ? new Date(event.date).toLocaleString('tr-TR') : "Tarih Yok";
 
-                const li = document.createElement('li');
-                li.className = `timeline-item ${dotClass}`;
-                li.innerHTML = `
-                    <div class="timeline-content">
-                        <div class="d-flex justify-content-between align-items-center mb-2">
-                            <span class="fw-bold fs-6">${iconHtml} ${escapeHtml(event.eventType)}</span>
-                            <span class="text-muted small"><i class="bi bi-calendar3"></i> ${dateString}</span>
+                return `
+                    <li class="timeline-item ${dotClass}">
+                        <div class="timeline-content">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span class="fw-bold fs-6">${iconHtml} ${escapeHtml(event.eventType)}</span>
+                                <span class="text-muted small"><i class="bi bi-calendar3"></i> ${dateString}</span>
+                            </div>
+                            <p class="mb-0 text-secondary">${escapeHtml(event.notes || "Açıklama bulunmuyor.")}</p>
+                            <div class="mt-2 text-end">
+                                <small class="text-muted fst-italic"><i class="bi bi-person-fill"></i> İşlem: ${escapeHtml(event.userName)}</small>
+                            </div>
                         </div>
-                        <p class="mb-0 text-secondary">${escapeHtml(event.notes || "Açıklama bulunmuyor.")}</p>
-                        <div class="mt-2 text-end">
-                            <small class="text-muted fst-italic"><i class="bi bi-person-fill"></i> İşlem: ${escapeHtml(event.userName)}</small>
-                        </div>
-                    </div>
+                    </li>
                 `;
-                timelineUl.appendChild(li);
-            });
+            }).join('');
+
+            timelineUl.innerHTML = timelineHtml; // Tek seferde DOM'a yazıldı        
         } else {
             timelineUl.innerHTML = '<li class="text-muted fst-italic">Geçmiş kaydı bulunamadı.</li>';
         }
@@ -332,6 +342,11 @@ async function searchAsset() {
     } catch (error) {
         hataGoster(error.message);
         document.getElementById('assetResultContainer').classList.add('d-none');
+
+        // Hata alındığında kullanıcı yetkiliyse boş ekranda kalmaması için Grid'i (Tabloyu) geri getiriyoruz
+        if (["admin", "superadmin"].includes(userRole)) {
+            document.getElementById('adminGridContainer').classList.remove('d-none');
+        }
     }
 }
 
@@ -420,7 +435,7 @@ async function sendAssetAction(url, method, body) {
 
         // Ekrana başarı mesajı ver ve Timeline'ı (Zaman çizelgesini) güncelle!
         basariToast("Harika! " + (result.message || "İşlem başarıyla tamamlandı."));
-        searchAsset();
+        await searchAsset(); //Ekranın güncellenmesi beklenecek        
 
     } catch (e) {
         hataGoster("Bağlantı hatası: " + e.message);
@@ -455,12 +470,15 @@ async function submitCreateAsset() {
         document.getElementById('newAssetSerial').value = '';
         document.getElementById('newAssetNotes').value = '';
 
-        loadGridCards(1); // Cihaz eklendiği için listeyi ve sayfalamayı yenile
+        // Sadece yetkisi olanlar için Grid'i YENİLE ve bitmesini BEKLE
+        if (["admin", "superadmin"].includes(userRole)) {
+            await loadGridCards(1); // Cihaz eklendiği için listeyi ve sayfalamayı yenile
+        }
 
+        // İşlem tamamen bittikten sonra detay aramasını tetikle ve BEKLE
         // Cihazı otomatik olarak ara ve ekranda göster!
         document.getElementById('serialSearchInput').value = serialNumber;
-        searchAsset();
-
+        await searchAsset();
     } catch (e) {
         hataGoster("Bağlantı hatası: " + e.message);
 
@@ -470,62 +488,89 @@ async function submitCreateAsset() {
 // ==========================================
 // ADMİNLER İÇİN GRİD KART MOTORU
 // ==========================================
-async function loadGridCards() {
+// Fonksiyon dışarıdan bir 'page' (sayfa) parametresi alıyor.
+async function loadGridCards(page = 1) {
+    currentGridPage = page;
     const gridContainer = document.getElementById("equipmentGridCards");
     gridContainer.innerHTML = '<div class="col-12 text-center text-muted"><div class="spinner-border text-primary"></div><br>Ekipmanlar yükleniyor...</div>';
 
     try {
-        const response = await apiRequest('/assets?pageNumber=1&pageSize=100', 'GET');
+        const response = await apiRequest(`/assets?pageNumber=${page}&pageSize=${currentGridPageSize}`, 'GET');
         const assets = response.assets || response;
+        const totalRecords = response.totalRecords || (assets ? assets.length : 0);
 
         if (!assets || assets.length === 0) {
             gridContainer.innerHTML = '<div class="col-12 text-center text-muted"><i class="bi bi-inbox fs-1"></i><p>Sistemde henüz kayıtlı ekipman yok.</p></div>';
+            const paginationContainer = document.getElementById("assetsPaginationContainer");
+            if (paginationContainer) paginationContainer.innerHTML = "";
             return;
         }
 
-        gridContainer.innerHTML = ''; // Temizle
+        // createElement ile tarayıcıyı yormak yerine, 
+        // verileri dışarıdaki bağımsız HTML oluşturucuya (buildAssetCardHtml) gönderip metin olarak birleştiriyoruz.
+        const cardsHtml = assets.map(asset => buildAssetCardHtml(asset)).join('');
 
-        assets.forEach(a => {
-            // Renk ve Durum Belirleme
-            let statusText = "Bilinmiyor";
-            let statusClass = "bg-secondary text-white";
-            let iconColor = "text-primary";
+        // Birleştirilen HTML'i tek bir seferde ekrana basıyoruz.
+        gridContainer.innerHTML = cardsHtml;
 
-            if (a.status === 'Available') { statusText = "Boşta"; statusClass = "bg-success text-white"; iconColor = "text-success"; }
-            else if (a.status === 'In Use') { statusText = "Kullanımda"; statusClass = "bg-primary text-white"; iconColor = "text-primary"; }
-            else if (a.status === 'Broken') { statusText = "Arızalı"; statusClass = "bg-danger text-white"; iconColor = "text-danger"; }
-
-            let personelAdi = a.assignedToName;
-            if (!personelAdi) personelAdi = "Şu an Boşta";
-
-            // Kartı Oluşturma (CSS Efektli)
-            const col = document.createElement("div");
-            col.className = "col-12 col-md-6 col-lg-4 col-xl-3";
-            col.innerHTML = `
-                <div class="card border-0 shadow-sm rounded-4 h-100 equipment-grid-card position-relative asset-grid-card">
-                    <div class="card-body text-center p-4">
-                        <div class="mb-3">
-                            <div class="d-inline-flex align-items-center justify-content-center bg-light rounded-circle asset-icon-circle">
-                                <i class="bi bi-laptop fs-1 ${iconColor}"></i>
-                            </div>
-                        </div>
-                        <h6 class="fw-bold mb-1 text-truncate" title="${escapeHtml(a.productName)}">${escapeHtml(a.productName)}</h6>
-                        <div class="mb-3">
-                            <span class="badge bg-dark rounded-pill fw-normal asset-sn-badge">SN: ${escapeHtml(a.serialNumber)}</span>
-                        </div>
-                        <div class="d-flex justify-content-between align-items-center border-top pt-3 mt-auto">
-                            <span class="badge ${statusClass} rounded-pill">${statusText}</span>
-                            <small class="text-muted text-truncate ms-2 asset-person-name"><i class="bi bi-person-fill"></i> ${escapeHtml(personelAdi)}</small>
-                        </div>
-                    </div>
-                    <!-- CSP Uyumlu Tıklanabilir Gizli Link (onclick silindi) -->
-                    <a href="#" class="stretched-link grid-asset-link" data-serial="${escapeHtml(a.serialNumber)}"></a>
-                </div>
-            `;
-            gridContainer.appendChild(col);
-        });
+        // Sayfalama Modülünü Grid Modunda (isGrid = true) Tetikle
+        if (typeof buildPagination === 'function') {
+            buildPagination(
+                "assetsPaginationContainer",
+                totalRecords,
+                page,
+                currentGridPageSize,
+                (newPage) => loadGridCards(newPage),
+                (newSize) => {
+                    currentGridPageSize = newSize;
+                    loadGridCards(1);
+                },
+                true // 'isGrid' parametresi! (8, 24, 48 çıkar)
+            );
+        }
 
     } catch (error) {
         gridContainer.innerHTML = `<div class="col-12 text-center text-danger">Yüklenirken hata oluştu: ${error.message}</div>`;
+        const paginationContainer = document.getElementById("assetsPaginationContainer");
+        if (paginationContainer) paginationContainer.innerHTML = "";
     }
+}
+
+// ==========================================
+// KART HTML ÜRETİCİSİ (UI VE DATA AYRIMI)
+// ==========================================
+function buildAssetCardHtml(asset) {
+    let statusText = "Bilinmiyor";
+    let statusClass = "bg-secondary text-white";
+    let iconColor = "text-primary";
+
+    if (asset.status === 'Available') { statusText = "Boşta"; statusClass = "bg-success text-white"; iconColor = "text-success"; }
+    else if (asset.status === 'In Use') { statusText = "Kullanımda"; statusClass = "bg-primary text-white"; iconColor = "text-primary"; }
+    else if (asset.status === 'Broken') { statusText = "Arızalı"; statusClass = "bg-danger text-white"; iconColor = "text-danger"; }
+
+    let personelAdi = asset.assignedToName || "Şu an Boşta";
+
+    return `
+        <div class="col-12 col-md-6 col-lg-4 col-xl-3">
+            <div class="card border-0 shadow-sm rounded-4 h-100 equipment-grid-card position-relative asset-grid-card">
+                <div class="card-body text-center p-4">
+                    <div class="mb-3">
+                        <div class="d-inline-flex align-items-center justify-content-center bg-light rounded-circle asset-icon-circle">
+                            <i class="bi bi-laptop fs-1 ${iconColor}"></i>
+                        </div>
+                    </div>
+                    <h6 class="fw-bold mb-1 text-truncate" title="${escapeHtml(asset.productName)}">${escapeHtml(asset.productName)}</h6>
+                    <div class="mb-3">
+                        <span class="badge bg-dark rounded-pill fw-normal asset-sn-badge">SN: ${escapeHtml(asset.serialNumber)}</span>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center border-top pt-3 mt-auto">
+                        <span class="badge ${statusClass} rounded-pill">${statusText}</span>
+                        <small class="text-muted text-truncate ms-2 asset-person-name"><i class="bi bi-person-fill"></i> ${escapeHtml(personelAdi)}</small>
+                    </div>
+                </div>
+                <!-- CSP Uyumlu Tıklanabilir Gizli Link -->
+                <a href="#" class="stretched-link grid-asset-link" data-serial="${escapeHtml(asset.serialNumber)}"></a>
+            </div>
+        </div>
+    `;
 }
