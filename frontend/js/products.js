@@ -1589,3 +1589,10 @@ const btnSkuUretEl = document.getElementById('btnSkuUret');
 if (btnSkuUretEl) {
     btnSkuUretEl.addEventListener('click', generateSku);
 }
+
+document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('btnExcelImport')?.addEventListener('click', handleExcelImport);
+    document.getElementById('btnExportExcel')?.addEventListener('click', exportProductsToExcel);
+    document.getElementById('btnExportPdf')?.addEventListener('click', exportProductsToPDF);
+    document.getElementById('btnExportCsv')?.addEventListener('click', exportProductsToCSV);
+});

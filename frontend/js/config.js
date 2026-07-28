@@ -167,40 +167,7 @@ function buildPagination(containerId, totalItems, currentPage, pageSize, onPageC
     let startItem = (currentPage - 1) * pageSize + 1;
     let endItem = Math.min(currentPage * pageSize, totalItems);
 
-    let html = `
-    <div class="d-flex justify-content-between align-items-center mt-3">
-        <div class="text-muted small">
-            ${startItem}-${endItem} / ${totalItems} kayıt
-        </div>
-        <nav>
-            <ul class="pagination pagination-sm mb-0 shadow-sm justify-content-center">`;
-
-    html += `<li class="page-item ${currentPage === 1 ? 'disabled' : ''}"><a class="page-link page-action" href="#" data-page="${currentPage - 1}">« Önceki</a></li>`;
-
-    for (let i = 1; i <= totalPages; i++) {
-        if (totalPages > 7) {
-            if (i === 1 || i === totalPages || (i >= currentPage - 1 && i <= currentPage + 1)) {
-                html += `<li class="page-item ${currentPage === i ? 'active' : ''}"><a class="page-link page-action" href="#" data-page="${i}">${i}</a></li>`;
-            } else if (i === 2 || i === totalPages - 1) {
-                html += `<li class="page-item disabled"><span class="page-link text-muted">...</span></li>`;
-            }
-        } else {
-            html += `<li class="page-item ${currentPage === i ? 'active' : ''}"><a class="page-link page-action" href="#" data-page="${i}">${i}</a></li>`;
-        }
-    }
-
-    html += `<li class="page-item ${currentPage === totalPages ? 'disabled' : ''}"><a class="page-link page-action" href="#" data-page="${currentPage + 1}">Sonraki »</a></li>`;
-    html += `   </ul>
-        </nav>
-        <div>
-            <select class="form-select form-select-sm shadow-sm page-size-action" style="width: auto;">
-                <option value="10" ${pageSize === 10 ? 'selected' : ''}>10 Satır</option>
-                <option value="25" ${pageSize === 25 ? 'selected' : ''}>25 Satır</option>
-                <option value="50" ${pageSize === 50 ? 'selected' : ''}>50 Satır</option>
-                <option value="100" ${pageSize === 100 ? 'selected' : ''}>100 Satır</option>
-            </select>
-        </div>
-    </div>`;
+    let html = buildPaginationHtml(totalItems, currentPage, pageSize, totalPages, startItem, endItem);
 
     container.innerHTML = html;
 
@@ -261,35 +228,7 @@ function renderProfessionalLayout() {
     // 4. YAN MENÜYÜ (SIDEBAR) OLUŞTURMA:
     const sidebar = document.createElement('aside');
     sidebar.id = 'sidebar';
-    sidebar.innerHTML = `
-        <div class="sidebar-header border-bottom">
-            <a class="fw-bold text-primary fs-4 text-decoration-none d-flex align-items-center" href="index.html">
-                <i class="bi bi-hexagon-fill me-2 fs-5"></i>
-                Stock<span class="sidebar-logo-text">Flow</span>
-            </a>
-            <button class="btn btn-sm d-lg-none text-muted border-0" id="btnCloseSidebar">
-                <i class="bi bi-x-lg fs-5"></i>
-            </button>
-        </div>
-        <div class="sidebar-menu flex-grow-1 overflow-auto py-3">
-            <h6 class="sidebar-heading text-uppercase text-muted fw-bold px-4 mb-2 fs-07rem ls-1px">Ana Menü</h6>
-            <a href="index.html" class="sidebar-link ${currentPath === 'index.html' ? 'active' : ''}"><i class="bi bi-grid-1x2"></i> <span>Ana Sayfa</span></a>
-            <a href="categories.html" id="navCategoriesItem" class="sidebar-link d-none ${currentPath === 'categories.html' ? 'active' : ''}"><i class="bi bi-tags"></i> <span>Kategoriler</span></a>
-            <a href="products.html" id="navProductsItem" class="sidebar-link d-none ${currentPath === 'products.html' ? 'active' : ''}"><i class="bi bi-box-seam"></i> <span>Ürünler</span></a>
-            <a href="movements.html" id="navMovementsItem" class="sidebar-link d-none ${currentPath === 'movements.html' ? 'active' : ''}"><i class="bi bi-arrow-left-right"></i> <span>Stok Hareketleri</span></a>
-            
-            <h6 class="sidebar-heading text-uppercase text-muted fw-bold px-4 mb-2 fs-07rem ls-1px">Yönetim</h6>
-            <a href="warehouses.html" id="navWarehousesItem" class="sidebar-link d-none ${currentPath === 'warehouses.html' ? 'active' : ''}"><i class="bi bi-building"></i> <span>Depolar</span></a>
-            <a href="suppliers.html" id="navSuppliersItem" class="sidebar-link d-none ${currentPath === 'suppliers.html' ? 'active' : ''}"><i class="bi bi-truck"></i> <span>Tedarikçiler</span></a>
-            <a href="assets.html" id="navAssetsItem" class="sidebar-link d-none ${currentPath === 'assets.html' ? 'active' : ''}"><i class="bi bi-pc-display"></i> <span>Ekipman Yönetimi</span></a>
-            
-            <h6 class="sidebar-heading text-uppercase text-muted fw-bold px-4 mb-2 fs-07rem ls-1px">Sistem</h6>
-            <a href="users.html" id="navUsersItem" class="sidebar-link d-none ${currentPath === 'users.html' ? 'active' : ''}"><i class="bi bi-people"></i> <span>Kullanıcılar</span></a>
-            <a href="roles.html" id="navRolesItem" class="sidebar-link d-none ${currentPath === 'roles.html' ? 'active' : ''}"><i class="bi bi-shield-lock"></i> <span>Rol ve Yetki Yönetimi</span></a>
-            <a href="audit-logs.html" id="navAuditLogsItem" class="sidebar-link d-none ${currentPath === 'audit-logs.html' ? 'active' : ''}"><i class="bi bi-journal-text"></i> <span>Sistem Logları</span></a>
-            <a href="test-scanner.html" id="navTestScannerItem" class="sidebar-link d-none ${currentPath === 'test-scanner.html' ? 'active' : ''}"><i class="bi bi-upc-scan"></i> <span>Barkod Okuyucu</span></a>
-        </div>
-    `;
+    sidebar.innerHTML = buildSidebarHtml(currentPath);
 
     // 5. ÜST BARI (TOPBAR) VE ANA İSKELETİ OLUŞTURMA:
     const mainWrapper = document.createElement('div');
@@ -297,59 +236,7 @@ function renderProfessionalLayout() {
 
     const topbar = document.createElement('header');
     topbar.className = 'topbar shadow-sm';
-    topbar.innerHTML = `
-        <div class="d-flex align-items-center">            
-            <button class="btn border-0 p-1 me-3 text-muted bg-transparent" id="btnToggleSidebar">
-                <i class="bi bi-list fs-3"></i>
-            </button>
-        </div>
-        <div class="d-flex align-items-center gap-3">
-            <button id="layoutThemeToggleBtn" class="btn btn-link text-decoration-none text-muted p-0 fs-5" title="Temayı Değiştir"></button>
-
-            <!-- Bildirimler -->
-            <div class="dropdown position-relative">
-                <a class="text-muted text-decoration-none dropdown-toggle no-caret" href="#" role="button" id="notificationDropdown" data-bs-toggle="dropdown">
-                    <i class="bi bi-bell-fill fs-5"></i>
-                    <span id="navbarNotificationCount" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger d-none fs-065rem">0</span>
-                </a>
-                <ul class="dropdown-menu dropdown-menu-end shadow border-0 p-2 notification-dropdown-menu">
-                    <li class="dropdown-header border-bottom pb-2 mb-2 d-flex justify-content-between align-items-center">
-                        <span class="fw-bold">Son Bildirimler</span>
-                        <button id="btnNavbarReadAll" class="btn btn-link btn-xs text-primary p-0 text-decoration-none small">Tümünü Oku</button>
-                    </li>
-                    <div id="navbarNotificationList" class="d-flex flex-column gap-2">
-                        <li class="text-center text-muted py-3 small">Bildirimler yükleniyor...</li>
-                    </div>
-                    <li class="border-top mt-2 pt-2 text-center">
-                        <a href="notifications.html" class="text-primary small text-decoration-none fw-bold">Tüm Bildirimleri Gör →</a>
-                    </li>
-                </ul>
-            </div>
-
-            <!-- Kullanıcı Menüsü (Profil ve Çıkış Birleştirildi) -->
-            <div class="dropdown">
-                <a href="#" class="d-flex align-items-center text-decoration-none dropdown-toggle text-muted" data-bs-toggle="dropdown" style="cursor: pointer;">
-                    <div class="bg-primary text-white rounded-circle profile-icon-wrapper me-2 shadow-sm d-flex justify-content-center align-items-center">
-                        <i class="bi bi-person"></i>
-                    </div>
-                    <span id="userProfile" class="small fw-bold d-none d-md-block text-muted">Yükleniyor...</span>
-                </a>
-                <ul class="dropdown-menu dropdown-menu-end shadow border-0 mt-2 py-2" style="min-width: 200px;">
-                    <li>
-                        <a href="profile.html" class="dropdown-item py-2 fw-semibold text-secondary">
-                            <i class="bi bi-person-gear me-2 text-primary"></i> Profil Ayarları
-                        </a>
-                    </li>
-                    <li><hr class="dropdown-divider my-1"></li>
-                    <li>
-                        <button id="btnNavbarLogout" class="dropdown-item py-2 fw-bold text-danger">
-                            <i class="bi bi-box-arrow-right me-2"></i> Çıkış Yap
-                        </button>
-                    </li>
-                </ul>
-            </div>
-        </div>
-    `;
+    topbar.innerHTML = buildTopbarHtml();
 
     mainWrapper.appendChild(topbar);
     mainWrapper.appendChild(contentContainer);

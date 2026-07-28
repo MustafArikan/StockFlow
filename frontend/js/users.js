@@ -397,8 +397,8 @@ async function kullaniciGecmisiniGoster(id, adSoyad) {
                 <td class="fw-bold text-primary">${escapeHtml(log.actionType)}</td>
                 <td>${escapeHtml(log.entityName)} <span class="badge bg-secondary">#${log.entityId}</span></td>
                 <td class="small text-muted">${escapeHtml(log.ipAddress)}</td>
-                <td class="small text-break" style="max-width: 200px;">${log.oldValues ? escapeHtml(log.oldValues) : "-"}</td>
-                <td class="small text-break" style="max-width: 200px;">${log.newValues ? escapeHtml(log.newValues) : "-"}</td>
+                <td class="small text-break mw-200">${log.oldValues ? escapeHtml(log.oldValues) : "-"}</td>
+                <td class="small text-break mw-200">${log.newValues ? escapeHtml(log.newValues) : "-"}</td>
             `;
             tbody.appendChild(tr);
         });

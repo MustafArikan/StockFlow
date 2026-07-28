@@ -18,9 +18,7 @@ class DynamicUI {
             let optionsStr = escapeHtml(JSON.stringify(options));
             inputHtml = `<div class="position-relative dynamic-rule-input-group" data-rule-id="${rule.id}">
                             <input type="text" id="search_${rule.id}" autocomplete="off" placeholder="Arayın veya seçin..." class="form-control dynamic-searchable-form-input" data-rule-id="${rule.id}" ${requiredAttr}>
-                            <input type="hidden" class="dynamic-rule-input" id="rule_${rule.id}" data-rule-id="${rule.id}" data-rule-key="${escapeHtml(rule.attributeKey)}" data-rule-type="text" ${requiredAttr}>
-                            <ul class="list-group position-absolute w-100 shadow-sm" id="results_${rule.id}" style="z-index:1000; display:none; max-height:200px; overflow-y:auto;"></ul>
-                            <div class="invalid-feedback">Listeden bir seçim yapmalısınız</div>
+                            <ul class="list-group position-absolute w-100 shadow-sm dynamic-ui-dropdown" id="results_${rule.id}"></ul>
                          </div>`;
             // Add options as dataset string to prevent parsing errors inside HTML attributes
             inputHtml = inputHtml.replace('<div', `<div data-options='${optionsStr}'`);
@@ -90,7 +88,7 @@ class DynamicUI {
                 let encodedOptions = escapeHtml(JSON.stringify(options));
                 inputHtml = `<div class="d-flex align-items-center dynamic-rule-input" data-rule-id="${rule.id}" data-rule-key="${escapeHtml(rule.attributeKey)}" data-rule-type="discrete_slider" data-options='${encodedOptions}'>
                                 <input type="range" class="form-range flex-grow-1 dynamic-discrete-slider-form" data-rule-id="${rule.id}" min="${rMin}" max="${rMax}" step="${rStep}" value="${rMin}" id="rule_${rule.id}">
-                                <input type="text" class="form-control form-control-sm ms-2 text-center" style="width:100px;" id="val_${rule.id}" value="${escapeHtml(options[0])}" readonly>
+                                <input type="text" class="form-control form-control-sm ms-2 text-center w-100px" id="val_${rule.id}" value="${escapeHtml(options[0])}" readonly>
                                 <input type="hidden" id="hidden_${rule.id}" value="${escapeHtml(options[0])}">
                              </div>`;
             } else {
@@ -112,9 +110,9 @@ class DynamicUI {
                 inputHtml = `<div class="d-flex flex-wrap mt-2 dynamic-rule-input" data-rule-id="${rule.id}" data-rule-key="${escapeHtml(rule.attributeKey)}" data-rule-type="color_picker">`;
                 options.forEach((opt, idx) => {
                     inputHtml += `<div class="form-check form-check-inline m-0 me-2 mb-2 p-0">
-                                    <label class="form-check-label d-flex align-items-center p-1 border rounded" style="cursor:pointer;" for="color_${rule.id}_${idx}">
+                                    <label class="form-check-label d-flex align-items-center p-1 border rounded cursor-pointer" for="color_${rule.id}_${idx}">
                                         <input class="form-check-input color-radio-item ms-1 me-2" type="radio" name="rule_${rule.id}" id="color_${rule.id}_${idx}" value="${escapeHtml(opt)}" ${requiredAttr}>
-                                        <span class="d-inline-block rounded-circle shadow-sm" title="${escapeHtml(opt)}" style="width:24px; height:24px; background-color:${escapeHtml(opt)}; border:1px solid #ddd;"></span>
+                                        <span class="d-inline-block rounded-circle shadow-sm color-swatch-span" title="${escapeHtml(opt)}" data-bg-color="${escapeHtml(opt)}"></span>
                                     </label>
                                   </div>`;
                 });
@@ -166,7 +164,7 @@ class DynamicUI {
             inputHtml = `<div class="position-relative" data-options='${optionsStr}'>
                             <div class="d-flex flex-wrap gap-1 mb-1" id="chips_filter_${rule.id}"></div>
                             <input type="text" class="form-control form-control-sm dynamic-multi-search-filter-input" placeholder="Ara ve seçiniz..." data-rule-id="${rule.id}">
-                            <ul id="results_filter_${rule.id}" class="list-group position-absolute w-100 shadow-sm" style="display:none; max-height:200px; overflow-y:auto; top:100%; z-index:99999;"></ul>
+                            <ul id="results_filter_${rule.id}" class="list-group position-absolute w-100 shadow-sm dynamic-ui-dropdown-top"></ul>
                             <input type="hidden" id="filter_hidden_${rule.id}" class="kural-filtresi" data-rule-id="${rule.id}" data-rule-key="${escapeHtml(rule.attributeKey)}" data-filter-type="multi_select" value="[]">
                          </div>`;
         }
@@ -176,7 +174,7 @@ class DynamicUI {
             inputHtml = `<div class="position-relative" data-options='${optionsStr}'>
                             <input type="text" class="form-control form-control-sm" placeholder="Ara veya Seç..."
                                    class="form-control form-control-sm dynamic-search-filter-input" data-rule-id="${rule.id}">
-                            <ul id="results_filter_${rule.id}" class="list-group position-absolute w-100 shadow-sm" style="display:none; max-height:200px; overflow-y:auto; top:100%; z-index:99999;"></ul>
+                            <ul id="results_filter_${rule.id}" class="list-group position-absolute w-100 shadow-sm dynamic-ui-dropdown-top"></ul>
                             <input type="hidden" id="filter_hidden_${rule.id}" class="kural-filtresi" data-rule-id="${rule.id}" data-rule-key="${escapeHtml(rule.attributeKey)}" data-filter-type="text">
                          </div>`;
         }
@@ -221,9 +219,9 @@ class DynamicUI {
 
                 inputHtml = `<div class="px-2 pb-3 pt-1">
                                 <div class="d-flex justify-content-between mb-3">
-                                    <input type="number" id="filter_min_${rule.id}" class="form-control form-control-sm text-center fw-bold" style="width:45%;" value="${rMin.toFixed(decimals)}" step="${rStep}" min="${rMin}" max="${rMax}">
+                                    <input type="number" id="filter_min_${rule.id}" class="form-control form-control-sm text-center fw-bold w-45" value="${rMin.toFixed(decimals)}" step="${rStep}" min="${rMin}" max="${rMax}">
                                     <span class="text-muted align-self-center">-</span>
-                                    <input type="number" id="filter_max_${rule.id}" class="form-control form-control-sm text-center fw-bold" style="width:45%;" value="${rMax.toFixed(decimals)}" step="${rStep}" min="${rMin}" max="${rMax}">
+                                    <input type="number" id="filter_max_${rule.id}" class="form-control form-control-sm text-center fw-bold w-45" value="${rMax.toFixed(decimals)}" step="${rStep}" min="${rMin}" max="${rMax}">
                                 </div>
                                 <div id="slider_${rule.id}" class="double-slider mb-2 mt-1" data-min="${rMin}" data-max="${rMax}" data-step="${rStep}"></div>
                                 <input type="hidden" class="kural-filtresi" id="filter_hidden_${rule.id}" data-rule-id="${rule.id}" data-rule-key="${escapeHtml(rule.attributeKey)}" data-filter-type="range">
@@ -303,7 +301,7 @@ class DynamicUI {
                 let encodedOptions = escapeHTML(JSON.stringify(secenekler));
                 inputHtml = `<div class="d-flex align-items-center w-100" data-options='${encodedOptions}'>
                                 <input type="range" class="form-range flex-grow-1 dynamic-preview-discrete-slider" min="${rMin}" max="${rMax}" step="1" value="${rMin}">
-                                <input type="text" class="form-control form-control-sm text-center ms-2" style="width:100px;" id="prev_num" value="${escapeHTML(secenekler[0])}" readonly>
+                                <input type="text" class="form-control form-control-sm text-center ms-2 w-100px" id="prev_num" value="${escapeHTML(secenekler[0])}" readonly>
                              </div>`;
             } else {
                 let step = (uiType === 'range_slider_decimal') ? 0.1 : 1;
@@ -320,9 +318,9 @@ class DynamicUI {
                 inputHtml = `<div class="d-flex flex-wrap">`;
                 secenekler.forEach((opt, idx) => {
                     inputHtml += `<div class="form-check form-check-inline m-0 me-2 p-0">
-                                    <label class="form-check-label d-flex align-items-center p-1 border rounded" style="cursor:pointer;" for="prev_color_${idx}">
+                                    <label class="form-check-label d-flex align-items-center p-1 border rounded cursor-pointer" for="prev_color_${idx}">
                                         <input class="form-check-input ms-1 me-2" type="radio" name="prev_color" id="prev_color_${idx}">
-                                        <span class="d-inline-block rounded-circle shadow-sm" title="${escapeHTML(opt)}" style="width:20px; height:20px; background-color:${escapeHTML(opt)}; border:1px solid #ddd;"></span>
+                                        <span class="d-inline-block rounded-circle shadow-sm color-swatch-span-sm" title="${escapeHTML(opt)}" data-bg-color="${escapeHTML(opt)}"></span>
                                     </label>
                                   </div>`;
                 });
@@ -747,7 +745,7 @@ class DynamicUI {
         selectedArr.forEach(val => {
             let badge = document.createElement('span');
             badge.className = 'badge bg-primary d-flex align-items-center me-1 mb-1';
-            badge.innerHTML = `${escapeHTML(val)} <i class="bi bi-x-circle ms-2 dynamic-remove-chip" style="cursor:pointer;" data-rule-id="${ruleId}" data-value="${escapeHTML(val)}"></i>`;
+            badge.innerHTML = `${escapeHTML(val)} <i class="bi bi-x-circle ms-2 dynamic-remove-chip cursor-pointer" data-rule-id="${ruleId}" data-value="${escapeHTML(val)}"></i>`;
             container.appendChild(badge);
         });
     }
@@ -874,3 +872,29 @@ if (typeof document !== 'undefined') {
 
 
 
+
+// CSP Uyumlu CSSOM uygulayici (Renkler icin)
+const dynamicStyleObserver = new MutationObserver((mutations) => {
+    let hasChanges = false;
+    for (let m of mutations) {
+        if (m.addedNodes.length > 0) {
+            hasChanges = true;
+            break;
+        }
+    }
+    if (hasChanges) {
+        document.querySelectorAll('[data-bg-color]').forEach(el => {
+            if (!el.style.backgroundColor) {
+                el.style.setProperty('background-color', el.getAttribute('data-bg-color'));
+            }
+        });
+    }
+});
+// Sayfa tam yuklendikten sonra observer'i baslat
+document.addEventListener('DOMContentLoaded', () => {
+    dynamicStyleObserver.observe(document.body, { childList: true, subtree: true });
+    // Ayrica mevcut elementler icin ilk calistirma:
+    document.querySelectorAll('[data-bg-color]').forEach(el => {
+        el.style.setProperty('background-color', el.getAttribute('data-bg-color'));
+    });
+});

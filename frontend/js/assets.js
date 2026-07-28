@@ -448,20 +448,20 @@ async function loadGridCards() {
             const col = document.createElement("div");
             col.className = "col-12 col-md-6 col-lg-4 col-xl-3";
             col.innerHTML = `
-                <div class="card border-0 shadow-sm rounded-4 h-100 equipment-grid-card position-relative" style="transition: transform 0.2s, box-shadow 0.2s; cursor: pointer;">
+                <div class="card border-0 shadow-sm rounded-4 h-100 equipment-grid-card position-relative asset-grid-card">
                     <div class="card-body text-center p-4">
                         <div class="mb-3">
-                            <div class="d-inline-flex align-items-center justify-content-center bg-light rounded-circle" style="width: 70px; height: 70px;">
+                            <div class="d-inline-flex align-items-center justify-content-center bg-light rounded-circle asset-icon-circle">
                                 <i class="bi bi-laptop fs-1 ${iconColor}"></i>
                             </div>
                         </div>
                         <h6 class="fw-bold mb-1 text-truncate" title="${escapeHtml(a.productName)}">${escapeHtml(a.productName)}</h6>
                         <div class="mb-3">
-                            <span class="badge bg-dark rounded-pill fw-normal" style="letter-spacing: 1px;">SN: ${escapeHtml(a.serialNumber)}</span>
+                            <span class="badge bg-dark rounded-pill fw-normal asset-sn-badge">SN: ${escapeHtml(a.serialNumber)}</span>
                         </div>
                         <div class="d-flex justify-content-between align-items-center border-top pt-3 mt-auto">
                             <span class="badge ${statusClass} rounded-pill">${statusText}</span>
-                            <small class="text-muted text-truncate ms-2" style="max-width: 120px;"><i class="bi bi-person-fill"></i> ${escapeHtml(personelAdi)}</small>
+                            <small class="text-muted text-truncate ms-2 asset-person-name"><i class="bi bi-person-fill"></i> ${escapeHtml(personelAdi)}</small>
                         </div>
                     </div>
                     <!-- CSP Uyumlu Tıklanabilir Gizli Link (onclick silindi) -->

@@ -165,6 +165,42 @@ async function checkEmptyStockAlerts() {
             dynamicBannerContainer = null;
             document.body.style.paddingTop = "0px";
         }
+        
+        // --- YENİ: Navbar Bildirimlerini Global Olarak Doldur (Eskiden index.js'teydi) ---
+        const list = document.getElementById("navbarNotificationList");
+        const badge = document.getElementById("navbarNotificationCount");
+
+        if (list && badge) {
+            list.innerHTML = "";
+
+            if (notifications.length === 0) {
+                badge.classList.add("d-none");
+                list.innerHTML = '<li class="text-center text-muted py-3 small">Yeni bildiriminiz yok.</li>';
+            } else {
+                badge.textContent = notifications.length;
+                badge.classList.remove("d-none");
+
+                const recentNotifications = notifications.slice(0, 5);
+                recentNotifications.forEach(n => {
+                    const li = document.createElement("li");
+                    li.className = "dropdown-item border-bottom pb-2 mb-2 px-3 py-2";
+                    li.style.whiteSpace = "normal";
+                    li.innerHTML = `
+                        <div class="d-flex align-items-start">
+                            <div class="me-3 mt-1 text-danger">
+                                <i class="bi bi-exclamation-circle-fill fs-5"></i>
+                            </div>
+                            <div>
+                                <div class="fw-bold small mb-1">${escapeHtml(n.title)}</div>
+                                <div class="text-muted small mb-1 fs-08rem">${escapeHtml(n.message)}</div>
+                                <div class="text-secondary small fs-075rem">${new Date(n.createdAt).toLocaleString('tr-TR')}</div>
+                            </div>
+                        </div>
+                    `;
+                    list.appendChild(li);
+                });
+            }
+        }
     } catch(e) {}
 }
 
@@ -186,6 +222,22 @@ document.addEventListener('click', async (e) => {
             btn.disabled = false;
             btn.innerText = "SONUCUNU ANLIYORUM";
             hataGoster(e.message);
+        }
+    }
+    
+    // Navbar'daki Tümünü Oku butonu için global dinleyici
+    const btnReadAll = e.target.closest('#btnNavbarReadAll');
+    if (btnReadAll) {
+        e.preventDefault();
+        const token = localStorage.getItem('token');
+        try {
+            await fetch(`${CONFIG.API_BASE_URL}/notifications/read-all`, {
+                method: "POST",
+                headers: { "Authorization": `Bearer ${token}` }
+            });
+            checkEmptyStockAlerts();
+        } catch(err) {
+            hataGoster("Bildirim işaretlenemedi: " + err.message);
         }
     }
 });
