@@ -1,4 +1,5 @@
-function buildPaginationHtml(totalItems, currentPage, pageSize, totalPages, startItem, endItem) {
+// isGrid = false varsayılan parametresi eklendi
+function buildPaginationHtml(totalItems, currentPage, pageSize, totalPages, startItem, endItem, isGrid = false) {
     let html = `
     <div class="d-flex justify-content-between align-items-center mt-3">
         <div class="text-muted small">
@@ -22,17 +23,24 @@ function buildPaginationHtml(totalItems, currentPage, pageSize, totalPages, star
     }
 
     html += `<li class="page-item ${currentPage === totalPages ? 'disabled' : ''}"><a class="page-link page-action" href="#" data-page="${currentPage + 1}">Sonraki »</a></li>`;
-    html += `   </ul>
+
+    // DİNAMİK SEÇENEK MOTORU: Grid ise 8'in katları, değilse 10'un katları
+    const options = isGrid ? [8, 24, 48, 96] : [10, 25, 50, 100];
+
+    // Map ve join ile daha temiz HTML üretimi
+    const optionsHtml = options.map(opt =>
+        `<option value="${opt}" ${pageSize === opt ? 'selected' : ''}>${opt} Kayıt</option>`
+    ).join('');
+
+    html += ` 
+            </ul>
         </nav>
         <div>
             <select class="form-select form-select-sm shadow-sm page-size-action w-auto">
-                <option value="10" ${pageSize === 10 ? 'selected' : ''}>10 Satır</option>
-                <option value="25" ${pageSize === 25 ? 'selected' : ''}>25 Satır</option>
-                <option value="50" ${pageSize === 50 ? 'selected' : ''}>50 Satır</option>
-                <option value="100" ${pageSize === 100 ? 'selected' : ''}>100 Satır</option>
+                ${optionsHtml}
             </select>
         </div>
     </div>`;
-    
+
     return html;
 }
