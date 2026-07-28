@@ -210,6 +210,10 @@ body {
     color: #ffffff;
 }
 
+.sidebar-heading {
+    color: #8e95a5 !important;
+}
+
 /* Menü bağlantılarının görünümünü, boşluklarını ve üzerine gelme (hover) efektlerini ayarlar. */
 .sidebar-link {
     display: flex;
