@@ -47,7 +47,7 @@ function hasPermission(action) {
     try {
         const token = localStorage.getItem('token');
         if (!token) return false;
-        
+
         const payload = JSON.parse(atob(token.split('.')[1]));
         if (payload.role === "superadmin") return true;
 
@@ -89,7 +89,6 @@ document.addEventListener('click', function (e) {
     }
 });
 
-// Modal Girişinde Enter Tuşu ile Kaydetme (Event Delegation / Tüm Sayfalarda Ortak)
 // Modal Girişinde Enter Tuşu ile Kaydetme (Event Delegation / Tüm Sayfalarda Ortak)
 // Form etiketiyle sarılı olsun ya da olmasın, bir modal içindeki metin kutusunda
 // Enter'a basılınca o modalın birincil (kaydet/oluştur) butonunu tetikler.
@@ -153,8 +152,8 @@ async function apiRequest(endpoint, method = 'GET', bodyData = null) {
 }
 
 // MERKEZİ SAYFALAMA (PAGINATION) OLUŞTURUCU
-// Tabloların altında sayfa numaralarını ve sayfa başına kayıt sayısını dinamik çizen fonksiyondur
-function buildPagination(containerId, totalItems, currentPage, pageSize, onPageChange, onPageSizeChange) {
+// Tabloların altında sayfa numaralarını ve sayfa başına kayıt sayısını dinamik çizen fonksiyondur // isGrid = false parametresi eklendi
+function buildPagination(containerId, totalItems, currentPage, pageSize, onPageChange, onPageSizeChange, isGrid = false) {
     const container = document.getElementById(containerId);
     if (!container) return;
 
@@ -167,7 +166,8 @@ function buildPagination(containerId, totalItems, currentPage, pageSize, onPageC
     let startItem = (currentPage - 1) * pageSize + 1;
     let endItem = Math.min(currentPage * pageSize, totalItems);
 
-    let html = buildPaginationHtml(totalItems, currentPage, pageSize, totalPages, startItem, endItem);
+    // isGrid bilgisi html oluşturucuya aktarıldı
+    let html = buildPaginationHtml(totalItems, currentPage, pageSize, totalPages, startItem, endItem, isGrid);
 
     container.innerHTML = html;
 
@@ -242,7 +242,7 @@ function renderProfessionalLayout() {
     mainWrapper.appendChild(contentContainer);
 
     document.body.appendChild(sidebar);
-    document.body.appendChild(mainWrapper);   
+    document.body.appendChild(mainWrapper);
 
     // Sunucuya istek atarak giriş yapan kullanıcının bilgilerini (Ad, Soyad, Rol vb.) alıyoruz
     apiRequest('/auth/me', 'GET').then(userData => {
