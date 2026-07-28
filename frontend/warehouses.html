@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="tr">
 
 <head>
@@ -8,20 +8,9 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
-    <link href="css/style.css" rel="stylesheet">
+    <link href="css/style.css?v=mobile-v1" rel="stylesheet">
     <script src="js/theme.js"></script>
-    <style>
-        /* Özel Gölgelendirme (Hover) Efekti */
-        .depo-karti {
-            transition: all 0.3s ease;
-            cursor: pointer;
-        }
-        .depo-karti:hover {
-            transform: translateY(-8px);
-            box-shadow: 0 15px 30px rgba(0,0,0,0.1) !important;
-            border-color: #0d6efd !important;
-        }
-    </style>
+
 </head>
 <body class="bg-light"> 
     <div class="container my-5">
@@ -29,7 +18,7 @@
         <div id="depoListesiGorunumu">
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <h2 class="fw-bold text-dark m-0">🏭 Depolar</h2>
-                <button class="btn btn-primary rounded-pill px-4 shadow-sm fw-bold" data-bs-toggle="modal" data-bs-target="#depoModal">
+                <button id="btnYeniDepo" class="btn btn-primary rounded-pill px-4 shadow-sm fw-bold" data-bs-toggle="modal" data-bs-target="#depoModal">
                     + Yeni Depo Ekle
                 </button>
             </div>
@@ -90,7 +79,7 @@
                         </select>
                     </div>
                     <div class="col-md-7 text-end">
-                        <button class="btn btn-outline-primary rounded-pill px-4 me-2 fw-bold" data-bs-toggle="modal" data-bs-target="#rafEkleModal">+ Yeni Raf</button>
+                        <button id="btnYeniRaf" class="btn btn-outline-primary rounded-pill px-4 me-2 fw-bold" data-bs-toggle="modal" data-bs-target="#rafEkleModal">+ Yeni Raf</button>
                         <button class="btn btn-success rounded-pill px-4 shadow-sm fw-bold" id="btnDepoyaUrunEkleModalAc">+ Yeni Ürün Girişi</button>
                     </div>
                 </div>
@@ -311,6 +300,9 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.js"></script>
     <script src="js/alerts.js"></script>
+    <script src="js/partials/sidebar.partial.js"></script>
+    <script src="js/partials/topbar.partial.js"></script>
+    <script src="js/partials/pagination.partial.js"></script>
     <script src="js/config.js"></script>
     <script src="js/auth.js"></script>
     <script src="js/warehouses.js"></script>

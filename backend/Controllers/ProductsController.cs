@@ -109,13 +109,13 @@ public class ProductsController : ControllerBase
     }
 
     [HttpPost]
-    [Authorize(Policy = Policies.AdminOnly)] 
+    [Authorize(Policy = Policies.RequireProductWrite)] 
     public async Task<IActionResult> Create(CreateProductDto dto)
     {
-        var mevcutUrun = await _context.Products.FirstOrDefaultAsync(p => p.Name == dto.Name || p.Barcode == dto.Barcode);
+        var mevcutUrun = await _context.Products.FirstOrDefaultAsync(p => p.Barcode == dto.Barcode);
         if (mevcutUrun != null)
         {
-            return BadRequest(new { message = "Bu isim veya barkoda sahip bir ürün zaten var." });
+            return BadRequest(new { message = "Bu barkoda sahip bir ürün zaten var." });
         }
 
         var categoryExists = await _context.Categories.AnyAsync(c => c.Id == dto.CategoryId);
@@ -275,17 +275,17 @@ public class ProductsController : ControllerBase
 
     // PUT /api/products/5 : mecvut ürünü güncelle 
     [HttpPut("{id}")]
-    [Authorize(Policy = Policies.AdminOnly)] 
+    [Authorize(Policy = Policies.RequireProductWrite)] 
     public async Task<IActionResult> Update(int id, UpdateProductDto dto)
     {
         var product = await _context.Products.FindAsync(id);
         if (product == null || product.IsDeleted)
             return NotFound();
 
-        var mevcut = await _context.Products.FirstOrDefaultAsync(p => (p.Name == dto.Name || p.Barcode == dto.Barcode) && p.Id != id && !p.IsDeleted);
+        var mevcut = await _context.Products.FirstOrDefaultAsync(p => p.Barcode == dto.Barcode && p.Id != id && !p.IsDeleted);
         if (mevcut != null)
         {
-            return BadRequest("Bu isim veya barkoda sahip bir ürün zaten var.");
+            return BadRequest("Bu barkoda sahip bir ürün zaten var.");
         }
 
         if (dto.Attributes != null && dto.Attributes.Any())
@@ -357,7 +357,7 @@ public class ProductsController : ControllerBase
 
     // DELETE /api/products/5 : ürünü sil
     [HttpDelete("{id}")]
-    [Authorize(Policy = Policies.AdminOnly)] 
+    [Authorize(Policy = Policies.RequireProductWrite)] 
     public async Task<IActionResult> Delete(int id)
     {
         var product = await _context.Products.FindAsync(id);

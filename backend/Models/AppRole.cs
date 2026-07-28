@@ -13,4 +13,7 @@ public class AppRole : BaseEntity
     public ICollection<AppRolePermission> RolePermissions { get; set; } = new List<AppRolePermission>();
 
     public bool IsSystemRole { get; set; }
+    
+    // Rol Hiyerarşisi: Yüksek rakam daha üst yetkiyi ifade eder (örn: superadmin=100, admin=90, vs.)
+    public int Level { get; set; } = 0;
 }

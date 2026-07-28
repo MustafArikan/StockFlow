@@ -1,3 +1,10 @@
+let userRoleName = "";
+let userPermissionsList = [];
+
+function hasPerm(p) {
+    return userRoleName === "superadmin" || userPermissionsList.includes(p);
+}
+
 document.addEventListener("DOMContentLoaded", () => {
     // Sadece superadmin erişebilir, değilse anasayfaya yönlendir
     const token = localStorage.getItem("token");
@@ -5,17 +12,35 @@ document.addEventListener("DOMContentLoaded", () => {
         window.location.href = "login.html";
         return;
     }
-    try {
+    try {   
         const payload = JSON.parse(atob(token.split('.')[1]));
-        if (payload.role !== "superadmin") {
+        userRoleName = payload.role;
+        let permissions = [];
+        if (payload.Permission) {
+            permissions = Array.isArray(payload.Permission) ? payload.Permission : [payload.Permission];
+        }
+        userPermissionsList = permissions;
+
+        const canManageUsers = payload.role === "superadmin" || 
+            permissions.includes("User.View") || 
+            permissions.includes("User.Add") || 
+            permissions.includes("User.Edit") || 
+            permissions.includes("User.Delete");
+
+        if (!canManageUsers) {
             Swal.fire({
                 icon: 'error',
                 title: 'Yetkisiz Erişim',
-                text: 'Kullanıcı yönetimi sayfasına sadece Süper Adminler erişebilir.'
+                text: 'Kullanıcı yönetimi sayfasına erişim yetkiniz bulunmamaktadır.'
             }).then(() => {
                 window.location.href = "index.html";
             });
             return;
+        }
+
+        if (hasPerm("User.Add")) {
+            const btnYeni = document.getElementById("btnYeniKullanici");
+            if (btnYeni) btnYeni.classList.remove("d-none");
         }
     } catch (e) {
         console.error("Token çözümlenemedi", e);
@@ -68,7 +93,6 @@ async function rolleriGetir() {
                     selectEl.innerHTML += `<option value="${r.id}">${escapeHtml(r.name)}</option>`;
                 });
             }
-            kullanicilariGetir(); // Refresh if needed, or just let the main call do it
         }
     } catch (e) {
         console.error("Roller getirilemedi", e);
@@ -131,33 +155,35 @@ function tabloyuDoldur(users) {
         const tr = document.createElement("tr");
         const kayitTarihi = new Date(user.createdAt).toLocaleString("tr-TR");
 
-        let roleOptions = '';
-        sistemRolleri.forEach(r => {
-            const isSelected = r.id === user.roleId ? 'selected' : '';
-            roleOptions += `<option value="${r.id}" ${isSelected}>${escapeHtml(r.name)}</option>`;
-        });
+        let actionsHtml = "";
+        
+        if (hasPerm("SecurityAuditLog.View")) {
+            actionsHtml += `<button class="btn btn-sm btn-info text-white shadow-sm me-1 btn-loglar" data-id="${user.id}" data-ad="${escapeHtml(user.firstName)} ${escapeHtml(user.lastName)}">
+                <i class="bi bi-clock-history"></i> Loglar
+            </button>`;
+        }
+        
+        if (hasPerm("User.Edit")) {
+            actionsHtml += `<button class="btn btn-sm btn-outline-primary shadow-sm me-1 btn-duzenle" data-id="${user.id}">
+                <i class="bi bi-pencil-square"></i> Düzenle
+            </button>`;
+        }
+        
+        if (hasPerm("User.Delete")) {
+            actionsHtml += `<button class="btn btn-sm btn-outline-danger shadow-sm btn-sil" data-id="${user.id}">
+                <i class="bi bi-trash3"></i> Sil
+            </button>`;
+        }
 
         tr.innerHTML = `
             <td class="fw-bold">#${user.id}</td>
             <td>${escapeHtml(user.firstName)} ${escapeHtml(user.lastName)}</td>
             <td>${escapeHtml(user.email)}</td>
             <td>${escapeHtml(user.phoneNumber || "-")}</td>
-            <td>
-                <select class="form-select form-select-sm shadow-sm border-secondary" style="width: auto; min-width: 120px;" onchange="degistirKullaniciRolu(${user.id}, this.value)">
-                    ${roleOptions || `<option value="${user.roleId}">${escapeHtml(user.role)}</option>`}
-                </select>
-            </td>
+            <td><span class="badge bg-secondary px-2 py-1">${escapeHtml(user.role)}</span></td>
             <td>${kayitTarihi}</td>
             <td class="text-end">
-                <button class="btn btn-sm btn-info text-white shadow-sm me-1 btn-loglar" data-id="${user.id}" data-ad="${escapeHtml(user.firstName)} ${escapeHtml(user.lastName)}">
-                    <i class="bi bi-clock-history"></i> Loglar
-                </button>
-                <button class="btn btn-sm btn-outline-primary shadow-sm me-1 btn-duzenle" data-id="${user.id}">
-                    <i class="bi bi-pencil-square"></i> Düzenle
-                </button>
-                <button class="btn btn-sm btn-outline-danger shadow-sm btn-sil" data-id="${user.id}">
-                    <i class="bi bi-trash3"></i> Sil
-                </button>
+                ${actionsHtml}
             </td>
         `;
         tbody.appendChild(tr);
@@ -371,8 +397,8 @@ async function kullaniciGecmisiniGoster(id, adSoyad) {
                 <td class="fw-bold text-primary">${escapeHtml(log.actionType)}</td>
                 <td>${escapeHtml(log.entityName)} <span class="badge bg-secondary">#${log.entityId}</span></td>
                 <td class="small text-muted">${escapeHtml(log.ipAddress)}</td>
-                <td class="small text-break" style="max-width: 200px;">${log.oldValues ? escapeHtml(log.oldValues) : "-"}</td>
-                <td class="small text-break" style="max-width: 200px;">${log.newValues ? escapeHtml(log.newValues) : "-"}</td>
+                <td class="small text-break mw-200">${log.oldValues ? escapeHtml(log.oldValues) : "-"}</td>
+                <td class="small text-break mw-200">${log.newValues ? escapeHtml(log.newValues) : "-"}</td>
             `;
             tbody.appendChild(tr);
         });

@@ -11,7 +11,7 @@ namespace stok_takip.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-[Authorize(Policy = Policies.SuperAdminOnly)] // Sadece Super Admin rolüne sahip kullanıcılar erişebilir
+[Authorize(Policy = Policies.RequireUserManage)]
 public class UsersController : ControllerBase
 {
     private readonly AppDbContext _context;
@@ -23,12 +23,25 @@ public class UsersController : ControllerBase
         _passwordHasher = passwordHasher;
     }
 
+    private async Task<int> GetCurrentUserRoleLevelAsync()
+    {
+        var currentUserIdStr = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        if (int.TryParse(currentUserIdStr, out int uid))
+        {
+            var currentUser = await _context.Users.Include(u => u.Role).FirstOrDefaultAsync(u => u.Id == uid);
+            return currentUser?.Role?.Level ?? 0;
+        }
+        return 0;
+    }
+
     [HttpGet]
     public async Task<IActionResult> GetAllUsers([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
     {
+        var currentUserLevel = await GetCurrentUserRoleLevelAsync();
+
         var query = _context.Users
             .AsNoTracking()
-            .Where(u => !u.IsDeleted);
+            .Where(u => !u.IsDeleted && (u.Role == null || u.Role.Level <= currentUserLevel));
 
         var totalRecords = await query.CountAsync();
 
@@ -87,19 +100,40 @@ public class UsersController : ControllerBase
     [HttpPut("{id}/role")]
     public async Task<IActionResult> UpdateUserRole(int id, [FromBody] UpdateRoleDto dto)
     {
-        var user = await _context.Users.FindAsync(id);
+        var user = await _context.Users.Include(u => u.Role).FirstOrDefaultAsync(u => u.Id == id);
         if (user == null)
         {
             return NotFound(new {message = "Kullanıcı bulunamadı."});
         }
+        
+        if (user.Role?.Name == "superadmin" && !User.IsInRole("superadmin"))
+        {
+            return Forbid(); // Süper admin hesabının rolünü değiştiremez
+        }
+
+        var currentUserLevel = await GetCurrentUserRoleLevelAsync();
+        if (user.Role != null && user.Role.Level > currentUserLevel)
+        {
+            return Forbid(); // Kendinden üst yetkili bir hesaba dokunamaz
+        }
 
         var newRole = await _context.AppRoles.FindAsync(dto.RoleId);
         if (newRole == null) return BadRequest(new { message = "Geçersiz rol." });
+        
+        if (newRole.Name == "superadmin" && !User.IsInRole("superadmin"))
+        {
+            return Forbid(); // Süper admin rolü atayamaz
+        }
+
+        if (newRole.Level > currentUserLevel)
+        {
+            return Forbid(); // Kendinden üst bir yetkiyi başkasına veremez
+        }
 
         var currentUserId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-        if (currentUserId == id.ToString() && newRole.Name != "admin")
+        if (currentUserId == id.ToString() && user.RoleId != dto.RoleId)
         {
-            return BadRequest(new {message = "Kendi rolünüzü admin'den farklı bir role değiştiremezsiniz."});
+            return BadRequest(new {message = "Güvenlik gereği kendi rolünüzü değiştiremezsiniz."});
         }
 
         user.RoleId = dto.RoleId;
@@ -121,6 +155,18 @@ public class UsersController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> CreateUser([FromBody] CreateUserDto dto)
     {
+        var newRole = await _context.AppRoles.FindAsync(dto.RoleId);
+        if (newRole?.Name == "superadmin" && !User.IsInRole("superadmin"))
+        {
+            return Forbid(); // Süper admin rolünde kullanıcı oluşturamaz
+        }
+
+        var currentUserLevel = await GetCurrentUserRoleLevelAsync();
+        if (newRole != null && newRole.Level > currentUserLevel)
+        {
+            return Forbid(); // Kendinden üst seviyede bir rol oluşturamaz
+        }
+
         var emailExists = await _context.Users.AsNoTracking().AnyAsync(u => u.Email == dto.Email);
         if (emailExists) return BadRequest(new { message = "Bu e-posta adresi zaten kullanılıyor." });
         
@@ -146,8 +192,36 @@ public class UsersController : ControllerBase
     [HttpPut("{id}")]
     public async Task<IActionResult> UpdateUser(int id, [FromBody] UpdateUserDto dto)
     {
-        var user = await _context.Users.FindAsync(id);
+        var user = await _context.Users.Include(u => u.Role).FirstOrDefaultAsync(u => u.Id == id);
         if (user == null) return NotFound(new { message = "Kullanıcı bulunamadı." });
+
+        if (user.Role?.Name == "superadmin" && !User.IsInRole("superadmin"))
+        {
+            return Forbid(); // Süper admin'i düzenleyemez
+        }
+
+        var currentUserLevel = await GetCurrentUserRoleLevelAsync();
+        if (user.Role != null && user.Role.Level > currentUserLevel)
+        {
+            return Forbid(); // Kendinden üst yetkili bir hesabı düzenleyemez
+        }
+
+        var newRole = await _context.AppRoles.FindAsync(dto.RoleId);
+        if (newRole?.Name == "superadmin" && !User.IsInRole("superadmin"))
+        {
+            return Forbid(); // Süper admin rolü atayamaz
+        }
+
+        if (newRole != null && newRole.Level > currentUserLevel)
+        {
+            return Forbid(); // Kendinden üst bir yetkiyi atayamaz
+        }
+
+        var currentUserId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        if (currentUserId == id.ToString() && user.RoleId != dto.RoleId)
+        {
+            return BadRequest(new { message = "Güvenlik gereği kendi rolünüzü değiştiremezsiniz." });
+        }
 
         if (user.Email != dto.Email)
         {
@@ -178,8 +252,19 @@ public class UsersController : ControllerBase
     [HttpDelete("{id}")]
     public async Task<IActionResult> DeleteUser(int id)
     {
-        var user = await _context.Users.FindAsync(id);
+        var user = await _context.Users.Include(u => u.Role).FirstOrDefaultAsync(u => u.Id == id);
         if (user == null) return NotFound(new { message = "Kullanıcı bulunamadı." });
+        
+        if (user.Role?.Name == "superadmin" && !User.IsInRole("superadmin"))
+        {
+            return Forbid(); // Süper admin'i silemez
+        }
+
+        var currentUserLevel = await GetCurrentUserRoleLevelAsync();
+        if (user.Role != null && user.Role.Level > currentUserLevel)
+        {
+            return Forbid(); // Kendinden üst yetkili bir hesabı silemez
+        }
 
         var currentUserId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
         if (currentUserId == id.ToString())

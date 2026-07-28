@@ -14,7 +14,6 @@ function escapeHtml(text) {
 
 document.addEventListener('DOMContentLoaded', () => {
     loadDashboardSummary();
-    loadNavbarNotifications();
     loadCharts();
 
     if (document.fonts && document.fonts.ready) {
@@ -26,8 +25,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    const btnNavbarReadAll = document.getElementById('btnNavbarReadAll');
-    if (btnNavbarReadAll) btnNavbarReadAll.addEventListener("click", markAllAsRead);
 
     const btnExportPdf = document.getElementById('btnExportPdf');
     if (btnExportPdf) btnExportPdf.addEventListener("click", exportDashboardAsPdf);
@@ -65,60 +62,7 @@ async function loadDashboardSummary() {
     }
 }
 
-async function loadNavbarNotifications() {
-    try {
-        const notifications = await apiRequest('/notifications?onlyUnread=true', 'GET');
-        const list = document.getElementById("navbarNotificationList");
-        const badge = document.getElementById("navbarNotificationCount");
 
-        if (!list || !badge) return;
-
-        list.innerHTML = "";
-
-        if (!notifications || notifications.length === 0) {
-            badge.classList.add("d-none");
-            list.innerHTML = '<li class="text-center text-muted py-3 small">Yeni bildiriminiz yok.</li>';
-            return;
-        }
-
-        badge.textContent = notifications.length;
-        badge.textContent = notifications.length;
-        badge.classList.remove("d-none");
-
-        // En son 5 bildirimi göster (eğer çok varsa)
-        const recentNotifications = notifications.slice(0, 5);
-
-        recentNotifications.forEach(n => {
-            const li = document.createElement("li");
-            li.className = "dropdown-item border-bottom pb-2 mb-2 px-3 py-2";
-            li.style.whiteSpace = "normal";
-            li.innerHTML = `
-                <div class="d-flex align-items-start">
-                    <div class="me-3 mt-1 text-danger">
-                        <i class="bi bi-exclamation-circle-fill fs-5"></i>
-                    </div>
-                    <div>
-                        <div class="fw-bold small mb-1">${escapeHtml(n.title)}</div>
-                        <div class="text-muted small mb-1" style="font-size: 0.8rem;">${escapeHtml(n.message)}</div>
-                        <div class="text-secondary small" style="font-size: 0.75rem;">${new Date(n.createdAt).toLocaleString('tr-TR')}</div>
-                    </div>
-                </div>
-            `;
-            list.appendChild(li);
-        });
-    } catch (error) {
-        console.error("Bildirimler yüklenemedi:", error);
-    }
-}
-
-async function markAllAsRead() {
-    try {
-        await apiRequest('/notifications/read-all', 'POST');
-        loadNavbarNotifications();
-    } catch (error) {
-        hataGoster("Bildirim işaretlenemedi: " + error.message);
-    }
-}
 
 // DASHBOARD GRAFİKLERİ
 let trendChartInstance = null;
@@ -557,10 +501,19 @@ async function exportDashboardAsPdf() {
         const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
 
         const tempHeader = document.createElement("div");
-        tempHeader.innerHTML = `
-            <h1 style="color: ${isDark ? '#fff' : '#000'}; font-weight: bold; margin-bottom: 5px;">StockFlow - Detaylı Kontrol Paneli Raporu</h1>
-            <p style="color: gray; margin-bottom: 20px;">Tarih: ${new Date().toLocaleString('tr-TR')}</p>
-        `;
+        const titleEl = document.createElement("h1");
+        titleEl.textContent = "StockFlow - Detaylı Kontrol Paneli Raporu";
+        titleEl.style.setProperty("color", isDark ? "#fff" : "#000");
+        titleEl.style.setProperty("font-weight", "bold");
+        titleEl.style.setProperty("margin-bottom", "5px");
+
+        const dateEl = document.createElement("p");
+        dateEl.textContent = "Tarih: " + new Date().toLocaleString('tr-TR');
+        dateEl.style.setProperty("color", "gray");
+        dateEl.style.setProperty("margin-bottom", "20px");
+
+        tempHeader.appendChild(titleEl);
+        tempHeader.appendChild(dateEl);
         target.insertBefore(tempHeader, target.firstChild);
 
         const sourceCanvas = await html2canvas(target, {

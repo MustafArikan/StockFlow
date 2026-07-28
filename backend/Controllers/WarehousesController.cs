@@ -101,7 +101,7 @@ public class WarehousesController : ControllerBase
 
     //PUT /api/warehouse/5 mecvut depoyu güncelleme
     [HttpPut("{id}")]
-    [Authorize(Policy = Policies.AdminOnly)] // Sadece Admin rolüne sahip kullanıcılar depo güncelleyebilir
+    [Authorize(Policy = Policies.RequireWarehouseWrite)] // Sadece Admin rolüne sahip kullanıcılar depo güncelleyebilir
     public async Task<IActionResult> Update(int id, CreateWarehouseDto dto)
     {
         var warehouse = await _context.Warehouses.FindAsync(id);
@@ -117,7 +117,7 @@ public class WarehousesController : ControllerBase
 
     //DELETE /api/warehouses/5 ürünü slime
     [HttpDelete("{id}")]
-    [Authorize(Policy = Policies.AdminOnly)] // Sadece Admin rolüne sahip kullanıcılar depo silebilir
+    [Authorize(Policy = Policies.RequireWarehouseWrite)] // Sadece Admin rolüne sahip kullanıcılar depo silebilir
     public async Task<IActionResult> Delete(int id)
     {
         var warehouse = await _context.Warehouses.FindAsync(id);

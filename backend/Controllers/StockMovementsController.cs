@@ -99,7 +99,7 @@ namespace stok_takip.Controllers
 
         // 2. POST: Create a new stock movement (IN, OUT, or TRANSFER)
         [HttpPost]
-        [Authorize(Policy = Policies.AdminOnly)] 
+        [Authorize(Policy = Policies.RequireStockMovementWrite)] 
         public async Task<IActionResult> CreateMovement([FromBody] StockMovementRequestDto dto)
         {
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
@@ -113,6 +113,14 @@ namespace stok_takip.Controllers
                 return NotFound(new { message = "Product not found." });
 
             string upperType = dto.MovementType.ToUpper();
+            
+            bool isSuperAdmin = User.IsInRole("superadmin");
+            if (upperType == "TRANSFER" && !User.HasClaim("Permission", "Movement.Transfer") && !isSuperAdmin)
+                return StatusCode(403, new { message = "You do not have permission to perform stock transfers." });
+            if (upperType == "IN" && !User.HasClaim("Permission", "Movement.Inbound") && !isSuperAdmin)
+                return StatusCode(403, new { message = "You do not have permission to perform stock inbound operations." });
+            if (upperType == "OUT" && !User.HasClaim("Permission", "Movement.Outbound") && !isSuperAdmin)
+                return StatusCode(403, new { message = "You do not have permission to perform stock outbound operations." });
 
             // ACID Compliant Transaction for TRANSFER type
             if (upperType == "TRANSFER")

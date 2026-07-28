@@ -32,11 +32,70 @@ document.addEventListener('DOMContentLoaded', () => {
             // Token parçalanırken hata oluşursa sayfa patlamasın diye try-catch içinde tutuyoruz
             const payload = JSON.parse(atob(token.split('.')[1]));
             userProfileEl.textContent = payload.email || "Kullanıcı";
-            
-            // Eğer rol superadmin ise Kullanıcılar menüsünü göster
-            if (payload.role === "superadmin") {
+            // Permissions can be string or array
+            let permissions = [];
+            if (payload.Permission) {
+                permissions = Array.isArray(payload.Permission) ? payload.Permission : [payload.Permission];
+            }
+
+            // Kullanıcı Yönetimi Gösterme Mantığı
+            if (payload.role === "superadmin" || permissions.includes("User.View") || permissions.includes("User.Add") || permissions.includes("User.Edit") || permissions.includes("User.Delete")) {
                 const navUsersItem = document.getElementById("navUsersItem");
                 if (navUsersItem) navUsersItem.classList.remove("d-none");
+            }
+
+            // Rol ve Yetki Yönetimi Gösterme Mantığı
+            if (payload.role === "superadmin" || permissions.includes("Role.View") || permissions.includes("Role.Add") || permissions.includes("Role.Edit") || permissions.includes("Role.Delete")) {
+                const navRolesItem = document.getElementById("navRolesItem");
+                if (navRolesItem) navRolesItem.classList.remove("d-none");
+            }
+
+            // Kategoriler
+            if (payload.role === "superadmin" || permissions.some(p => p.startsWith("Category."))) {
+                const navItem = document.getElementById("navCategoriesItem");
+                if (navItem) navItem.classList.remove("d-none");
+            }
+            
+            // Ürünler
+            if (payload.role === "superadmin" || permissions.some(p => p.startsWith("Product."))) {
+                const navItem = document.getElementById("navProductsItem");
+                if (navItem) navItem.classList.remove("d-none");
+            }
+
+            // Stok Hareketleri
+            if (payload.role === "superadmin" || permissions.some(p => p.startsWith("Movement."))) {
+                const navItem = document.getElementById("navMovementsItem");
+                if (navItem) navItem.classList.remove("d-none");
+            }
+
+            // Depolar
+            if (payload.role === "superadmin" || permissions.some(p => p.startsWith("Warehouse."))) {
+                const navItem = document.getElementById("navWarehousesItem");
+                if (navItem) navItem.classList.remove("d-none");
+            }
+
+            // Tedarikçiler
+            if (payload.role === "superadmin" || permissions.some(p => p.startsWith("Supplier."))) {
+                const navItem = document.getElementById("navSuppliersItem");
+                if (navItem) navItem.classList.remove("d-none");
+            }
+
+            // Demirbaşlar (Assets)
+            if (payload.role === "superadmin" || permissions.some(p => p.startsWith("Asset."))) {
+                const navItem = document.getElementById("navAssetsItem");
+                if (navItem) navItem.classList.remove("d-none");
+            }
+
+            // Sistem Logları
+            if (payload.role === "superadmin" || permissions.includes("System.AuditLogs")) {
+                const navItem = document.getElementById("navAuditLogsItem");
+                if (navItem) navItem.classList.remove("d-none");
+            }
+
+            // Barkod Okuyucu
+            if (payload.role === "superadmin" || permissions.includes("Scanner.Use")) {
+                const navItem = document.getElementById("navTestScannerItem");
+                if (navItem) navItem.classList.remove("d-none");
             }
         } catch (e) {
             console.error("Token çözümlenemedi:", e);
@@ -106,6 +165,42 @@ async function checkEmptyStockAlerts() {
             dynamicBannerContainer = null;
             document.body.style.paddingTop = "0px";
         }
+        
+        // --- YENİ: Navbar Bildirimlerini Global Olarak Doldur (Eskiden index.js'teydi) ---
+        const list = document.getElementById("navbarNotificationList");
+        const badge = document.getElementById("navbarNotificationCount");
+
+        if (list && badge) {
+            list.innerHTML = "";
+
+            if (notifications.length === 0) {
+                badge.classList.add("d-none");
+                list.innerHTML = '<li class="text-center text-muted py-3 small">Yeni bildiriminiz yok.</li>';
+            } else {
+                badge.textContent = notifications.length;
+                badge.classList.remove("d-none");
+
+                const recentNotifications = notifications.slice(0, 5);
+                recentNotifications.forEach(n => {
+                    const li = document.createElement("li");
+                    li.className = "dropdown-item border-bottom pb-2 mb-2 px-3 py-2";
+                    li.style.whiteSpace = "normal";
+                    li.innerHTML = `
+                        <div class="d-flex align-items-start">
+                            <div class="me-3 mt-1 text-danger">
+                                <i class="bi bi-exclamation-circle-fill fs-5"></i>
+                            </div>
+                            <div>
+                                <div class="fw-bold small mb-1">${escapeHtml(n.title)}</div>
+                                <div class="text-muted small mb-1 fs-08rem">${escapeHtml(n.message)}</div>
+                                <div class="text-secondary small fs-075rem">${new Date(n.createdAt).toLocaleString('tr-TR')}</div>
+                            </div>
+                        </div>
+                    `;
+                    list.appendChild(li);
+                });
+            }
+        }
     } catch(e) {}
 }
 
@@ -127,6 +222,22 @@ document.addEventListener('click', async (e) => {
             btn.disabled = false;
             btn.innerText = "SONUCUNU ANLIYORUM";
             hataGoster(e.message);
+        }
+    }
+    
+    // Navbar'daki Tümünü Oku butonu için global dinleyici
+    const btnReadAll = e.target.closest('#btnNavbarReadAll');
+    if (btnReadAll) {
+        e.preventDefault();
+        const token = localStorage.getItem('token');
+        try {
+            await fetch(`${CONFIG.API_BASE_URL}/notifications/read-all`, {
+                method: "POST",
+                headers: { "Authorization": `Bearer ${token}` }
+            });
+            checkEmptyStockAlerts();
+        } catch(err) {
+            hataGoster("Bildirim işaretlenemedi: " + err.message);
         }
     }
 });

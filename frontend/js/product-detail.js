@@ -8,7 +8,7 @@ function renderUrunDetay(urun){
                         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Kapat"></button>
                     </div>
                     <div class="d-flex align-items-center w-100 mt-2">
-                        <div class="bg-white text-primary rounded-circle d-flex align-items-center justify-content-center shadow" style="width: 60px; height: 60px; font-size: 24px;">
+                        <div class="bg-white text-primary rounded-circle d-flex align-items-center justify-content-center shadow product-detail-icon">
                             <i class="bi bi-box-seam"></i>
                         </div>
                         <div class="ms-3">
@@ -21,25 +21,25 @@ function renderUrunDetay(urun){
                     <div class="row g-3 mb-4">
                         <div class="col-6">
                             <div class="bg-white p-3 rounded-3 shadow-sm border border-light">
-                                <small class="text-muted text-uppercase fw-bold" style="font-size: 0.7rem;">Barkod</small>
+                                <small class="text-muted text-uppercase fw-bold fs-07rem">Barkod</small>
                                 <div class="fw-bold fs-6 mt-1 text-dark">${escapeHtml(urun.barcode)}</div>
                             </div>
                         </div>
                         <div class="col-6">
                             <div class="bg-white p-3 rounded-3 shadow-sm border border-light">
-                                <small class="text-muted text-uppercase fw-bold" style="font-size: 0.7rem;">Sistem ID</small>
+                                <small class="text-muted text-uppercase fw-bold fs-07rem">Sistem ID</small>
                                 <div class="fw-bold fs-6 mt-1 text-dark">#${urun.id}</div>
                             </div>
                         </div>
                         <div class="col-6">
                             <div class="bg-white p-3 rounded-3 shadow-sm border border-light">
-                                <small class="text-muted text-uppercase fw-bold" style="font-size: 0.7rem;">Mevcut Stok</small>
+                                <small class="text-muted text-uppercase fw-bold fs-07rem">Mevcut Stok</small>
                                 <div class="fw-bold fs-5 mt-1">${urun.stockQuantity}</div>
                             </div>
                         </div>
                         <div class="col-6">
                             <div class="bg-white p-3 rounded-3 shadow-sm border border-light">
-                                <small class="text-muted text-uppercase fw-bold" style="font-size: 0.7rem;">Min. Stok</small>
+                                <small class="text-muted text-uppercase fw-bold fs-07rem">Min. Stok</small>
                                 <div class="fw-bold fs-6 mt-1 text-dark">${urun.minStockLevel}</div>
                             </div>
                         </div>
@@ -50,7 +50,7 @@ function renderUrunDetay(urun){
                                 ${urun.attributes && urun.attributes.length > 0
                                     ? urun.attributes.map(attr => `
                                         <tr>
-                                            <td class="text-muted fw-bold" style="width:40%;">${escapeHtml(attr.key)}</td>
+                                            <td class="text-muted fw-bold w-40">${escapeHtml(attr.key)}</td>
                                             <td class="text-dark fw-semibold">${escapeHtml(attr.value)}</td>
                                         </tr>`).join('')
                                     : `<tr><td class="text-muted fst-italic">Özel nitelik (kural) bulunamadı.</td></tr>`
