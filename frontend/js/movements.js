@@ -198,16 +198,16 @@ function tabloyuCiz(veriListesi) {
         if (uId) {
             finalKisiHtml = `
             <div class="d-flex flex-column align-items-center justify-content-center">
-                <a href="#" data-action="view-profile" data-user-id="${uId}" class="text-decoration-none fw-bold text-primary text-truncate" style="max-width: 150px;">
+                <a href="#" data-action="view-profile" data-user-id="${uId}" class="text-decoration-none fw-bold text-primary text-truncate mw-150">
                     <i class="bi bi-person-badge me-1"></i>${escapeHtml(kisiIsmi)}
                 </a>
-                ${kisiMail ? `<small class="text-muted text-truncate" style="max-width: 150px; font-size: 0.75rem;">${escapeHtml(kisiMail)}</small>` : ''}
+                ${kisiMail ? `<small class="text-muted text-truncate mw-150 fs-075rem">${escapeHtml(kisiMail)}</small>` : ''}
             </div>`;
         } else {
             finalKisiHtml = `
             <div class="d-flex flex-column align-items-center justify-content-center">
-                <span class="fw-bold text-secondary text-truncate" style="max-width: 150px;">${escapeHtml(kisiIsmi)}</span>
-                ${kisiMail ? `<small class="text-muted text-truncate" style="max-width: 150px; font-size: 0.75rem;">${escapeHtml(kisiMail)}</small>` : ''}
+                <span class="fw-bold text-secondary text-truncate mw-150">${escapeHtml(kisiIsmi)}</span>
+                ${kisiMail ? `<small class="text-muted text-truncate mw-150 fs-075rem">${escapeHtml(kisiMail)}</small>` : ''}
             </div>`;
         }
 

@@ -1,4 +1,4 @@
-﻿document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", () => {
     RolesUI.init();
     RolesUI.attachEventListeners();
 });
@@ -86,7 +86,7 @@ const RolesUI = {
 
         sortedRoles.forEach(role => {
             const isSelected = this.selectedRoleId === role.id ? 'active' : '';
-            const systemBadge = role.isSystemRole ? `<span class="badge bg-danger ms-2" style="font-size: 0.65rem">Sistem</span>` : '';
+            const systemBadge = role.isSystemRole ? `<span class="badge bg-danger ms-2 fs-065rem">Sistem</span>` : '';
             
             const el = document.createElement('div');
             el.className = `role-item p-3 border-bottom d-flex justify-content-between align-items-center ${isSelected}`;
@@ -162,8 +162,8 @@ const RolesUI = {
                         <div class="permission-module-header d-flex justify-content-between align-items-center mb-2 pb-2 border-bottom">
                             <h6 class="mb-0 fw-bold text-primary"><i class="bi ${iconClass} me-2 fs-5 align-middle"></i>${escapeHTML(moduleName)}</h6>
                             <div class="form-check form-switch m-0 d-flex align-items-center" title="Bu modüldeki (Örn: ${escapeHTML(moduleName)}) tüm yetkileri tek tuşla verir veya kaldırır.">
-                                <label class="form-check-label me-2 small text-muted" style="cursor: pointer;" for="selectAll_${moduleSlug}">Tümünü Seç</label>
-                                <input class="form-check-input m-0" style="cursor: pointer;" type="checkbox" id="selectAll_${moduleSlug}">
+                                <label class="form-check-label me-2 small text-muted cursor-pointer" for="selectAll_${moduleSlug}">Tümünü Seç</label>
+                                <input class="form-check-input m-0 cursor-pointer" type="checkbox" id="selectAll_${moduleSlug}">
                             </div>
                         </div>
                         <div class="permission-module-body flex-grow-1" id="module_body_${moduleSlug}">
@@ -174,7 +174,7 @@ const RolesUI = {
                     <div class="permission-item">
                         <div class="pe-3">
                             <span class="fw-semibold d-block text-dark">${escapeHTML(p.name)}</span>
-                            <small class="text-muted d-block" style="font-size: 0.75rem; line-height: 1.2;">${escapeHTML(p.description || '')}</small>
+                            <small class="text-muted d-block roles-desc-text">${escapeHTML(p.description || '')}</small>
                         </div>
                         <div class="form-check form-switch m-0 flex-shrink-0">
                             <input class="form-check-input perm-cb module-cb-${moduleSlug}" type="checkbox" value="${p.id}" id="perm_${p.id}">

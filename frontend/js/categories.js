@@ -611,7 +611,7 @@ async function kurallariYukle(categoryId) {
             tr.setAttribute("data-id", kural.id);
             // Sürüklerken düzgün dursun diye arkaplan verebiliriz ama Sortable ghostClass hallediyor
             tr.innerHTML = `
-                <td class="text-center" style="cursor: grab;"><i class="bi bi-grip-vertical text-muted fs-5 handle"></i></td>
+                <td class="text-center cursor-grab"><i class="bi bi-grip-vertical text-muted fs-5 handle"></i></td>
                 <td>${targetBadge}</td>
                 <td class="fw-bold text-dark">${escapeHtml(kural.attributeKey)} ${opts}</td>
                 <td>${tipBadge}</td>

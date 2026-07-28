@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="tr">
 
 <head>
@@ -46,30 +46,7 @@
         <div id="dashboardExportArea">
 
             <!-- 4'lü Özet Bilgi Kartlarını listeler -->
-            <style>
-                .saas-card {
-                    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
-                    border: 1px solid var(--border-color) !important;
-                    background-color: var(--card-bg) !important;
-                }
 
-                .saas-card:hover {
-                    transform: translateY(-4px);
-                    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.06) !important;
-                    border-color: #0d6efd !important;
-                }
-
-                [data-theme="dark"] .saas-card:hover {
-                    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.4) !important;
-                    border-color: #3d8bfd !important;
-                }
-
-                .saas-card a.stretched-link {
-                    outline: none !important;
-                    -webkit-tap-highlight-color: transparent !important;
-                    text-decoration: none !important;
-                }
-            </style>
 
             <div class="row g-4 mb-5">
                 <!-- Ürün Çeşidi Kartı -->
@@ -79,12 +56,11 @@
                         <a href="products.html" class="stretched-link"></a>
 
                         <div class="d-flex justify-content-between align-items-center mb-3">
-                            <span class="text-muted fw-bold" style="font-size: 0.80rem; letter-spacing: 0.5px;">TOPLAM
+                            <span class="text-muted fw-bold stat-label">TOPLAM
                                 ÜRÜN ÇEŞİDİ</span>
                             <i class="bi bi-box-seam text-primary fs-4"></i>
                         </div>
-                        <h2 id="totalProductsText" class="fw-bold mb-0"
-                            style="font-size: 2.2rem; color: var(--text-primary);">0</h2>
+                        <h2 id="totalProductsText" class="fw-bold mb-0 stat-value-primary">0</h2>
                     </div>
                 </div>
 
@@ -94,11 +70,11 @@
                         <a href="movements.html" class="stretched-link"></a>
 
                         <div class="d-flex justify-content-between align-items-center mb-3">
-                            <span class="text-muted fw-bold" style="font-size: 0.80rem; letter-spacing: 0.5px;">TOPLAM
+                            <span class="text-muted fw-bold stat-label">TOPLAM
                                 STOK</span>
                             <i class="bi bi-boxes text-success fs-4"></i>
                         </div>
-                        <h2 id="totalStockText" class="fw-bold mb-0 text-success" style="font-size: 2.2rem;">0 <span
+                        <h2 id="totalStockText" class="fw-bold mb-0 text-success stat-value">0 <span
                                 class="fs-6 text-muted">Adet</span></h2>
                     </div>
                 </div>
@@ -109,12 +85,11 @@
                         <a href="warehouses.html" class="stretched-link"></a>
 
                         <div class="d-flex justify-content-between align-items-center mb-3">
-                            <span class="text-muted fw-bold" style="font-size: 0.80rem; letter-spacing: 0.5px;">AKTİF
+                            <span class="text-muted fw-bold stat-label">AKTİF
                                 DEPO SAYISI</span>
                             <i class="bi bi-building text-info fs-4"></i>
                         </div>
-                        <h2 id="activeWarehousesText" class="fw-bold mb-0"
-                            style="font-size: 2.2rem; color: var(--text-primary);">0</h2>
+                        <h2 id="activeWarehousesText" class="fw-bold mb-0 stat-value-primary">0</h2>
                     </div>
                 </div>
 
@@ -124,11 +99,11 @@
                         <a href="notifications.html" class="stretched-link"></a>
 
                         <div class="d-flex justify-content-between align-items-center mb-3">
-                            <span class="text-danger fw-bold" style="font-size: 0.80rem; letter-spacing: 0.5px;">KRİTİK
+                            <span class="text-danger fw-bold stat-label">KRİTİK
                                 STOK UYARISI</span>
                             <i class="bi bi-exclamation-triangle-fill text-danger fs-4"></i>
                         </div>
-                        <h2 id="criticalAlertsText" class="fw-bold text-danger mb-0" style="font-size: 2.2rem;">0</h2>
+                        <h2 id="criticalAlertsText" class="fw-bold text-danger mb-0 stat-value">0</h2>
                     </div>
                 </div>
             </div>
@@ -139,7 +114,7 @@
                 <div class="col-12">
                     <div class="card border-0 shadow-sm rounded-3 p-4">
                         <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
-                            <h5 class="fw-bold text-muted mb-0" style="letter-spacing: 0.5px;">SON 30 GÜN STOK HAREKET
+                            <h5 class="fw-bold text-muted mb-0 section-title-tight">SON 30 GÜN STOK HAREKET
                                 TRENDİ</h5>
                             <select id="trendProductFilter"
                                 class="form-select form-select-sm w-auto shadow-sm border-secondary rounded-pill px-3 fw-bold text-primary">
@@ -214,6 +189,9 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.js"></script>
     <script src="js/alerts.js"></script>   
+    <script src="js/partials/sidebar.partial.js"></script>
+    <script src="js/partials/topbar.partial.js"></script>
+    <script src="js/partials/pagination.partial.js"></script>
     <script src="js/config.js"></script>
     <script src="js/auth.js"></script>
     <script src="js/index.js"></script>
