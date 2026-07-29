@@ -13,6 +13,7 @@ using stok_takip.DTOs;
 using stok_takip.Models;
 using stok_takip.Middlewares;
 using stok_takip.Constants;
+using Prometheus;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -40,6 +41,10 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
     options.KnownProxies.Clear();  // Tüm proxyleri bilinen olarak kabul et
 });
 builder.Services.AddHttpContextAccessor();
+
+// --- Prometheus Metrics ---
+builder.Services.AddSingleton<stok_takip.Metrics.StockFlowMetrics>();
+
 builder.Services.AddOpenApi();
 builder.Services.AddDbContextPool<AppDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
@@ -211,6 +216,16 @@ builder.Services.AddCors(options =>
 });
 
 var app = builder.Build();
+
+// --- Prometheus Metrics Middleware ---
+// HTTP istek süresi, durum kodu, path bazlı sayaçları otomatik toplar.
+app.UseHttpMetrics(options =>
+{
+    // /api/{id} gibi path'lerde her ID ayrı bir metrik etiketi olmasın diye
+    // route şablonunu kullanır (ör: /api/products/{id} tek metrik olarak toplanır).
+    options.ReduceStatusCodeCardinality();
+});
+
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 
 if (app.Environment.IsDevelopment())
@@ -220,6 +235,11 @@ if (app.Environment.IsDevelopment())
 }
 
 app.MapGet("/api/health", () => Results.Ok(new { status = "ok" })).AllowAnonymous();
+
+// --- Prometheus /metrics endpoint'i ---
+// DİKKAT: Bu endpoint kimlik doğrulama gerektirmez ama internete AÇIK OLMAMALIDIR.
+// 4. bölümdeki güvenlik notlarına bakınız (sadece Docker iç ağından erişilebilir olacak).
+app.MapMetrics("/metrics").AllowAnonymous();
 
 app.UseForwardedHeaders();
 

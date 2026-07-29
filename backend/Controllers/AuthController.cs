@@ -22,17 +22,20 @@ public class AuthController : ControllerBase
     private readonly IPasswordHasher<User> _passwordHasher;
     private readonly IConfiguration _configuration;
     private readonly IEmailService _emailService;
+    private readonly stok_takip.Metrics.StockFlowMetrics _metrics;
 
     public AuthController(
         AppDbContext context,
         IPasswordHasher<User> passwordHasher,
         IConfiguration configuration,
-        IEmailService emailService)
+        IEmailService emailService,
+        stok_takip.Metrics.StockFlowMetrics metrics)
     {
         _context = context;
         _passwordHasher = passwordHasher;
         _configuration = configuration;
         _emailService = emailService;
+        _metrics = metrics;
     }
 
 [AllowAnonymous]
@@ -139,6 +142,7 @@ public async Task<IActionResult> Login([FromBody] LoginDto dto)
             .FirstOrDefaultAsync(u => u.Email == dto.Email);
         if (user == null)
         {
+            _metrics.LoginAttemptsTotal.WithLabels("failed").Inc();
             return Unauthorized(new { message = "Invalid email or password." });
         }
 
@@ -166,6 +170,7 @@ public async Task<IActionResult> Login([FromBody] LoginDto dto)
 
             await _context.SaveChangesAsync();
             int remainingAttempts = 5 - user.FailedLoginAttempts;
+            _metrics.LoginAttemptsTotal.WithLabels("failed").Inc();
             if (remainingAttempts > 0)
             {
                 return Unauthorized(new { message = $"Invalid email or password. Kalan deneme hakkınız: {remainingAttempts}" });
@@ -203,6 +208,9 @@ public async Task<IActionResult> Login([FromBody] LoginDto dto)
 
         _context.UserSessions.Add(session);
         await _context.SaveChangesAsync();
+
+        _metrics.LoginAttemptsTotal.WithLabels("success").Inc();
+        _metrics.ActiveSessions.Inc();
 
         return Ok(new 
         { 
