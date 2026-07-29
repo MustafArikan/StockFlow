@@ -363,6 +363,12 @@ body {
     border: 2px dashed var(--border-color);
 }
 
+/* CSP Uyumlu Dinamik Kamera Boyutlandırması */
+.scanner-viewport {
+    max-width: 100%;
+    min-height: 300px;
+}
+
 #reader {
     width: 100% !important;
     border: none !important;

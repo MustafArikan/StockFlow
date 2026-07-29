@@ -159,8 +159,8 @@
                 </div>
                 <div class="modal-body p-4 text-center">
                     <!-- Kamera Ekranı -->
-                    <div id="readerAsset" class="mx-auto overflow-hidden rounded-3 border shadow-sm"
-                        style="max-width: 100%; min-height: 300px;"></div>
+                    <div id="readerAsset"
+                        class="mx-auto overflow-hidden rounded-3 border shadow-sm w-100 scanner-viewport"></div>
 
                     <!-- Durum Metni -->
                     <div id="kameraDurumAsset" class="text-muted small mt-3 fw-bold">Kamera
@@ -201,10 +201,10 @@
 
                         <!-- Kamera Ekranı -->
                         <div id="kameraAlaniEkle" class="d-none mb-3 rounded-3 overflow-hidden position-relative">
-                            <div id="readerEkle"></div>
+                            <div id="readerEkle" class="scanner-viewport w-100"></div>
                             <button type="button"
-                                class="btn btn-sm btn-danger position-absolute bottom-0 start-50 translate-middle-x mb-2 rounded-pill px-4 shadow"
-                                id="btnKameraKapatEkle" style="z-index: 999;">Kapat</button>
+                                class="btn btn-sm btn-danger position-absolute bottom-0 start-50 translate-middle-x mb-2 rounded-pill px-4 shadow z-3"
+                                id="btnKameraKapatEkle">Kapat</button>
                         </div>
 
                         <input type="text" id="newAssetSerial" class="form-control"
