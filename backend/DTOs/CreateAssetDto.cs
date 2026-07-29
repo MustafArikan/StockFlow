@@ -11,4 +11,6 @@ public class CreateAssetDto
     public string SerialNumber { get; set; } = string.Empty;
 
     public string? Notes { get; set; }
+
+    public int LocationId { get; set; }
 }

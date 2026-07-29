@@ -55,52 +55,66 @@ public class AssetsController : ControllerBase
             return BadRequest(new { message = $"Stok yetersiz! Depoda hiç '{product.Name}' bulunmuyor. Lütfen önce stok girişi yapın." });
         }
 
-        // Depodaki ilk müsait raftan/stoktan 1 adet düşürüyoruz
+        // Belirtilen kaynak rafta (locationId) yeterli stok var mı kontrolü yapılıyor
         var stockLevel = await _context.StockLevels
-            .FirstOrDefaultAsync(sl => sl.ProductId == product.Id && sl.Quantity > 0);
+            .FirstOrDefaultAsync(sl => sl.ProductId == product.Id && sl.LocationId == dto.LocationId);
 
-        if (stockLevel != null)
+        if (stockLevel == null || stockLevel.Quantity < 1)
         {
-            stockLevel.Quantity -= 1;
+            return BadRequest(new { message = "Seçilen depoda/rafta bu ürün için yeterli stok bulunmuyor." });
         }
 
-        // STOK HAREKETİNİ (LOG) KAYDET
-        var stockMovement = new StockMovement
+        // ACID Güvencesi İçin Transaction Başlatıyoruz (Hata olursa veritabanı yarıda kalmasın diye)
+        using var transaction = await _context.Database.BeginTransactionAsync();
+        try
         {
-            ProductId = product.Id,
-            MovementType = "OUT", // Stok çıkışı
-            Quantity = 1,
-            Description = $"Ekipman Sisteme Kaydedildi (Seri No: {dto.SerialNumber})",
-            CreatedAt = DateTime.UtcNow,
-            UserId = GetCurrentUserId()
-        };
-        _context.StockMovements.Add(stockMovement);
+            // Belirtilen raftan 1 adet düşürür
+            stockLevel.Quantity -= 1;
 
-        // Yeni Ekipman (Asset) nesnesinin oluşturulması
-        var newAsset = new Asset
+            // Stok hareketini kaydeder
+            var stockMovement = new StockMovement
+            {
+                ProductId = product.Id,
+                MovementType = "OUT", // Stok çıkışı
+                Quantity = 1,
+                SourceLocationId = dto.LocationId,
+                Description = $"Ekipman Sisteme Kaydedildi (Seri No: {dto.SerialNumber})",
+                CreatedAt = DateTime.UtcNow,
+                UserId = GetCurrentUserId()
+            };
+            _context.StockMovements.Add(stockMovement);
+
+            // Yeni Ekipman (Asset) nesnesinin oluşturulması
+            var newAsset = new Asset
+            {
+                ProductId = dto.ProductId,
+                SerialNumber = dto.SerialNumber,
+                Notes = dto.Notes,
+                Status = "Available" // İlk eklendiğinde durumu 'Müsait/Boşta' olur
+            };
+
+            // Ekipman eklendiğine dair ilk yaşam döngüsü logunun atılması
+            var historyRecord = new AssetHistory
+            {
+                Asset = newAsset,
+                UserId = GetCurrentUserId(),
+                EventType = "Sisteme Giriş",
+                Notes = "Ekipman sisteme eklendi ve stoktan 1 adet düşüldü."
+            };
+
+            _context.Assets.Add(newAsset);
+            _context.AssetHistories.Add(historyRecord);
+
+            await _context.SaveChangesAsync();
+            await transaction.CommitAsync(); // Her şey yolundaysa onayla
+
+            return Ok(new { message = "Ekipman başarıyla oluşturuldu ve stoktan düşüldü.", assetId = newAsset.Id });
+        }
+        catch (Exception ex)
         {
-            ProductId = dto.ProductId,
-            SerialNumber = dto.SerialNumber,
-            Notes = dto.Notes,
-            Status = "Available" // İlk eklendiğinde durumu 'Müsait/Boşta' olur
-        };
-
-        // Ekipman eklendiğine dair ilk yaşam döngüsü logunun atılması
-        var historyRecord = new AssetHistory
-        {
-            Asset = newAsset,
-            UserId = GetCurrentUserId(), // Yardımcı metot kullanıldı
-            EventType = "Sisteme Giriş",
-            Notes = "Ekipman sisteme eklendi ve stoktan 1 adet düşüldü."
-        };
-
-        _context.Assets.Add(newAsset);
-        _context.AssetHistories.Add(historyRecord);
-
-        // Transaction (İşlem) mantığı: EF Core stok düşme, stok hareketi ve ekipman kaydını TEK seferde güvenle işler.
-        await _context.SaveChangesAsync();
-
-        return Ok(new { message = "Ekipman başarıyla oluşturuldu ve stoktan düşüldü.", assetId = newAsset.Id });
+            await transaction.RollbackAsync(); // Hata çıkarsa stok düşüşünü geri al
+            return StatusCode(500, new { message = "Ekipman kaydedilirken hata oluştu: " + ex.Message });
+        }
     }
 
     // --- 2. EKİPMAN ATAMA İŞLEMİ ---
@@ -342,6 +356,89 @@ public class AssetsController : ControllerBase
 
         return Ok(new { message = "Bakım kaydı başarıyla eklendi." });
     }
+
+    // --- 9. EKİPMAN SİLME VE İSTEĞE BAĞLI STOĞA GERİ EKLEME ---
+    [HttpDelete("{id}")]
+    [Authorize(Policy = Policies.RequireAssetWrite)]
+    public async Task<IActionResult> DeleteAsset(int id, [FromQuery] int? returnLocationId)
+    {
+        var asset = await _context.Assets
+            .Include(a => a.Product)
+            .FirstOrDefaultAsync(a => a.Id == id);
+
+        if (asset == null)
+        {
+            return NotFound(new { message = "Silinecek ekipman bulunamadı." });
+        }
+
+        using var transaction = await _context.Database.BeginTransactionAsync();
+        try
+        {
+            // Eğer kullanıcı "Stoğa Geri Ekle" seçeneğini seçtiyse ve bir hedef raf belirlediyse
+            if (returnLocationId.HasValue)
+            {
+                var targetLocation = await _context.Locations.FindAsync(returnLocationId.Value);
+                if (targetLocation == null)
+                {
+                    return BadRequest(new { message = "Belirtilen hedef raf sistemde bulunamadı." });
+                }
+
+                // Hedef raftaki stok seviyesini bul veya yoksa yeni oluştur
+                var stockLevel = await _context.StockLevels
+                    .FirstOrDefaultAsync(sl => sl.ProductId == asset.ProductId && sl.LocationId == returnLocationId.Value);
+
+                if (stockLevel != null)
+                {
+                    stockLevel.Quantity += 1;
+                }
+                else
+                {
+                    _context.StockLevels.Add(new StockLevel
+                    {
+                        ProductId = asset.ProductId,
+                        LocationId = returnLocationId.Value,
+                        Quantity = 1
+                    });
+                }
+
+                // Stok hareketini kaydet
+                var stockMovement = new StockMovement
+                {
+                    ProductId = asset.ProductId,
+                    MovementType = "IN",
+                    Quantity = 1,
+                    TargetLocationId = returnLocationId.Value,
+                    Description = $"Silinen Ekipman Stoğa Geri Eklendi (Seri No: {asset.SerialNumber})",
+                    CreatedAt = DateTime.UtcNow,
+                    UserId = GetCurrentUserId()
+                };
+                _context.StockMovements.Add(stockMovement);
+            }
+
+            // Ekipmanı sistemden kalıcı olarak sil
+            _context.Assets.Remove(asset);
+
+            // Yaşam döngüsü / Audit logu
+            var historyRecord = new AssetHistory
+            {
+                AssetId = asset.Id,
+                UserId = GetCurrentUserId(),
+                EventType = "Sistemden Silindi",
+                Notes = returnLocationId.HasValue ? "Ekipman silindi ve stoğa geri eklendi." : "Ekipman hurdaya ayrılarak sistemden silindi."
+            };
+            _context.AssetHistories.Add(historyRecord);
+
+            await _context.SaveChangesAsync();
+            await transaction.CommitAsync();
+
+            return Ok(new { message = "Ekipman başarıyla sistemden silindi." });
+        }
+        catch (Exception ex)
+        {
+            await transaction.RollbackAsync();
+            return StatusCode(500, new { message = "Ekipman silinirken bir hata oluştu: " + ex.Message });
+        }
+    } // <--- Bu süslü parantez metodu düzgünce kapatır!
 
 
     // YARDIMCI METOTLAR 
