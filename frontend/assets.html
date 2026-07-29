@@ -127,6 +127,14 @@
                                 <i class="bi bi-arrow-return-left"></i> Kullanıcıdan Al (Teslim Al)
                             </button>
                         </div>
+
+                        <!-- Ekipmanı Sil Butonu -->
+                        <div class="mt-4 pt-3 border-top border-danger border-opacity-25">
+                            <button class="btn btn-sm btn-outline-danger w-100 fw-bold shadow-sm" data-bs-toggle="modal"
+                                data-bs-target="#deleteAssetModal">
+                                <i class="bi bi-trash3 me-1"></i> Ekipmanı Sistemden Sil
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -178,41 +186,74 @@
                     <h5 class="modal-title text-success"><i class="bi bi-plus-circle"></i> Yeni Ekipman Kaydet</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
-                <div class="modal-body">
-                    <div class="alert alert-info py-2 small">
-                        <i class="bi bi-info-circle"></i> Ürün kataloğundan (Stoktan) bir ürün seçin ve fiziksel
-                        kutusundaki IMEI / Seri Numarasını girin.
+                <div class="modal-body p-4">
+                    <div class="alert alert-info py-2 small mb-4 shadow-sm border-info bg-opacity-10">
+                        <i class="bi bi-info-circle-fill me-1"></i> <strong>Kayıt Adımları:</strong> Ekipmanı kaydetmek
+                        için sistemdeki ürün kataloğundan seçim yapıp, stoktan düşülecek depo ve rafı belirleyin.
+                        Ardından ekipmanın fiziksel kutusu üzerindeki IMEI veya Seri Numarasını girerek işlemi
+                        tamamlayın.
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label">Ürün / Model Seçin <span class="text-danger">*</span></label>
-                        <select id="newAssetProduct" class="form-select">
-                            <option value="">Yükleniyor...</option>
-                        </select>
-                    </div>
-                    <div class="mb-3">
-                        <div class="d-flex justify-content-between align-items-center mb-2">
-                            <label class="form-label fw-bold mb-0">Seri Numarası / IMEI / Barkod <span
+
+                    <!-- Ekipman ve Kimlik Bilgileri -->
+                    <h6 class="fw-bold text-primary mb-3"><i class="bi bi-box-seam me-2"></i>1. Ekipman Bilgileri</h6>
+                    <div class="row g-3 mb-4">
+                        <div class="col-12">
+                            <label class="form-label small fw-bold text-muted">Ürün / Model Seçin <span
                                     class="text-danger">*</span></label>
-                            <button type="button" class="btn btn-sm btn-outline-primary rounded-pill py-0 px-3 fw-bold"
-                                id="btnKameraAcEkle">
-                                <i class="bi bi-upc-scan me-1"></i> Barkod Okut
-                            </button>
+                            <select id="newAssetProduct" class="form-select">
+                                <option value="">Yükleniyor...</option>
+                            </select>
                         </div>
+                        <div class="col-12">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <label class="form-label small fw-bold text-muted mb-0">Seri Numarası / IMEI / Barkod
+                                    <span class="text-danger">*</span></label>
+                                <button type="button"
+                                    class="btn btn-sm btn-outline-primary rounded-pill py-0 px-3 fw-bold"
+                                    id="btnKameraAcEkle">
+                                    <i class="bi bi-upc-scan me-1"></i> Barkod Okut
+                                </button>
+                            </div>
 
-                        <!-- Kamera Ekranı -->
-                        <div id="kameraAlaniEkle" class="d-none mb-3 rounded-3 overflow-hidden position-relative">
-                            <div id="readerEkle" class="scanner-viewport w-100"></div>
-                            <button type="button"
-                                class="btn btn-sm btn-danger position-absolute bottom-0 start-50 translate-middle-x mb-2 rounded-pill px-4 shadow z-3"
-                                id="btnKameraKapatEkle">Kapat</button>
+                            <!-- Kamera Ekranı -->
+                            <div id="kameraAlaniEkle" class="d-none mb-2 rounded-3 overflow-hidden position-relative">
+                                <div id="readerEkle" class="scanner-viewport w-100"></div>
+                                <button type="button"
+                                    class="btn btn-sm btn-danger position-absolute bottom-0 start-50 translate-middle-x mb-2 rounded-pill px-4 shadow z-3"
+                                    id="btnKameraKapatEkle">Kapat</button>
+                            </div>
+
+                            <input type="text" id="newAssetSerial" class="form-control"
+                                placeholder="Ekipmanın üzerindeki benzersiz kod...">
                         </div>
-
-                        <input type="text" id="newAssetSerial" class="form-control"
-                            placeholder="Ekipmanın üzerindeki benzersiz kod...">
                     </div>
 
+                    <!-- Stok Çıkış Konumu (WMS Entegrasyonu) -->
+                    <h6 class="fw-bold text-danger mb-3"><i class="bi bi-box-arrow-up me-2"></i>2. Çıkış (Kaynak) Konumu
+                    </h6>
+                    <div class="p-3 bg-light border rounded-3 shadow-sm mb-4">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label text-muted small fw-bold">Depo Seçin <span
+                                        class="text-danger">*</span></label>
+                                <select class="form-select" id="newAssetSourceWarehouse" disabled>
+                                    <option value="">Önce ürün seçiniz...</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label text-muted small fw-bold">Raf Seçin <span
+                                        class="text-danger">*</span></label>
+                                <select class="form-select" id="newAssetSourceLocation" disabled>
+                                    <option value="">Önce depo seçiniz...</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Ek Bilgiler -->
+                    <h6 class="fw-bold text-secondary mb-3"><i class="bi bi-card-text me-2"></i>3. Ek Bilgiler</h6>
                     <div class="mb-3">
-                        <label class="form-label">Ek Notlar (Opsiyonel)</label>
+                        <label class="form-label small fw-bold text-muted">Ek Notlar (Opsiyonel)</label>
                         <textarea id="newAssetNotes" class="form-control" rows="2"
                             placeholder="Örn: Kutusunda ufak bir ezik var..."></textarea>
                     </div>
@@ -349,6 +390,55 @@
         </div>
     </div>
 
+    <!-- Ekipmanı Sistemden Sil Modalı -->
+    <div class="modal fade" id="deleteAssetModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title text-danger fw-bold"><i class="bi bi-trash3 me-2"></i>Ekipmanı Sistemden Sil
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body bg-light">
+                    <div class="alert alert-warning small">
+                        <i class="bi bi-exclamation-triangle-fill me-1"></i> Bu işlem, ekipmanı sistemden kalıcı olarak
+                        silecektir!
+                    </div>
+
+                    <div class="form-check form-switch mb-4 mt-3">
+                        <input class="form-check-input" type="checkbox" id="returnToStockSwitch" checked>
+                        <label class="form-check-label fw-bold text-dark" for="returnToStockSwitch">Stoğa Geri Ekle
+                            (Stok Miktarını Artır)</label>
+                        <div class="form-text small text-muted">Kapalıysa ekipman hurdaya ayrılmış sayılır, stok miktarı
+                            artırılmaz.</div>
+                    </div>
+
+                    <!-- Hedef Konumu (Stokun Gireceği Yer) -->
+                    <div class="mb-3 p-3 bg-white border rounded-3 shadow-sm" id="returnTargetLocationGroup">
+                        <h6 class="fw-bold text-success mb-3"><i class="bi bi-box-arrow-in-down me-2"></i>Hedef (Giriş)
+                            Konumu</h6>
+                        <label class="form-label text-muted small fw-bold">Depo Seçin <span
+                                class="text-danger">*</span></label>
+                        <select class="form-select mb-2" id="deleteAssetTargetWarehouse">
+                            <option value="">Depolar yükleniyor...</option>
+                        </select>
+                        <label class="form-label text-muted small fw-bold">Raf Seçin <span
+                                class="text-danger">*</span></label>
+                        <select class="form-select" id="deleteAssetTargetLocation" disabled>
+                            <option value="">Önce depo seçin...</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-outline-secondary rounded-pill px-4"
+                        data-bs-dismiss="modal">İptal</button>
+                    <button type="button" id="btnSubmitDeleteAsset"
+                        class="btn btn-danger rounded-pill px-4 fw-bold shadow-sm">Kalıcı Olarak Sil</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
 
     <!-- Temel JavaScript Kütüphaneleri -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
@@ -362,6 +452,7 @@
     <script src="js/config.js"></script>
     <script src="js/alerts.js"></script>
     <script src="js/auth.js"></script>
+    <script src="js/stock-utils.js"></script>
     <script src="js/partials/sidebar.partial.js"></script>
     <script src="js/partials/topbar.partial.js"></script>
     <script src="js/partials/pagination.partial.js"></script>
