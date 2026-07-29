@@ -106,12 +106,12 @@ Bu proje, geleneksel kişi bazlı rol atamaları yerine tamamen **görev (task) 
 - [ ] **Kurulum:** C# Birim Testleri (Unit Tests) ortamının kurulması (`xUnit` + `FluentAssertions` altyapısı)
 - [ Ertelendi ] Canlı ortam Nginx tersine vekil (Reverse Proxy) ve SSL (HTTPS) sertifikası yapılandırması
 - [ Ertelendi ] Canlı ortam otomatik veritabanı yedekleme ve arşivleme altyapısı
-- [ ] Prometheus & Grafana ile canlı/production öncesi izleme (monitoring) hazırlığı
+- [x] Prometheus & Grafana ile canlı/production öncesi izleme (monitoring) hazırlığı
 
 ### 🔮 Modül 8: Gelişmiş Özellikler & Demirbaş (Assets)
-- [ ] **Arayüz:** Zimmet & Cihaz Teknik Detay Kartı Sayfası (Mobil kameradan cihaz QR kodu okutulduğunda açılan ekran)
+- [x] **Arayüz:** Zimmet & Cihaz Teknik Detay Kartı Sayfası (Mobil kameradan cihaz QR kodu okutulduğunda açılan ekran)
 - [x] **API:** `POST /api/assets` (Seri no/QR bazlı tekil fiziksel cihaz ekleme endpoint'i)
-- [ ] **API:** `GET /api/assets/{serialNumber}` (Seri no/QR ile tekil cihaz bilgilerini getirme endpoint'i)
+- [x] **API:** `GET /api/assets/{serialNumber}` (Seri no/QR ile tekil cihaz bilgilerini getirme endpoint'i)
 - [x] **API:** `POST /api/assets/{id}/assign` (Cihazı kullanıcıya zimmetleme endpoint'i)
 - [x] **API:** `GET /api/assets/{id}/history` (Cihazın geçmiş tüm sahiplerini gösteren Zaman Çizelgesi / Timeline endpoint'i)
 - [x] **API:** `GET /api/security/audit-logs` (Detaylı Güvenlik Denetim Günlüğü listeleme endpoint'i)

@@ -1,0 +1,56 @@
+global:
+  scrape_interval: 15s        # Her 15 saniyede bir tüm target'lardan veri çek
+  evaluation_interval: 15s    # Alert kurallarını her 15 saniyede bir değerlendir
+
+rule_files:
+  - "/etc/prometheus/alert_rules.yml"
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: ["alertmanager:9093"]   # Alertmanager kullanmıyorsanız bu bloğu silin
+
+scrape_configs:
+  # --- StockFlow Backend (.NET, native /metrics endpoint) ---
+  - job_name: "stockflow-backend"
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["backend:8080"]
+        labels:
+          service: "backend"
+          project: "stockflow"
+
+  # --- MSSQL veritabanı metrikleri (sql_exporter üzerinden) ---
+  - job_name: "stockflow-mssql"
+    static_configs:
+      - targets: ["mssql-exporter:9399"]
+        labels:
+          service: "database"
+          project: "stockflow"
+
+  # --- Nginx (frontend) metrikleri ---
+  - job_name: "stockflow-nginx"
+    static_configs:
+      - targets: ["nginx-exporter:9113"]
+        labels:
+          service: "frontend"
+          project: "stockflow"
+
+  # --- Docker container'larının kaynak kullanımı (cAdvisor) ---
+  - job_name: "cadvisor"
+    static_configs:
+      - targets: ["cadvisor:8080"]
+        labels:
+          project: "stockflow"
+
+  # --- Host (sunucu) düzeyinde CPU/RAM/Disk (node-exporter) ---
+  - job_name: "node-exporter"
+    static_configs:
+      - targets: ["node-exporter:9100"]
+        labels:
+          project: "stockflow"
+
+  # --- Prometheus'un kendi kendini izlemesi ---
+  - job_name: "prometheus"
+    static_configs:
+      - targets: ["localhost:9090"]

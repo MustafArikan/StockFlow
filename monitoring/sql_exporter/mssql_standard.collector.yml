@@ -1,0 +1,54 @@
+collector_name: mssql_standard
+
+metrics:
+  - metric_name: mssql_database_size_bytes
+    type: gauge
+    help: "Veritabanı dosyalarının toplam boyutu (byte)"
+    key_labels:
+      - database_name
+    values: [size_bytes]
+    query: |
+      SELECT DB_NAME(database_id) AS database_name, SUM(size) * 8.0 * 1024 AS size_bytes
+      FROM sys.master_files
+      GROUP BY database_id;
+
+  - metric_name: mssql_active_connections
+    type: gauge
+    help: "Veritabanına açık aktif bağlantı sayısı"
+    values: [connections]
+    query: |
+      SELECT COUNT(*) AS connections FROM sys.dm_exec_sessions WHERE is_user_process = 1;
+
+  - metric_name: mssql_blocked_sessions
+    type: gauge
+    help: "Şu anda blocked (bekleyen) session sayısı"
+    values: [blocked]
+    query: |
+      SELECT COUNT(*) AS blocked FROM sys.dm_exec_requests WHERE blocking_session_id <> 0;
+
+  - metric_name: mssql_deadlocks_total
+    type: gauge
+    help: "Son restart'tan bu yana toplam deadlock sayısı"
+    values: [deadlocks]
+    query: |
+      SELECT cntr_value AS deadlocks
+      FROM sys.dm_os_performance_counters
+      WHERE counter_name = 'Number of Deadlocks/sec' AND instance_name = '_Total';
+
+  - metric_name: mssql_batch_requests_per_sec
+    type: gauge
+    help: "Saniyedeki toplam batch isteği sayısı (throughput göstergesi)"
+    values: [batch_requests]
+    query: |
+      SELECT cntr_value AS batch_requests
+      FROM sys.dm_os_performance_counters
+      WHERE counter_name = 'Batch Requests/sec';
+
+  - metric_name: mssql_page_life_expectancy
+    type: gauge
+    help: "Buffer pool'daki bir sayfanın ortalama kalma süresi (saniye) — düşükse RAM yetersiz demektir"
+    values: [seconds]
+    query: |
+      SELECT cntr_value AS seconds
+      FROM sys.dm_os_performance_counters
+      WHERE counter_name = 'Page life expectancy';
