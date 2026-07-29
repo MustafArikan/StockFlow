@@ -146,7 +146,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 // 7.2. İZİN REDDEDİLDİ VEYA KAMERA YOK (Modal hiç açılmaz)
                 btnKameraAcAsset.disabled = false;
                 btnKameraAcAsset.innerHTML = originalHtml;
-                alert("Kameraya erişilemedi! Lütfen tarayıcı adres çubuğundaki kilit simgesinden kamera izni verin veya bilgisayarınıza bir kamera bağlayın.");
+                uyariGoster("Kameraya erişilemedi! Lütfen tarayıcı adres çubuğundaki kilit simgesinden kamera izni verin veya bilgisayarınıza bir kamera bağlayın.");
             }
         });
 

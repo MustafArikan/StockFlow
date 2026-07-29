@@ -315,4 +315,8 @@ function renderProfessionalLayout() {
     }
 }
 
+function tarihFormatla(t) {
+    return t ? new Date(t).toLocaleDateString("tr-TR") : "-";
+}
+
 document.addEventListener('DOMContentLoaded', renderProfessionalLayout);
