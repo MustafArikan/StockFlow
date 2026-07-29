@@ -32,22 +32,22 @@ stok_takip/
 
 ---
 
-## 📊 Görev (Task) Bazlı Backlog ve İlerleme Durumu (Genel İlerleme: %61.8 - 34/55 Görev)
+## 📊 Görev (Task) Bazlı Backlog ve İlerleme Durumu (Genel İlerleme: %90.4 - 57/63 Görev)
 
 Bu proje, geleneksel kişi bazlı rol atamaları yerine tamamen **görev (task) bazlı** yönetilmektedir. 
 * **Çalışma Prensibi:** Geliştiriciler (K1, K2, K3, K4 fark etmeksizin) backlog'dan istedikleri herhangi bir görevi (ön yüz ekranını, entegrasyonu veya API endpoint'ini) üzerine alıp geliştirebilir ve bitirdiğinde işaretleyebilir. Belirli bir alan kısıtlaması veya alan paylaşımı yoktur.
 
 | Durum | Toplam Görev | Tamamlanan | Ertelenen | Kalan | Aktif İlerleme Yüzdesi |
 | :--- | :---: | :---: | :---: | :---: | :---: |
-| **Genel Proje Durumu** | **55** | **36** | **2** | **17** | **%67.9** |
+| **Genel Proje Durumu** | **63** | **57** | **2** | **4** | **%93.4** |
 
-*Not: Canlı ortam planlarındaki değişiklikler nedeniyle ertelenen 2 görev (Nginx SSL ve otomatik veritabanı yedekleme) genel yüzdenin dışındaki "Ertelenen" kısmında tutulmaktadır. Ertelenenler düşüldüğünde aktif görev ilerleme oranı **%67.9** (36/53) seviyesindedir.*
+*Not: Canlı ortam planlarındaki değişiklikler nedeniyle ertelenen 2 görev (Nginx SSL ve otomatik veritabanı yedekleme) genel yüzdenin dışındaki "Ertelenen" kısmında tutulmaktadır. Ertelenenler düşüldüğünde aktif görev ilerleme oranı **%93.4** (57/61) seviyesindedir.*
 
 ---
 
 ### 🔐 Modül 1: Kullanıcı Yönetimi & Yetkilendirme (Auth)
-- [ ] **Arayüz:** Kullanıcı Giriş Sayfası (`login.html` - Giriş formu ve JWT token saklama entegrasyonu)
-- [ ] **Arayüz:** Kullanıcı Kayıt Sayfası (`register.html` - Kayıt formu)
+- [x] **Arayüz:** Kullanıcı Giriş Sayfası (`login.html` - Giriş formu ve JWT token saklama entegrasyonu)
+- [x] **Arayüz:** Kullanıcı Kayıt Sayfası (`register.html` - Kayıt formu)
 - [x] **API:** `POST /api/auth/register` (Kullanıcı kayıt ve parola hashleme endpoint'i)
 - [x] **API:** `POST /api/auth/verify-email` (Kullanıcı e-posta onay kodu doğrulama endpoint'i)
 - [x] **API:** `POST /api/auth/login` (Kullanıcı girişi, kimlik doğrulama ve JWT token üretim endpoint'i)
@@ -108,13 +108,25 @@ Bu proje, geleneksel kişi bazlı rol atamaları yerine tamamen **görev (task) 
 - [ Ertelendi ] Canlı ortam otomatik veritabanı yedekleme ve arşivleme altyapısı
 - [ ] Prometheus & Grafana ile canlı/production öncesi izleme (monitoring) hazırlığı
 
-### 🔮 Modül 8: Gelişmiş Özellikler (Yol Haritası)
+### 🔮 Modül 8: Gelişmiş Özellikler & Demirbaş (Assets)
 - [ ] **Arayüz:** Zimmet & Cihaz Teknik Detay Kartı Sayfası (Mobil kameradan cihaz QR kodu okutulduğunda açılan ekran)
-- [ ] **API:** `POST /api/assets` (Seri no/QR bazlı tekil fiziksel cihaz ekleme endpoint'i)
+- [x] **API:** `POST /api/assets` (Seri no/QR bazlı tekil fiziksel cihaz ekleme endpoint'i)
 - [ ] **API:** `GET /api/assets/{serialNumber}` (Seri no/QR ile tekil cihaz bilgilerini getirme endpoint'i)
-- [ ] **API:** `POST /api/assets/{id}/assign` (Cihazı kullanıcıya zimmetleme endpoint'i)
-- [ ] **API:** `GET /api/assets/{id}/history` (Cihazın geçmiş tüm sahiplerini gösteren Zaman Çizelgesi / Timeline endpoint'i)
-- [ ] **API:** `GET /api/security/audit-logs` (Detaylı Güvenlik Denetim Günlüğü listeleme endpoint'i)
+- [x] **API:** `POST /api/assets/{id}/assign` (Cihazı kullanıcıya zimmetleme endpoint'i)
+- [x] **API:** `GET /api/assets/{id}/history` (Cihazın geçmiş tüm sahiplerini gösteren Zaman Çizelgesi / Timeline endpoint'i)
+- [x] **API:** `GET /api/security/audit-logs` (Detaylı Güvenlik Denetim Günlüğü listeleme endpoint'i)
+
+### 🏢 Modül 9: PIM (Ürün Bilgi Yönetimi) & Dinamik Özellikler (EAV)
+- [x] **Altyapı:** Hibrit JSON Dinamik Özellik (EAV) Mimarisi Entegrasyonu
+- [x] **API:** `GET /api/attribute-rules` (Kategori kuralları getirme endpoint'i)
+- [x] **Arayüz:** Kategori Kuralları Drag & Drop (SortableJS) Sıralama
+- [x] **Arayüz:** Ürün Ekleme Formu Cascading (Depo -> Raf) ve Dinamik Özellik (PIM) Form Render
+- [x] **Arayüz:** Hiyerarşik Kategori Ağacı Görünümü (Tree View)
+
+### 👥 Modül 10: Genişletilmiş Kullanıcı & Profil Yönetimi
+- [x] **Arayüz:** Kişisel Profil Ekranı (`profile.html` - Kullanıcı kendi bilgilerini ve şifresini değiştirir)
+- [x] **Arayüz:** Sistem Kullanıcıları Yönetim Paneli (`users.html` - Süper Admin ekranı)
+- [x] **API:** `UsersController` (Kullanıcı Ekle/Sil/Düzenle tam CRUD operasyonları)
 
 ---
 
