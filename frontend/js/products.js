@@ -11,7 +11,6 @@ let pageSize = 10;
 let aktifArama = '';
 let siralamaSutunu = 'id';
 let siralamaYonu = 'asc';
-let aktifDetayUrunId = null;
 
 // 1. URL'den search parametresini güvenli ve tek bir noktadan yakala
 const urlParams = new URLSearchParams(window.location.search);
@@ -324,7 +323,7 @@ function sirala(sutun) {
     }
 
     const sutunlar = { id: 'thId', name: 'thAd', barcode: 'thBarkod', minStockLevel: 'thMinStok', categoryName: 'thKategori', stockQuantity: 'thMevcutStok' };
-    const metinler = { id: 'ID', name: 'Ürün Adı', barcode: 'Barkod', minStockLevel: 'Min. Stok', categoryName: 'Kategori', stockQuantity: 'Mevcut Stok' };
+    const metinler = { id: 'Tarihi', name: 'Ürün Adı', barcode: 'Barkod', minStockLevel: 'Min. Stok', categoryName: 'Kategori', stockQuantity: 'Mevcut Stok' };
 
     Object.keys(sutunlar).forEach(key => {
         const el = document.getElementById(sutunlar[key]);
@@ -538,124 +537,7 @@ async function dropdownKategorileriniYukle() {
         if (c) c.innerHTML = '<div class="text-danger small">Kategoriler yüklenemedi!</div>';
     }
 }
-//
-async function dropdownTedarikcileriYukle() {
-    try {
-        const cevap = await fetch(`${CONFIG.API_BASE_URL}/suppliers?pageSize=1000`, {
-            method: "GET",
-            headers: { "Authorization": `Bearer ${token}` }
-        });
 
-        if (!cevap.ok) throw new Error("Tedarikçiler alınamadı.");
-
-        const data = await cevap.json();
-        const tedarikciler = data.items || data;
-        const select = document.getElementById("detayTedarikciSelect");
-
-        if (select) {
-            select.innerHTML = '<option value="">Tedarikçi seçin...</option>';
-            tedarikciler.forEach(tedarikci => {
-                const option = document.createElement("option");
-                option.value = tedarikci.id;
-                option.textContent = tedarikci.name;
-                select.appendChild(option);
-            });
-        }
-    } catch (hata) {
-        console.error("Tedarikçi dropdown yükleme hatası:", hata);
-        const select = document.getElementById("detayTedarikciSelect");
-        if(select) select.innerHTML = '<option value="" disabled>Yüklenemedi!</option>';
-    }
-}
-
-async function detayTedarkciYukle(productId) {
-    const tablo = document.getElementById("detayTedarikciListesi");
-    try{
-        const cevap = await fetch(`${CONFIG.API_BASE_URL}/products/${productId}/suppliers`, {
-            method: "GET",
-            headers: { "Authorization": `Bearer ${token}` }
-        });
-        if (!cevap.ok) throw new Error("Tedarikçiler alınamadı.");
-        
-        const liste = await cevap.json();
-        tablo.innerHTML = "";
-
-        if (liste.length === 0) { 
-            tablo.innerHTML = `<tr><td class="text-muted fst-italic">Bu ürüne bağlı tedarikçi yok.</td></tr>`; return; 
-        }
-
-        liste.forEach(ps => {
-            tablo.innerHTML += `<tr><td class="fw-semibold">${escapeHtml(ps.supplierName)}</td>
-                <td class="text-muted small">${ps.purchasePrice != null ? ps.purchasePrice + ' ₺' : '-'}</td>
-                <td class="text-end">
-                    <button class="btn btn-sm btn-outline-danger rounded-pill btn-tedarikci-kaldir" data-sid="${ps.supplierId}">Kaldır</button>
-                </td>
-            </tr>`;
-                
-        });
-    }catch(hata) {
-        tablo.innerHTML = `<tr><td class="text-danger">${hata.message}</td></tr>`;
-
-    }
-}
-
-document.getElementById("btnDetayTedarikciEkle").addEventListener("click", async() => {
-
-    const supplierId = document.getElementById("detayTedarikciSelect").value;
-    const fiyat = document.getElementById("detayTedarikciFiyat").value;
-    
-    if (!supplierId) {
-        uyariGoster("Lütfen tedarikçi seçin."); 
-        return;
-    }
-    const veri ={
-        supplierId: parseInt(supplierId),
-        purchasePrice: fiyat ? parseFloat(fiyat): null,
-        supplierProductCode: null,
-        leadTimeDays: null,
-        isPreferred: false
-    };
-    try{
-    const cevap = await fetch(`${CONFIG.API_BASE_URL}/products/${aktifDetayUrunId}/suppliers`, {
-        method:"POST",
-        headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${token}`
-        },
-        body: JSON.stringify(veri)
-    });
-
-    if(!cevap.ok) throw new Error(await cevap.text() || "Bağlama başarısız.");
-
-    detayTedarkciYukle(aktifDetayUrunId);
-    document.getElementById("detayTedarikciSelect").value = "";
-    document.getElementById("detayTedarikciFiyat").value  = "";
-
-    }catch(hata){
-        hataGoster("Hata: " + hata.message);
-    }
-});
-
-document.getElementById("detayTedarikciListesi").addEventListener("click", async(e) =>{
-    const btn = e.target.closest(".btn-tedarikci-kaldir");
-    if(!btn) return;
-    if (!(await onayla("Bu tedarikçi bağını kaldırmak istiyor musunuz?", "Evet, kaldır"))) return;
-    const sid = btn.getAttribute("data-sid");
-    try{
-        const cevap = await fetch(`${CONFIG.API_BASE_URL}/products/${aktifDetayUrunId}/suppliers/${sid}`, {
-            method: "DELETE",
-            headers: { "Authorization": `Bearer ${token}` }
-        });
-
-        if (!cevap.ok) throw new Error("Silme başarısız.");
-        detayTedarkciYukle(aktifDetayUrunId)
-    } catch (hata) {
-        hataGoster("Tedarikçi silinemedi: " + hata.message);
-    }
-
-})
-
-//
 
 const urunDepoSelect = document.getElementById("urunDepoId");
 if (urunDepoSelect) {
@@ -954,7 +836,7 @@ function tabloyuCiz(urunler) {
 
         const satir = `
             <tr>
-                <td class="fw-bold">${urun.id}</td>
+                <td class="text-muted small">${tarihFormatla(urun.createdAt)}</td>
                 <td>${escapeHtml(urun.name)}</td>
                 <td>${escapeHtml(urun.barcode)}</td>
                 <td>${urun.minStockLevel}</td>
@@ -1106,59 +988,7 @@ async function urunSil(id) {
     }
 }
 
-function urunDetayGoster(id) {
-    const urun = tumUrunler.find(u => u.id === id);
-    if (!urun) return;
 
-    document.getElementById("detayUrunAdi").textContent = urun.name || "-";
-    document.getElementById("detayUrunKategori").textContent = urun.categoryName || "Kategori Yok";
-    document.getElementById("detayUrunBarkod").textContent = urun.barcode || "-";
-    document.getElementById("detayUrunId").textContent = urun.id;
-    document.getElementById("detayUrunMinStok").textContent = urun.minStockLevel || "0";
-
-    const stokEl = document.getElementById("detayUrunStok");
-    stokEl.textContent = `${urun.stockQuantity} Adet`;
-    stokEl.className = urun.stockQuantity <= urun.minStockLevel ? "fw-bold fs-5 mt-1 text-danger" : "fw-bold fs-5 mt-1 text-success";
-
-    const ozelliklerTablosu = document.getElementById("detayUrunOzellikler");
-    ozelliklerTablosu.innerHTML = "";
-
-    if (urun.attributes && Array.isArray(urun.attributes) && urun.attributes.length > 0) {
-        urun.attributes.forEach(attr => {
-            let val = attr.value;
-            if (val === "true") val = "Evet";
-            if (val === "false") val = "Hayır";
-
-            let valHtml = escapeHtml(val);
-            if (/^#([0-9A-F]{3}){1,2}$/i.test(val)) {
-                valHtml = `<div class="d-flex align-items-center">
-                            <span class="color-dot me-2 shadow-sm" data-bg-color="${escapeHtml(val)}"></span>
-                            <span class="text-muted small">${escapeHtml(val)}</span>
-                           </div>`;
-            }
-
-            ozelliklerTablosu.innerHTML += `
-                <tr>
-                    <td class="text-muted fw-bold w-40 border-b-eee">${escapeHtml(attr.key)}</td>
-                    <td class="text-dark fw-semibold border-b-eee">${valHtml}</td>
-                </tr>`;
-        });
-    } else {
-        ozelliklerTablosu.innerHTML = `<tr><td class="text-muted fst-italic">Özel nitelik (kural) bulunamadı.</td></tr>`;
-    }
-
-    document.querySelectorAll('#detayUrunOzellikler [data-bg-color]').forEach(el => {
-        el.style.backgroundColor = el.getAttribute('data-bg-color');
-        el.removeAttribute('data-bg-color');
-    });
-
-    const modalElement = document.getElementById("urunDetayModal");
-    const modalInstance = bootstrap.Modal.getOrCreateInstance(modalElement);
-    aktifDetayUrunId = urun.id;
-    dropdownTedarikcileriYukle();
-    detayTedarkciYukle(urun.id);
-    modalInstance.show();
-}
 
 function urunDuzenle(id) {
     const urun = tumUrunler.find(u => u.id === id);
@@ -1255,7 +1085,7 @@ if (tabloGovdesi) {
         const btnSil = e.target.closest(".btn-sil");
         const btnIncele = e.target.closest(".btn-incele");
 
-        if (btnIncele) urunDetayGoster(parseInt(btnIncele.getAttribute("data-id")));
+        if (btnIncele) urunDetayAc(parseInt(btnIncele.getAttribute("data-id")), { tedarikciYonetimi: hasPermission("Supplier.Edit") });
         else if (btnDuzenle) urunDuzenle(parseInt(btnDuzenle.getAttribute("data-id")));
         else if (btnSil) urunSil(parseInt(btnSil.getAttribute("data-id")));
     });
@@ -1291,10 +1121,7 @@ if (!hasPermission("Product.Add")) {
     const btnEkle = document.querySelector('[data-bs-target="#urunModal"]');
     if (btnEkle) btnEkle.classList.add('d-none');
 }
-if (!hasPermission("Product.Edit") && !hasPermission("Product.Delete")) {
-    const islemSutunuBasligi = document.getElementById("islemSutunuBasligi");
-    if (islemSutunuBasligi) islemSutunuBasligi.classList.add('d-none');
-}
+
 
 urunleriYukle(currentPage);
 dropdownKategorileriniYukle();
@@ -1516,7 +1343,7 @@ document.getElementById('btnFiltreleriTemizle')?.addEventListener('click', () =>
 async function generateSku() {
     const categoryId = document.getElementById("urunKategoriId")?.value;
     if (!categoryId) {
-        alert("Lütfen SKU üretmeden önce bir kategori seçin.");
+        uyariGoster("Lütfen SKU üretmeden önce bir kategori seçin.");
         return;
     }
 
@@ -1575,7 +1402,7 @@ async function generateSku() {
             document.getElementById("urunBarkod").value = response.sku;
         }
     } catch (hata) {
-        alert("SKU üretilirken hata oluştu: " + hata.message);
+        hataGoster("SKU üretilirken hata oluştu: " + hata.message);
     } finally {
         if(btn) {
             btn.disabled = false;

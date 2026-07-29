@@ -44,7 +44,8 @@ public class ProductsController : ControllerBase
                 CategoryId = p.CategoryId,
                 CategoryName = p.Category.Name,
                 StockQuantity = p.StockLevels.Sum(sl => sl.Quantity),
-                AttributesStr = p.Attributes
+                AttributesStr = p.Attributes,
+                CreatedAt = p.CreatedAt
             })
             .ToListAsync();
 
@@ -57,6 +58,7 @@ public class ProductsController : ControllerBase
             CategoryId = p.CategoryId,
             CategoryName = p.CategoryName,
             StockQuantity = p.StockQuantity,
+            CreatedAt = p.CreatedAt,
             Attributes = string.IsNullOrEmpty(p.AttributesStr) ? new List<ProductAttributeDto>() : System.Text.Json.JsonSerializer.Deserialize<List<ProductAttributeDto>>(p.AttributesStr)
         }).ToList();
 
@@ -84,7 +86,8 @@ public class ProductsController : ControllerBase
                 CategoryId = p.CategoryId,
                 CategoryName = p.Category.Name,
                 StockQuantity = p.StockLevels.Sum(sl => sl.Quantity),
-                AttributesStr = p.Attributes
+                AttributesStr = p.Attributes,
+                CreatedAt = p.CreatedAt
             }).FirstOrDefaultAsync();
             
         if (product == null)
@@ -99,6 +102,7 @@ public class ProductsController : ControllerBase
             CategoryId = product.CategoryId,
             CategoryName = product.CategoryName,
             StockQuantity = product.StockQuantity,
+            CreatedAt = product.CreatedAt,
             Attributes = string.IsNullOrEmpty(product.AttributesStr)
                 ? new List<ProductAttributeDto>()
                 : System.Text.Json.JsonSerializer.Deserialize<List<ProductAttributeDto>>(product.AttributesStr) 
