@@ -16,10 +16,12 @@ namespace stok_takip.Controllers
     public class StockMovementsController : ControllerBase
     {
         private readonly AppDbContext _context;
+        private readonly stok_takip.Metrics.StockFlowMetrics _metrics;
 
-        public StockMovementsController(AppDbContext context)
+        public StockMovementsController(AppDbContext context, stok_takip.Metrics.StockFlowMetrics metrics)
         {
             _context = context;
+            _metrics = metrics;
         }
 
         // 1. GET: Fetch all movements with optional filters (For frontend table)
@@ -178,6 +180,7 @@ namespace stok_takip.Controllers
                     await _context.SaveChangesAsync();
                     await transaction.CommitAsync(); // Commit changes safely
 
+                    _metrics.StockMovementsTotal.WithLabels(movement.MovementType, "Transfer").Inc();
                     return Ok(new { message = "Stock transfer successfully completed.", movementId = movement.Id });
                 }
                 catch (DbUpdateConcurrencyException)
@@ -241,6 +244,7 @@ namespace stok_takip.Controllers
                         await _context.SaveChangesAsync();
                         await transaction.CommitAsync();
 
+                        _metrics.StockMovementsTotal.WithLabels(movement.MovementType, "Giris").Inc();
                         return Ok(new { message = "Stock successfully added.", movementId = movement.Id });
                 }
                 catch (DbUpdateConcurrencyException)
@@ -339,6 +343,7 @@ namespace stok_takip.Controllers
 
                     await transaction.CommitAsync();
 
+                    _metrics.StockMovementsTotal.WithLabels(movement.MovementType, "Cikis").Inc();
                     return Ok(new { message = "Stock successfully deducted.", movementId = movement.Id });
                 }
                 catch (DbUpdateConcurrencyException)

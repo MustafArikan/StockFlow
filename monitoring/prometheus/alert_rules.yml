@@ -1,0 +1,71 @@
+groups:
+  - name: stockflow_alerts
+    rules:
+      # Backend tamamen erişilemez hale gelirse
+      - alert: BackendDown
+        expr: up{job="stockflow-backend"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "StockFlow backend erişilemiyor"
+          description: "backend:8080 hedefi 1 dakikadır Prometheus'a cevap vermiyor."
+
+      # MSSQL erişilemez hale gelirse
+      - alert: DatabaseDown
+        expr: up{job="stockflow-mssql"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "MSSQL veritabanı erişilemiyor"
+          description: "mssql-exporter hedefinden veri alınamıyor, veritabanı çökmüş olabilir."
+
+      # Ortalama HTTP istek süresi çok yükselirse (yavaşlama belirtisi)
+      - alert: HighRequestLatency
+        expr: histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{job="stockflow-backend"}[5m])) by (le)) > 2
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Backend yanıt süresi yükseldi (p95 > 2s)"
+          description: "Son 5 dakikada isteklerin %95'i 2 saniyeden uzun sürüyor."
+
+      # 5xx hata oranı yükselirse
+      - alert: HighErrorRate
+        expr: sum(rate(http_requests_received_total{job="stockflow-backend",code=~"5.."}[5m])) / sum(rate(http_requests_received_total{job="stockflow-backend"}[5m])) > 0.05
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "5xx hata oranı %5'i geçti"
+          description: "Son 5 dakikadaki isteklerin %5'inden fazlası sunucu hatası döndürüyor."
+
+      # Host disk doluluk oranı yüksekse
+      - alert: HighDiskUsage
+        expr: (node_filesystem_size_bytes{mountpoint="/"} - node_filesystem_free_bytes{mountpoint="/"}) / node_filesystem_size_bytes{mountpoint="/"} > 0.85
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Disk kullanımı %85'i geçti"
+          description: "Kök dosya sisteminde alan azalıyor, log/veritabanı volume'lerini kontrol edin."
+
+      # Host RAM kullanımı yüksekse
+      - alert: HighMemoryUsage
+        expr: (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) > 0.90
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Sunucu RAM kullanımı %90'ı geçti"
+
+      # Backend container'ının CPU kullanımı sürekli yüksekse
+      - alert: BackendHighCPU
+        expr: sum(rate(container_cpu_usage_seconds_total{name="stok_backend_api"}[5m])) > 0.9
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Backend container CPU kullanımı yüksek"
+          description: "stok_backend_api container'ı 5 dakikadır 1 CPU çekirdeğinin %90'ından fazlasını kullanıyor."
