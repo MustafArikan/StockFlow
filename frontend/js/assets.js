@@ -190,7 +190,7 @@ async function loadProductsForDropdown() {
         if (data.items && data.items.length > 0) {
             // Döngü yerine map ve join ile tek satırlık string üretiyoruz, DOM'a 1 kere basıyoruz.
             const optionsHtml = data.items.map(product =>
-                `<option value="${product.id}">${escapeHtml(product.name)} (Stok: ${product.stockQuantity})</option>`
+                `<option value="${product.id}">${escapeHtml(product.name)} (Stok: ${product.stockQuantity ?? Bilinmiyor})</option>`
             ).join('');
 
             // Başlık ve veriler, DOM'a TEK SEFERDE basıldı.
@@ -215,13 +215,12 @@ async function loadUsersForDropdown() {
         if (users && users.length > 0) {
             // Tüm kullanıcıları dönüp, arka planda dev bir HTML metni oluşturuyoruz
             const optionsHtml = users.map(user => {
-                const fname = user.firstName || user.FirstName || "";
-                const lname = user.lastName || user.LastName || "";
-                const email = user.email || user.Email || "Bilinmiyor";
-                let displayName = `${fname} ${lname}`.trim();
-                if (!displayName) displayName = email;
+                const fname = user.firstName ?? user.FirstName ?? "";
+                const lname = user.lastName ?? user.LastName ?? "";
+                const email = user.email ?? user.Email ?? "Bilinmiyor";
 
-                const id = user.id || user.Id;
+                const displayName = `${fname} ${lname}`.trim() || email;
+                const id = user.id ?? user.Id;
                 // Değeri doğrudan DOM'a yazmak yerine 'return' ile geriye döndürüyoruz
                 return `<option value="${id}">${escapeHtml(displayName)}</option>`;
             }).join(''); // .join('') ile tüm parçaları aralarında boşluk olmadan tek bir metne dönüştürüyoruz.
@@ -548,7 +547,7 @@ function buildAssetCardHtml(asset) {
     else if (asset.status === 'In Use') { statusText = "Kullanımda"; statusClass = "bg-primary text-white"; iconColor = "text-primary"; }
     else if (asset.status === 'Broken') { statusText = "Arızalı"; statusClass = "bg-danger text-white"; iconColor = "text-danger"; }
 
-    let personelAdi = asset.assignedToName || "Şu an Boşta";
+    const personelAdi = asset.assignedToName ?? "Şu an Boşta";
 
     return `
         <div class="col-12 col-md-6 col-lg-4 col-xl-3">
