@@ -27,7 +27,7 @@ public class SuppliersController : ControllerBase
         var suppliers = await _context.Suppliers
             .AsNoTracking()
             .Where(s => !s.IsDeleted)
-            .Select(s => new stok_takip.DTOs.SupplierResponseDto(s.Id, s.Name, s.ContactName, s.ContactEmail, s.ContactPhone, s.Address, s.TaxNumber))
+            .Select(s => new stok_takip.DTOs.SupplierResponseDto(s.Id, s.Name, s.ContactName, s.ContactEmail, s.ContactPhone, s.Address, s.TaxNumber, s.CreatedAt))
             .ToListAsync();
         return Ok(suppliers);
     }
@@ -59,7 +59,7 @@ public class SuppliersController : ControllerBase
 
         _context.Suppliers.Add(supplier);
         await _context.SaveChangesAsync();
-        return Ok(new stok_takip.DTOs.SupplierResponseDto(supplier.Id, supplier.Name, supplier.ContactName, supplier.ContactEmail, supplier.ContactPhone, supplier.Address, supplier.TaxNumber));
+        return Ok(new stok_takip.DTOs.SupplierResponseDto(supplier.Id, supplier.Name, supplier.ContactName, supplier.ContactEmail, supplier.ContactPhone, supplier.Address, supplier.TaxNumber, supplier.CreatedAt));
     }
 
     // PUT mevcut tedarikçiyi güncelleme
@@ -80,7 +80,7 @@ public class SuppliersController : ControllerBase
         supplier.TaxNumber = dto.TaxNumber;
 
         await _context.SaveChangesAsync();
-        return Ok(new SupplierResponseDto(supplier.Id, supplier.Name, supplier.ContactName, supplier.ContactEmail, supplier.ContactPhone, supplier.Address, supplier.TaxNumber));
+        return Ok(new SupplierResponseDto(supplier.Id, supplier.Name, supplier.ContactName, supplier.ContactEmail, supplier.ContactPhone, supplier.Address, supplier.TaxNumber, supplier.CreatedAt));
     }
 
     // DELETE tedarikçiyi silme

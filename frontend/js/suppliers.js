@@ -118,11 +118,11 @@ function tabloyuCiz(liste) {
         if (silinebilir) aksiyon += `<button class="btn btn-sm btn-outline-danger rounded-pill btn-sil" data-id="${t.id}">Sil</button>`;
         
 
-        const aksiyonTd = (duzenlenebilir || silinebilir) ? `<td class="text-end">${aksiyon}</td>` : "";
+        const aksiyonTd = `<td class="text-end">${aksiyon}</td>`;
 
         html += `
             <tr>
-                <td class="fw-bold text-muted small">${t.id}</td>
+                <td class="fw-bold text-muted small">${tarihFormatla(t.createdAt)}</td>
                 <td class="fw-bold">${escapeHtml(t.name)}</td>
                 <td>${escapeHtml(t.contactName) || '<span class="text-muted">-</span>'}</td>
                 <td>${escapeHtml(t.contactPhone) || '<span class="text-muted">-</span>'}</td>
@@ -327,8 +327,6 @@ document.querySelector('[data-bs-target="#tedarikciModal"]')?.addEventListener("
 if (!hasPermission("Supplier.Add")) {
     document.querySelector('[data-bs-target="#tedarikciModal"]')?.classList.add('d-none');
 }
-if (!hasPermission("Supplier.Edit") && !hasPermission("Supplier.Delete")) {
-    document.getElementById("islemSutunuBasligi")?.classList.add('d-none');
-}
+
 
 tedarikcileriYukle();

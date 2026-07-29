@@ -60,7 +60,9 @@ async function depolariYukle() {
         tumDepolar = sonuc.items || sonuc;      
 
         depolariFiltreleVeCiz();
-        yoneticileriYukle();
+        if (typeof hasPermission === "function" && (hasPermission("Warehouse.Add") || hasPermission("Warehouse.Edit"))) {
+            yoneticileriYukle();
+        }
     } catch (hata) {
         const container = document.getElementById("depoKartlariContainer");
         if(container) container.innerHTML = `<div class="col-12 text-center text-danger py-4">Depolar yüklenemedi. (${hata.message})</div>`;
@@ -126,7 +128,6 @@ function depolariFiltreleVeCiz() {
                     <div class="emoji-icon mb-2 emoji-icon-lg">${icon}</div>
                     <h5 class="fw-bold text-dark mt-2">${escapeHtml(depo.name)}</h5>
                     <p class="text-muted small mb-1">${escapeHtml(depo.address)}</p>
-                    <span class="badge bg-light text-secondary border mt-2">ID: ${depo.id}</span>
                 </div>
             </div>`;
         container.innerHTML += cardHtml;
@@ -287,7 +288,7 @@ async function raflariSayfaliYukle(depoId, page = 1) {
 
         tbody.innerHTML = "";
         if (raflar.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="3" class="text-center text-muted py-4">Bu depoda henüz raf bulunmuyor.</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="2" class="text-center text-muted py-4">Bu depoda henüz raf bulunmuyor.</td></tr>`;
             const paginationContainer = document.getElementById("rafSayfalamaContainer");
             if (paginationContainer) paginationContainer.innerHTML = "";
             return;
@@ -296,7 +297,6 @@ async function raflariSayfaliYukle(depoId, page = 1) {
         raflar.forEach(raf => {
             tbody.innerHTML += `
                 <tr data-rafid="${raf.id}">
-                    <td class="ps-4 fw-bold text-muted small">${raf.id}</td>
                     <td class="fw-bold text-primary">${escapeHtml(raf.code)}</td>
                     <td class="text-end pe-4">
                         <button class="btn btn-sm btn-outline-danger rounded-circle me-2 btn btn-sm btn-outline-danger rounded-circle me-2 btn-raf-sil" title="Rafı Sil" data-id="${raf.id}" data-code="${escapeHtml(raf.code)}" >🗑️</button>
@@ -307,7 +307,7 @@ async function raflariSayfaliYukle(depoId, page = 1) {
 
         sayfalamayiCizRaflar(sonuc.totalRecords || 0, rafPage, depoId);
     } catch (hata) {
-        tbody.innerHTML = `<tr><td colspan="3" class="text-center text-danger py-4">Raflar yüklenemedi! (${hata.message})</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="2" class="text-center text-danger py-4">Raflar yüklenemedi! (${hata.message})</td></tr>`;
     }
 }
 

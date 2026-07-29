@@ -99,9 +99,45 @@ function initSearchCamera() {
             const scannerModalInstance = bootstrap.Modal.getOrCreateInstance(scannerModalEl);
             scannerModalInstance.show();
 
-            if (durumEl) {
-                durumEl.textContent = "Kamera başlatılıyor...";
-                durumEl.className = "text-center text-muted small mt-3 fw-bold";
+                scannerModalInstance = bootstrap.Modal.getOrCreateInstance(scannerModalEl);
+                scannerModalInstance.show();
+
+                if (durumEl) {
+                    durumEl.textContent = "Kamera başlatılıyor...";
+                    durumEl.className = "text-center text-muted small mt-3 fw-bold";
+                }
+
+                // Kamerayı Başlat
+                startScanner("readerAsset", (scannedText) => {
+                    // BAŞARILI OKUMA
+                    let audio = new Audio('https://www.soundjay.com/button/beep-07.wav');
+                    audio.play().catch(() => { });
+
+                    document.getElementById('serialSearchInput').value = scannedText;
+
+                    if (durumEl) {
+                        durumEl.textContent = "Barkod Okundu! Yönlendiriliyor...";
+                        durumEl.className = "text-center text-success small mt-3 fw-bold";
+                    }
+
+                    searchAsset();
+
+                    setTimeout(() => {
+                        scannerModalInstance.hide();
+                    }, 600);
+
+                }, (errorMessage) => {
+                    // HATA DURUMU (Kameraya gösterilmediğinde)
+                    if (durumEl && durumEl.className.includes("text-muted")) {
+                        durumEl.textContent = "Karekod veya Barkod aranıyor, kameraya gösterin...";
+                    }
+                });
+
+            } catch (error) {
+                // 7.2. İZİN REDDEDİLDİ VEYA KAMERA YOK (Modal hiç açılmaz)
+                btnKameraAcAsset.disabled = false;
+                btnKameraAcAsset.innerHTML = originalHtml;
+                uyariGoster("Kameraya erişilemedi! Lütfen tarayıcı adres çubuğundaki kilit simgesinden kamera izni verin veya bilgisayarınıza bir kamera bağlayın.");
             }
 
             startScanner("readerAsset", (scannedText) => {
