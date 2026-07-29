@@ -1,8 +1,10 @@
-﻿document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", () => {
     // URL parametrelerinden mesaj varsa göster (Kayıt başarılı mesajı gibi)
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get('registered') === 'true') {
-        showSuccess("Hesabınız doğrulandı. Şimdi giriş yapabilirsiniz.");
+        basariToast("Hesabınız doğrulandı. Şimdi giriş yapabilirsiniz.");
+    } else if (urlParams.get('passwordReset') === 'true') {
+        basariToast("Şifreniz başarıyla sıfırlandı. Yeni şifrenizle giriş yapabilirsiniz.");
     }
 
     document.getElementById("loginForm").addEventListener("submit", async (e) => {
@@ -12,8 +14,7 @@
         const password = document.getElementById("password").value;
         const btnLogin = document.getElementById("btnLogin");
         
-        hideError();
-        hideSuccess();
+        
         
         btnLogin.disabled = true;
         btnLogin.innerHTML = `<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Bekleniyor...`;
@@ -38,13 +39,13 @@
 
             if (data.token) {
                 localStorage.setItem("token", data.token);
-                window.location.href = "index.html"; // Başarılıysa anasayfaya at
+                window.location.href = "index.html";
             } else {
                 throw new Error("Sunucudan giriş anahtarı (token) alınamadı.");
             }
 
         } catch (error) {
-            showError(error.message);
+            hataGoster(error.message);
         } finally {
             btnLogin.disabled = false;
             btnLogin.innerHTML = "Giriş Yap";
@@ -52,24 +53,6 @@
     });
 });
 
-function showError(msg) {
-    const errEl = document.getElementById("errorMessage");
-    errEl.textContent = msg;
-    errEl.classList.remove("d-none");
-}
 
-function hideError() {
-    document.getElementById("errorMessage").classList.add("d-none");
-}
-
-function showSuccess(msg) {
-    const sucEl = document.getElementById("successMessage");
-    sucEl.textContent = msg;
-    sucEl.classList.remove("d-none");
-}
-
-function hideSuccess() {
-    document.getElementById("successMessage").classList.add("d-none");
-}
 
 
