@@ -1,46 +1,73 @@
-﻿// Kamerayı başlatma fonksiyonu
+﻿// ==========================================
+// HİBRİT TARAYICI TEST PANELİ SCRİPTİ
+// ==========================================
+
+// 1. Kamerayı Başlatma Fonksiyonu
 function initScanner() {
-    document.getElementById('result-box').classList.add('d-none');
-    
-    // startScanner fonksiyonunu bizim scanner.js'den çağırıyoruz
+    const resultBox = document.getElementById('result-box');
+    if (resultBox) resultBox.classList.add('d-none');
+
+    // scanner.js içindeki ortak startScanner fonksiyonu çağrılır
     startScanner('reader', onScanSuccess, onScanError);
 }
 
-// Kod başarıyla okunduğunda tetiklenecek fonksiyon
+// 2. Kod Başarıyla Okunduğunda Tetiklenecek Fonksiyon
 function onScanSuccess(decodedText, decodedResult) {
-    console.log(`Kod Okundu: ${decodedText}`, decodedResult);
-    
-    document.getElementById('result-box').classList.remove('d-none');
-    document.getElementById('result-text').innerText = decodedText;
-    
-    if (decodedResult && decodedResult.result && decodedResult.result.format) {
-        document.getElementById('result-format').innerText = decodedResult.result.format.formatName;
-    } else {
-        document.getElementById('result-format').innerText = "Belirlenemedi";
+    const resultBox = document.getElementById('result-box');
+    const resultText = document.getElementById('result-text');
+    const resultFormat = document.getElementById('result-format');
+
+    if (resultBox) resultBox.classList.remove('d-none');
+    if (resultText) resultText.textContent = decodedText;
+
+    if (resultFormat) {
+        const formatName = decodedResult?.result?.format?.formatName || "Belirlenemedi";
+        resultFormat.textContent = formatName;
     }
 }
 
+// 3. Anlık Tarama Hataları (Sessiz Dinleme - Konsol Kirliliğini Önler)
 function onScanError(errorMessage) {
-    // Tarama sırasındaki anlık okuma denemesi hataları (opsiyonel dinleme)
+    // Tarama esnasındaki kare yakalama denemesi hataları bilinçli olarak sessize alınmıştır.
 }
 
-// Okunan kodu kopyalama
+// 4. Okunan Kodu Panoya Kopyalama
 function copyResult() {
-    const text = document.getElementById('result-text').innerText;
+    const text = document.getElementById('result-text')?.innerText;
+    if (!text || text === '-') return;
+
     navigator.clipboard.writeText(text).then(() => {
-        basariToast("Kod panoya kopyalandı!");
+        if (typeof basariToast === 'function') {
+            basariToast("Kod panoya kopyalandı!");
+        }
+    }).catch(err => {
+        if (typeof hataGoster === 'function') {
+            hataGoster("Kopyalama başarısız: " + err.message);
+        }
     });
 }
 
-// Olay dinleyicilerini bağla (Satır içi onclick'leri kaldırdık)
+// 5. Olay Dinleyicilerini Bağlama (DOMContentLoaded)
 document.addEventListener("DOMContentLoaded", () => {
     const btnStart = document.getElementById("btnStartScanner");
     const btnStop = document.getElementById("btnStopScanner");
     const btnCopy = document.getElementById("btnCopyResult");
 
-    if (btnStart) btnStart.addEventListener("click", initScanner);
-    if (btnStop) btnStop.addEventListener("click", stopScanner); // stopScanner scanner.js'de tanımlıdır
-    if (btnCopy) btnCopy.addEventListener("click", copyResult);
+    btnStart?.addEventListener("click", initScanner);
+    btnStop?.addEventListener("click", async () => {
+        if (typeof stopScanner === 'function') {
+            await stopScanner();
+            if (typeof basariToast === 'function') {
+                basariToast("Kamera durduruldu.");
+            }
+        }
+    });
+    btnCopy?.addEventListener("click", copyResult);
 });
 
-
+// 6. Sayfadan Ayrılırken Bellek Sızıntısı (Memory Leak) Koruması
+window.addEventListener('beforeunload', () => {
+    if (typeof stopScanner === 'function') {
+        stopScanner();
+    }
+});

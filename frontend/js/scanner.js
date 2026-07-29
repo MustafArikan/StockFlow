@@ -18,7 +18,7 @@ function startScanner(elementId, onScanSuccess, onScanFailure) {
                 initializeAndStart(elementId, onScanSuccess, onScanFailure);
             })
             .catch((err) => {
-                console.error("Old browser cannot be stopped:", err);
+                console.error("Önceki tarayıcı kapatılamadı:", err);
                 initializeAndStart(elementId, onScanSuccess, onScanFailure);
             });
     } else {
@@ -31,12 +31,18 @@ function startScanner(elementId, onScanSuccess, onScanFailure) {
  */
 function initializeAndStart(elementId, onScanSuccess, onScanFailure) {
     try {
+        // Element kontrolü (Sayfada reader ID'li eleman yoksa çökmeyi önle)
+        const targetElement = document.getElementById(elementId);
+        if (!targetElement) {
+            console.error(`Tarayıcı hedef elementi (${elementId}) bulunamadı!`);
+            return;
+        }
+
         html5QrCode = new Html5Qrcode(elementId);
-        
-        const config = { 
+
+        const config = {
             fps: 15, // Tarama hızı (kare/saniye)
-            qrbox: function(width, height) {
-                // Ekran genişliğine göre tarama kutusunu dinamik ayarla
+            qrbox: function (width, height) {
                 const minEdge = Math.min(width, height);
                 const qrboxSize = Math.floor(minEdge * 0.6);
                 return {
@@ -49,20 +55,23 @@ function initializeAndStart(elementId, onScanSuccess, onScanFailure) {
 
         // facingMode: "environment" -> Arka kamerayı tercih et (mobil uyumluluk için)
         html5QrCode.start(
-            { facingMode: "environment" }, 
-            config, 
-            onScanSuccess, 
+            { facingMode: "environment" },
+            config,
+            onScanSuccess,
             onScanFailure
         ).then(() => {
-            console.log("Camera started successfully.");
+            console.log("Kamera başarıyla başlatıldı.");
         }).catch((err) => {
-            console.error("Failed to start camera: ", err);
-            // Kullanıcıya uyarı göster
-            hataGoster("Failed to access camera. Please check camera permissions." + err.message) 
+            console.error("Kamera başlatılamadı: ", err);
+            if (typeof hataGoster === 'function') {
+                hataGoster("Kameraya erişilemedi. Lütfen tarayıcı izinlerini kontrol edin: " + err.message);
+            }
         });
     } catch (e) {
-        hataGoster("Tarayıcı başlatılamadı: " + e.message);
-
+        console.error("Tarayıcı ilklendirme hatası: ", e);
+        if (typeof hataGoster === 'function') {
+            hataGoster("Tarayıcı başlatılamadı: " + e.message);
+        }
     }
 }
 
@@ -71,16 +80,21 @@ function initializeAndStart(elementId, onScanSuccess, onScanFailure) {
  * @returns {Promise}
  */
 function stopScanner() {
-    if (html5QrCode && html5QrCode.isScanning) {
-        return html5QrCode.stop()
-            .then(() => {
-                console.log("Camera and scanner closed.");
-                html5QrCode = null;
-            })
-            .catch((err) => {
-                console.error("Error occurred while stopping camera: ", err);
-            });
+    if (html5QrCode) {
+        if (html5QrCode.isScanning) {
+            return html5QrCode.stop()
+                .then(() => {
+                    console.log("Kamera ve tarayıcı kapatıldı.");
+                    html5QrCode = null;
+                })
+                .catch((err) => {
+                    console.error("Kamera kapatılırken hata oluştu: ", err);
+                    html5QrCode = null;
+                });
+        } else {
+            html5QrCode = null;
+        }
     }
+
     return Promise.resolve();
 }
-

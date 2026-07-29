@@ -1,3 +1,14 @@
+// XSS koruması eklenmiş hali
+function escapeHtml(text) {
+    if (!text) return "";
+    return text.toString()
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
+
 // Profil sayfası yüklendiğinde mevcut bilgileri getir
 document.addEventListener("DOMContentLoaded", async () => {
     // Profil form elementleri
@@ -49,7 +60,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
         try {
             const response = await apiRequest('/auth/profile', 'PUT', updateData);
-            
+
             // Başarılı kaydetme mesajı (Premium UX)
             Swal.fire({
                 icon: 'success',
@@ -74,8 +85,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
 
     // 3. ŞİFRE DEĞİŞTİRME MANTIĞI VE KONTROLLERİ
-    // Yeni şifre ile Tekrarı anlık olarak kontrol et
-    inputConfirmPassword.addEventListener("input", () => {
+    // Yeni şifre ile Tekrarı anlık olarak kontrol et    
+    function validatePasswordMatch() {
         if (inputNewPassword.value !== inputConfirmPassword.value && inputConfirmPassword.value !== "") {
             errorPasswordMatch.classList.remove("d-none");
             inputConfirmPassword.classList.add("is-invalid");
@@ -83,14 +94,10 @@ document.addEventListener("DOMContentLoaded", async () => {
             errorPasswordMatch.classList.add("d-none");
             inputConfirmPassword.classList.remove("is-invalid");
         }
-    });
+    }
 
-    inputNewPassword.addEventListener("input", () => {
-        if (inputNewPassword.value === inputConfirmPassword.value) {
-            errorPasswordMatch.classList.add("d-none");
-            inputConfirmPassword.classList.remove("is-invalid");
-        }
-    });
+    inputConfirmPassword.addEventListener("input", validatePasswordMatch);
+    inputNewPassword.addEventListener("input", validatePasswordMatch);
 
     formPassword.addEventListener("submit", async (e) => {
         e.preventDefault();
@@ -127,7 +134,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
         try {
             const response = await apiRequest('/auth/change-password', 'POST', passwordData);
-            
+
             Swal.fire({
                 icon: 'success',
                 title: 'Şifre Değiştirildi',
@@ -152,19 +159,4 @@ document.addEventListener("DOMContentLoaded", async () => {
             btnChangePassword.innerHTML = orjinalMetin;
         }
     });
-
-    // 4. NAVBAR ÇIKIŞ YAP BUTONU (Logout)
-    const btnLogout = document.getElementById("btnNavbarLogout");
-    if (btnLogout) {
-        btnLogout.addEventListener("click", async () => {
-            try {
-                await apiRequest('/auth/logout', 'POST');
-            } catch (e) {
-                // Token hatası alsa bile local'den silip çıkışa zorluyoruz
-            } finally {
-                localStorage.removeItem('token');
-                window.location.href = 'login.html';
-            }
-        });
-    }
 });
