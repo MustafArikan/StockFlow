@@ -176,7 +176,6 @@ function tabloyuDoldur(users) {
         }
 
         tr.innerHTML = `
-            <td class="fw-bold">#${user.id}</td>
             <td>${escapeHtml(user.firstName)} ${escapeHtml(user.lastName)}</td>
             <td>${escapeHtml(user.email)}</td>
             <td>${escapeHtml(user.phoneNumber || "-")}</td>
