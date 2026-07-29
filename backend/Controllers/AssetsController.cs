@@ -438,7 +438,7 @@ public class AssetsController : ControllerBase
             await transaction.RollbackAsync();
             return StatusCode(500, new { message = "Ekipman silinirken bir hata oluştu: " + ex.Message });
         }
-    } // <--- Bu süslü parantez metodu düzgünce kapatır!
+    }
 
 
     // YARDIMCI METOTLAR 
