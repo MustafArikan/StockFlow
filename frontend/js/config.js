@@ -319,4 +319,7 @@ function tarihFormatla(t) {
     return t ? new Date(t).toLocaleDateString("tr-TR") : "-";
 }
 
+function tarihSaatFormatla(t) {
+    return t ? new Date(t).toLocaleString("tr-TR") : "-";
+}
 document.addEventListener('DOMContentLoaded', renderProfessionalLayout);
