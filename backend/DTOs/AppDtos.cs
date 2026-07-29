@@ -9,7 +9,7 @@ public record CategoryResponseDto(int Id, string Name, int? ParentId);
 public record ProductResponseDto(int Id, string Name, string Barcode, int MinStockLevel, int CategoryId, string? Attributes);
 public record WarehouseResponseDto(int Id, string Name, string? Address);
 public record LocationResponseDto(int Id, string Code, int WarehouseId);
-public record SupplierResponseDto(int Id, string Name, string? ContactName, string? ContactEmail, string? ContactPhone, string? Address, string? TaxNumber);
+public record SupplierResponseDto(int Id, string Name, string? ContactName, string? ContactEmail, string? ContactPhone, string? Address, string? TaxNumber, DateTime CreatedAt);
 public record AttributeRuleResponseDto(int Id, int? CategoryId, string AttributeKey, string DataType, bool IsRequired, string? AllowedValues, string UiComponent, decimal? MinValue, decimal? MaxValue, string TargetLevel, int DisplayOrder);
 public record UpdateRuleOrderDto(int Id, int DisplayOrder);
 public record AssetResponseDto(int Id, string SerialNumber, int ProductId, int? AssignedToId, string Status, string? Notes);
