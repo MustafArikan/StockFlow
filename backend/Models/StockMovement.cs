@@ -35,4 +35,8 @@ public class StockMovement : BaseEntity
     public string? SupplierTaxNumber { get; set; } // istersen vergi no da
 
 
+    public int? SourceLocationId { get; set; } // WMS Entegrasyonu İçin Eklenen Alanlar
+    public int? TargetLocationId { get; set; } // WMS Entegrasyonu İçin Eklenen Alanlar
+
+
 }
