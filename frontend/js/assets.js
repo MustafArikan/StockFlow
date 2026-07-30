@@ -10,11 +10,13 @@ function escapeHtml(text) {
 }
 
 let currentAssetId = null;
+let currentAssetProductId = null;
 let currentGridPage = 1;
 let currentGridPageSize = 8; // Izgara tasarımı için varsayılan 8
 const userRole = typeof getUserRole === "function" ? getUserRole() : "User";
 const token = localStorage.getItem('token');
 if (!token) window.location.href = 'login.html';
+const barcodeBeepSound = new Audio('audio/beep-07.wav');
 
 // ==========================================
 // SAYFA YÜKLENDİĞİNDE ÇALIŞACAKLAR 
@@ -55,6 +57,10 @@ function applyPermissions() {
         document.querySelector('[data-bs-target="#assignAssetModal"]')?.classList.add('d-none');
         document.querySelector('[data-bs-target="#returnAssetModal"]')?.classList.add('d-none');
     }
+
+    if (!hasPermission("Asset.Delete")) {
+        document.querySelector('[data-bs-target="#deleteAssetModal"]')?.classList.add('d-none');
+    }
 }
 
 // MERKEZİ OLAY DİNLEYİCİLERİ
@@ -79,13 +85,39 @@ function initEventListeners() {
     document.getElementById('btnSubmitResolve')?.addEventListener('click', submitResolve);
     document.getElementById('btnSubmitMaintenance')?.addEventListener('click', submitMaintenance);
 
-    // Silme butonu dinleyicisi eklendi
+    // Kullanımdan kaldırma butonu dinleyicisi eklendi
     document.getElementById('btnSubmitDeleteAsset')?.addEventListener('click', submitDeleteAsset);
 
     // Akıllı Cascading Dropdown Dinleyicileri (WMS Entegrasyonu)
     document.getElementById('newAssetProduct')?.addEventListener('change', async function () {
         if (typeof StockUtils !== 'undefined') {
-            await StockUtils.loadSmartWarehousesForProduct(this.value, 'newAssetSourceWarehouse', 'newAssetSourceLocation');
+            try {
+                await StockUtils.loadSmartWarehousesForProduct(this.value, 'newAssetSourceWarehouse', 'newAssetSourceLocation');
+            } catch (e) {
+                console.warn("Akıllı WMS servisi yanıt vermedi, standart depo listesi yükleniyor...");
+                StockUtils.loadAllWarehouses('newAssetSourceWarehouse');
+                StockUtils._resetDropdown('newAssetSourceLocation', 'Önce depo seçiniz...', true);
+            }
+        }
+    });
+
+    document.getElementById('deleteAssetTargetLocation')?.addEventListener('change', async function () {
+        const infoDiv = document.getElementById('targetLocationStockInfo');
+        const valSpan = document.getElementById('targetLocationStockValue');
+
+        if (this.value && currentAssetProductId) {
+            try {
+                // Seçilen ürünün, seçilen raftaki stok durumunu getiriyoruz
+                const stockData = await apiRequest(`/stock-levels/by-product/${currentAssetProductId}`, 'GET');
+                const rafStogu = stockData.find(s => s.locationId === parseInt(this.value, 10));
+
+                valSpan.textContent = rafStogu ? rafStogu.quantity : "0";
+                infoDiv.classList.remove('d-none');
+            } catch (e) {
+                infoDiv.classList.add('d-none');
+            }
+        } else {
+            infoDiv.classList.add('d-none');
         }
     });
 
@@ -101,10 +133,20 @@ function initEventListeners() {
         }
     });
 
+    // STOKA GERİ AL SWITCH DİNAMİK METİN DİNLEYİCİSİ ---
     document.getElementById('returnToStockSwitch')?.addEventListener('change', function () {
+        const label = document.getElementById('returnToStockLabel');
         const targetGroup = document.getElementById('returnTargetLocationGroup');
-        if (this.checked) targetGroup.classList.remove('d-none');
-        else targetGroup.classList.add('d-none');
+
+        if (this.checked) {
+            // Switch AÇIK iken:
+            label.innerHTML = 'Stoka Geri Al <span class="text-success small">(Stok miktarını artırır)</span>';
+            if (targetGroup) targetGroup.classList.remove('d-none'); // Depo/Raf seçimini gösterir
+        } else {
+            // Switch KAPALI iken:
+            label.innerHTML = 'Stoka Geri Alma <span class="text-danger small">(Stok miktarını artırmaz)</span>';
+            if (targetGroup) targetGroup.classList.add('d-none'); // Depo/Raf seçimini gizler
+        }
     });
 
     // KAMERA 1: ARAMA EKRANI İÇİN
@@ -118,12 +160,15 @@ function initEventListeners() {
 function initSearchCamera() {
     const btnKameraAcAsset = document.getElementById("btnKameraAcAsset");
     const scannerModalEl = document.getElementById("scannerModalAsset");
+    const originalHtml = btnKameraAcAsset ? btnKameraAcAsset.innerHTML : '';
 
     btnKameraAcAsset?.addEventListener("click", async () => {
         const durumEl = document.getElementById('kameraDurumAsset');
-        const originalHtml = btnKameraAcAsset.innerHTML;
-        btnKameraAcAsset.disabled = true;
-        btnKameraAcAsset.innerHTML = `<span class="spinner-border spinner-border-sm"></span>`;
+
+        if (btnKameraAcAsset) {
+            btnKameraAcAsset.disabled = true;
+            btnKameraAcAsset.innerHTML = `<span class="spinner-border spinner-border-sm"></span>`;
+        }
 
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ video: true });
@@ -141,7 +186,8 @@ function initSearchCamera() {
             }
 
             startScanner("readerAsset", (scannedText) => {
-                new Audio('https://www.soundjay.com/button/beep-07.wav').play().catch(() => { });
+                barcodeBeepSound.currentTime = 0; // Sesi başa sarar
+                barcodeBeepSound.play().catch(() => { }); // Sesi çalar
                 document.getElementById('serialSearchInput').value = scannedText;
                 if (durumEl) {
                     durumEl.textContent = "Barkod Okundu! Yönlendiriliyor...";
@@ -167,10 +213,10 @@ function initAddAssetCamera() {
     const btnKameraKapatEkle = document.getElementById("btnKameraKapatEkle");
     const kameraAlaniEkle = document.getElementById("kameraAlaniEkle");
     const inputNewAssetSerial = document.getElementById("newAssetSerial");
+    const defaultBtnHtml = btnKameraAcEkle ? btnKameraAcEkle.innerHTML : '';
 
     btnKameraAcEkle?.addEventListener("click", async () => {
         if (btnKameraAcEkle.disabled) return;
-        const originalText = btnKameraAcEkle.innerHTML;
         btnKameraAcEkle.disabled = true;
         btnKameraAcEkle.innerHTML = `<span class="spinner-border spinner-border-sm"></span> Bekleniyor...`;
 
@@ -179,10 +225,11 @@ function initAddAssetCamera() {
             stream.getTracks().forEach(track => track.stop());
 
             kameraAlaniEkle.classList.remove("d-none");
-            btnKameraAcEkle.innerHTML = originalText;
+            btnKameraAcEkle.innerHTML = defaultBtnHtml;
 
             startScanner("readerEkle", (scannedText) => {
-                new Audio('https://www.soundjay.com/button/beep-07.wav').play().catch(() => { });
+                barcodeBeepSound.currentTime = 0; // Sesi başa sarar
+                barcodeBeepSound.play().catch(() => { }); // Sesi çalar
                 inputNewAssetSerial.value = scannedText;
                 closeScannerEkle();
                 basariToast("Barkod başarıyla okundu!");
@@ -190,7 +237,7 @@ function initAddAssetCamera() {
         } catch (error) {
             uyariGoster("Kameraya erişilemedi!");
             btnKameraAcEkle.disabled = false;
-            btnKameraAcEkle.innerHTML = originalText;
+            btnKameraAcEkle.innerHTML = defaultBtnHtml;
         }
     });
 
@@ -201,7 +248,7 @@ function initAddAssetCamera() {
         kameraAlaniEkle?.classList.add("d-none");
         if (btnKameraAcEkle) {
             btnKameraAcEkle.disabled = false;
-            btnKameraAcEkle.innerHTML = `<i class="bi bi-upc-scan me-1"></i> Barkod Okut`;
+            btnKameraAcEkle.innerHTML = defaultBtnHtml;
         }
         stopScanner();
     }
@@ -209,6 +256,9 @@ function initAddAssetCamera() {
 
 // Grid Listesine Geri Dönüş Fonksiyonu
 async function goBackToGrid() {
+    currentAssetId = null;
+    currentAssetProductId = null;
+
     document.getElementById('assetResultContainer').classList.add('d-none');
     document.getElementById('serialSearchInput').value = '';
 
@@ -282,6 +332,7 @@ async function searchAsset() {
     try {
         const data = await apiRequest(`/assets/${encodeURIComponent(serial)}/timeline`, 'GET');
         currentAssetId = data.assetInfo.id;
+        currentAssetProductId = data.assetInfo.productId;
 
         document.getElementById('assetResultContainer').classList.remove('d-none');
         // Arama yapıldığında Grid'i gizle
@@ -296,11 +347,13 @@ async function searchAsset() {
         if (data.assetInfo.status === 'Available') statusBadge = `<span class="badge bg-success px-3 py-2 fs-6 rounded-pill">Müsait (Boşta)</span>`;
         else if (data.assetInfo.status === 'In Use') statusBadge = `<span class="badge bg-primary px-3 py-2 fs-6 rounded-pill">Kullanımda</span>`;
         else if (data.assetInfo.status === 'Broken') statusBadge = `<span class="badge bg-danger px-3 py-2 fs-6 rounded-pill">Arızalı</span>`;
+        else if (data.assetInfo.status === 'Retired') statusBadge = `<span class="badge bg-dark px-3 py-2 fs-6 rounded-pill"><i class="bi bi-slash-circle me-1"></i> Kullanım Dışı</span>`;
 
-        document.getElementById('resStatus').innerHTML = statusBadge;
+        const resStatusEl = document.getElementById('resStatus');
+        resStatusEl.innerHTML = statusBadge;
 
         if (data.assetInfo.nextMaintenanceDate) {
-            document.getElementById('resStatus').innerHTML += `<div class="mt-2"><small class="text-info fw-bold"><i class="bi bi-calendar-event"></i> Sonraki Bakım: ${new Date(data.assetInfo.nextMaintenanceDate).toLocaleDateString('tr-TR')}</small></div>`;
+            resStatusEl.innerHTML += `<div class="mt-2"><small class="text-info fw-bold"><i class="bi bi-calendar-event"></i> Sonraki Bakım: ${new Date(data.assetInfo.nextMaintenanceDate).toLocaleDateString('tr-TR')}</small></div>`;
         }
 
         document.getElementById('resAssignedTo').textContent = data.assetInfo.assignedTo;
@@ -310,20 +363,33 @@ async function searchAsset() {
         const btnReturn = document.querySelector('[data-bs-target="#returnAssetModal"]');
         const btnBreakdown = document.querySelector('[data-bs-target="#breakdownModal"]');
         const btnResolve = document.querySelector('[data-bs-target="#resolveModal"]');
+        const btnRetire = document.querySelector('[data-bs-target="#deleteAssetModal"]');
 
         const status = data.assetInfo.status;
 
-        // Müsait değilse "Ata" butonunu gizle
-        if (btnAssign) btnAssign.classList.toggle('d-none', status !== 'Available');
+        // Cihaz durumu uygun olsa bile kullanıcının yetkisi var mı diye kontrol edilir
+        const canAssign = hasPermission("Asset.Assign");
+        const canEdit = hasPermission("Asset.Edit");
+        const canDelete = hasPermission("Asset.Delete");
 
-        // Kullanımda değilse "Teslim Al" butonunu gizle
-        if (btnReturn) btnReturn.classList.toggle('d-none', status !== 'In Use');
+        // Müsait DEĞİLSE VEYA kullanıcının atama yetkisi YOKSA butonu gizle
+        if (btnAssign) btnAssign.classList.toggle('d-none', status !== 'Available' || !canAssign);
 
-        // Zaten arızalıysa "Arıza Bildir" butonunu gizle
-        if (btnBreakdown) btnBreakdown.classList.toggle('d-none', status === 'Broken');
+        // Kullanımda DEĞİLSE VEYA kullanıcının atama (geri alma) yetkisi YOKSA butonu gizle
+        if (btnReturn) btnReturn.classList.toggle('d-none', status !== 'In Use' || !canAssign);
 
-        // Arızalı değilse "Çözüm Gir (Tamir)" butonunu gizle
-        if (btnResolve) btnResolve.classList.toggle('d-none', status !== 'Broken');
+        // Arızalıysa VEYA pasifse VEYA düzenleme yetkisi YOKSA Arıza Bildir'i gizle
+        if (btnBreakdown) btnBreakdown.classList.toggle('d-none', status === 'Broken' || status === 'Retired' || !canEdit);
+
+        // Arızalı DEĞİLSE VEYA düzenleme yetkisi YOKSA Çözüm Gir'i gizle
+        if (btnResolve) btnResolve.classList.toggle('d-none', status !== 'Broken' || !canEdit);
+
+        // Zaten kullanımdan kaldırılmış VEYA kullanıcının yetkisi YOKSA butonu gizle
+        if (btnRetire) {
+            // Butonun bulunduğu üst kapsayıcıyı komple gizle
+            const retireWrapper = btnRetire.closest('.border-top');
+            if (retireWrapper) retireWrapper.classList.toggle('d-none', status === 'Retired' || !canDelete);
+        }
 
         // 2. Timeline (Zaman Çizelgesini) Çiz
         const timelineUl = document.getElementById('assetTimelineList');
@@ -400,7 +466,7 @@ async function submitAssignAsset() {
 
     // C# controller [HttpPut] beklediği için 'PUT' kullanıyoruz
     await sendAssetAction(`${CONFIG.API_BASE_URL}/assets/${currentAssetId}/assign`, 'PUT', {
-        userId: parseInt(userId),
+        userId: parseInt(userId, 10),
         notes: notes
     });
 }
@@ -468,8 +534,8 @@ async function sendAssetAction(url, method, body) {
             if (modalInstance) modalInstance.hide();
         });
 
-        // Form alanlarını temizle
-        document.querySelectorAll('textarea, input[type="date"]').forEach(el => el.value = '');
+        // Form alanlarını temizler
+        document.querySelectorAll('.modal textarea, .modal input[type="date"]').forEach(el => el.value = '');
 
         // Ekrana başarı mesajı ver ve Timeline'ı (Zaman çizelgesini) güncelle!
         basariToast("Harika! " + (result.message || "İşlem başarıyla tamamlandı."));
@@ -492,9 +558,12 @@ async function submitCreateAsset() {
     }
 
     const btnEkle = document.getElementById('btnSubmitCreateAsset');
-    const originalText = btnEkle.innerHTML;
-    btnEkle.disabled = true;
-    btnEkle.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Kaydediliyor...';
+    const originalText = btnEkle ? btnEkle.innerHTML : '';
+
+    if (btnEkle) {
+        btnEkle.disabled = true;
+        btnEkle.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Kaydediliyor...';
+    }
 
     try {
         const result = await apiRequest('/assets', 'POST', {
@@ -532,8 +601,10 @@ async function submitCreateAsset() {
     } catch (e) {
         hataGoster("Bağlantı hatası: " + e.message);
     } finally {
-        btnEkle.disabled = false;
-        btnEkle.innerHTML = originalText;
+        if (btnEkle) {
+            btnEkle.disabled = false;
+            btnEkle.innerHTML = originalText;
+        }
     }
 }
 
@@ -599,8 +670,10 @@ function buildAssetCardHtml(asset) {
     if (asset.status === 'Available') { statusText = "Boşta"; statusClass = "bg-success text-white"; iconColor = "text-success"; }
     else if (asset.status === 'In Use') { statusText = "Kullanımda"; statusClass = "bg-primary text-white"; iconColor = "text-primary"; }
     else if (asset.status === 'Broken') { statusText = "Arızalı"; statusClass = "bg-danger text-white"; iconColor = "text-danger"; }
+    else if (asset.status === 'Retired') { statusText = "Kullanım Dışı"; statusClass = "bg-dark text-white"; iconColor = "text-secondary opacity-50"; }
 
-    const personelAdi = asset.assignedToName ?? "Şu an Boşta";
+    // Eğer cihaz kullanımdan kaldırılmışsa personeli boş göster, değilse atanmış kişiyi yaz
+    const personelAdi = asset.status === 'Retired' ? "Kullanımdan Kaldırıldı" : (asset.assignedToName ?? "Şu an Boşta");
 
     return `
         <div class="col-12 col-md-6 col-lg-4 col-xl-3">
@@ -628,7 +701,7 @@ function buildAssetCardHtml(asset) {
 }
 
 // ==========================================
-// EKİPMAN SİLME VE STOĞA GERİ EKLEME MANTIĞI
+// EKİPMANI KULLANIMDAN KALDIRMA 
 // ==========================================
 async function submitDeleteAsset() {
     if (!currentAssetId) return;
@@ -637,27 +710,47 @@ async function submitDeleteAsset() {
     const locationId = document.getElementById('deleteAssetTargetLocation').value;
 
     if (isReturnToStock && !locationId) {
-        return uyariGoster("Stoğa geri eklemek için lütfen giriş yapılacak Hedef Rafı seçiniz!");
+        return uyariGoster("Stoka geri almak için lütfen Hedef Rafı seçiniz!");
     }
 
     const btn = document.getElementById('btnSubmitDeleteAsset');
-    btn.disabled = true;
-    btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Siliniyor...';
+    const originalBtnHtml = btn ? btn.innerHTML : '';
+
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> İşleniyor...';
+    }
 
     try {
         const endpoint = isReturnToStock
-            ? `/assets/${currentAssetId}?returnLocationId=${locationId}`
-            : `/assets/${currentAssetId}`;
+            ? `/assets/${currentAssetId}/retire?returnLocationId=${locationId}`
+            : `/assets/${currentAssetId}/retire`;
 
-        await apiRequest(endpoint, 'DELETE');
+        await apiRequest(endpoint, 'PUT');
 
-        basariToast("Ekipman sistemden başarıyla silindi.");
+        basariToast("Ekipman kullanımdan kaldırıldı ve pasife alındı.");
 
         const modalInstance = bootstrap.Modal.getInstance(document.getElementById('deleteAssetModal'));
         if (modalInstance) modalInstance.hide();
 
         document.getElementById('assetResultContainer').classList.add('d-none');
         document.getElementById('serialSearchInput').value = '';
+        document.getElementById('targetLocationStockInfo').classList.add('d-none');
+
+        currentAssetId = null;
+        currentAssetProductId = null;
+
+        const stockSwitch = document.getElementById('returnToStockSwitch');
+        if (stockSwitch) {
+            stockSwitch.checked = true;
+            stockSwitch.dispatchEvent(new Event('change'));
+        }
+
+        document.getElementById('deleteAssetTargetWarehouse').value = ''; // Depoyu temizler
+
+        if (typeof StockUtils !== 'undefined') {
+            StockUtils._resetDropdown('deleteAssetTargetLocation', 'Önce depo seçin...', true); // Rafı temizler
+        }
 
         if (["admin", "superadmin"].includes(userRole)) {
             document.getElementById('adminGridContainer').classList.remove('d-none');
@@ -665,11 +758,11 @@ async function submitDeleteAsset() {
         }
 
     } catch (e) {
-        hataGoster("Silme hatası: " + e.message);
+        hataGoster("İşlem hatası: " + e.message);
     } finally {
         if (btn) {
             btn.disabled = false;
-            btn.innerHTML = 'Kalıcı Olarak Sil';
+            btn.innerHTML = originalBtnHtml;
         }
     }
 }
