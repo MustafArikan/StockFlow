@@ -1,6 +1,8 @@
 using stok_takip.Constants;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using stok_takip.Attributes;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using stok_takip.Data;
 using stok_takip.DTOs;
@@ -23,7 +25,8 @@ public class AssetsController : ControllerBase
 
     // --- 1. YENİ EKİPMAN KAYIT İŞLEMİ ---
     [HttpPost]
-    [Authorize(Policy = Policies.RequireAssetWrite)]
+    [RequirePermission(Policies.RequireAssetWrite)]
+    [EnableRateLimiting(Policies.RequireAssetWrite)]
     public async Task<IActionResult> CreateAsset([FromBody] CreateAssetDto dto)
     {
         // Aynı seri numarasına sahip Ekipman var mı kontrolü
@@ -119,7 +122,8 @@ public class AssetsController : ControllerBase
 
     // --- 2. EKİPMAN ATAMA İŞLEMİ ---
     [HttpPut("{id}/assign")]
-    [Authorize(Policy = Policies.RequireAssetWrite)]
+    [RequirePermission(Policies.RequireAssetWrite)]
+    [EnableRateLimiting(Policies.RequireAssetWrite)]
     public async Task<IActionResult> AssignAsset(int id, [FromBody] AssignAssetDto dto)
     {
         var asset = await _context.Assets.FindAsync(id);
@@ -250,7 +254,8 @@ public class AssetsController : ControllerBase
 
     // --- 5. EKİPMAN TESLİM ALMA İŞLEMİ ---
     [HttpPut("{id}/return")]
-    [Authorize(Policy = Policies.RequireAssetWrite)]
+    [RequirePermission(Policies.RequireAssetWrite)]
+    [EnableRateLimiting(Policies.RequireAssetWrite)]
 
     public async Task<IActionResult> ReturnAsset(int id, [FromBody] ReturnAssetDto dto)
     {
@@ -281,7 +286,8 @@ public class AssetsController : ControllerBase
 
     // --- 6. ARIZA BİLDİRİMİ İŞLEMİ ---
     [HttpPost("{id}/breakdown")]
-    [Authorize(Policy = Policies.RequireAssetWrite)]
+    [RequirePermission(Policies.RequireAssetWrite)]
+    [EnableRateLimiting(Policies.RequireAssetWrite)]
     public async Task<IActionResult> ReportBreakdown(int id, [FromBody] ReportBreakdownDto dto)
     {
         var asset = await _context.Assets.FindAsync(id);
@@ -305,7 +311,8 @@ public class AssetsController : ControllerBase
 
     // --- 7. ARIZA ÇÖZÜMÜ / TAMİR İŞLEMİ ---
     [HttpPost("{id}/resolve")]
-    [Authorize(Policy = Policies.RequireAssetWrite)]
+    [RequirePermission(Policies.RequireAssetWrite)]
+    [EnableRateLimiting(Policies.RequireAssetWrite)]
     public async Task<IActionResult> ResolveBreakdown(int id, [FromBody] ResolveBreakdownDto dto)
     {
         var asset = await _context.Assets.FindAsync(id);
@@ -330,7 +337,8 @@ public class AssetsController : ControllerBase
 
     // --- 8. BAKIM İŞLEME ---
     [HttpPost("{id}/maintenance")]
-    [Authorize(Policy = Policies.RequireAssetWrite)]
+    [RequirePermission(Policies.RequireAssetWrite)]
+    [EnableRateLimiting(Policies.RequireAssetWrite)]
     public async Task<IActionResult> LogMaintenance(int id, [FromBody] LogMaintenanceDto dto)
     {
         var asset = await _context.Assets.FindAsync(id);
@@ -359,7 +367,8 @@ public class AssetsController : ControllerBase
 
     // --- 9. EKİPMAN SİLME VE İSTEĞE BAĞLI STOĞA GERİ EKLEME ---
     [HttpDelete("{id}")]
-    [Authorize(Policy = Policies.RequireAssetWrite)]
+    [RequirePermission(Policies.RequireAssetWrite)]
+    [EnableRateLimiting(Policies.RequireAssetWrite)]
     public async Task<IActionResult> DeleteAsset(int id, [FromQuery] int? returnLocationId)
     {
         var asset = await _context.Assets

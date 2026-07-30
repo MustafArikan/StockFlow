@@ -1,6 +1,8 @@
 using stok_takip.Constants;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using stok_takip.Attributes;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using stok_takip.Data;
 using stok_takip.DTOs;
@@ -69,7 +71,8 @@ public class LocationsController : ControllerBase
 
     // POST /api/locations  yeni raf ekle
     [HttpPost]
-    [Authorize(Policy = Policies.RequireLocationWrite)] 
+    [RequirePermission(Policies.RequireLocationWrite)]
+    [EnableRateLimiting(Policies.RequireLocationWrite)] 
     public async Task<IActionResult> Create(CreateLocationDto dto)
     {
         var warehouseExists = await _context.Warehouses.AnyAsync(w => w.Id == dto.WarehouseId);
@@ -89,7 +92,8 @@ public class LocationsController : ControllerBase
 
     // DELETE /api/locations/5  rafı sil
     [HttpDelete("{id}")]
-    [Authorize(Policy = Policies.RequireLocationWrite)] 
+    [RequirePermission(Policies.RequireLocationWrite)]
+    [EnableRateLimiting(Policies.RequireLocationWrite)] 
     public async Task<IActionResult> Delete(int id)
     {
         var location = await _context.Locations.FindAsync(id);

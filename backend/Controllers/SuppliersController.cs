@@ -1,6 +1,8 @@
 using stok_takip.Constants;
  using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using stok_takip.Attributes;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using stok_takip.Data;
 using stok_takip.DTOs;
@@ -34,7 +36,8 @@ public class SuppliersController : ControllerBase
 
     // Yeni Tedarikçi Ekle
     [HttpPost]
-    [Authorize(Policy = Policies.RequireSupplierWrite)] //access token kontrolune cevir
+    [RequirePermission(Policies.RequireSupplierWrite)]
+    [EnableRateLimiting(Policies.RequireSupplierWrite)] //access token kontrolune cevir
     public async Task<IActionResult> Create([FromBody] stok_takip.DTOs.CreateSupplierDto dto)
     {
         if (string.IsNullOrWhiteSpace(dto.Name))
@@ -64,7 +67,8 @@ public class SuppliersController : ControllerBase
 
     // PUT mevcut tedarikçiyi güncelleme
     [HttpPut("{id}")]
-    [Authorize(Policy = Policies.RequireSupplierWrite)]
+    [RequirePermission(Policies.RequireSupplierWrite)]
+    [EnableRateLimiting(Policies.RequireSupplierWrite)]
 
     public async Task<IActionResult> Update(int id, CreateSupplierDto dto)
     {
@@ -85,7 +89,8 @@ public class SuppliersController : ControllerBase
 
     // DELETE tedarikçiyi silme
     [HttpDelete("{id}")]
-    [Authorize(Policy = Policies.RequireSupplierWrite)] 
+    [RequirePermission(Policies.RequireSupplierWrite)]
+    [EnableRateLimiting(Policies.RequireSupplierWrite)] 
     public async Task<IActionResult> Delete(int id)
     {
         var supplier = await _context.Suppliers.FindAsync(id);
