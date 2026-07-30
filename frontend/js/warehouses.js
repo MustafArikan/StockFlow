@@ -393,7 +393,7 @@ async function raftakiUrunleriGoruntule(rafId, rafKodu) {
         
         urunleriFiltreleVeSila(); 
     } catch (hata) {
-        document.getElementById("urunTablosuGovdesi").innerHTML = `<tr><td colspan="6" class="text-center text-danger">Ürünler yüklenemedi! (${hata.message})</td></tr>`;
+        document.getElementById("urunTablosuGovdesi").innerHTML = `<tr><td colspan="5" class="text-center text-danger">Ürünler yüklenemedi! (${hata.message})</td></tr>`;
     }
 }
 
@@ -442,7 +442,6 @@ function urunleriFiltreleVeSila() {
         
         tbody.innerHTML += `
             <tr>
-                <td class="ps-4 fw-bold text-muted small">${id}</td>
                 <td class="fw-bold">${escapeHtml(name)}</td>
                 <td><code class="text-secondary">${escapeHtml(barcode)}</code></td>
                 <td><span class="badge bg-light text-secondary border">${escapeHtml(categoryName || "-")}</span></td>
@@ -480,15 +479,15 @@ function gecmisTablosunuGuncelle() {
     const simdi = new Date();
 
     let filtrelenmis = seciliUrunGecmisi.filter(h => {
-        const islemTarihi = new Date(h.tarih || h.Date);
+        const islemTarihi = new Date(h.date);
         if (zamanFiltresi === "SON_1_HAFTA") return (simdi - islemTarihi) / (1000 * 60 * 60 * 24) <= 7;
         else if (zamanFiltresi === "SON_1_AY") return (simdi - islemTarihi) / (1000 * 60 * 60 * 24) <= 30;
         return true;
     });
 
     filtrelenmis.sort((a, b) => {
-        const dateA = new Date(a.tarih || a.Date);
-        const dateB = new Date(b.tarih || b.Date);
+        const dateA = new Date(a.date);
+        const dateB = new Date(b.date);
         if (siralama === "ESKIDEN_YENIYE") return dateA - dateB;
         return dateB - dateA;
     });
@@ -505,7 +504,7 @@ function gecmisTablosunuGuncelle() {
         const islemTipiTasarim = isGiris 
             ? `<span class="badge bg-success bg-opacity-10 text-success border border-success px-2 py-1">GİRİŞ</span>`
             : `<span class="badge bg-danger bg-opacity-10 text-danger border border-danger px-2 py-1">ÇIKIŞ</span>`;
-        const formatliTarih = new Date(h.tarih || h.Date).toLocaleString('tr-TR');
+        const formatliTarih = tarihSaatFormatla(h.date);
 
         tbody.innerHTML += `
             <tr>
