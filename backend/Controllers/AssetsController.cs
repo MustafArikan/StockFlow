@@ -145,15 +145,13 @@ public class AssetsController : ControllerBase
         asset.AssignedToId = dto.UserId;
         asset.Status = "In Use";
 
-        // Atama işlemi kaydının oluşturulması  
-        string notEki = !string.IsNullOrWhiteSpace(dto.Notes) ? $" Ek not: {dto.Notes}" : "";
-
+        // Atama işlemi kaydının oluşturulması
         var historyRecord = new AssetHistory
         {
             AssetId = asset.Id,
             UserId = GetCurrentUserId(), // Yardımcı metot kullanıldı
             EventType = "Kullanıcıya Atandı",
-            Notes = $"{targetUser.Email} kullanıcısına atandı.{notEki}"
+            Notes = $"{targetUser.Email} kullanıcısına atandı.{FormatNotes(dto.Notes)}"
         };
 
         _context.AssetHistories.Add(historyRecord);
@@ -259,22 +257,31 @@ public class AssetsController : ControllerBase
             return BadRequest(new { message = "Ekipman bulunamadı veya şu an kimseye atanmamış." });
         }
 
-        string notEki = !string.IsNullOrWhiteSpace(dto.Notes) ? $" Ek not: {dto.Notes}" : "";
-
-        var historyRecord = new AssetHistory
+        using var transaction = await _context.Database.BeginTransactionAsync();
+        try
         {
-            AssetId = asset.Id,
-            UserId = GetCurrentUserId(), // Yardımcı metot kullanıldı
-            EventType = "Teslim Alındı",
-            Notes = $"{asset.AssignedTo?.FirstName} {asset.AssignedTo?.LastName} tarafından iade edildi.{notEki}"
-        };
+            var historyRecord = new AssetHistory
+            {
+                AssetId = asset.Id,
+                UserId = GetCurrentUserId(), // Yardımcı metot kullanıldı
+                EventType = "Teslim Alındı",
+                Notes = $"{asset.AssignedTo?.FirstName} {asset.AssignedTo?.LastName} tarafından teslim alındı.{FormatNotes(dto.Notes)}"
+            };
 
-        asset.AssignedToId = null;
-        asset.Status = "Available";
+            asset.AssignedToId = null;
+            asset.Status = "Available";
 
-        _context.AssetHistories.Add(historyRecord);
-        await _context.SaveChangesAsync();
-        return Ok(new { message = "Ekipman başarıyla teslim alındı." });
+            _context.AssetHistories.Add(historyRecord);
+            await _context.SaveChangesAsync();
+            await transaction.CommitAsync();
+
+            return Ok(new { message = "Ekipman başarıyla teslim alındı." });
+        }
+        catch (Exception ex)
+        {
+            await transaction.RollbackAsync();
+            return StatusCode(500, new { message = "Ekipman teslim alınırken hata oluştu: " + ex.Message });
+        }
     }
 
     // --- 6. ARIZA BİLDİRİMİ İŞLEMİ ---
@@ -418,7 +425,7 @@ public class AssetsController : ControllerBase
                 UserId = GetCurrentUserId(),
                 EventType = "Kullanımdan Kaldırıldı",
                 Notes = returnLocationId.HasValue
-                    ? "Ekipman kullanımdan kaldırıldı ve sağlam parçalar stoka geri alındı."
+                    ? "Ekipman kullanımdan kaldırıldı ve stoka geri alındı."
                     : "Ekipman pasife alınarak sistemden düşüldü."
             };
             _context.AssetHistories.Add(historyRecord);
@@ -440,5 +447,10 @@ public class AssetsController : ControllerBase
     {
         var userIdString = User.FindFirstValue(ClaimTypes.NameIdentifier);
         return int.TryParse(userIdString, out int uid) ? uid : null;
+    }
+
+    private string FormatNotes(string? notes)
+    {
+        return !string.IsNullOrWhiteSpace(notes) ? $" Ek not: {notes.Trim()}" : string.Empty;
     }
 }
