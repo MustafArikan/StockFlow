@@ -1,6 +1,6 @@
 // ==========================================
 // ORTAK STOK MOTORU (WMS UTILITIES)
-// Bu modül; stok miktarlarını çeker, sıfır stoklu rafları gizler 
+// Bu modül stok miktarlarını çeker, sıfır stoklu rafları gizler 
 // ve hem Stok Hareketleri hem de Ekipman sayfalarında ortak kullanılır.
 // ==========================================
 
@@ -20,13 +20,13 @@ const StockUtils = {
         return el;
     },
 
-    // 1. ÇIKIŞ İŞLEMLERİ İÇİN (Sadece stoku > 0 olan depoları getirir)
+    // 1. ÇIKIŞ İŞLEMLERİ İÇİN (Depoları ve detaylarını listeler)
     async loadSmartWarehousesForProduct(productId, whDropdownId, locDropdownId) {
         const whSelect = document.getElementById(whDropdownId);
         if (!whSelect) return;
 
-        this._resetDropdown(whDropdownId, 'Yükleniyor...', true);
-        this._resetDropdown(locDropdownId, 'Önce depo seçin...', true);
+        this._resetDropdown(whDropdownId, 'Stoklar kontrol ediliyor...', true);
+        this._resetDropdown(locDropdownId, 'Önce depo seçiniz...', true);
 
         if (!productId) {
             this._resetDropdown(whDropdownId, 'Önce ürün seçiniz...', true);
@@ -34,32 +34,37 @@ const StockUtils = {
         }
 
         try {
-            const response = await apiRequest(`/stock-levels/product/${productId}`, 'GET');
-            this.currentAvailableStockMap = response.items || response || [];
+            const response = await apiRequest(`/stock-levels/by-product/${productId}`, 'GET');
+            this.currentAvailableStockMap = response.items || response.data || response || [];
 
-            // Stok adedi 0'dan büyük olanları filtreler
-            const availableStock = this.currentAvailableStockMap.filter(s => s.quantity > 0);
+            const availableStock = this.currentAvailableStockMap.filter(s => s.quantity && s.quantity > 0);
 
             if (availableStock.length === 0) {
-                this._resetDropdown(whDropdownId, 'Bu üründen stokta kalmamış!', true);
+                this._resetDropdown(whDropdownId, 'Ürün stokta yok!', true);
                 return;
             }
 
-            // Depoları gruplar ve stokları toplar
+            // Depoları gruplar ve Raf Sayısı ile Toplam Stoku hesaplar
             const warehouseMap = new Map();
             availableStock.forEach(item => {
                 if (!warehouseMap.has(item.warehouseId)) {
-                    warehouseMap.set(item.warehouseId, { id: item.warehouseId, name: item.warehouseName, totalStock: 0 });
+                    warehouseMap.set(item.warehouseId, {
+                        id: item.warehouseId,
+                        name: item.warehouseName,
+                        totalStock: 0,
+                        shelfCount: 0
+                    });
                 }
-                warehouseMap.get(item.warehouseId).totalStock += item.quantity;
+                const wh = warehouseMap.get(item.warehouseId);
+                wh.totalStock += item.quantity;
+                wh.shelfCount += 1;
             });
 
             this._resetDropdown(whDropdownId, '-- Çıkış Yapılacak Depoyu Seçiniz --', false);
-            
-            // innerHTML yerine new Option() ile güvenli nesne ataması
-            warehouseMap.forEach(wh => {
-                whSelect.add(new Option(`${wh.name} (Mevcut: ${wh.totalStock} Adet)`, wh.id));
-            });
+
+            for (let [key, wh] of warehouseMap) {
+                whSelect.add(new Option(`${wh.name} — [ ${wh.shelfCount} Raf, Toplam: ${wh.totalStock} Adet ]`, wh.id));
+            }
 
         } catch (e) {
             console.error("Akıllı stok yükleme hatası:", e);
@@ -67,7 +72,7 @@ const StockUtils = {
         }
     },
 
-    // 2. ÇIKIŞ İŞLEMLERİ İÇİN (Seçili depoda stoku > 0 olan rafları getirir)
+    // 2. ÇIKIŞ İŞLEMLERİ İÇİN (Seçili deponun raflarını getirir)
     fillSmartLocationsForWarehouse(warehouseId, locDropdownId) {
         const locSelect = document.getElementById(locDropdownId);
         if (!locSelect) return;
@@ -79,10 +84,11 @@ const StockUtils = {
 
         const availableLocations = this.currentAvailableStockMap.filter(s => s.warehouseId === parseInt(warehouseId, 10) && s.quantity > 0);
 
-        this._resetDropdown(locDropdownId, '-- Düşülecek Rafı Seçiniz --', false);
-        
+        this._resetDropdown(locDropdownId, '-- Çıkış Rafını Seçiniz --', false);
+
         availableLocations.forEach(loc => {
-            locSelect.add(new Option(`${loc.locationCode} (Mevcut: ${loc.quantity} Adet)`, loc.locationId));
+            const locName = loc.locationCode || loc.locationName || "İsimsiz Raf";
+            locSelect.add(new Option(`${locName} (Mevcut: ${loc.quantity} Adet)`, loc.locationId));
         });
     },
 

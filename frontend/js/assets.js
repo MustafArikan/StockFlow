@@ -11,6 +11,7 @@ function escapeHtml(text) {
 
 let currentAssetId = null;
 let currentAssetProductId = null;
+let currentAssetSerialNumber = null; //Uygulamanın baktığı cihazı unutmaması için
 let currentGridPage = 1;
 let currentGridPageSize = 8; // Izgara tasarımı için varsayılan 8
 const userRole = typeof getUserRole === "function" ? getUserRole() : "User";
@@ -88,16 +89,22 @@ function initEventListeners() {
     // Kullanımdan kaldırma butonu dinleyicisi eklendi
     document.getElementById('btnSubmitDeleteAsset')?.addEventListener('click', submitDeleteAsset);
 
-    // Akıllı Cascading Dropdown Dinleyicileri (WMS Entegrasyonu)
+    // Akıllı Cascading Dropdown Dinleyicileri (WMS Entegrasyonu)    
     document.getElementById('newAssetProduct')?.addEventListener('change', async function () {
-        if (typeof StockUtils !== 'undefined') {
-            try {
-                await StockUtils.loadSmartWarehousesForProduct(this.value, 'newAssetSourceWarehouse', 'newAssetSourceLocation');
-            } catch (e) {
-                console.warn("Akıllı WMS servisi yanıt vermedi, standart depo listesi yükleniyor...");
-                StockUtils.loadAllWarehouses('newAssetSourceWarehouse');
+        const selectedProductId = this.value;
+
+        // Eğer ürün seçimi kaldırıldıysa/boşaltıldıysa, depoları ve rafları sıfırla
+        if (!selectedProductId) {
+            if (typeof StockUtils !== 'undefined' && typeof StockUtils._resetDropdown === 'function') {
+                StockUtils._resetDropdown('newAssetSourceWarehouse', 'Önce ürün seçiniz...', true);
                 StockUtils._resetDropdown('newAssetSourceLocation', 'Önce depo seçiniz...', true);
             }
+            return;
+        }
+
+        // Bütün işi Ortak WMS Motoru (StockUtils) yapar
+        if (typeof StockUtils !== 'undefined') {
+            await StockUtils.loadSmartWarehousesForProduct(selectedProductId, 'newAssetSourceWarehouse', 'newAssetSourceLocation');
         }
     });
 
@@ -258,6 +265,7 @@ function initAddAssetCamera() {
 async function goBackToGrid() {
     currentAssetId = null;
     currentAssetProductId = null;
+    currentAssetSerialNumber = null; // Geri dönünce hafızayı temizler
 
     document.getElementById('assetResultContainer').classList.add('d-none');
     document.getElementById('serialSearchInput').value = '';
@@ -281,18 +289,30 @@ async function loadProductsForDropdown() {
         const data = await apiRequest('/products?pageNumber=1&pageSize=1000', 'GET');
         select.length = 0;
 
-        if (data.items && data.items.length > 0) {
+        // API yanıtı data.items, data.products veya direkt array olabilir
+        const products = data.items || data.products || data.data || data;
+
+        if (Array.isArray(products) && products.length > 0) {
             select.add(new Option("-- Bir Ürün Seçin --", ""));
-            data.items.forEach(product => {
-                const stokText = product.stockQuantity ?? 'Bilinmiyor';
-                select.add(new Option(`${product.name} (Stok: ${stokText})`, product.id));
+            products.forEach(product => {
+                const stokText = product.stockQuantity ?? product.StockQuantity ?? 'Bilinmiyor';
+                const name = product.name ?? product.Name;
+                const id = product.id ?? product.Id;
+                select.add(new Option(`${name} (Stok: ${stokText})`, id));
             });
             select.disabled = false;
         } else {
             select.add(new Option("Kayıtlı ürün bulunamadı!", ""));
+            select.disabled = false;
         }
     } catch (e) {
         console.error("Ürünler yüklenirken hata:", e);
+        const select = document.getElementById('newAssetProduct');
+        if (select) {
+            select.length = 0;
+            select.add(new Option("Bağlantı Hatası!", ""));
+            select.disabled = false;
+        }
     }
 }
 
@@ -326,28 +346,65 @@ async function loadUsersForDropdown() {
 }
 
 async function searchAsset() {
-    const serial = document.getElementById('serialSearchInput').value.trim();
+    // 1. Arama kutusuna bak, 2. Boşsa hafızadaki cihaza bak
+    const inputSerial = document.getElementById('serialSearchInput').value.trim();
+    const serial = inputSerial || currentAssetSerialNumber; // EĞER INPUT BOŞSA HAFIZADAKİNİ KULLAN
     if (!serial) return;
 
     try {
         const data = await apiRequest(`/assets/${encodeURIComponent(serial)}/timeline`, 'GET');
         currentAssetId = data.assetInfo.id;
         currentAssetProductId = data.assetInfo.productId;
+        currentAssetSerialNumber = data.assetInfo.serialNumber;
 
         document.getElementById('assetResultContainer').classList.remove('d-none');
         // Arama yapıldığında Grid'i gizle
         document.getElementById('adminGridContainer').classList.add('d-none');
 
-        // 1. Cihaz Profilini Doldur
+        // 1. Cihaz Profilini Doldur        
         document.getElementById('resProductName').textContent = data.assetInfo.productName;
         document.getElementById('resSerialNumber').textContent = data.assetInfo.serialNumber;
 
+        const status = data.assetInfo.status;
+        let detailIconColor = "text-primary";
+        let detailBgClass = "bg-primary bg-opacity-10";
+
+        if (status === 'Available') {
+            detailIconColor = "text-success";
+            detailBgClass = "bg-success bg-opacity-10";
+        }
+        else if (status === 'In Use') {
+            detailIconColor = "text-primary";
+            detailBgClass = "bg-primary bg-opacity-10";
+        }
+        else if (status === 'Broken') {
+            detailIconColor = "text-danger";
+            detailBgClass = "bg-danger bg-opacity-10";
+        }
+        else if (status === 'Retired') {
+            detailIconColor = "text-secondary opacity-50";
+            detailBgClass = "bg-secondary bg-opacity-10";
+        }
+
+        // HTML'de atadığımız ID'ler üzerinden doğrudan tam isabet eşleştirme
+        const iconContainer = document.getElementById('resIconContainer');
+        const iconElement = document.getElementById('resIconElement');
+
+        if (iconContainer) {
+            iconContainer.className = `d-inline-flex align-items-center justify-content-center ${detailBgClass} rounded-circle mb-3`;
+            iconContainer.style.width = "90px";
+            iconContainer.style.height = "90px";
+        }
+        if (iconElement) {
+            iconElement.className = `bi bi-laptop fs-1 ${detailIconColor}`;
+        }
+
         // Renkli Rozet Mantığı
         let statusBadge = `<span class="badge bg-secondary">Bilinmiyor</span>`;
-        if (data.assetInfo.status === 'Available') statusBadge = `<span class="badge bg-success px-3 py-2 fs-6 rounded-pill">Müsait (Boşta)</span>`;
-        else if (data.assetInfo.status === 'In Use') statusBadge = `<span class="badge bg-primary px-3 py-2 fs-6 rounded-pill">Kullanımda</span>`;
-        else if (data.assetInfo.status === 'Broken') statusBadge = `<span class="badge bg-danger px-3 py-2 fs-6 rounded-pill">Arızalı</span>`;
-        else if (data.assetInfo.status === 'Retired') statusBadge = `<span class="badge bg-dark px-3 py-2 fs-6 rounded-pill"><i class="bi bi-slash-circle me-1"></i> Kullanım Dışı</span>`;
+        if (status === 'Available') statusBadge = `<span class="badge bg-success px-3 py-2 fs-6 rounded-pill">Müsait (Boşta)</span>`;
+        else if (status === 'In Use') statusBadge = `<span class="badge bg-primary px-3 py-2 fs-6 rounded-pill">Kullanımda</span>`;
+        else if (status === 'Broken') statusBadge = `<span class="badge bg-danger px-3 py-2 fs-6 rounded-pill">Arızalı</span>`;
+        else if (status === 'Retired') statusBadge = `<span class="badge bg-dark px-3 py-2 fs-6 rounded-pill"><i class="bi bi-slash-circle me-1"></i> Kullanım Dışı</span>`;
 
         const resStatusEl = document.getElementById('resStatus');
         resStatusEl.innerHTML = statusBadge;
@@ -358,38 +415,32 @@ async function searchAsset() {
 
         document.getElementById('resAssignedTo').textContent = data.assetInfo.assignedTo;
 
-        // Cihazın durumuna göre mantıksız olan butonları gizle
-        const btnAssign = document.querySelector('[data-bs-target="#assignAssetModal"]');
-        const btnReturn = document.querySelector('[data-bs-target="#returnAssetModal"]');
-        const btnBreakdown = document.querySelector('[data-bs-target="#breakdownModal"]');
-        const btnResolve = document.querySelector('[data-bs-target="#resolveModal"]');
-        const btnRetire = document.querySelector('[data-bs-target="#deleteAssetModal"]');
+        // Ekranda birden fazla buton varsa tümünü gizler
+        const btnAssign = document.querySelectorAll('[data-bs-target="#assignAssetModal"]');
+        const btnReturn = document.querySelectorAll('[data-bs-target="#returnAssetModal"]');
+        const btnBreakdown = document.querySelectorAll('[data-bs-target="#breakdownModal"]');
+        const btnResolve = document.querySelectorAll('[data-bs-target="#resolveModal"]');
+        const btnRetire = document.querySelectorAll('[data-bs-target="#deleteAssetModal"]');
+        const btnMaintenance = document.querySelectorAll('[data-bs-target="#maintenanceModal"]');
 
-        const status = data.assetInfo.status;
-
-        // Cihaz durumu uygun olsa bile kullanıcının yetkisi var mı diye kontrol edilir
         const canAssign = hasPermission("Asset.Assign");
         const canEdit = hasPermission("Asset.Edit");
         const canDelete = hasPermission("Asset.Delete");
 
-        // Müsait DEĞİLSE VEYA kullanıcının atama yetkisi YOKSA butonu gizle
-        if (btnAssign) btnAssign.classList.toggle('d-none', status !== 'Available' || !canAssign);
+        // Tüm liste öğeleri için güvenlik kapıları
+        btnAssign.forEach(btn => btn.classList.toggle('d-none', status !== 'Available' || !canAssign));
+        btnReturn.forEach(btn => btn.classList.toggle('d-none', status !== 'In Use' || !canAssign));
 
-        // Kullanımda DEĞİLSE VEYA kullanıcının atama (geri alma) yetkisi YOKSA butonu gizle
-        if (btnReturn) btnReturn.classList.toggle('d-none', status !== 'In Use' || !canAssign);
+        // Kullanım Dışı ise Bakımı Gizler
+        btnMaintenance.forEach(btn => btn.classList.toggle('d-none', status === 'Retired' || !canEdit));
 
-        // Arızalıysa VEYA pasifse VEYA düzenleme yetkisi YOKSA Arıza Bildir'i gizle
-        if (btnBreakdown) btnBreakdown.classList.toggle('d-none', status === 'Broken' || status === 'Retired' || !canEdit);
+        btnBreakdown.forEach(btn => btn.classList.toggle('d-none', status === 'Broken' || status === 'Retired' || !canEdit));
+        btnResolve.forEach(btn => btn.classList.toggle('d-none', status !== 'Broken' || !canEdit));
 
-        // Arızalı DEĞİLSE VEYA düzenleme yetkisi YOKSA Çözüm Gir'i gizle
-        if (btnResolve) btnResolve.classList.toggle('d-none', status !== 'Broken' || !canEdit);
-
-        // Zaten kullanımdan kaldırılmış VEYA kullanıcının yetkisi YOKSA butonu gizle
-        if (btnRetire) {
-            // Butonun bulunduğu üst kapsayıcıyı komple gizle
-            const retireWrapper = btnRetire.closest('.border-top');
-            if (retireWrapper) retireWrapper.classList.toggle('d-none', status === 'Retired' || !canDelete);
-        }
+        btnRetire.forEach(btn => {
+            const wrapper = btn.closest('.border-top') || btn.parentElement;
+            if (wrapper) wrapper.classList.toggle('d-none', status === 'Retired' || !canDelete);
+        });
 
         // 2. Timeline (Zaman Çizelgesini) Çiz
         const timelineUl = document.getElementById('assetTimelineList');
@@ -441,7 +492,11 @@ async function searchAsset() {
 
         // Sonuç alanını göster, input'u temizle
         document.getElementById('assetResultContainer').classList.remove('d-none');
-        document.getElementById('serialSearchInput').value = '';
+
+        // Eğer arama gerçekten inputtan yapıldıysa inputu temizler
+        if (inputSerial) {
+            document.getElementById('serialSearchInput').value = '';
+        }
 
     } catch (error) {
         hataGoster(error.message);
@@ -553,8 +608,14 @@ async function submitCreateAsset() {
     const notes = document.getElementById('newAssetNotes').value.trim();
     const locationId = document.getElementById('newAssetSourceLocation').value;
 
-    if (!productId || !serialNumber || !locationId) {
-        return uyariGoster("Lütfen Ürün, Seri Numarası ve Çıkış Yapılacak Rafı seçin!");
+    if (!productId) {
+        return uyariGoster("Lütfen kaydedilecek Ürünü seçiniz!");
+    }
+    if (!serialNumber) {
+        return uyariGoster("Lütfen ekipmanın Seri Numarasını veya Barkodunu giriniz!");
+    }
+    if (!locationId) {
+        return uyariGoster("Lütfen stoktan düşülecek Çıkış Rafını seçiniz!");
     }
 
     const btnEkle = document.getElementById('btnSubmitCreateAsset');
@@ -663,14 +724,29 @@ async function loadGridCards(page = 1) {
 // KART HTML ÜRETİCİSİ (UI VE DATA AYRIMI)
 // ==========================================
 function buildAssetCardHtml(asset) {
+    // Tüm değişkenleri tek bir yerde başlatılır
     let statusText = "Bilinmiyor";
     let statusClass = "bg-secondary text-white";
     let iconColor = "text-primary";
+    let iconBgClass = "bg-secondary bg-opacity-10";
 
-    if (asset.status === 'Available') { statusText = "Boşta"; statusClass = "bg-success text-white"; iconColor = "text-success"; }
-    else if (asset.status === 'In Use') { statusText = "Kullanımda"; statusClass = "bg-primary text-white"; iconColor = "text-primary"; }
-    else if (asset.status === 'Broken') { statusText = "Arızalı"; statusClass = "bg-danger text-white"; iconColor = "text-danger"; }
-    else if (asset.status === 'Retired') { statusText = "Kullanım Dışı"; statusClass = "bg-dark text-white"; iconColor = "text-secondary opacity-50"; }
+    // if-else bloğu ile tüm renk ve metinler aynı anda atanır
+    if (asset.status === 'Available') {
+        statusText = "Boşta"; statusClass = "bg-success text-white";
+        iconColor = "text-success"; iconBgClass = "bg-success bg-opacity-10";
+    }
+    else if (asset.status === 'In Use') {
+        statusText = "Kullanımda"; statusClass = "bg-primary text-white";
+        iconColor = "text-primary"; iconBgClass = "bg-primary bg-opacity-10";
+    }
+    else if (asset.status === 'Broken') {
+        statusText = "Arızalı"; statusClass = "bg-danger text-white";
+        iconColor = "text-danger"; iconBgClass = "bg-danger bg-opacity-10";
+    }
+    else if (asset.status === 'Retired') {
+        statusText = "Kullanım Dışı"; statusClass = "bg-dark text-white";
+        iconColor = "text-secondary opacity-50"; iconBgClass = "bg-secondary bg-opacity-10";
+    }
 
     // Eğer cihaz kullanımdan kaldırılmışsa personeli boş göster, değilse atanmış kişiyi yaz
     const personelAdi = asset.status === 'Retired' ? "Kullanımdan Kaldırıldı" : (asset.assignedToName ?? "Şu an Boşta");
@@ -680,7 +756,7 @@ function buildAssetCardHtml(asset) {
             <div class="card border-0 shadow-sm rounded-4 h-100 equipment-grid-card position-relative asset-grid-card">
                 <div class="card-body text-center p-4">
                     <div class="mb-3">
-                        <div class="d-inline-flex align-items-center justify-content-center bg-light rounded-circle asset-icon-circle">
+                        <div class="d-inline-flex align-items-center justify-content-center ${iconBgClass} rounded-circle asset-icon-circle">
                             <i class="bi bi-laptop fs-1 ${iconColor}"></i>
                         </div>
                     </div>
@@ -739,6 +815,7 @@ async function submitDeleteAsset() {
 
         currentAssetId = null;
         currentAssetProductId = null;
+        currentAssetSerialNumber = null; // Cihaz silinince hafızayı tamamen temizler
 
         const stockSwitch = document.getElementById('returnToStockSwitch');
         if (stockSwitch) {

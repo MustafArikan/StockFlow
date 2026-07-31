@@ -89,10 +89,14 @@
 
                     <div class="card-body p-4">
                         <div class="text-center mb-4">
-                            <div class="display-1 text-primary mb-2"><i class="bi bi-laptop"></i></div>
+                            <div id="resIconContainer"
+                                class="d-inline-flex align-items-center justify-content-center bg-light rounded-circle p-4 mb-3">
+                                <i id="resIconElement" class="bi bi-laptop display-4 text-primary"></i>
+                            </div>
                             <h4 class="fw-bold" id="resProductName">-</h4>
                             <span class="badge bg-light text-dark border px-3 py-2 mt-1">Seri No: <code
-                                    id="resSerialNumber">-</code></span>
+                                    id="resSerialNumber">-</code>
+                            </span>
                         </div>
                         <hr>
                         <div class="mb-3">
@@ -237,14 +241,14 @@
                     </h6>
                     <div class="p-3 bg-light border rounded-3 shadow-sm mb-4">
                         <div class="row g-3">
-                            <div class="col-md-6">
+                            <div class="col-12">
                                 <label for="newAssetSourceWarehouse" class="form-label text-muted small fw-bold">Depo
                                     Seçin <span class="text-danger">*</span></label>
                                 <select class="form-select" id="newAssetSourceWarehouse" disabled>
                                     <option value="">Önce ürün seçiniz...</option>
                                 </select>
                             </div>
-                            <div class="col-md-6">
+                            <div class="col-12">
                                 <label for="newAssetSourceLocation" class="form-label text-muted small fw-bold">Raf
                                     Seçin <span class="text-danger">*</span></label>
                                 <select class="form-select" id="newAssetSourceLocation" disabled>
