@@ -426,7 +426,7 @@ public class AssetsController : ControllerBase
                 EventType = "Kullanımdan Kaldırıldı",
                 Notes = returnLocationId.HasValue
                     ? "Ekipman kullanımdan kaldırıldı ve stoka geri alındı."
-                    : "Ekipman pasife alınarak sistemden düşüldü."
+                    : "Ekipman kullanımdan kaldırıldı ve hurdaya ayrıldı."
             };
             _context.AssetHistories.Add(historyRecord);
 
