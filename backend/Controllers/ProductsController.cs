@@ -1,6 +1,8 @@
 using stok_takip.Constants;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using stok_takip.Attributes;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
 using stok_takip.Data;
@@ -113,7 +115,8 @@ public class ProductsController : ControllerBase
     }
 
     [HttpPost]
-    [Authorize(Policy = Policies.RequireProductWrite)] 
+    [RequirePermission(Policies.RequireProductWrite)]
+    [EnableRateLimiting(Policies.RequireProductWrite)] 
     public async Task<IActionResult> Create(CreateProductDto dto)
     {
         var mevcutUrun = await _context.Products.FirstOrDefaultAsync(p => p.Barcode == dto.Barcode);
@@ -279,7 +282,8 @@ public class ProductsController : ControllerBase
 
     // PUT /api/products/5 : mecvut ürünü güncelle 
     [HttpPut("{id}")]
-    [Authorize(Policy = Policies.RequireProductWrite)] 
+    [RequirePermission(Policies.RequireProductWrite)]
+    [EnableRateLimiting(Policies.RequireProductWrite)] 
     public async Task<IActionResult> Update(int id, UpdateProductDto dto)
     {
         var product = await _context.Products.FindAsync(id);
@@ -361,7 +365,8 @@ public class ProductsController : ControllerBase
 
     // DELETE /api/products/5 : ürünü sil
     [HttpDelete("{id}")]
-    [Authorize(Policy = Policies.RequireProductWrite)] 
+    [RequirePermission(Policies.RequireProductWrite)]
+    [EnableRateLimiting(Policies.RequireProductWrite)] 
     public async Task<IActionResult> Delete(int id)
     {
         var product = await _context.Products.FindAsync(id);

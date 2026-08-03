@@ -13,6 +13,9 @@ using stok_takip.DTOs;
 using stok_takip.Models;
 using stok_takip.Middlewares;
 using stok_takip.Constants;
+using stok_takip.Attributes;
+using stok_takip.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Prometheus;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -24,6 +27,7 @@ builder.Services.AddControllers()
     });
 builder.Services.AddRateLimiter(options =>
 {
+    // Mevcut login/register limiter'ı — AYNEN KALIYOR
     options.AddFixedWindowLimiter("AuthLimit", limiterOptions =>
     {
         limiterOptions.PermitLimit = 5; // 5 istek
@@ -31,9 +35,39 @@ builder.Services.AddRateLimiter(options =>
         limiterOptions.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
         limiterOptions.QueueLimit = 0; // Kuyrukta istek bekletme
     });
+
+    // --- YENİ: appsettings.json > AuthorizationPolicies altındaki her key için
+    // otomatik olarak kullanıcı bazlı bir rate limit policy'si üretir ---
+    var policiesSection = builder.Configuration.GetSection("AuthorizationPolicies");
+    foreach (var policySection in policiesSection.GetChildren())
+    {
+        var policyKey = policySection.Key; // "RequireProductWrite" vb.
+        var permitLimit = policySection.GetValue<int>("RateLimit:PermitLimit");
+        var windowSeconds = policySection.GetValue<int>("RateLimit:WindowSeconds");
+
+        if (permitLimit <= 0 || windowSeconds <= 0) continue; // RateLimit tanımlı değilse atla
+
+        options.AddPolicy(policyKey, httpContext =>
+        {
+            // IP yerine kullanıcı bazlı limit: her giriş yapmış kullanıcı kendi limitine sahip olur
+            var userId = httpContext.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
+                         ?? httpContext.Connection.RemoteIpAddress?.ToString()
+                         ?? "anonymous";
+
+            return RateLimitPartition.GetFixedWindowLimiter(
+                $"{policyKey}:{userId}",
+                _ => new FixedWindowRateLimiterOptions
+                {
+                    PermitLimit = permitLimit,
+                    Window = TimeSpan.FromSeconds(windowSeconds),
+                    QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                    QueueLimit = 0
+                });
+        });
+    }
+
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests; // Too Many Requests
-}
-);
+});
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
 {
     options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
@@ -157,12 +191,16 @@ builder.Services.AddAuthentication(options =>
     };
 });
 
+builder.Services.AddSingleton<IAuthorizationPolicyProvider, PermissionPolicyProvider>();
+builder.Services.AddScoped<IAuthorizationHandler, PermissionAuthorizationHandler>();
+
 builder.Services.AddAuthorization(options =>
 {
     options.FallbackPolicy = new Microsoft.AspNetCore.Authorization.AuthorizationPolicyBuilder()
         .RequireAuthenticatedUser()
         .Build();
 
+    // Rol bazlı olanlar (permission listesi yok, sadece rol kontrolü) kod içinde kalıyor:
     options.AddPolicy(Policies.SuperAdminOnly, policy => policy.RequireAssertion(context => 
         context.User.IsInRole("superadmin") || 
         context.User.HasClaim("Permission", "Role.View") ||
@@ -171,24 +209,6 @@ builder.Services.AddAuthorization(options =>
         context.User.HasClaim("Permission", "Role.Delete")
     ));
     options.AddPolicy(Policies.AdminOnly, policy => policy.RequireRole("admin", "superadmin"));
-    
-    // Permission policies for future dynamic expansion
-    options.AddPolicy(Policies.RequireAssetWrite, policy => policy.RequireAssertion(context => context.User.IsInRole("superadmin") || context.User.HasClaim("Permission", "Asset.Add") || context.User.HasClaim("Permission", "Asset.Edit")));
-    options.AddPolicy(Policies.RequireAuditLogRead, policy => policy.RequireAssertion(context => context.User.IsInRole("superadmin") || context.User.HasClaim("Permission", "System.AuditLogs")));
-    options.AddPolicy(Policies.RequireCategoryWrite, policy => policy.RequireAssertion(context => context.User.IsInRole("superadmin") || context.User.HasClaim("Permission", "Category.Add") || context.User.HasClaim("Permission", "Category.Edit")));
-    options.AddPolicy(Policies.RequireLocationWrite, policy => policy.RequireAssertion(context => context.User.IsInRole("superadmin") || context.User.HasClaim("Permission", "Location.Add")));
-    options.AddPolicy(Policies.RequireProductWrite, policy => policy.RequireAssertion(context => context.User.IsInRole("superadmin") || context.User.HasClaim("Permission", "Product.Add") || context.User.HasClaim("Permission", "Product.Edit")));
-    options.AddPolicy(Policies.RequireProductSupplierWrite, policy => policy.RequireAssertion(context => context.User.IsInRole("superadmin") || context.User.HasClaim("Permission", "Supplier.Edit")));
-    options.AddPolicy(Policies.RequireStockMovementWrite, policy => policy.RequireAssertion(context => context.User.IsInRole("superadmin") || context.User.HasClaim("Permission", "Movement.Inbound") || context.User.HasClaim("Permission", "Movement.Outbound") || context.User.HasClaim("Permission", "Movement.Transfer")));
-    options.AddPolicy(Policies.RequireSupplierWrite, policy => policy.RequireAssertion(context => context.User.IsInRole("superadmin") || context.User.HasClaim("Permission", "Supplier.Add") || context.User.HasClaim("Permission", "Supplier.Edit")));
-    options.AddPolicy(Policies.RequireWarehouseWrite, policy => policy.RequireAssertion(context => context.User.IsInRole("superadmin") || context.User.HasClaim("Permission", "Warehouse.Add") || context.User.HasClaim("Permission", "Warehouse.Edit")));
-    options.AddPolicy(Policies.RequireUserManage, policy => policy.RequireAssertion(context => 
-        context.User.IsInRole("superadmin") || 
-        context.User.HasClaim("Permission", "User.View") ||
-        context.User.HasClaim("Permission", "User.Add") ||
-        context.User.HasClaim("Permission", "User.Edit") ||
-        context.User.HasClaim("Permission", "User.Delete")
-    ));
 });
 
 builder.Services.AddCors(options =>
