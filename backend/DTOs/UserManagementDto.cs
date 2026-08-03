@@ -21,6 +21,7 @@ namespace stok_takip.DTOs
     public string Password { get; set; } = string.Empty;
 
     public string? PhoneNumber { get; set; }
+    public string? IdentityNumber { get; set; }
 
     [Required]
     public int RoleId { get; set; }
@@ -41,6 +42,7 @@ namespace stok_takip.DTOs
         public string Email { get; set; } = string.Empty;
 
         public string? PhoneNumber { get; set; }
+        public string? IdentityNumber { get; set; }
 
         [Required]
         public int RoleId { get; set; }

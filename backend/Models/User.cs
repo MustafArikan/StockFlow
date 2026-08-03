@@ -7,6 +7,8 @@ public class User : BaseEntity
     public string LastName { get; set; } = string.Empty;
     public string Email { get; set; } = string.Empty;
     public string? PhoneNumber { get; set; }
+    [System.ComponentModel.DataAnnotations.MaxLength(11)]
+    public string? IdentityNumber { get; set; }
     public string PasswordHash { get; set; } = string.Empty;
     public int RoleId { get; set; }
     public AppRole Role { get; set; } = null!;
