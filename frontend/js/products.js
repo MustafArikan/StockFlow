@@ -27,10 +27,7 @@ if (urlSearch) {
 
 if (!token) window.location.href = 'login.html';
 
-// XSS Koruması
-
-
-// Alt kategorileri recursive (özyineli) olarak bulan fonksiyon (Senin özelliğin)
+// Alt kategorileri recursive olarak bulan fonksiyon
 function getAltKategoriIdleri(parentId) {
     let ids = [parseInt(parentId)];
     if (!window.tumKategoriler) return ids;
@@ -124,15 +121,15 @@ const productView = createDataView({
                             if (!validValues.includes((attr.value ?? '').toString().toLowerCase())) {
                                 return false;
                             }
-                        } catch(e) {
+                        } catch (e) {
                             return false;
                         }
                     } else if (filter.type === 'multi_select') {
-                        const selectedValues = filter.value; 
-                        if (selectedValues.length > 0) { 
-                            const attrVal = (attr.value ?? "").toString().toLocaleLowerCase("tr-TR"); 
-                            const match = selectedValues.some(v => attrVal.includes(v)); 
-                            if (!match) return false; 
+                        const selectedValues = filter.value;
+                        if (selectedValues.length > 0) {
+                            const attrVal = (attr.value ?? "").toString().toLocaleLowerCase("tr-TR");
+                            const match = selectedValues.some(v => attrVal.includes(v));
+                            if (!match) return false;
                         }
                     } else {
                         if (!(attr.value ?? "").toString().toLocaleLowerCase("tr-TR").includes(filter.value)) {
@@ -172,8 +169,16 @@ const productView = createDataView({
         return `
             <tr>
                 <td class="text-muted small">${tarihFormatla(urun.createdAt)}</td>
-                <td>${escapeHtml(urun.name)}</td>
-                <td>${escapeHtml(urun.barcode)}</td>
+                <td class="fw-bold">${escapeHtml(urun.name)}</td>
+                <td>
+                    <button class="btn btn-sm btn-outline-secondary rounded-pill btn-print-barcode d-inline-flex align-items-center shadow-sm" 
+                            data-barcode="${escapeHtml(urun.barcode)}" 
+                            data-name="${escapeHtml(urun.name)}" 
+                            title="Barkod Çıktısı Al">
+                        <i class="bi bi-upc-scan me-2"></i>
+                        <span class="fw-bold">${escapeHtml(urun.barcode)}</span>
+                    </button>
+                </td>
                 <td>${urun.minStockLevel}</td>
                 <td>${escapeHtml(urun.categoryName)}</td>
                 <td>
@@ -202,11 +207,11 @@ function kategoriOzetiniGuncelle(filtreliListe) {
             paginationContainer.parentNode.insertBefore(ozetContainer, paginationContainer);
         }
     }
-    
+
     // Kategori adını id üzerinden bul
     let kategoriAdi = "Tümü";
     const seciliKategoriId = document.getElementById("filtreKategoriId")?.value;
-    
+
     if (seciliKategoriId && window.tumKategoriler) {
         const seciliKategori = window.tumKategoriler.find(c => c.id == seciliKategoriId);
         if (seciliKategori && seciliKategori.name) {
@@ -301,7 +306,7 @@ async function handleExcelImport() {
     try {
         const report = await apiRequest('/products/import', 'POST', formData);
 
-        if(alertContainer) {
+        if (alertContainer) {
             let reportHtml = `
                 <div class="alert ${report.errorCount > 0 ? 'alert-warning' : 'alert-success'} rounded-3 p-4 border shadow-sm">
                     <h5 class="fw-bold mb-3"><i class="bi bi-clipboard-data-fill"></i> İçe Aktarma Sonuç Raporu</h5>
@@ -636,14 +641,14 @@ if (urunKategoriSelectForm) {
                 let starHtml = rule.isRequired ? '<span class="text-danger">*</span>' : '';
                 let skipHtml = !rule.isRequired ? `<a href="#" class="text-primary text-decoration-none ms-3 small fw-normal btn-skip border rounded px-2 py-1 bg-white shadow-sm" title="Zorunlu değil, atla">Atla <i class="bi bi-arrow-right"></i></a>` : '';
 
-            let options = [];
-            if (rule.allowedValues && rule.allowedValues !== "[]") {
-                try { options = JSON.parse(rule.allowedValues); } 
-                catch(e) { options = rule.allowedValues.split(',').map(s => s.trim()); }
-            }
-            
-            inputHtml = DynamicUI.renderFormInput(rule, options, escapeHtml);
-            let uiType = rule.uiComponent || rule.dataType;
+                let options = [];
+                if (rule.allowedValues && rule.allowedValues !== "[]") {
+                    try { options = JSON.parse(rule.allowedValues); }
+                    catch (e) { options = rule.allowedValues.split(',').map(s => s.trim()); }
+                }
+
+                inputHtml = DynamicUI.renderFormInput(rule, options, escapeHtml);
+                let uiType = rule.uiComponent || rule.dataType;
 
                 if (uiType === 'searchable_dropdown' || uiType === 'autocomplete') {
                     let optionsHtml = options.map(opt => `<option value="${escapeHtml(opt)}">`).join('');
@@ -769,35 +774,35 @@ if (urunKategoriSelectForm) {
                 validRuleIndex++;
             });
 
-        if (typeof $ !== 'undefined' && $.fn.selectpicker) {
-            $('.selectpicker.dynamic-rule-input').selectpicker();
-        }
+            if (typeof $ !== 'undefined' && $.fn.selectpicker) {
+                $('.selectpicker.dynamic-rule-input').selectpicker();
+            }
 
-        // PIM - Sırayla Gösterme Mantığı (Event Listener'ları 1 kez ekle)
-        if (!container.dataset.pimListenersAttached) {
-            container.dataset.pimListenersAttached = 'true';
-            
-            const revealNext = (wrapper) => {
-                if (!wrapper) return;
-                const nextIndex = parseInt(wrapper.dataset.index) + 1;
-                const nextDiv = container.querySelector(`.dynamic-rule-wrapper[data-index="${nextIndex}"]`);
-                if (nextDiv && nextDiv.classList.contains('d-none')) {
-                    nextDiv.classList.remove('d-none');
-                    nextDiv.classList.add('animate__animated', 'animate__fadeIn');
-                    
-                    if (nextDiv.dataset.isBoolean === 'true') {
-                        revealNext(nextDiv);
+            // PIM - Sırayla Gösterme Mantığı (Event Listener'ları 1 kez ekle)
+            if (!container.dataset.pimListenersAttached) {
+                container.dataset.pimListenersAttached = 'true';
+
+                const revealNext = (wrapper) => {
+                    if (!wrapper) return;
+                    const nextIndex = parseInt(wrapper.dataset.index) + 1;
+                    const nextDiv = container.querySelector(`.dynamic-rule-wrapper[data-index="${nextIndex}"]`);
+                    if (nextDiv && nextDiv.classList.contains('d-none')) {
+                        nextDiv.classList.remove('d-none');
+                        nextDiv.classList.add('animate__animated', 'animate__fadeIn');
+
+                        if (nextDiv.dataset.isBoolean === 'true') {
+                            revealNext(nextDiv);
+                        }
                     }
-                }
-            };
+                };
 
-            // Sayfa yüklendiğinde ilk eleman boolean ise hemen sonrakini de aç
-            setTimeout(() => {
-                const firstEl = container.querySelector('.dynamic-rule-wrapper[data-index="0"]');
-                if (firstEl && firstEl.dataset.isBoolean === 'true') {
-                    revealNext(firstEl);
-                }
-            }, 50);
+                // Sayfa yüklendiğinde ilk eleman boolean ise hemen sonrakini de aç
+                setTimeout(() => {
+                    const firstEl = container.querySelector('.dynamic-rule-wrapper[data-index="0"]');
+                    if (firstEl && firstEl.dataset.isBoolean === 'true') {
+                        revealNext(firstEl);
+                    }
+                }, 50);
 
                 container.addEventListener('input', (e) => revealNext(e.target.closest('.dynamic-rule-wrapper')));
                 container.addEventListener('change', (e) => revealNext(e.target.closest('.dynamic-rule-wrapper')));
@@ -858,56 +863,56 @@ if (btnUrunKaydetEl) {
         const initialQuantity = document.getElementById("urunBaslangicStok")?.value;
         const btnKaydet = document.getElementById("btnUrunKaydet");
 
-    const urunVerisi = {
-        name: name,
-        barcode: barcode,
-        minStockLevel: parseInt(minStockLevel) || 0,
-        categoryId: parseInt(categoryId) || null,
-        targetLocationId: parseInt(targetLocationId) || 0,
-        initialQuantity: parseInt(initialQuantity) || 0,
-        cost: 0,
-        price: 0
-    };
+        const urunVerisi = {
+            name: name,
+            barcode: barcode,
+            minStockLevel: parseInt(minStockLevel) || 0,
+            categoryId: parseInt(categoryId) || null,
+            targetLocationId: parseInt(targetLocationId) || 0,
+            initialQuantity: parseInt(initialQuantity) || 0,
+            cost: 0,
+            price: 0
+        };
 
-    const dinamikInputlar = document.querySelectorAll('.dynamic-rule-input');
-    if (dinamikInputlar.length > 0) {
-        urunVerisi.attributes = []; 
-        dinamikInputlar.forEach(input => {
-            const ruleId = parseInt(input.getAttribute('data-rule-id'));
-            const key = input.getAttribute('data-rule-key');
-            const type = input.getAttribute('data-rule-type');
-            let val = "";
-            
-            if (type === "radio") {
-                const checked = input.querySelector('input[type="radio"]:checked');
-                if (checked) val = checked.value;
-            } else if (type === "checkbox_group") {
-                const checkedBoxes = Array.from(input.querySelectorAll('input[type="checkbox"]:checked')).map(cb => cb.value);
-                if (checkedBoxes.length > 0) val = checkedBoxes.join(", ");
-            } else if (type === "boolean") {
-                const checkbox = input.querySelector('input[type="checkbox"]');
-                val = checkbox.checked ? "true" : "false";
-            } else if (type === "range_slider") {
-                val = input.querySelector('input[type="range"]').value;
-            } else if (type === "discrete_slider") {
-                val = input.querySelector('input[type="hidden"]').value;
-            } else if (type === "color_picker") {
-                const checkedRb = input.querySelector('.color-radio-item:checked');
-                if (checkedRb) val = checkedRb.value;
-                else val = input.querySelector('input[type="color"]')?.value || "";
-            } else {
-                val = input.value;
-            }
-            
-            if (ruleId && key && val !== "") {
-                urunVerisi.attributes.push({
-                    ruleId: ruleId,
-                    key: key,
-                    value: val
-                });
-            }
-        });
-    }
+        const dinamikInputlar = document.querySelectorAll('.dynamic-rule-input');
+        if (dinamikInputlar.length > 0) {
+            urunVerisi.attributes = [];
+            dinamikInputlar.forEach(input => {
+                const ruleId = parseInt(input.getAttribute('data-rule-id'));
+                const key = input.getAttribute('data-rule-key');
+                const type = input.getAttribute('data-rule-type');
+                let val = "";
+
+                if (type === "radio") {
+                    const checked = input.querySelector('input[type="radio"]:checked');
+                    if (checked) val = checked.value;
+                } else if (type === "checkbox_group") {
+                    const checkedBoxes = Array.from(input.querySelectorAll('input[type="checkbox"]:checked')).map(cb => cb.value);
+                    if (checkedBoxes.length > 0) val = checkedBoxes.join(", ");
+                } else if (type === "boolean") {
+                    const checkbox = input.querySelector('input[type="checkbox"]');
+                    val = checkbox.checked ? "true" : "false";
+                } else if (type === "range_slider") {
+                    val = input.querySelector('input[type="range"]').value;
+                } else if (type === "discrete_slider") {
+                    val = input.querySelector('input[type="hidden"]').value;
+                } else if (type === "color_picker") {
+                    const checkedRb = input.querySelector('.color-radio-item:checked');
+                    if (checkedRb) val = checkedRb.value;
+                    else val = input.querySelector('input[type="color"]')?.value || "";
+                } else {
+                    val = input.value;
+                }
+
+                if (ruleId && key && val !== "") {
+                    urunVerisi.attributes.push({
+                        ruleId: ruleId,
+                        key: key,
+                        value: val
+                    });
+                }
+            });
+        }
 
         const metod = id ? "PUT" : "POST";
         const adres = id ? `/products/${id}` : '/products';
@@ -934,7 +939,7 @@ if (btnUrunKaydetEl) {
 
             urunleriYukle(currentPage);
             btnKaydet.disabled = false;
-            btnKaydet.innerText = "Ekle ve Kaydet";            
+            btnKaydet.innerText = "Ekle ve Kaydet";
         } catch (hata) {
             hataGoster("İşlem başarısız: " + hata.message);
             btnKaydet.disabled = false;
@@ -1004,7 +1009,7 @@ function urunDuzenle(id) {
                             let formattedValue = Number(attr.value).toFixed(decimals);
                             range.value = formattedValue;
                             const numberInput = document.getElementById(`val_${attr.ruleId}`);
-                            if(numberInput) numberInput.value = formattedValue;
+                            if (numberInput) numberInput.value = formattedValue;
                         }
                     } else if (type === 'discrete_slider') {
                         const range = input.querySelector(`input[type="range"]`);
@@ -1049,13 +1054,20 @@ function urunDuzenle(id) {
 
 if (tabloGovdesi) {
     tabloGovdesi.addEventListener("click", (e) => {
+        const btnPrint = e.target.closest(".btn-print-barcode");
         const btnDuzenle = e.target.closest(".btn-duzenle");
         const btnSil = e.target.closest(".btn-sil");
         const btnIncele = e.target.closest(".btn-incele");
 
-        if (btnIncele) urunDetayAc(parseInt(btnIncele.getAttribute("data-id")), { tedarikciYonetimi: hasPermission("Supplier.Edit") });
-        else if (btnDuzenle) urunDuzenle(parseInt(btnDuzenle.getAttribute("data-id")));
-        else if (btnSil) urunSil(parseInt(btnSil.getAttribute("data-id")));
+        if (btnPrint) {
+            openBarcodePrintModal(btnPrint.getAttribute("data-barcode"), btnPrint.getAttribute("data-name"));
+        } else if (btnIncele) {
+            urunDetayAc(parseInt(btnIncele.getAttribute("data-id")), { tedarikciYonetimi: hasPermission("Supplier.Edit") });
+        } else if (btnDuzenle) {
+            urunDuzenle(parseInt(btnDuzenle.getAttribute("data-id")));
+        } else if (btnSil) {
+            urunSil(parseInt(btnSil.getAttribute("data-id")));
+        }
     });
 }
 
@@ -1180,8 +1192,8 @@ document.getElementById('filtreKategoriId')?.addEventListener('change', async fu
                     let lblMax = document.getElementById(`filter_max_lbl_${id}`);
 
                     let format = {
-                        to: function(value) { return String(optionsArr[Math.round(value)] || ''); },
-                        from: function(value) { return optionsArr.indexOf(String(value)); }
+                        to: function (value) { return String(optionsArr[Math.round(value)] || ''); },
+                        from: function (value) { return optionsArr.indexOf(String(value)); }
                     };
 
                     noUiSlider.create(el, {
@@ -1197,8 +1209,8 @@ document.getElementById('filtreKategoriId')?.addEventListener('change', async fu
                     el.noUiSlider.on('update', function (values, handle) {
                         let minIdx = optionsArr.indexOf(values[0]);
                         let maxIdx = optionsArr.indexOf(values[1]);
-                        if(minIdx === -1) minIdx = 0;
-                        if(maxIdx === -1) maxIdx = optionsArr.length - 1;
+                        if (minIdx === -1) minIdx = 0;
+                        if (maxIdx === -1) maxIdx = optionsArr.length - 1;
 
                         if (handle === 0 && lblMin) lblMin.innerText = optionsArr[minIdx];
                         if (handle === 1 && lblMax) lblMax.innerText = optionsArr[maxIdx];
@@ -1222,7 +1234,7 @@ document.getElementById('filtreKategoriId')?.addEventListener('change', async fu
                     if (isNaN(max)) max = 1000;
                     if (min >= max) max = min + 100;
                     let step = parseFloat(el.dataset.step) || 1;
-                    
+
                     let isDec = step < 1;
                     noUiSlider.create(el, {
                         start: [min, max],
@@ -1235,14 +1247,14 @@ document.getElementById('filtreKategoriId')?.addEventListener('change', async fu
                             from: function (value) { return Number(value); }
                         }
                     });
-                    
+
                     let minIn = document.getElementById(`filter_min_${id}`);
                     let maxIn = document.getElementById(`filter_max_${id}`);
-                    
+
                     el.noUiSlider.on('update', function (values, handle) {
-                        if (handle === 0) { if(minIn) minIn.value = values[0]; }
-                        else { if(maxIn) maxIn.value = values[1]; }
-                        
+                        if (handle === 0) { if (minIn) minIn.value = values[0]; }
+                        else { if (maxIn) maxIn.value = values[1]; }
+
                         let currentMin = parseFloat(values[0]);
                         let currentMax = parseFloat(values[1]);
                         if (currentMin === min && currentMax === max) {
@@ -1251,17 +1263,17 @@ document.getElementById('filtreKategoriId')?.addEventListener('change', async fu
                             hidden.value = `${minIn ? minIn.value : values[0]}-${maxIn ? maxIn.value : values[1]}`;
                         }
                     });
-                    
+
                     el.noUiSlider.on('change', function () {
                         hidden.dispatchEvent(new Event('input'));
                     });
 
-                    if (minIn) minIn.addEventListener('change', function() { 
-                        el.noUiSlider.set([this.value, null]); 
+                    if (minIn) minIn.addEventListener('change', function () {
+                        el.noUiSlider.set([this.value, null]);
                         hidden.dispatchEvent(new Event('input'));
                     });
-                    if (maxIn) maxIn.addEventListener('change', function() { 
-                        el.noUiSlider.set([null, this.value]); 
+                    if (maxIn) maxIn.addEventListener('change', function () {
+                        el.noUiSlider.set([null, this.value]);
                         hidden.dispatchEvent(new Event('input'));
                     });
                 }
@@ -1297,7 +1309,7 @@ document.getElementById('btnFiltreleriTemizle')?.addEventListener('click', () =>
         catSelect.value = '';
         const event = new Event('change');
         catSelect.dispatchEvent(event);
-        
+
         // Kategori arayüzünü (Cascader) görsel olarak baştan çizerek sıfırla
         if (typeof buildCategoryCascader === 'function') {
             buildCategoryCascader('filtreKategoriContainer', 'filtreKategoriId', null, true);
@@ -1322,7 +1334,7 @@ async function generateSku() {
         const key = input.getAttribute('data-rule-key');
         const type = input.getAttribute('data-rule-type');
         let val = "";
-        
+
         if (type === "radio") {
             const checked = input.querySelector('input[type="radio"]:checked');
             if (checked) val = checked.value;
@@ -1348,14 +1360,14 @@ async function generateSku() {
         } else {
             val = input.value;
         }
-        
+
         if (ruleId && key && val !== "") {
             attributes.push({ ruleId: ruleId, key: key, value: val });
         }
     });
 
     const btn = document.getElementById("btnSkuUret");
-    if(btn) {
+    if (btn) {
         btn.disabled = true;
         btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Üretiliyor...';
     }
@@ -1372,7 +1384,7 @@ async function generateSku() {
     } catch (hata) {
         hataGoster("SKU üretilirken hata oluştu: " + hata.message);
     } finally {
-        if(btn) {
+        if (btn) {
             btn.disabled = false;
             btn.innerHTML = '<i class="bi bi-magic"></i> SKU Üret';
         }
@@ -1390,4 +1402,157 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('btnExportExcel')?.addEventListener('click', exportProductsToExcel);
     document.getElementById('btnExportPdf')?.addEventListener('click', exportProductsToPDF);
     document.getElementById('btnExportCsv')?.addEventListener('click', exportProductsToCSV);
+});
+
+// =========================================================================
+// BARKOD ÇİZİM VE YAZDIRMA (PRINT) İŞLEMLERİ
+// =========================================================================
+function openBarcodePrintModal(barcode, productName) {
+    document.getElementById("barcodeProductName").textContent = productName;
+
+    // JsBarcode kütüphanesi ile SVG elementine Code128 formatında çizim yapıyoruz
+    JsBarcode("#barcodeCanvas", barcode, {
+        format: "CODE128",
+        lineColor: "#000",
+        width: 2,
+        height: 80,
+        displayValue: true,
+        fontSize: 16,
+        margin: 10
+    });
+
+    const modalInstance = bootstrap.Modal.getOrCreateInstance(document.getElementById('barcodePrintModal'));
+    modalInstance.show();
+}
+
+function printBarcode() {
+    const printContent = document.getElementById('printArea').innerHTML;
+    const productName = document.getElementById("barcodeProductName").textContent;
+
+    const bugun = new Date().toLocaleString('tr-TR', {
+        day: '2-digit', month: '2-digit', year: 'numeric',
+        hour: '2-digit', minute: '2-digit'
+    });
+
+    // Yeni ve temiz bir yazdırma penceresi açıyoruz
+    const printWindow = window.open('', '', 'width=600,height=400');
+
+    printWindow.document.write(`
+        <!DOCTYPE html>
+        <html lang="tr">
+        <head>
+            <title>Etiket</title>
+            <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+            <link href="css/style.css" rel="stylesheet">
+        </head>
+        <body class="d-flex flex-column justify-content-center align-items-center bg-white vh-100 m-0 p-0 overflow-hidden text-center">
+            
+            <!-- Üst Kısım: Tarih -->
+            <div class="text-muted fw-bold mb-2 fs-07rem ls-1px">
+                ${bugun}
+            </div>
+            
+            <!-- Orta Kısım: Barkod Görseli -->
+            ${printContent}
+            
+            <!-- Alt Kısım: Ürün Adı -->
+            <div class="mt-2 fw-bold text-dark fs-6">
+                ${escapeHtml(productName)}
+            </div>
+
+        </body>
+        </html>
+    `);
+
+    printWindow.document.close();
+    printWindow.focus();
+
+    setTimeout(() => {
+        printWindow.print();
+        printWindow.close();
+    }, 500);
+}
+
+// Barkod Yazdırma (Print) Butonu Event Listener'ı (CSP Uyumlu)
+document.getElementById('btnPrintBarcodeAction')?.addEventListener('click', printBarcode);
+
+// =========================================================================
+// KAMERA İLE ARAMA VE DETAY OTO-AÇILIŞ ENTEGRASYONU
+// =========================================================================
+const barcodeBeepSound = new Audio('audio/beep-07.wav');
+
+document.getElementById('btnKameraAcUrunler')?.addEventListener('click', async () => {
+    const btnKameraAc = document.getElementById("btnKameraAcUrunler");
+    const scannerModalEl = document.getElementById("scannerModalUrunler");
+    const durumEl = document.getElementById('kameraDurumUrunler');
+    const originalHtml = btnKameraAc ? btnKameraAc.innerHTML : '';
+
+    if (btnKameraAc) {
+        btnKameraAc.disabled = true;
+        btnKameraAc.innerHTML = `<span class="spinner-border spinner-border-sm"></span>`;
+    }
+
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        stream.getTracks().forEach(track => track.stop());
+
+        btnKameraAc.disabled = false;
+        btnKameraAc.innerHTML = originalHtml;
+
+        const scannerModalInstance = bootstrap.Modal.getOrCreateInstance(scannerModalEl);
+        scannerModalInstance.show();
+
+        if (durumEl) {
+            durumEl.textContent = "Kamera başlatılıyor...";
+            durumEl.className = "text-center text-muted small mt-3 fw-bold";
+        }
+
+        // scanner.js motorunu başlatıyoruz
+        if (typeof startScanner === 'function') {
+            startScanner("readerUrunler", (scannedText) => {
+                barcodeBeepSound.currentTime = 0;
+                barcodeBeepSound.play().catch(() => { });
+
+                if (durumEl) {
+                    durumEl.textContent = `Barkod Okundu: ${scannedText}. Ürün aranıyor...`;
+                    durumEl.className = "text-center text-success small mt-3 fw-bold";
+                }
+
+                // Kamerayı durdur ve modalı kapat
+                stopScanner();
+                setTimeout(() => scannerModalInstance.hide(), 400);
+
+                // Arama kutusuna yaz ve filtrelemeyi tetikle
+                const aramaKutusu = document.getElementById('aramaKutusu');
+                if (aramaKutusu) {
+                    aramaKutusu.value = scannedText;
+                    aktifArama = scannedText.toLowerCase();
+                    veriyiGuncelle();
+                }
+
+                // Okunan barkod ile eşleşen ürünü bul ve Detay Modalını doğrudan göster
+                const bulunanUrun = tumUrunler.find(u => (u.barcode || "").toLowerCase() === scannedText.toLowerCase());
+
+                if (bulunanUrun) {
+                    setTimeout(() => {
+                        urunDetayAc(bulunanUrun.id, { tedarikciYonetimi: hasPermission("Supplier.Edit") });
+                    }, 800);
+                } else {
+                    setTimeout(() => uyariGoster("Okutulan barkoda ait ürün sistemde bulunamadı!"), 800);
+                }
+
+            }, () => {
+                if (durumEl && durumEl.className.includes("text-muted")) durumEl.textContent = "Barkod aranıyor, kameraya gösterin...";
+            });
+        }
+    } catch (error) {
+        btnKameraAc.disabled = false;
+        btnKameraAc.innerHTML = originalHtml;
+        uyariGoster("Kameraya erişilemedi! Lütfen tarayıcı izinlerini kontrol edin.");
+    }
+});
+
+// Modal kapandığında kamerayı güvenli bir şekilde kapatır
+document.getElementById('scannerModalUrunler')?.addEventListener('hidden.bs.modal', () => {
+    if (typeof stopScanner === 'function') stopScanner();
 });
