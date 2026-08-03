@@ -44,120 +44,150 @@ function getAltKategoriIdleri(parentId) {
 // =========================================================================
 // VERİ GÜNCELLEME, FİLTRELEME VE ÖZET MOTORU
 // =========================================================================
-function veriyiGuncelle() {
-    const seciliKategoriId = document.getElementById("filtreKategoriId")?.value;
+const productView = createDataView({
+    containerId: "urunTablosuGovdesi",
+    paginationContainerId: "paginationContainer",
+    mode: 'table',
+    emptyColspan: 7,
+    emptyMessage: "Kayıt bulunamadı.",
+    pageSize: 10,
+    fetchPage: async (page, size) => {
+        if (!tumUrunler || tumUrunler.length === 0) {
+            const data = await apiRequest('/products?pageNumber=1&pageSize=1000', 'GET');
+            tumUrunler = data.items || data || [];
+        }
 
-    // Aktif dinamik filtreleri topla
-    const dynamicFilters = [];
-    document.querySelectorAll('.kural-filtresi').forEach(input => {
-        const filterType = input.getAttribute('data-filter-type') || 'text';
+        const seciliKategoriId = document.getElementById("filtreKategoriId")?.value;
+        const dynamicFilters = [];
+        document.querySelectorAll('.kural-filtresi').forEach(input => {
+            const filterType = input.getAttribute('data-filter-type') || 'text';
 
-        if (filterType === 'multi_select') {
-            let secilenler = [];
-            try { secilenler = JSON.parse(input.value || '[]'); } catch (e) { secilenler = []; }
-            if (secilenler.length > 0) {
+            if (filterType === 'multi_select') {
+                let secilenler = [];
+                try { secilenler = JSON.parse(input.value || '[]'); } catch (e) { secilenler = []; }
+                if (secilenler.length > 0) {
+                    dynamicFilters.push({
+                        ruleId: parseInt(input.getAttribute('data-rule-id') || '0'),
+                        key: input.getAttribute('data-rule-key'),
+                        type: 'multi_select',
+                        value: secilenler.map(v => String(v).toLocaleLowerCase("tr-TR").trim())
+                    });
+                }
+                return;
+            }
+
+            if (input.value && input.value.trim() !== '') {
                 dynamicFilters.push({
                     ruleId: parseInt(input.getAttribute('data-rule-id') || '0'),
                     key: input.getAttribute('data-rule-key'),
-                    type: 'multi_select',
-                    value: secilenler.map(v => String(v).toLocaleLowerCase("tr-TR").trim())
+                    type: filterType,
+                    value: input.value.toLocaleLowerCase("tr-TR").trim()
                 });
             }
-            return;
-        }
+        });
 
-        if (input.value && input.value.trim() !== '') {
-            dynamicFilters.push({
-                ruleId: parseInt(input.getAttribute('data-rule-id') || '0'),
-                key: input.getAttribute('data-rule-key'),
-                type: filterType,
-                value: input.value.toLocaleLowerCase("tr-TR").trim()
-            });
-        }
-    });
+        filtreliUrunler = tumUrunler.filter(urun => {
+            const textMatch =
+                (urun.name && urun.name.toLowerCase().includes(aktifArama)) ||
+                (urun.barcode && urun.barcode.toLowerCase().includes(aktifArama)) ||
+                (urun.categoryName && urun.categoryName.toLowerCase().includes(aktifArama)) ||
+                (urun.id && urun.id.toString().includes(aktifArama));
+            if (!textMatch) return false;
 
-    filtreliUrunler = tumUrunler.filter(urun => {
-        // 1. Genel Metin Araması
-        const textMatch =
-            (urun.name && urun.name.toLowerCase().includes(aktifArama)) ||
-            (urun.barcode && urun.barcode.toLowerCase().includes(aktifArama)) ||
-            (urun.categoryName && urun.categoryName.toLowerCase().includes(aktifArama)) ||
-            (urun.id && urun.id.toString().includes(aktifArama));
-        if (!textMatch) return false;
-
-        // 2. Kategori Filtresi (Alt kategorileri de kapsar)
-        if (seciliKategoriId) {
-            const gecerliIdler = getAltKategoriIdleri(seciliKategoriId);
-            if (!gecerliIdler.includes(urun.categoryId)) {
-                return false;
+            if (seciliKategoriId) {
+                const gecerliIdler = getAltKategoriIdleri(seciliKategoriId);
+                if (!gecerliIdler.includes(urun.categoryId)) {
+                    return false;
+                }
             }
-        }
 
-        // 3. Dinamik Özellik Filtreleri
-        if (dynamicFilters.length > 0) {
-            if (!urun.attributes || !Array.isArray(urun.attributes)) return false;
+            if (dynamicFilters.length > 0) {
+                if (!urun.attributes || !Array.isArray(urun.attributes)) return false;
 
-            for (let filter of dynamicFilters) {
-                // API either sends ruleId or key. We'll check both for robustness.
-                const attr = urun.attributes.find(a => (a.ruleId && a.ruleId === filter.ruleId) || (a.key && a.key === filter.key));
-                if (!attr) return false;
+                for (let filter of dynamicFilters) {
+                    const attr = urun.attributes.find(a => (a.ruleId && a.ruleId === filter.ruleId) || (a.key && a.key === filter.key));
+                    if (!attr) return false;
 
-                if (filter.type === 'range') {
-                    // Range filter value is "min-max"
-                    const parts = filter.value.split('-');
-                    if (parts.length === 2) {
-                        const min = parseFloat(parts[0]);
-                        const max = parseFloat(parts[1]);
-                        const attrVal = parseFloat(attr.value);
-                        if (isNaN(attrVal) || attrVal < min || attrVal > max) {
+                    if (filter.type === 'range') {
+                        const parts = filter.value.split('-');
+                        if (parts.length === 2) {
+                            const min = parseFloat(parts[0]);
+                            const max = parseFloat(parts[1]);
+                            const attrVal = parseFloat(attr.value);
+                            if (isNaN(attrVal) || attrVal < min || attrVal > max) {
+                                return false;
+                            }
+                        }
+                    } else if (filter.type === 'discrete_range') {
+                        try {
+                            const validValues = JSON.parse(filter.value);
+                            if (!validValues.includes((attr.value ?? '').toString().toLowerCase())) {
+                                return false;
+                            }
+                        } catch(e) {
                             return false;
                         }
-                    }
-                } else if (filter.type === 'discrete_range') {
-                    try {
-                        const validValues = JSON.parse(filter.value);
-                        if (!validValues.includes((attr.value ?? '').toString().toLowerCase())) {
+                    } else if (filter.type === 'multi_select') {
+                        const selectedValues = filter.value; 
+                        if (selectedValues.length > 0) { 
+                            const attrVal = (attr.value ?? "").toString().toLocaleLowerCase("tr-TR"); 
+                            const match = selectedValues.some(v => attrVal.includes(v)); 
+                            if (!match) return false; 
+                        }
+                    } else {
+                        if (!(attr.value ?? "").toString().toLocaleLowerCase("tr-TR").includes(filter.value)) {
                             return false;
                         }
-                    } catch(e) {
-                        return false;
-                    }
-                } else if (filter.type === 'multi_select') {
-                    const selectedValues = filter.value; if (selectedValues.length > 0) { const attrVal = (attr.value ?? "").toString().toLocaleLowerCase("tr-TR"); const match = selectedValues.some(v => attrVal.includes(v)); if (!match) return false; }
-                } else {
-                    if (!(attr.value ?? "").toString().toLocaleLowerCase("tr-TR").includes(filter.value)) {
-                        return false;
                     }
                 }
             }
-        }
+            return true;
+        });
 
-        return true;
-    });
+        filtreliUrunler.sort((a, b) => {
+            let degerA = a[siralamaSutunu] != null ? a[siralamaSutunu] : '';
+            let degerB = b[siralamaSutunu] != null ? b[siralamaSutunu] : '';
 
-    filtreliUrunler.sort((a, b) => {
-        let degerA = a[siralamaSutunu] != null ? a[siralamaSutunu] : '';
-        let degerB = b[siralamaSutunu] != null ? b[siralamaSutunu] : '';
+            if (typeof degerA === 'string') {
+                return siralamaYonu === 'asc' ? degerA.localeCompare(degerB) : degerB.localeCompare(degerA);
+            } else {
+                return siralamaYonu === 'asc' ? degerA - degerB : degerB - degerA;
+            }
+        });
 
-        if (typeof degerA === 'string') {
-            return siralamaYonu === 'asc' ? degerA.localeCompare(degerB) : degerB.localeCompare(degerA);
-        } else {
-            return siralamaYonu === 'asc' ? degerA - degerB : degerB - degerA;
-        }
-    });
+        kategoriOzetiniGuncelle(filtreliUrunler);
 
-    const yeniToplamSayfa = Math.ceil(filtreliUrunler.length / pageSize) || 1;
-    if (currentPage > yeniToplamSayfa) currentPage = yeniToplamSayfa;
+        const start = (page - 1) * size;
+        return {
+            items: filtreliUrunler.slice(start, start + size),
+            totalItems: filtreliUrunler.length
+        };
+    },
+    renderRow: (urun) => {
+        let btnIncele = `<button class="btn btn-sm btn-outline-info rounded-pill btn-incele me-1" title="Detayları Gör" data-id="${urun.id}"><i class="bi bi-eye"></i> Görüntüle</button>`;
+        let btnDuzenle = hasPermission("Product.Edit") ? `<button class="btn btn-sm btn-outline-primary rounded-pill btn-duzenle me-1" data-id="${urun.id}">Düzenle</button>` : "";
+        let btnSil = hasPermission("Product.Delete") ? `<button class="btn btn-sm btn-outline-danger rounded-pill btn-sil" data-id="${urun.id}">Sil</button>` : "";
+        let aksiyonButonlari = `<td class="text-end">${btnIncele} ${btnDuzenle} ${btnSil}</td>`;
 
-    const baslangic = (currentPage - 1) * pageSize;
-    const bitis = baslangic + pageSize;
-    const sayfadakiVeriler = filtreliUrunler.slice(baslangic, bitis);
+        return `
+            <tr>
+                <td class="text-muted small">${tarihFormatla(urun.createdAt)}</td>
+                <td>${escapeHtml(urun.name)}</td>
+                <td>${escapeHtml(urun.barcode)}</td>
+                <td>${urun.minStockLevel}</td>
+                <td>${escapeHtml(urun.categoryName)}</td>
+                <td>
+                    <span class="badge ${urun.stockQuantity <= urun.minStockLevel ? 'bg-danger text-danger' : 'bg-success text-success'} bg-opacity-10 border ${urun.stockQuantity <= urun.minStockLevel ? 'border-danger' : 'border-success'} px-2 py-1 rounded-pill">
+                        ${urun.stockQuantity} Adet
+                    </span>
+                </td>
+                ${aksiyonButonlari}
+            </tr>`;
+    }
+});
 
-    tabloyuCiz(sayfadakiVeriler);
-    sayfalamayiCiz();
-
-    // Senin eklediğin Özet Bilgi Fonksiyonunu Çağırıyoruz
-    kategoriOzetiniGuncelle(filtreliUrunler);
+function veriyiGuncelle() {
+    productView.load(1);
 }
 
 // Tablonun altına filtrelenen ürün çeşidini ve TOPLAM STOK ADEDİNİ yazar (Senin özelliğin)
@@ -353,10 +383,8 @@ if (aramaKutusuEl) {
 async function urunleriYukle(page = 1) {
     try {
         const sonuc = await apiRequest('/products?pageNumber=1&pageSize=1000', 'GET');
-        tumUrunler = sonuc.items || sonuc;
-        currentPage = page;
-
-        veriyiGuncelle();
+        tumUrunler = sonuc.items || sonuc || [];
+        productView.load(page);
     } catch (hata) {
         if (tabloGovdesi) {
             tabloGovdesi.innerHTML = `<tr><td colspan="7" class="text-center text-danger py-4">Ürünler yüklenemedi. (${hata.message})</td></tr>`;
@@ -810,59 +838,7 @@ if (urunKategoriSelectForm) {
 // =========================================================================
 // TABLO ÇİZİMİ, MODALLAR VE SİLME/DÜZENLEME
 // =========================================================================
-function tabloyuCiz(urunler) {
-    if (!tabloGovdesi) return;
-    tabloGovdesi.innerHTML = "";
 
-    if (urunler.length === 0) {
-        tabloGovdesi.innerHTML = `<tr><td colspan="7" class="text-center text-muted py-4">Kayıt bulunamadı.</td></tr>`;
-        return;
-    }
-
-    let satirlar = [];
-    urunler.forEach(urun => {
-        let btnIncele = `<button class="btn btn-sm btn-outline-info rounded-pill btn-incele me-1" title="Detayları Gör" data-id="${urun.id}"><i class="bi bi-eye"></i> Görüntüle</button>`;
-        let btnDuzenle = hasPermission("Product.Edit") ? `<button class="btn btn-sm btn-outline-primary rounded-pill btn-duzenle me-1" data-id="${urun.id}">Düzenle</button>` : "";
-        let btnSil = hasPermission("Product.Delete") ? `<button class="btn btn-sm btn-outline-danger rounded-pill btn-sil" data-id="${urun.id}">Sil</button>` : "";
-        let aksiyonButonlari = `<td class="text-end">${btnIncele} ${btnDuzenle} ${btnSil}</td>`;
-
-        const satir = `
-            <tr>
-                <td class="text-muted small">${tarihFormatla(urun.createdAt)}</td>
-                <td>${escapeHtml(urun.name)}</td>
-                <td>${escapeHtml(urun.barcode)}</td>
-                <td>${urun.minStockLevel}</td>
-                <td>${escapeHtml(urun.categoryName)}</td>
-                <td>
-                    <span class="badge ${urun.stockQuantity <= urun.minStockLevel ? 'bg-danger text-danger' : 'bg-success text-success'} bg-opacity-10 border ${urun.stockQuantity <= urun.minStockLevel ? 'border-danger' : 'border-success'} px-2 py-1 rounded-pill">
-                        ${urun.stockQuantity} Adet
-                    </span>
-                </td>
-                ${aksiyonButonlari}
-            </tr>`;
-        satirlar.push(satir);
-    });
-    tabloGovdesi.innerHTML = satirlar.join("");
-}
-
-
-function sayfalamayiCiz() {
-    buildPagination(
-        "paginationContainer", 
-        filtreliUrunler.length, 
-        currentPage, 
-        pageSize, 
-        (newPage) => {
-            currentPage = newPage;
-            veriyiGuncelle();
-        },
-        (newSize) => {
-            pageSize = newSize;
-            currentPage = 1;
-            veriyiGuncelle();
-        }
-    );
-}
 
 const btnUrunKaydetEl = document.getElementById("btnUrunKaydet");
 if (btnUrunKaydetEl) {

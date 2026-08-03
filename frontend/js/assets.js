@@ -664,52 +664,27 @@ async function submitCreateAsset() {
 // ==========================================
 // ADMİNLER İÇİN GRİD KART MOTORU
 // ==========================================
-// Fonksiyon dışarıdan bir 'page' (sayfa) parametresi alıyor.
-async function loadGridCards(page = 1) {
-    currentGridPage = page;
-    const gridContainer = document.getElementById("equipmentGridCards");
-    gridContainer.innerHTML = '<div class="col-12 text-center text-muted"><div class="spinner-border text-primary"></div><br>Ekipmanlar yükleniyor...</div>';
-
-    try {
-        const response = await apiRequest(`/assets?pageNumber=${page}&pageSize=${currentGridPageSize}`, 'GET');
+const assetGrid = createDataView({
+    containerId: "equipmentGridCards",
+    paginationContainerId: "assetsPaginationContainer",
+    mode: 'grid',
+    emptyMessage: "Sistemde henüz kayıtlı ekipman yok.",
+    pageSize: 8,
+    fetchPage: async (page, pageSize) => {
+        const response = await apiRequest(`/assets?pageNumber=${page}&pageSize=${pageSize}`, 'GET');
         const assets = response.assets || response;
         const totalRecords = response.totalRecords || (assets ? assets.length : 0);
+        return {
+            items: assets || [],
+            totalItems: totalRecords
+        };
+    },
+    renderCard: buildAssetCardHtml
+});
 
-        if (!assets || assets.length === 0) {
-            gridContainer.innerHTML = '<div class="col-12 text-center text-muted"><i class="bi bi-inbox fs-1"></i><p>Sistemde henüz kayıtlı ekipman yok.</p></div>';
-            const paginationContainer = document.getElementById("assetsPaginationContainer");
-            if (paginationContainer) paginationContainer.innerHTML = "";
-            return;
-        }
-
-        // createElement ile tarayıcıyı yormak yerine, 
-        // verileri dışarıdaki bağımsız HTML oluşturucuya (buildAssetCardHtml) gönderip metin olarak birleştiriyoruz.
-        const cardsHtml = assets.map(asset => buildAssetCardHtml(asset)).join('');
-
-        // Birleştirilen HTML'i tek bir seferde ekrana basıyoruz.
-        gridContainer.innerHTML = cardsHtml;
-
-        // Sayfalama Modülünü Grid Modunda (isGrid = true) Tetikle
-        if (typeof buildPagination === 'function') {
-            buildPagination(
-                "assetsPaginationContainer",
-                totalRecords,
-                page,
-                currentGridPageSize,
-                (newPage) => loadGridCards(newPage),
-                (newSize) => {
-                    currentGridPageSize = newSize;
-                    loadGridCards(1);
-                },
-                true // 'isGrid' parametresi! (8, 24, 48 çıkar)
-            );
-        }
-
-    } catch (error) {
-        gridContainer.innerHTML = `<div class="col-12 text-center text-danger">Yüklenirken hata oluştu: ${error.message}</div>`;
-        const paginationContainer = document.getElementById("assetsPaginationContainer");
-        if (paginationContainer) paginationContainer.innerHTML = "";
-    }
+async function loadGridCards(page = 1) {
+    currentGridPage = page;
+    assetGrid.load(page);
 }
 
 // ==========================================

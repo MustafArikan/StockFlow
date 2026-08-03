@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="tr">
 
 <head>
@@ -35,26 +35,28 @@
 
                 <!-- Arama ve filtreleme alanlarını oluşturur -->
                 <div class="row mb-4 align-items-center mt-3">
-                    <div class="col-md-6">
+                    <div class="col-md-4">
                         <div class="position-relative">
-                            <span
-                                class="position-absolute top-50 translate-middle-y ms-3 text-muted pointer-events-none">🔍</span>
-                            <input type="text" id="aramaKutusu" class="form-control rounded-pill ps-5"
-                                placeholder="Ürün Adı, Kodu veya Personel Ara...">
+                            <span class="position-absolute top-50 translate-middle-y ms-3 text-muted pointer-events-none">🔍</span>
+                            <input type="text" id="aramaKutusu" class="form-control rounded-pill ps-5" placeholder="Ürün Adı, Kodu veya Personel Ara...">
                         </div>
                     </div>
-                    <div class="col-md-6 text-md-end mt-3 mt-md-0 d-flex gap-2 justify-content-md-end">
-                        <button id="btnTumu"
-                            class="btn btn-secondary btn-sm rounded-pill px-3 shadow-sm filtre-elemani">Tümü</button>
-                        <button id="btnGirisler"
-                            class="btn btn-outline-success btn-sm rounded-pill px-3 shadow-sm filtre-elemani">Stok
-                            Girişleri</button>
-                        <button id="btnCikislar"
-                            class="btn btn-outline-danger btn-sm rounded-pill px-3 shadow-sm filtre-elemani">Stok
-                            Çıkışları</button>
-                        <button id="btnTransferler"
-                            class="btn btn-outline-info btn-sm rounded-pill px-3 shadow-sm filtre-elemani">Stok
-                            Transferleri</button>
+                    <div class="col-md-3">
+                        <input type="date" id="startDate" class="form-control rounded-pill" title="Başlangıç Tarihi">
+                    </div>
+                    <div class="col-md-3">
+                        <input type="date" id="endDate" class="form-control rounded-pill" title="Bitiş Tarihi">
+                    </div>
+                    <div class="col-md-2 mt-3 mt-md-0 d-flex justify-content-md-end">
+                        <button id="filtreUygula" class="btn btn-primary rounded-pill w-100 shadow-sm">Filtrele</button>
+                    </div>
+                </div>
+                <div class="row mb-4">
+                    <div class="col-12 d-flex gap-2 justify-content-md-end">
+                        <button id="btnTumu" class="btn btn-secondary btn-sm rounded-pill px-3 shadow-sm filtre-elemani">Tümü</button>
+                        <button id="btnGirisler" class="btn btn-outline-success btn-sm rounded-pill px-3 shadow-sm filtre-elemani">Stok Girişleri</button>
+                        <button id="btnCikislar" class="btn btn-outline-danger btn-sm rounded-pill px-3 shadow-sm filtre-elemani">Stok Çıkışları</button>
+                        <button id="btnTransferler" class="btn btn-outline-info btn-sm rounded-pill px-3 shadow-sm filtre-elemani">Stok Transferleri</button>
                     </div>
                 </div>
                
@@ -73,12 +75,12 @@
                                 <th id="thPersonel" class="text-center user-select-none sortable-th">Personel ↕</th>
                             </tr>
                         </thead>
-                        <tbody id="hareketTablosuGövdesi"></tbody>
+                        <tbody id="stokHareketleriGovdesi"></tbody>
                     </table>
                 </div>
 
                 <!-- Sayfalama butonlarını barındırır -->
-                <div id="paginationContainer"></div>
+                <div id="hareketSayfalamaContainer"></div>
             </div>
         </div>
     </div>
@@ -247,6 +249,7 @@
     <script src="js/security-utils.js"></script>
     <script src="js/table-utils.js"></script>
     <script src="js/config.js"></script>
+    <script src="js/data-view-engine.js"></script>
     <script src="js/scanner.js"></script>
     <script src="js/movements.js"></script>
     <script src="js/auth.js"></script>

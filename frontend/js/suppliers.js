@@ -3,95 +3,43 @@ const token = localStorage.getItem('token');
 if (!token) window.location.href = 'login.html';
 
 let tumTedarikciler = [];
-let filtreliTedarikciler = [];
 const tabloGovdesi = document.getElementById("tedarikciTablosuGovdesi");
-let currentPage = 1;
-let pageSize = 10;
-let aktifArama = '';
-let siralamaSutunu = 'id';
-let siralamaYonu = 'asc';
 
-
-
-
-// ---- Liste + arama + sıralama + sayfalama ----
-function veriyiGuncelle() {
-    const q = aktifArama.trim().toLowerCase();
-
-    filtreliTedarikciler = tumTedarikciler.filter(t => {
-        if (!q) return true;
-        return (t.name && t.name.toLowerCase().includes(q)) ||
-               (t.contactName && t.contactName.toLowerCase().includes(q)) ||
-               (t.contactPhone && t.contactPhone.toLowerCase().includes(q)) ||
-               (t.taxNumber && t.taxNumber.toString().toLowerCase().includes(q)) ||
-               (t.id && t.id.toString().includes(q));
-    });
-
-    filtreliTedarikciler.sort((a, b) => {
-        let dA = a[siralamaSutunu] != null ? a[siralamaSutunu] : '';
-        let dB = b[siralamaSutunu] != null ? b[siralamaSutunu] : '';
-        if (typeof dA === 'string') {
-            return siralamaYonu === 'asc' ? dA.localeCompare(dB) : dB.localeCompare(dA);
-        }
-        return siralamaYonu === 'asc' ? dA - dB : dB - dA;
-    });
-
-    const totalItems = filtreliTedarikciler.length;
-    const toplamSayfa = Math.ceil(totalItems / pageSize) || 1;
-    if (currentPage > toplamSayfa) currentPage = toplamSayfa;
-
-    const bas = (currentPage - 1) * pageSize;
-    const bitis = Math.min(bas + pageSize, totalItems);
-    const sayfadaki = filtreliTedarikciler.slice(bas, bitis);
-
-    tabloyuCiz(sayfadaki);
-    
-    const container = document.getElementById("paginationContainer");
-    if (container) {
-        if (toplamSayfa > 0) {
-            container.innerHTML = buildPaginationHtml(totalItems, currentPage, pageSize, toplamSayfa, bas + 1, bitis);
-        } else {
-            container.innerHTML = "";
-        }
+const supplierView = createDataView({
+    containerId: "tedarikciTablosuGovdesi",
+    paginationContainerId: "paginationContainer",
+    mode: 'table',
+    emptyColspan: 6,
+    emptyMessage: "Kayıt bulunamadı.",
+    searchFields: ['name', 'contactName', 'contactPhone', 'taxNumber', 'id'],
+    defaultSortKey: 'id',
+    defaultSortDir: 'asc',
+    pageSize: 10,
+    renderRow: (t) => {
+        const duzenlenebilir = hasPermission("Supplier.Edit");
+        const silinebilir = hasPermission("Supplier.Delete");
+        let aksiyon = "";
+        aksiyon += `<button class="btn btn-sm btn-outline-info rounded-pill btn-goruntule me-1" data-id="${t.id}">Görüntüle</button>`;
+        if (duzenlenebilir) aksiyon += `<button class="btn btn-sm btn-outline-primary rounded-pill btn-duzenle me-1" data-id="${t.id}">Düzenle</button>`;
+        if (silinebilir) aksiyon += `<button class="btn btn-sm btn-outline-danger rounded-pill btn-sil" data-id="${t.id}">Sil</button>`;
+        const aksiyonTd = `<td class="text-end">${aksiyon}</td>`;
+        return `
+            <tr>
+                <td class="fw-bold text-muted small">${tarihFormatla(t.createdAt)}</td>
+                <td class="fw-bold">${escapeHtml(t.name)}</td>
+                <td>${escapeHtml(t.contactName) || '<span class="text-muted">-</span>'}</td>
+                <td>${escapeHtml(t.contactPhone) || '<span class="text-muted">-</span>'}</td>
+                <td>${escapeHtml(t.taxNumber) || '<span class="text-muted">-</span>'}</td>
+                ${aksiyonTd}
+            </tr>`;
     }
-}
+});
 
-function sirala(sutun) {
-    if (siralamaSutunu === sutun) {
-        siralamaYonu = siralamaYonu === 'asc' ? 'desc' : 'asc';
-    } else {
-        siralamaSutunu = sutun;
-        siralamaYonu = 'asc';
-    }
-    veriyiGuncelle();
-}
-
-document.getElementById("thId")?.addEventListener("click", () => sirala("id"));
-document.getElementById("thAd")?.addEventListener("click", () => sirala("name"));
+document.getElementById("thId")?.addEventListener("click", () => supplierView.setSort("id"));
+document.getElementById("thAd")?.addEventListener("click", () => supplierView.setSort("name"));
 
 document.getElementById("aramaKutusu")?.addEventListener("keyup", (e) => {
-    aktifArama = e.target.value;
-    currentPage = 1;
-    veriyiGuncelle();
-});
-
-document.getElementById("paginationContainer")?.addEventListener("click", (e) => {
-    const btn = e.target.closest(".page-action");
-    if (btn) {
-        e.preventDefault();
-        const li = btn.closest(".page-item");
-        if (li && (li.classList.contains("disabled") || li.classList.contains("active"))) return;
-        const page = parseInt(btn.getAttribute("data-page"));
-        if (!isNaN(page)) { currentPage = page; veriyiGuncelle(); }
-    }
-});
-
-document.getElementById("paginationContainer")?.addEventListener("change", (e) => {
-    if (e.target.classList.contains("page-size-action")) {
-        pageSize = parseInt(e.target.value);
-        currentPage = 1;
-        veriyiGuncelle();
-    }
+    supplierView.setSearch(e.target.value);
 });
 
 async function tedarikcileriYukle() {
@@ -112,7 +60,7 @@ async function tedarikcileriYukle() {
 
         const sonuc = await cevap.json();
         tumTedarikciler = sonuc.items || sonuc; // GET /suppliers düz dizi döner
-        veriyiGuncelle();
+        supplierView.setItems(tumTedarikciler);
     } catch (hata) {
         tabloGovdesi.innerHTML = `<tr><td colspan="6" class="text-center text-danger py-4">Tedarikçiler yüklenemedi. (${escapeHtml(hata.message)})</td></tr>`;
         const p = document.getElementById("paginationContainer");
@@ -120,39 +68,7 @@ async function tedarikcileriYukle() {
     }
 }
 
-function tabloyuCiz(liste) {
-    tabloGovdesi.innerHTML = "";
-
-    if (!liste.length) {
-        tabloGovdesi.innerHTML = `<tr><td colspan="6" class="text-center text-muted py-4">Kayıt bulunamadı.</td></tr>`;
-        return;
-    }
-
-    const duzenlenebilir = hasPermission("Supplier.Edit");
-    const silinebilir = hasPermission("Supplier.Delete");
-
-    let html = "";
-    liste.forEach(t => {
-        let aksiyon = "";
-        aksiyon += `<button class="btn btn-sm btn-outline-info rounded-pill btn-goruntule me-1" data-id="${t.id}">Görüntüle</button>`;
-        if (duzenlenebilir) aksiyon += `<button class="btn btn-sm btn-outline-primary rounded-pill btn-duzenle me-1" data-id="${t.id}">Düzenle</button>`;
-        if (silinebilir) aksiyon += `<button class="btn btn-sm btn-outline-danger rounded-pill btn-sil" data-id="${t.id}">Sil</button>`;
-        
-
-        const aksiyonTd = `<td class="text-end">${aksiyon}</td>`;
-
-        html += `
-            <tr>
-                <td class="fw-bold text-muted small">${tarihFormatla(t.createdAt)}</td>
-                <td class="fw-bold">${escapeHtml(t.name)}</td>
-                <td>${escapeHtml(t.contactName) || '<span class="text-muted">-</span>'}</td>
-                <td>${escapeHtml(t.contactPhone) || '<span class="text-muted">-</span>'}</td>
-                <td>${escapeHtml(t.taxNumber) || '<span class="text-muted">-</span>'}</td>
-                ${aksiyonTd}
-            </tr>`;
-    });
-    tabloGovdesi.innerHTML = html;
-}
+// tabloyuCiz motora taşındı
 
 // ---- Ekle / Düzenle (kaydet) ----
 document.getElementById("btnTedarikciKaydet")?.addEventListener("click", async () => {

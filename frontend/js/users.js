@@ -75,86 +75,29 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 });
 
-let currentPage = 1;
-let pageSize = 10;
 let sistemRolleri = [];
 
-async function rolleriGetir() {
-    try {
-        const response = await fetch(`${CONFIG.API_BASE_URL}/roles`, {
-            headers: { "Authorization": `Bearer ${localStorage.getItem("token")}` }
-        });
-        if (response.ok) {
-            sistemRolleri = await response.json();
-            const selectEl = document.getElementById("role");
-            if (selectEl) {
-                selectEl.innerHTML = '<option value="">Seçiniz...</option>';
-                sistemRolleri.forEach(r => {
-                    selectEl.innerHTML += `<option value="${r.id}">${escapeHtml(r.name)}</option>`;
-                });
-            }
-        }
-    } catch (e) {
-        console.error("Roller getirilemedi", e);
-    }
-}
-
-async function kullanicilariGetir() {
-    try {
-        const response = await fetch(`${CONFIG.API_BASE_URL}/users?pageNumber=${currentPage}&pageSize=${pageSize}`, {
-            headers: {
-                "Authorization": `Bearer ${localStorage.getItem("token")}`
-            }
-        });
-
-        if (response.status === 403 || response.status === 401) {
-             throw new Error("Yetkisiz erişim. Lütfen tekrar giriş yapın.");
-        }
-
-        const text = await response.text();
-        if (!text) {
-             throw new Error(`Sunucu boş yanıt döndürdü (HTTP ${response.status})`);
-        }
-        
-        let data;
+const userView = createDataView({
+    containerId: "kullaniciTablosuGovdesi",
+    paginationContainerId: "kullanicilarPaginationContainer",
+    mode: 'table',
+    emptyColspan: 6,
+    emptyMessage: "Hiç kullanıcı bulunamadı.",
+    pageSize: 10,
+    fetchPage: async (page, size) => {
         try {
-            data = JSON.parse(text);
-        } catch (e) {
-            console.error("Geçersiz JSON Yanıtı:", text);
-            throw new Error("Sunucudan geçersiz bir yanıt geldi (JSON hatası). Konsolu kontrol edin.");
+            const response = await apiRequest(`/users?pageNumber=${page}&pageSize=${size}`, 'GET');
+            return {
+                items: response.items || response || [],
+                totalItems: response.totalRecords || (response.items ? response.items.length : (response.length || 0))
+            };
+        } catch (error) {
+            Swal.fire('Hata', error.message || 'Kullanıcılar yüklenemedi.', 'error');
+            return { items: [], totalItems: 0 };
         }
-
-        if (!response.ok) {
-            throw new Error(data.message || `Sunucu hatası: HTTP ${response.status}`);
-        }
-
-        tabloyuDoldur(data.items || []);
-        buildPagination("kullanicilarPaginationContainer", data.totalRecords || 0, data.currentPage || 1, pageSize, (newPage) => {
-            currentPage = newPage;
-            kullanicilariGetir();
-        }, (newSize) => {
-            pageSize = newSize;
-            currentPage = 1;
-            kullanicilariGetir();
-        });
-    } catch (error) {
-        Swal.fire('Hata', error.message, 'error');
-    }
-}
-
-function tabloyuDoldur(users) {
-    const tbody = document.getElementById("kullaniciTablosuGovdesi");
-    tbody.innerHTML = "";
-
-    if (users.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="7" class="text-center text-muted">Hiç kullanıcı bulunamadı.</td></tr>`;
-        return;
-    }
-
-    users.forEach(user => {
-        const tr = document.createElement("tr");
+    },
+    renderRow: (user) => {
         const kayitTarihi = new Date(user.createdAt).toLocaleString("tr-TR");
-
         let actionsHtml = "";
         
         if (hasPerm("SecurityAuditLog.View")) {
@@ -175,18 +118,43 @@ function tabloyuDoldur(users) {
             </button>`;
         }
 
-        tr.innerHTML = `
-            <td>${escapeHtml(user.firstName)} ${escapeHtml(user.lastName)}</td>
-            <td>${escapeHtml(user.email)}</td>
-            <td>${escapeHtml(user.phoneNumber || "-")}</td>
-            <td><span class="badge bg-secondary px-2 py-1">${escapeHtml(user.role)}</span></td>
-            <td>${kayitTarihi}</td>
-            <td class="text-end">
-                ${actionsHtml}
-            </td>
+        return `
+            <tr>
+                <td>${escapeHtml(user.firstName)} ${escapeHtml(user.lastName)}</td>
+                <td>${escapeHtml(user.email)}</td>
+                <td>${escapeHtml(user.phoneNumber || "-")}</td>
+                <td><span class="badge bg-secondary px-2 py-1">${escapeHtml(user.role)}</span></td>
+                <td>${kayitTarihi}</td>
+                <td class="text-end">
+                    ${actionsHtml}
+                </td>
+            </tr>
         `;
-        tbody.appendChild(tr);
-    });
+    }
+});
+
+async function kullanicilariGetir() {
+    userView.load(1);
+}
+
+async function rolleriGetir() {
+    try {
+        const response = await fetch(`${CONFIG.API_BASE_URL}/roles`, {
+            headers: { "Authorization": `Bearer ${localStorage.getItem("token")}` }
+        });
+        if (response.ok) {
+            sistemRolleri = await response.json();
+            const selectEl = document.getElementById("role");
+            if (selectEl) {
+                selectEl.innerHTML = '<option value="">Seçiniz...</option>';
+                sistemRolleri.forEach(r => {
+                    selectEl.innerHTML += `<option value="${r.id}">${escapeHtml(r.name)}</option>`;
+                });
+            }
+        }
+    } catch (e) {
+        console.error("Roller getirilemedi", e);
+    }
 }
 
 async function degistirKullaniciRolu(userId, newRoleId) {
