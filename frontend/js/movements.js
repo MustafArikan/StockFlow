@@ -69,11 +69,13 @@ const hareketView = createDataView({
         let uId = hareket.userId || hareket.id;
 
         if (uId) {
+            let kisiAdElementi = `<a href="#" class="text-decoration-none fw-bold text-primary" data-action="view-profile" data-user-id="${uId}">${escapeHtml(kisiIsmi)}</a>`;
             finalKisiHtml = `
             <div class="d-flex flex-column align-items-center justify-content-center">
                 ${kisiAdElementi}
                 ${kisiMail ? `<small class="text-muted text-truncate mw-150 fs-075rem">${escapeHtml(kisiMail)}</small>` : ''}
             </div>`;
+        }
 
         return `
             <tr>
@@ -84,7 +86,6 @@ const hareketView = createDataView({
                 <td class="fw-bold text-center align-middle ${adetRengi}">${adetIsareti}${hareket.quantity}</td>
                 <td class="text-center align-middle">${finalKisiHtml}</td>
             </tr>`;
-        }
     }
 });
 
