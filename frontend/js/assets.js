@@ -156,6 +156,54 @@ function initEventListeners() {
         }
     });
 
+    // YENİ EKİPMAN MODALINI KAPANDIĞINDA SIFIRLAMA     
+    document.getElementById('createAssetModal')?.addEventListener('hidden.bs.modal', () => {
+        const productSelect = document.getElementById('newAssetProduct');
+        const serialInput = document.getElementById('newAssetSerial');
+        const notesInput = document.getElementById('newAssetNotes');
+
+        if (productSelect) productSelect.value = '';
+        if (serialInput) serialInput.value = '';
+        if (notesInput) notesInput.value = '';
+
+        // WMS Dropdown'larını Kilitle ve Boşalt
+        if (typeof StockUtils !== 'undefined') {
+            StockUtils._resetDropdown('newAssetSourceWarehouse', 'Önce ürün seçiniz...', true);
+            StockUtils._resetDropdown('newAssetSourceLocation', 'Önce depo seçiniz...', true);
+        }
+
+        // Butonu eski haline getir
+        const btnEkle = document.getElementById('btnSubmitCreateAsset');
+        if (btnEkle) {
+            btnEkle.disabled = false;
+            btnEkle.innerHTML = 'Sisteme Kaydet';
+        }
+    });
+
+    // KULLANIMDAN KALDIRMA MODALI KAPANDIĞINDA SIFIRLAMA
+    document.getElementById('deleteAssetModal')?.addEventListener('hidden.bs.modal', () => {
+        const stockSwitch = document.getElementById('returnToStockSwitch');
+        if (stockSwitch) {
+            stockSwitch.checked = true;
+            stockSwitch.dispatchEvent(new Event('change')); // Etiketi günceller
+        }
+
+        document.getElementById('deleteAssetTargetWarehouse').value = '';
+        document.getElementById('targetLocationStockInfo').classList.add('d-none');
+
+        if (typeof StockUtils !== 'undefined') {
+            StockUtils._resetDropdown('deleteAssetTargetLocation', 'Önce depo seçin...', true);
+        }
+    });
+
+    // TÜM AKSİYON MODALLARI KAPANDIĞINDA İÇİNDEKİLERİ SİL
+    const actionModals = ['assignAssetModal', 'returnAssetModal', 'breakdownModal', 'resolveModal', 'maintenanceModal'];
+    actionModals.forEach(modalId => {
+        document.getElementById(modalId)?.addEventListener('hidden.bs.modal', function () {
+            this.querySelectorAll('textarea, input[type="date"], select').forEach(el => el.value = '');
+        });
+    });
+
     // KAMERA 1: ARAMA EKRANI İÇİN
     initSearchCamera();
 
@@ -583,14 +631,11 @@ async function sendAssetAction(url, method, body) {
         const endpoint = url.replace(CONFIG.API_BASE_URL, '');
         const result = await apiRequest(endpoint, method, body) || {};
 
-        // Açık olan modal penceresini kapat
-        document.querySelectorAll('.modal').forEach(m => {
-            const modalInstance = bootstrap.Modal.getInstance(m);
-            if (modalInstance) modalInstance.hide();
-        });
-
-        // Form alanlarını temizler
-        document.querySelectorAll('.modal textarea, .modal input[type="date"]').forEach(el => el.value = '');
+        // Sadece ekranda aktif olarak açık olan modalı bul ve kapat
+        const activeModalEl = document.querySelector('.modal.show');
+        if (activeModalEl) {
+            bootstrap.Modal.getInstance(activeModalEl).hide();
+        }
 
         // Ekrana başarı mesajı ver ve Timeline'ı (Zaman çizelgesini) güncelle!
         basariToast("Harika! " + (result.message || "İşlem başarıyla tamamlandı."));
@@ -639,17 +684,6 @@ async function submitCreateAsset() {
         // Modalı kapatır
         const modalInstance = bootstrap.Modal.getInstance(document.getElementById('createAssetModal'));
         if (modalInstance) modalInstance.hide();
-
-        // Formu temizler
-        document.getElementById('newAssetProduct').value = '';
-        document.getElementById('newAssetSerial').value = '';
-        document.getElementById('newAssetNotes').value = '';
-
-        // Dropdownları resetler
-        if (typeof StockUtils !== 'undefined') {
-            StockUtils._resetDropdown('newAssetSourceWarehouse', 'Önce ürün seçiniz...', true);
-            StockUtils._resetDropdown('newAssetSourceLocation', 'Önce depo seçiniz...', true);
-        }
 
         // Sadece yetkisi olanlar için Grid'i YENİLER ve bitmesini BEKLER
         if (["admin", "superadmin"].includes(userRole)) {
@@ -815,19 +849,7 @@ async function submitDeleteAsset() {
 
         currentAssetId = null;
         currentAssetProductId = null;
-        currentAssetSerialNumber = null; // Cihaz silinince hafızayı tamamen temizler
-
-        const stockSwitch = document.getElementById('returnToStockSwitch');
-        if (stockSwitch) {
-            stockSwitch.checked = true;
-            stockSwitch.dispatchEvent(new Event('change'));
-        }
-
-        document.getElementById('deleteAssetTargetWarehouse').value = ''; // Depoyu temizler
-
-        if (typeof StockUtils !== 'undefined') {
-            StockUtils._resetDropdown('deleteAssetTargetLocation', 'Önce depo seçin...', true); // Rafı temizler
-        }
+        currentAssetSerialNumber = null; // Cihaz silinince hafızayı tamamen temizler        
 
         if (["admin", "superadmin"].includes(userRole)) {
             document.getElementById('adminGridContainer').classList.remove('d-none');
