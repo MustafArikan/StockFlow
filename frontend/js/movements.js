@@ -581,7 +581,7 @@ async function kullaniciProfiliGoster(userId) {
 
 // Yetkiye göre buton/kolon gizleme
 document.addEventListener("DOMContentLoaded", () => {
-    if (typeof hasPermission === "function" && !hasPermission("Movement.Add")) {
+    if (typeof hasPermission === "function" && !hasPermission("Movement.Inbound") && !hasPermission("Movement.Outbound") && !hasPermission("Movement.Transfer")) {
         const btnYeniIslem = document.getElementById("btnYeniIslem");
         if (btnYeniIslem) btnYeniIslem.classList.add('d-none');
     }

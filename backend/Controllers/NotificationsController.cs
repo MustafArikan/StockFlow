@@ -47,8 +47,7 @@ namespace stok_takip.Controllers
 
             if (notification.Severity == "DANGER" || notification.Severity == "EMPTY_STOCK")
             {
-                var userRole = User.FindFirst(ClaimTypes.Role)?.Value;
-                if (userRole != "admin")
+                if (!User.IsInRole("admin") && !User.IsInRole("superadmin"))
                 {
                     return BadRequest(new { message = "Only administrators can dismiss DANGER or EMPTY_STOCK alerts. Please contact your manager." });
                 }
