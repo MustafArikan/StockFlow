@@ -1,6 +1,8 @@
 using stok_takip.Constants;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using stok_takip.Attributes;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using stok_takip.Data;
 using System.Linq;
@@ -10,7 +12,8 @@ namespace stok_takip.Controllers
 {
     [ApiController]
     [Route("api/audit-logs")]
-    [Authorize(Policy = Policies.RequireAuditLogRead)]
+    [RequirePermission(Policies.RequireAuditLogRead)]
+    [EnableRateLimiting(Policies.RequireAuditLogRead)]
     public class AuditLogsController : ControllerBase
     {
         private readonly AppDbContext _context;
@@ -57,7 +60,8 @@ namespace stok_takip.Controllers
         }
 
         [HttpGet("user/{userId}")]
-        [Authorize(Policy = Policies.RequireAuditLogRead)]
+        [RequirePermission(Policies.RequireAuditLogRead)]
+        [EnableRateLimiting(Policies.RequireAuditLogRead)]
         public async Task<IActionResult> GetByUserId(int userId, [FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 50)
         {
             var query = _context.SecurityAuditLogs.AsNoTracking().Where(l => l.UserId == userId);
