@@ -243,6 +243,7 @@ public async Task<IActionResult> GetMe()
             firstName = user.FirstName,
             lastName = user.LastName,
             phoneNumber = user.PhoneNumber,
+            identityNumber = user.IdentityNumber,
             role = user.Role.Name,
             createdAt = user.CreatedAt,
         });
@@ -277,6 +278,7 @@ public async Task<IActionResult> GetMe()
         user.FirstName = dto.FirstName;
         user.LastName = dto.LastName;
         user.PhoneNumber = dto.PhoneNumber;
+        user.IdentityNumber = dto.IdentityNumber;
 
         await _context.SaveChangesAsync();
 
@@ -284,7 +286,8 @@ public async Task<IActionResult> GetMe()
             firstName = user.FirstName,
             lastName = user.LastName,  
             email = user.Email,
-            phoneNumber = user.PhoneNumber
+            phoneNumber = user.PhoneNumber,
+            identityNumber = user.IdentityNumber
             });
     }
 

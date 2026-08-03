@@ -59,6 +59,7 @@ public class UsersController : ControllerBase
                 u.FirstName,
                 u.LastName,
                 u.PhoneNumber,
+                u.IdentityNumber,
                 RoleId = u.RoleId,
                 Role = u.Role.Name,
                 u.IsEmailConfirmed,
@@ -88,6 +89,7 @@ public class UsersController : ControllerBase
                 u.FirstName,
                 u.LastName,
                 u.PhoneNumber,
+                u.IdentityNumber,
                 RoleId = u.RoleId,
                 Role = u.Role.Name,
                 u.IsEmailConfirmed,
@@ -179,6 +181,7 @@ public class UsersController : ControllerBase
             LastName = dto.LastName,
             Email = dto.Email,
             PhoneNumber = dto.PhoneNumber,
+            IdentityNumber = dto.IdentityNumber,
             RoleId = dto.RoleId,
             IsEmailConfirmed = true, // Superadmin tarafından oluşturulan kullanıcılar için e-posta doğrulamasını atlıyoruz
             CreatedAt = DateTime.UtcNow
@@ -236,6 +239,7 @@ public class UsersController : ControllerBase
         user.LastName = dto.LastName;
         user.Email = dto.Email;
         user.PhoneNumber = dto.PhoneNumber;
+        user.IdentityNumber = dto.IdentityNumber;
         user.RoleId = dto.RoleId;
 
         if (!string.IsNullOrEmpty(dto.Password))
