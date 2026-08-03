@@ -10,11 +10,14 @@ function escapeHtml(text) {
 }
 
 let currentAssetId = null;
+let currentAssetProductId = null;
+let currentAssetSerialNumber = null; //Uygulamanın baktığı cihazı unutmaması için
 let currentGridPage = 1;
 let currentGridPageSize = 8; // Izgara tasarımı için varsayılan 8
 const userRole = typeof getUserRole === "function" ? getUserRole() : "User";
 const token = localStorage.getItem('token');
 if (!token) window.location.href = 'login.html';
+const barcodeBeepSound = new Audio('audio/beep-07.wav');
 
 // ==========================================
 // SAYFA YÜKLENDİĞİNDE ÇALIŞACAKLAR 
@@ -55,6 +58,10 @@ function applyPermissions() {
         document.querySelector('[data-bs-target="#assignAssetModal"]')?.classList.add('d-none');
         document.querySelector('[data-bs-target="#returnAssetModal"]')?.classList.add('d-none');
     }
+
+    if (!hasPermission("Asset.Delete")) {
+        document.querySelector('[data-bs-target="#deleteAssetModal"]')?.classList.add('d-none');
+    }
 }
 
 // MERKEZİ OLAY DİNLEYİCİLERİ
@@ -79,13 +86,45 @@ function initEventListeners() {
     document.getElementById('btnSubmitResolve')?.addEventListener('click', submitResolve);
     document.getElementById('btnSubmitMaintenance')?.addEventListener('click', submitMaintenance);
 
-    // Silme butonu dinleyicisi eklendi
+    // Kullanımdan kaldırma butonu dinleyicisi eklendi
     document.getElementById('btnSubmitDeleteAsset')?.addEventListener('click', submitDeleteAsset);
 
-    // Akıllı Cascading Dropdown Dinleyicileri (WMS Entegrasyonu)
+    // Akıllı Cascading Dropdown Dinleyicileri (WMS Entegrasyonu)    
     document.getElementById('newAssetProduct')?.addEventListener('change', async function () {
+        const selectedProductId = this.value;
+
+        // Eğer ürün seçimi kaldırıldıysa/boşaltıldıysa, depoları ve rafları sıfırla
+        if (!selectedProductId) {
+            if (typeof StockUtils !== 'undefined' && typeof StockUtils._resetDropdown === 'function') {
+                StockUtils._resetDropdown('newAssetSourceWarehouse', 'Önce ürün seçiniz...', true);
+                StockUtils._resetDropdown('newAssetSourceLocation', 'Önce depo seçiniz...', true);
+            }
+            return;
+        }
+
+        // Bütün işi Ortak WMS Motoru (StockUtils) yapar
         if (typeof StockUtils !== 'undefined') {
-            await StockUtils.loadSmartWarehousesForProduct(this.value, 'newAssetSourceWarehouse', 'newAssetSourceLocation');
+            await StockUtils.loadSmartWarehousesForProduct(selectedProductId, 'newAssetSourceWarehouse', 'newAssetSourceLocation');
+        }
+    });
+
+    document.getElementById('deleteAssetTargetLocation')?.addEventListener('change', async function () {
+        const infoDiv = document.getElementById('targetLocationStockInfo');
+        const valSpan = document.getElementById('targetLocationStockValue');
+
+        if (this.value && currentAssetProductId) {
+            try {
+                // Seçilen ürünün, seçilen raftaki stok durumunu getiriyoruz
+                const stockData = await apiRequest(`/stock-levels/by-product/${currentAssetProductId}`, 'GET');
+                const rafStogu = stockData.find(s => s.locationId === parseInt(this.value, 10));
+
+                valSpan.textContent = rafStogu ? rafStogu.quantity : "0";
+                infoDiv.classList.remove('d-none');
+            } catch (e) {
+                infoDiv.classList.add('d-none');
+            }
+        } else {
+            infoDiv.classList.add('d-none');
         }
     });
 
@@ -101,10 +140,20 @@ function initEventListeners() {
         }
     });
 
+    // STOKA GERİ AL SWITCH DİNAMİK METİN DİNLEYİCİSİ ---
     document.getElementById('returnToStockSwitch')?.addEventListener('change', function () {
+        const label = document.getElementById('returnToStockLabel');
         const targetGroup = document.getElementById('returnTargetLocationGroup');
-        if (this.checked) targetGroup.classList.remove('d-none');
-        else targetGroup.classList.add('d-none');
+
+        if (this.checked) {
+            // Switch AÇIK iken:
+            label.innerHTML = 'Stoka Geri Al <span class="text-success small">(Stok miktarını artırır)</span>';
+            if (targetGroup) targetGroup.classList.remove('d-none'); // Depo/Raf seçimini gösterir
+        } else {
+            // Switch KAPALI iken:
+            label.innerHTML = 'Stoka Geri Alma <span class="text-danger small">(Stok miktarını artırmaz)</span>';
+            if (targetGroup) targetGroup.classList.add('d-none'); // Depo/Raf seçimini gizler
+        }
     });
 
     // KAMERA 1: ARAMA EKRANI İÇİN
@@ -118,12 +167,15 @@ function initEventListeners() {
 function initSearchCamera() {
     const btnKameraAcAsset = document.getElementById("btnKameraAcAsset");
     const scannerModalEl = document.getElementById("scannerModalAsset");
+    const originalHtml = btnKameraAcAsset ? btnKameraAcAsset.innerHTML : '';
 
     btnKameraAcAsset?.addEventListener("click", async () => {
         const durumEl = document.getElementById('kameraDurumAsset');
-        const originalHtml = btnKameraAcAsset.innerHTML;
-        btnKameraAcAsset.disabled = true;
-        btnKameraAcAsset.innerHTML = `<span class="spinner-border spinner-border-sm"></span>`;
+
+        if (btnKameraAcAsset) {
+            btnKameraAcAsset.disabled = true;
+            btnKameraAcAsset.innerHTML = `<span class="spinner-border spinner-border-sm"></span>`;
+        }
 
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ video: true });
@@ -141,7 +193,8 @@ function initSearchCamera() {
             }
 
             startScanner("readerAsset", (scannedText) => {
-                new Audio('https://www.soundjay.com/button/beep-07.wav').play().catch(() => { });
+                barcodeBeepSound.currentTime = 0; // Sesi başa sarar
+                barcodeBeepSound.play().catch(() => { }); // Sesi çalar
                 document.getElementById('serialSearchInput').value = scannedText;
                 if (durumEl) {
                     durumEl.textContent = "Barkod Okundu! Yönlendiriliyor...";
@@ -167,10 +220,10 @@ function initAddAssetCamera() {
     const btnKameraKapatEkle = document.getElementById("btnKameraKapatEkle");
     const kameraAlaniEkle = document.getElementById("kameraAlaniEkle");
     const inputNewAssetSerial = document.getElementById("newAssetSerial");
+    const defaultBtnHtml = btnKameraAcEkle ? btnKameraAcEkle.innerHTML : '';
 
     btnKameraAcEkle?.addEventListener("click", async () => {
         if (btnKameraAcEkle.disabled) return;
-        const originalText = btnKameraAcEkle.innerHTML;
         btnKameraAcEkle.disabled = true;
         btnKameraAcEkle.innerHTML = `<span class="spinner-border spinner-border-sm"></span> Bekleniyor...`;
 
@@ -179,10 +232,11 @@ function initAddAssetCamera() {
             stream.getTracks().forEach(track => track.stop());
 
             kameraAlaniEkle.classList.remove("d-none");
-            btnKameraAcEkle.innerHTML = originalText;
+            btnKameraAcEkle.innerHTML = defaultBtnHtml;
 
             startScanner("readerEkle", (scannedText) => {
-                new Audio('https://www.soundjay.com/button/beep-07.wav').play().catch(() => { });
+                barcodeBeepSound.currentTime = 0; // Sesi başa sarar
+                barcodeBeepSound.play().catch(() => { }); // Sesi çalar
                 inputNewAssetSerial.value = scannedText;
                 closeScannerEkle();
                 basariToast("Barkod başarıyla okundu!");
@@ -190,7 +244,7 @@ function initAddAssetCamera() {
         } catch (error) {
             uyariGoster("Kameraya erişilemedi!");
             btnKameraAcEkle.disabled = false;
-            btnKameraAcEkle.innerHTML = originalText;
+            btnKameraAcEkle.innerHTML = defaultBtnHtml;
         }
     });
 
@@ -201,7 +255,7 @@ function initAddAssetCamera() {
         kameraAlaniEkle?.classList.add("d-none");
         if (btnKameraAcEkle) {
             btnKameraAcEkle.disabled = false;
-            btnKameraAcEkle.innerHTML = `<i class="bi bi-upc-scan me-1"></i> Barkod Okut`;
+            btnKameraAcEkle.innerHTML = defaultBtnHtml;
         }
         stopScanner();
     }
@@ -209,6 +263,10 @@ function initAddAssetCamera() {
 
 // Grid Listesine Geri Dönüş Fonksiyonu
 async function goBackToGrid() {
+    currentAssetId = null;
+    currentAssetProductId = null;
+    currentAssetSerialNumber = null; // Geri dönünce hafızayı temizler
+
     document.getElementById('assetResultContainer').classList.add('d-none');
     document.getElementById('serialSearchInput').value = '';
 
@@ -231,18 +289,30 @@ async function loadProductsForDropdown() {
         const data = await apiRequest('/products?pageNumber=1&pageSize=1000', 'GET');
         select.length = 0;
 
-        if (data.items && data.items.length > 0) {
+        // API yanıtı data.items, data.products veya direkt array olabilir
+        const products = data.items || data.products || data.data || data;
+
+        if (Array.isArray(products) && products.length > 0) {
             select.add(new Option("-- Bir Ürün Seçin --", ""));
-            data.items.forEach(product => {
-                const stokText = product.stockQuantity ?? 'Bilinmiyor';
-                select.add(new Option(`${product.name} (Stok: ${stokText})`, product.id));
+            products.forEach(product => {
+                const stokText = product.stockQuantity ?? product.StockQuantity ?? 'Bilinmiyor';
+                const name = product.name ?? product.Name;
+                const id = product.id ?? product.Id;
+                select.add(new Option(`${name} (Stok: ${stokText})`, id));
             });
             select.disabled = false;
         } else {
             select.add(new Option("Kayıtlı ürün bulunamadı!", ""));
+            select.disabled = false;
         }
     } catch (e) {
         console.error("Ürünler yüklenirken hata:", e);
+        const select = document.getElementById('newAssetProduct');
+        if (select) {
+            select.length = 0;
+            select.add(new Option("Bağlantı Hatası!", ""));
+            select.disabled = false;
+        }
     }
 }
 
@@ -276,54 +346,101 @@ async function loadUsersForDropdown() {
 }
 
 async function searchAsset() {
-    const serial = document.getElementById('serialSearchInput').value.trim();
+    // 1. Arama kutusuna bak, 2. Boşsa hafızadaki cihaza bak
+    const inputSerial = document.getElementById('serialSearchInput').value.trim();
+    const serial = inputSerial || currentAssetSerialNumber; // EĞER INPUT BOŞSA HAFIZADAKİNİ KULLAN
     if (!serial) return;
 
     try {
         const data = await apiRequest(`/assets/${encodeURIComponent(serial)}/timeline`, 'GET');
         currentAssetId = data.assetInfo.id;
+        currentAssetProductId = data.assetInfo.productId;
+        currentAssetSerialNumber = data.assetInfo.serialNumber;
 
         document.getElementById('assetResultContainer').classList.remove('d-none');
         // Arama yapıldığında Grid'i gizle
         document.getElementById('adminGridContainer').classList.add('d-none');
 
-        // 1. Cihaz Profilini Doldur
+        // 1. Cihaz Profilini Doldur        
         document.getElementById('resProductName').textContent = data.assetInfo.productName;
         document.getElementById('resSerialNumber').textContent = data.assetInfo.serialNumber;
 
+        const status = data.assetInfo.status;
+        let detailIconColor = "text-primary";
+        let detailBgClass = "bg-primary bg-opacity-10";
+
+        if (status === 'Available') {
+            detailIconColor = "text-success";
+            detailBgClass = "bg-success bg-opacity-10";
+        }
+        else if (status === 'In Use') {
+            detailIconColor = "text-primary";
+            detailBgClass = "bg-primary bg-opacity-10";
+        }
+        else if (status === 'Broken') {
+            detailIconColor = "text-danger";
+            detailBgClass = "bg-danger bg-opacity-10";
+        }
+        else if (status === 'Retired') {
+            detailIconColor = "text-secondary opacity-50";
+            detailBgClass = "bg-secondary bg-opacity-10";
+        }
+
+        // HTML'de atadığımız ID'ler üzerinden doğrudan tam isabet eşleştirme
+        const iconContainer = document.getElementById('resIconContainer');
+        const iconElement = document.getElementById('resIconElement');
+
+        if (iconContainer) {
+            iconContainer.className = `d-inline-flex align-items-center justify-content-center ${detailBgClass} rounded-circle mb-3`;
+            iconContainer.style.width = "90px";
+            iconContainer.style.height = "90px";
+        }
+        if (iconElement) {
+            iconElement.className = `bi bi-laptop fs-1 ${detailIconColor}`;
+        }
+
         // Renkli Rozet Mantığı
         let statusBadge = `<span class="badge bg-secondary">Bilinmiyor</span>`;
-        if (data.assetInfo.status === 'Available') statusBadge = `<span class="badge bg-success px-3 py-2 fs-6 rounded-pill">Müsait (Boşta)</span>`;
-        else if (data.assetInfo.status === 'In Use') statusBadge = `<span class="badge bg-primary px-3 py-2 fs-6 rounded-pill">Kullanımda</span>`;
-        else if (data.assetInfo.status === 'Broken') statusBadge = `<span class="badge bg-danger px-3 py-2 fs-6 rounded-pill">Arızalı</span>`;
+        if (status === 'Available') statusBadge = `<span class="badge bg-success px-3 py-2 fs-6 rounded-pill">Müsait (Boşta)</span>`;
+        else if (status === 'In Use') statusBadge = `<span class="badge bg-primary px-3 py-2 fs-6 rounded-pill">Kullanımda</span>`;
+        else if (status === 'Broken') statusBadge = `<span class="badge bg-danger px-3 py-2 fs-6 rounded-pill">Arızalı</span>`;
+        else if (status === 'Retired') statusBadge = `<span class="badge bg-dark px-3 py-2 fs-6 rounded-pill"><i class="bi bi-slash-circle me-1"></i> Kullanım Dışı</span>`;
 
-        document.getElementById('resStatus').innerHTML = statusBadge;
+        const resStatusEl = document.getElementById('resStatus');
+        resStatusEl.innerHTML = statusBadge;
 
         if (data.assetInfo.nextMaintenanceDate) {
-            document.getElementById('resStatus').innerHTML += `<div class="mt-2"><small class="text-info fw-bold"><i class="bi bi-calendar-event"></i> Sonraki Bakım: ${new Date(data.assetInfo.nextMaintenanceDate).toLocaleDateString('tr-TR')}</small></div>`;
+            resStatusEl.innerHTML += `<div class="mt-2"><small class="text-info fw-bold"><i class="bi bi-calendar-event"></i> Sonraki Bakım: ${new Date(data.assetInfo.nextMaintenanceDate).toLocaleDateString('tr-TR')}</small></div>`;
         }
 
         document.getElementById('resAssignedTo').textContent = data.assetInfo.assignedTo;
 
-        // Cihazın durumuna göre mantıksız olan butonları gizle
-        const btnAssign = document.querySelector('[data-bs-target="#assignAssetModal"]');
-        const btnReturn = document.querySelector('[data-bs-target="#returnAssetModal"]');
-        const btnBreakdown = document.querySelector('[data-bs-target="#breakdownModal"]');
-        const btnResolve = document.querySelector('[data-bs-target="#resolveModal"]');
+        // Ekranda birden fazla buton varsa tümünü gizler
+        const btnAssign = document.querySelectorAll('[data-bs-target="#assignAssetModal"]');
+        const btnReturn = document.querySelectorAll('[data-bs-target="#returnAssetModal"]');
+        const btnBreakdown = document.querySelectorAll('[data-bs-target="#breakdownModal"]');
+        const btnResolve = document.querySelectorAll('[data-bs-target="#resolveModal"]');
+        const btnRetire = document.querySelectorAll('[data-bs-target="#deleteAssetModal"]');
+        const btnMaintenance = document.querySelectorAll('[data-bs-target="#maintenanceModal"]');
 
-        const status = data.assetInfo.status;
+        const canAssign = hasPermission("Asset.Assign");
+        const canEdit = hasPermission("Asset.Edit");
+        const canDelete = hasPermission("Asset.Delete");
 
-        // Müsait değilse "Ata" butonunu gizle
-        if (btnAssign) btnAssign.classList.toggle('d-none', status !== 'Available');
+        // Tüm liste öğeleri için güvenlik kapıları
+        btnAssign.forEach(btn => btn.classList.toggle('d-none', status !== 'Available' || !canAssign));
+        btnReturn.forEach(btn => btn.classList.toggle('d-none', status !== 'In Use' || !canAssign));
 
-        // Kullanımda değilse "Teslim Al" butonunu gizle
-        if (btnReturn) btnReturn.classList.toggle('d-none', status !== 'In Use');
+        // Kullanım Dışı ise Bakımı Gizler
+        btnMaintenance.forEach(btn => btn.classList.toggle('d-none', status === 'Retired' || !canEdit));
 
-        // Zaten arızalıysa "Arıza Bildir" butonunu gizle
-        if (btnBreakdown) btnBreakdown.classList.toggle('d-none', status === 'Broken');
+        btnBreakdown.forEach(btn => btn.classList.toggle('d-none', status === 'Broken' || status === 'Retired' || !canEdit));
+        btnResolve.forEach(btn => btn.classList.toggle('d-none', status !== 'Broken' || !canEdit));
 
-        // Arızalı değilse "Çözüm Gir (Tamir)" butonunu gizle
-        if (btnResolve) btnResolve.classList.toggle('d-none', status !== 'Broken');
+        btnRetire.forEach(btn => {
+            const wrapper = btn.closest('.border-top') || btn.parentElement;
+            if (wrapper) wrapper.classList.toggle('d-none', status === 'Retired' || !canDelete);
+        });
 
         // 2. Timeline (Zaman Çizelgesini) Çiz
         const timelineUl = document.getElementById('assetTimelineList');
@@ -375,7 +492,11 @@ async function searchAsset() {
 
         // Sonuç alanını göster, input'u temizle
         document.getElementById('assetResultContainer').classList.remove('d-none');
-        document.getElementById('serialSearchInput').value = '';
+
+        // Eğer arama gerçekten inputtan yapıldıysa inputu temizler
+        if (inputSerial) {
+            document.getElementById('serialSearchInput').value = '';
+        }
 
     } catch (error) {
         hataGoster(error.message);
@@ -400,7 +521,7 @@ async function submitAssignAsset() {
 
     // C# controller [HttpPut] beklediği için 'PUT' kullanıyoruz
     await sendAssetAction(`${CONFIG.API_BASE_URL}/assets/${currentAssetId}/assign`, 'PUT', {
-        userId: parseInt(userId),
+        userId: parseInt(userId, 10),
         notes: notes
     });
 }
@@ -468,8 +589,8 @@ async function sendAssetAction(url, method, body) {
             if (modalInstance) modalInstance.hide();
         });
 
-        // Form alanlarını temizle
-        document.querySelectorAll('textarea, input[type="date"]').forEach(el => el.value = '');
+        // Form alanlarını temizler
+        document.querySelectorAll('.modal textarea, .modal input[type="date"]').forEach(el => el.value = '');
 
         // Ekrana başarı mesajı ver ve Timeline'ı (Zaman çizelgesini) güncelle!
         basariToast("Harika! " + (result.message || "İşlem başarıyla tamamlandı."));
@@ -487,14 +608,23 @@ async function submitCreateAsset() {
     const notes = document.getElementById('newAssetNotes').value.trim();
     const locationId = document.getElementById('newAssetSourceLocation').value;
 
-    if (!productId || !serialNumber || !locationId) {
-        return uyariGoster("Lütfen Ürün, Seri Numarası ve Çıkış Yapılacak Rafı seçin!");
+    if (!productId) {
+        return uyariGoster("Lütfen kaydedilecek Ürünü seçiniz!");
+    }
+    if (!serialNumber) {
+        return uyariGoster("Lütfen ekipmanın Seri Numarasını veya Barkodunu giriniz!");
+    }
+    if (!locationId) {
+        return uyariGoster("Lütfen stoktan düşülecek Çıkış Rafını seçiniz!");
     }
 
     const btnEkle = document.getElementById('btnSubmitCreateAsset');
-    const originalText = btnEkle.innerHTML;
-    btnEkle.disabled = true;
-    btnEkle.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Kaydediliyor...';
+    const originalText = btnEkle ? btnEkle.innerHTML : '';
+
+    if (btnEkle) {
+        btnEkle.disabled = true;
+        btnEkle.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Kaydediliyor...';
+    }
 
     try {
         const result = await apiRequest('/assets', 'POST', {
@@ -532,8 +662,10 @@ async function submitCreateAsset() {
     } catch (e) {
         hataGoster("Bağlantı hatası: " + e.message);
     } finally {
-        btnEkle.disabled = false;
-        btnEkle.innerHTML = originalText;
+        if (btnEkle) {
+            btnEkle.disabled = false;
+            btnEkle.innerHTML = originalText;
+        }
     }
 }
 
@@ -592,22 +724,39 @@ async function loadGridCards(page = 1) {
 // KART HTML ÜRETİCİSİ (UI VE DATA AYRIMI)
 // ==========================================
 function buildAssetCardHtml(asset) {
+    // Tüm değişkenleri tek bir yerde başlatılır
     let statusText = "Bilinmiyor";
     let statusClass = "bg-secondary text-white";
     let iconColor = "text-primary";
+    let iconBgClass = "bg-secondary bg-opacity-10";
 
-    if (asset.status === 'Available') { statusText = "Boşta"; statusClass = "bg-success text-white"; iconColor = "text-success"; }
-    else if (asset.status === 'In Use') { statusText = "Kullanımda"; statusClass = "bg-primary text-white"; iconColor = "text-primary"; }
-    else if (asset.status === 'Broken') { statusText = "Arızalı"; statusClass = "bg-danger text-white"; iconColor = "text-danger"; }
+    // if-else bloğu ile tüm renk ve metinler aynı anda atanır
+    if (asset.status === 'Available') {
+        statusText = "Boşta"; statusClass = "bg-success text-white";
+        iconColor = "text-success"; iconBgClass = "bg-success bg-opacity-10";
+    }
+    else if (asset.status === 'In Use') {
+        statusText = "Kullanımda"; statusClass = "bg-primary text-white";
+        iconColor = "text-primary"; iconBgClass = "bg-primary bg-opacity-10";
+    }
+    else if (asset.status === 'Broken') {
+        statusText = "Arızalı"; statusClass = "bg-danger text-white";
+        iconColor = "text-danger"; iconBgClass = "bg-danger bg-opacity-10";
+    }
+    else if (asset.status === 'Retired') {
+        statusText = "Kullanım Dışı"; statusClass = "bg-dark text-white";
+        iconColor = "text-secondary opacity-50"; iconBgClass = "bg-secondary bg-opacity-10";
+    }
 
-    const personelAdi = asset.assignedToName ?? "Şu an Boşta";
+    // Eğer cihaz kullanımdan kaldırılmışsa personeli boş göster, değilse atanmış kişiyi yaz
+    const personelAdi = asset.status === 'Retired' ? "Kullanımdan Kaldırıldı" : (asset.assignedToName ?? "Şu an Boşta");
 
     return `
         <div class="col-12 col-md-6 col-lg-4 col-xl-3">
             <div class="card border-0 shadow-sm rounded-4 h-100 equipment-grid-card position-relative asset-grid-card">
                 <div class="card-body text-center p-4">
                     <div class="mb-3">
-                        <div class="d-inline-flex align-items-center justify-content-center bg-light rounded-circle asset-icon-circle">
+                        <div class="d-inline-flex align-items-center justify-content-center ${iconBgClass} rounded-circle asset-icon-circle">
                             <i class="bi bi-laptop fs-1 ${iconColor}"></i>
                         </div>
                     </div>
@@ -628,7 +777,7 @@ function buildAssetCardHtml(asset) {
 }
 
 // ==========================================
-// EKİPMAN SİLME VE STOĞA GERİ EKLEME MANTIĞI
+// EKİPMANI KULLANIMDAN KALDIRMA 
 // ==========================================
 async function submitDeleteAsset() {
     if (!currentAssetId) return;
@@ -637,27 +786,48 @@ async function submitDeleteAsset() {
     const locationId = document.getElementById('deleteAssetTargetLocation').value;
 
     if (isReturnToStock && !locationId) {
-        return uyariGoster("Stoğa geri eklemek için lütfen giriş yapılacak Hedef Rafı seçiniz!");
+        return uyariGoster("Stoka geri almak için lütfen Hedef Rafı seçiniz!");
     }
 
     const btn = document.getElementById('btnSubmitDeleteAsset');
-    btn.disabled = true;
-    btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Siliniyor...';
+    const originalBtnHtml = btn ? btn.innerHTML : '';
+
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> İşleniyor...';
+    }
 
     try {
         const endpoint = isReturnToStock
-            ? `/assets/${currentAssetId}?returnLocationId=${locationId}`
-            : `/assets/${currentAssetId}`;
+            ? `/assets/${currentAssetId}/retire?returnLocationId=${locationId}`
+            : `/assets/${currentAssetId}/retire`;
 
-        await apiRequest(endpoint, 'DELETE');
+        await apiRequest(endpoint, 'PUT');
 
-        basariToast("Ekipman sistemden başarıyla silindi.");
+        basariToast("Ekipman kullanımdan kaldırıldı ve pasife alındı.");
 
         const modalInstance = bootstrap.Modal.getInstance(document.getElementById('deleteAssetModal'));
         if (modalInstance) modalInstance.hide();
 
         document.getElementById('assetResultContainer').classList.add('d-none');
         document.getElementById('serialSearchInput').value = '';
+        document.getElementById('targetLocationStockInfo').classList.add('d-none');
+
+        currentAssetId = null;
+        currentAssetProductId = null;
+        currentAssetSerialNumber = null; // Cihaz silinince hafızayı tamamen temizler
+
+        const stockSwitch = document.getElementById('returnToStockSwitch');
+        if (stockSwitch) {
+            stockSwitch.checked = true;
+            stockSwitch.dispatchEvent(new Event('change'));
+        }
+
+        document.getElementById('deleteAssetTargetWarehouse').value = ''; // Depoyu temizler
+
+        if (typeof StockUtils !== 'undefined') {
+            StockUtils._resetDropdown('deleteAssetTargetLocation', 'Önce depo seçin...', true); // Rafı temizler
+        }
 
         if (["admin", "superadmin"].includes(userRole)) {
             document.getElementById('adminGridContainer').classList.remove('d-none');
@@ -665,11 +835,11 @@ async function submitDeleteAsset() {
         }
 
     } catch (e) {
-        hataGoster("Silme hatası: " + e.message);
+        hataGoster("İşlem hatası: " + e.message);
     } finally {
         if (btn) {
             btn.disabled = false;
-            btn.innerHTML = 'Kalıcı Olarak Sil';
+            btn.innerHTML = originalBtnHtml;
         }
     }
 }

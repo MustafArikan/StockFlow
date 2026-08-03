@@ -19,13 +19,12 @@
 <body>
     <div class="container-fluid mt-4">
         <!-- Ekipman Ekleme Butonu -->
-        <!-- ÜST BAŞLIK VE EKLEME BUTONU -->
         <div class="d-flex justify-content-between align-items-center mb-4">
             <div>
                 <h1 class="fw-bold text-dark mb-0">Ekipman Yönetimi</h1>
                 <p class="text-muted mb-0">Şirket varlıklarını ve ekipman durumlarını yönetin</p>
             </div>
-            <button class="btn btn-success rounded-pill px-4 shadow-sm fw-bold" id="btnYeniEkipman"
+            <button type="button" class="btn btn-success rounded-pill px-4 shadow-sm fw-bold" id="btnYeniEkipman"
                 data-bs-toggle="modal" data-bs-target="#createAssetModal">
                 + Yeni Ekipman Kaydet
             </button>
@@ -55,8 +54,8 @@
                             </div>
                         </div>
                         <div class="col-md-3 d-grid">
-                            <button class="btn btn-primary btn-lg rounded-pill fw-bold shadow-sm" id="btnSearchAsset"
-                                type="button">Sorgula</button>
+                            <button type="button" class="btn btn-primary btn-lg rounded-pill fw-bold shadow-sm"
+                                id="btnSearchAsset">Sorgula</button>
                         </div>
                     </div>
                 </div>
@@ -78,7 +77,8 @@
 
             <!-- Geri Dön Butonu -->
             <div class="col-12 mb-3">
-                <button class="btn btn-sm btn-outline-secondary rounded-pill px-3 fw-bold" id="btnGeriDonGrid">
+                <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3 fw-bold"
+                    id="btnGeriDonGrid">
                     <i class="bi bi-arrow-left"></i> Geri Dön
                 </button>
             </div>
@@ -89,10 +89,14 @@
 
                     <div class="card-body p-4">
                         <div class="text-center mb-4">
-                            <div class="display-1 text-primary mb-2"><i class="bi bi-laptop"></i></div>
+                            <div id="resIconContainer"
+                                class="d-inline-flex align-items-center justify-content-center bg-light rounded-circle p-4 mb-3">
+                                <i id="resIconElement" class="bi bi-laptop display-4 text-primary"></i>
+                            </div>
                             <h4 class="fw-bold" id="resProductName">-</h4>
                             <span class="badge bg-light text-dark border px-3 py-2 mt-1">Seri No: <code
-                                    id="resSerialNumber">-</code></span>
+                                    id="resSerialNumber">-</code>
+                            </span>
                         </div>
                         <hr>
                         <div class="mb-3">
@@ -106,33 +110,37 @@
                         <hr>
                         <!-- Aksiyon Butonları -->
                         <div class="d-grid gap-2" id="assetActionButtons">
-                            <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal"
+                            <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal"
                                 data-bs-target="#assignAssetModal">
                                 <i class="bi bi-person-plus"></i> Kullanıcı Ata (Teslim Et)
                             </button>
-                            <button class="btn btn-sm btn-outline-danger" data-bs-toggle="modal"
+
+                            <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal"
                                 data-bs-target="#breakdownModal">
                                 <i class="bi bi-exclamation-triangle"></i> Arıza Bildir
                             </button>
-                            <button class="btn btn-sm btn-outline-success" data-bs-toggle="modal"
+
+                            <button type="button" class="btn btn-sm btn-outline-success" data-bs-toggle="modal"
                                 data-bs-target="#resolveModal">
                                 <i class="bi bi-check-circle"></i> Çözüm Gir (Tamir)
                             </button>
-                            <button class="btn btn-sm btn-outline-info" data-bs-toggle="modal"
+
+                            <button type="button" class="btn btn-sm btn-outline-info" data-bs-toggle="modal"
                                 data-bs-target="#maintenanceModal">
                                 <i class="bi bi-wrench"></i> Bakım İşle
                             </button>
-                            <button class="btn btn-sm btn-outline-warning" data-bs-toggle="modal"
+
+                            <button type="button" class="btn btn-sm btn-outline-warning" data-bs-toggle="modal"
                                 data-bs-target="#returnAssetModal">
                                 <i class="bi bi-arrow-return-left"></i> Kullanıcıdan Al (Teslim Al)
                             </button>
                         </div>
 
-                        <!-- Ekipmanı Sil Butonu -->
-                        <div class="mt-4 pt-3 border-top border-danger border-opacity-25">
-                            <button class="btn btn-sm btn-outline-danger w-100 fw-bold shadow-sm" data-bs-toggle="modal"
-                                data-bs-target="#deleteAssetModal">
-                                <i class="bi bi-trash3 me-1"></i> Ekipmanı Sistemden Sil
+                        <!-- Ekipmanı Kullanımdan Kaldır Butonu -->
+                        <div class="mt-4 pt-3 border-top border-secondary border-opacity-25">
+                            <button type="button" class="btn btn-sm btn-outline-secondary w-100 fw-bold"
+                                data-bs-toggle="modal" data-bs-target="#deleteAssetModal">
+                                <i class="bi bi-box-arrow-down me-1"></i> Ekipmanı Kullanımdan Kaldır
                             </button>
                         </div>
                     </div>
@@ -179,7 +187,7 @@
     </div>
 
     <!-- Yeni Ekipman Ekle Modalı -->
-    <div class="modal fade" id="createAssetModal" tabindex="-1">
+    <div class="modal fade" id="createAssetModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
@@ -198,16 +206,16 @@
                     <h6 class="fw-bold text-primary mb-3"><i class="bi bi-box-seam me-2"></i>1. Ekipman Bilgileri</h6>
                     <div class="row g-3 mb-4">
                         <div class="col-12">
-                            <label class="form-label small fw-bold text-muted">Ürün / Model Seçin <span
-                                    class="text-danger">*</span></label>
+                            <label for="newAssetProduct" class="form-label small fw-bold text-muted">Ürün / Model Seçin
+                                <span class="text-danger">*</span></label>
                             <select id="newAssetProduct" class="form-select">
                                 <option value="">Yükleniyor...</option>
                             </select>
                         </div>
                         <div class="col-12">
                             <div class="d-flex justify-content-between align-items-center mb-2">
-                                <label class="form-label small fw-bold text-muted mb-0">Seri Numarası / IMEI / Barkod
-                                    <span class="text-danger">*</span></label>
+                                <label for="newAssetSerial" class="form-label small fw-bold text-muted mb-0">Seri
+                                    Numarası / IMEI / Barkod <span class="text-danger">*</span></label>
                                 <button type="button"
                                     class="btn btn-sm btn-outline-primary rounded-pill py-0 px-3 fw-bold"
                                     id="btnKameraAcEkle">
@@ -233,16 +241,16 @@
                     </h6>
                     <div class="p-3 bg-light border rounded-3 shadow-sm mb-4">
                         <div class="row g-3">
-                            <div class="col-md-6">
-                                <label class="form-label text-muted small fw-bold">Depo Seçin <span
-                                        class="text-danger">*</span></label>
+                            <div class="col-12">
+                                <label for="newAssetSourceWarehouse" class="form-label text-muted small fw-bold">Depo
+                                    Seçin <span class="text-danger">*</span></label>
                                 <select class="form-select" id="newAssetSourceWarehouse" disabled>
                                     <option value="">Önce ürün seçiniz...</option>
                                 </select>
                             </div>
-                            <div class="col-md-6">
-                                <label class="form-label text-muted small fw-bold">Raf Seçin <span
-                                        class="text-danger">*</span></label>
+                            <div class="col-12">
+                                <label for="newAssetSourceLocation" class="form-label text-muted small fw-bold">Raf
+                                    Seçin <span class="text-danger">*</span></label>
                                 <select class="form-select" id="newAssetSourceLocation" disabled>
                                     <option value="">Önce depo seçiniz...</option>
                                 </select>
@@ -253,7 +261,8 @@
                     <!-- Ek Bilgiler -->
                     <h6 class="fw-bold text-secondary mb-3"><i class="bi bi-card-text me-2"></i>3. Ek Bilgiler</h6>
                     <div class="mb-3">
-                        <label class="form-label small fw-bold text-muted">Ek Notlar (Opsiyonel)</label>
+                        <label for="newAssetNotes" class="form-label small fw-bold text-muted">Ek Notlar
+                            (Opsiyonel)</label>
                         <textarea id="newAssetNotes" class="form-control" rows="2"
                             placeholder="Örn: Kutusunda ufak bir ezik var..."></textarea>
                     </div>
@@ -267,7 +276,7 @@
     </div>
 
     <!-- Kullanıcı Atama (Teslim Etme) Modalı -->
-    <div class="modal fade" id="assignAssetModal" tabindex="-1">
+    <div class="modal fade" id="assignAssetModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
@@ -277,13 +286,14 @@
                 </div>
                 <div class="modal-body">
                     <div class="mb-3">
-                        <label class="form-label">Atanacak Kullanıcı <span class="text-danger">*</span></label>
+                        <label for="assignUserSelect" class="form-label">Atanacak Kullanıcı <span
+                                class="text-danger">*</span></label>
                         <select id="assignUserSelect" class="form-select">
                             <option value="">Yükleniyor...</option>
                         </select>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Ek Notlar (Opsiyonel)</label>
+                        <label for="assignNotes" class="form-label">Ek Notlar (Opsiyonel)</label>
                         <textarea id="assignNotes" class="form-control" rows="2"
                             placeholder="Örn: Şarj aletiyle birlikte teslim edildi..."></textarea>
                     </div>
@@ -296,17 +306,18 @@
     </div>
 
     <!-- Teslim Alma Modalı -->
-    <div class="modal fade" id="returnAssetModal" tabindex="-1">
+    <div class="modal fade" id="returnAssetModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title fw-bold text-warning"><i class="bi bi-arrow-return-left me-2"></i>
-                        Kullanıcıdan Al (Teslim Al)</h5>
+                    <h5 class="modal-title fw-bold text-warning"><i
+                            class="bi bi-arrow-return-left me-2"></i>Kullanıcıdan Al (Teslim Al)</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
                     <div class="mb-3">
-                        <label class="form-label text-muted small fw-bold">Teslim Alma Notu (Opsiyonel)</label>
+                        <label for="returnNotes" class="form-label text-muted small fw-bold">Teslim Alma Notu
+                            (Opsiyonel)</label>
                         <textarea id="returnNotes" class="form-control" rows="2"
                             placeholder="Örn: Kullanıcı işten ayrıldı, ekipman sorunsuz teslim alındı..."></textarea>
                     </div>
@@ -320,7 +331,7 @@
     </div>
 
     <!-- Arıza Modalı -->
-    <div class="modal fade" id="breakdownModal" tabindex="-1">
+    <div class="modal fade" id="breakdownModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
@@ -329,7 +340,8 @@
                 </div>
                 <div class="modal-body">
                     <div class="mb-3">
-                        <label class="form-label">Arıza Açıklaması <span class="text-danger">*</span></label>
+                        <label for="breakdownDesc" class="form-label">Arıza Açıklaması <span
+                                class="text-danger">*</span></label>
                         <textarea id="breakdownDesc" class="form-control" rows="3"
                             placeholder="Örn: Ekran kırıldı, cihaz açılmıyor..."></textarea>
                     </div>
@@ -342,7 +354,7 @@
     </div>
 
     <!-- Çözüm Modalı -->
-    <div class="modal fade" id="resolveModal" tabindex="-1">
+    <div class="modal fade" id="resolveModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
@@ -351,7 +363,8 @@
                 </div>
                 <div class="modal-body">
                     <div class="mb-3">
-                        <label class="form-label">Yapılan İşlem / Çözüm <span class="text-danger">*</span></label>
+                        <label for="resolveSolution" class="form-label">Yapılan İşlem / Çözüm <span
+                                class="text-danger">*</span></label>
                         <textarea id="resolveSolution" class="form-control" rows="3"
                             placeholder="Örn: Yeni batarya takıldı, test edildi..."></textarea>
                     </div>
@@ -364,7 +377,7 @@
     </div>
 
     <!-- Bakım Modalı -->
-    <div class="modal fade" id="maintenanceModal" tabindex="-1">
+    <div class="modal fade" id="maintenanceModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
@@ -373,12 +386,13 @@
                 </div>
                 <div class="modal-body">
                     <div class="mb-3">
-                        <label class="form-label">Bakım Detayları <span class="text-danger">*</span></label>
+                        <label for="maintenanceDetails" class="form-label">Bakım Detayları <span
+                                class="text-danger">*</span></label>
                         <textarea id="maintenanceDetails" class="form-control" rows="2"
                             placeholder="Örn: Format atıldı, termal macun yenilendi..."></textarea>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Gelecek Bakım Tarihi (Opsiyonel)</label>
+                        <label for="maintenanceNextDate" class="form-label">Gelecek Bakım Tarihi (Opsiyonel)</label>
                         <input type="date" id="maintenanceNextDate" class="form-control">
                     </div>
                 </div>
@@ -390,55 +404,68 @@
         </div>
     </div>
 
-    <!-- Ekipmanı Sistemden Sil Modalı -->
+    <!-- Ekipmanı Kullanımdan Kaldırma ve Pasife Alma Modalı -->
     <div class="modal fade" id="deleteAssetModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title text-danger fw-bold"><i class="bi bi-trash3 me-2"></i>Ekipmanı Sistemden Sil
-                    </h5>
+                    <h5 class="modal-title text-secondary fw-bold"><i class="bi bi-box-arrow-down me-2"></i>Ekipmanı
+                        Kullanımdan Kaldır</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body bg-light">
-                    <div class="alert alert-warning small">
-                        <i class="bi bi-exclamation-triangle-fill me-1"></i> Bu işlem, ekipmanı sistemden kalıcı olarak
-                        silecektir!
+                    <div class="alert alert-secondary small border-secondary border-opacity-25">
+                        <i class="bi bi-info-circle-fill me-1"></i> Bu işlem ekipmanı kullanımdan kaldırıp pasife alır.
+                        Ekipmanın geçmiş log kayıtları korunur.
                     </div>
 
                     <div class="form-check form-switch mb-4 mt-3">
                         <input class="form-check-input" type="checkbox" id="returnToStockSwitch" checked>
-                        <label class="form-check-label fw-bold text-dark" for="returnToStockSwitch">Stoğa Geri Ekle
-                            (Stok Miktarını Artır)</label>
-                        <div class="form-text small text-muted">Kapalıysa ekipman hurdaya ayrılmış sayılır, stok miktarı
-                            artırılmaz.</div>
+
+                        <!-- Dinamik Etiket (JS Tarafından Değiştirilecek) -->
+                        <label class="form-check-label fw-bold text-dark" for="returnToStockSwitch"
+                            id="returnToStockLabel">
+                            Stoka Geri Al <span class="text-success small">(Stok miktarını artırır)</span>
+                        </label>
+
+                        <div class="form-text small text-muted">
+                            Açıksa seçilen rafa 1 adet stok eklenir. Kapalıysa ekipman hurdaya ayrılmış sayılır, stok
+                            miktarı artırılmaz.
+                        </div>
                     </div>
 
                     <!-- Hedef Konumu (Stokun Gireceği Yer) -->
                     <div class="mb-3 p-3 bg-white border rounded-3 shadow-sm" id="returnTargetLocationGroup">
-                        <h6 class="fw-bold text-success mb-3"><i class="bi bi-box-arrow-in-down me-2"></i>Hedef (Giriş)
+                        <h6 class="fw-bold text-success mb-3"><i class="bi bi-box-arrow-in-down me-2"></i>Giriş (Hedef)
                             Konumu</h6>
-                        <label class="form-label text-muted small fw-bold">Depo Seçin <span
-                                class="text-danger">*</span></label>
+
+                        <label for="deleteAssetTargetWarehouse" class="form-label text-muted small fw-bold">Depo Seçin
+                            <span class="text-danger">*</span></label>
                         <select class="form-select mb-2" id="deleteAssetTargetWarehouse">
                             <option value="">Depolar yükleniyor...</option>
                         </select>
-                        <label class="form-label text-muted small fw-bold">Raf Seçin <span
-                                class="text-danger">*</span></label>
-                        <select class="form-select" id="deleteAssetTargetLocation" disabled>
+
+                        <label for="deleteAssetTargetLocation" class="form-label text-muted small fw-bold">Raf Seçin
+                            <span class="text-danger">*</span></label>
+                        <select class="form-select mb-2" id="deleteAssetTargetLocation" disabled>
                             <option value="">Önce depo seçin...</option>
                         </select>
+
+                        <div id="targetLocationStockInfo" class="small fw-bold text-primary d-none mt-2">
+                            <i class="bi bi-info-circle me-1"></i> Bu raftaki mevcut stok: <span
+                                id="targetLocationStockValue">0</span> Adet
+                        </div>
                     </div>
                 </div>
                 <div class="modal-footer border-0">
-                    <button type="button" class="btn btn-outline-secondary rounded-pill px-4"
+                    <button type="button" class="btn btn-secondary rounded-pill px-4"
                         data-bs-dismiss="modal">İptal</button>
                     <button type="button" id="btnSubmitDeleteAsset"
-                        class="btn btn-danger rounded-pill px-4 fw-bold shadow-sm">Kalıcı Olarak Sil</button>
+                        class="btn btn-danger rounded-pill px-4 fw-bold shadow-sm">Kullanımdan Kaldır</button>
                 </div>
             </div>
         </div>
     </div>
-
 
     <!-- Temel JavaScript Kütüphaneleri -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>

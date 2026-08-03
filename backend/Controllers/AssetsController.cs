@@ -48,7 +48,6 @@ public class AssetsController : ControllerBase
         }
 
         // STOK KONTROLÜ (Toplam Miktar Kontrolü)
-        // Ürünün mevcut toplam stoğunu hesaplıyoruz
         var totalStock = await _context.StockLevels
             .Where(sl => sl.ProductId == product.Id)
             .SumAsync(sl => sl.Quantity);
@@ -102,7 +101,7 @@ public class AssetsController : ControllerBase
                 Asset = newAsset,
                 UserId = GetCurrentUserId(),
                 EventType = "Sisteme Giriş",
-                Notes = "Ekipman sisteme eklendi ve stoktan 1 adet düşüldü."
+                Notes = "Ekipman sisteme eklendi ve stoka ait depodan 1 adet düşüldü."
             };
 
             _context.Assets.Add(newAsset);
@@ -132,7 +131,7 @@ public class AssetsController : ControllerBase
             return NotFound(new { message = "Belirtilen Ekipman bulunamadı." });
         }
 
-        // Ekipman zaten başkasındaysa veya arızalıysa engelleme
+        // Ekipman başkasındaysa engeller
         if (asset.Status == "In Use" || asset.AssignedToId != null)
         {
             return BadRequest(new { message = "Bu Ekipman zaten bir kullanıcıya atanmış." });
@@ -150,15 +149,13 @@ public class AssetsController : ControllerBase
         asset.AssignedToId = dto.UserId;
         asset.Status = "In Use";
 
-        // Atama işlem logunun oluşturulması  
-        string notEki = !string.IsNullOrWhiteSpace(dto.Notes) ? $" Ek not: {dto.Notes}" : "";
-
+        // Atama işlemi kaydının oluşturulması
         var historyRecord = new AssetHistory
         {
             AssetId = asset.Id,
             UserId = GetCurrentUserId(), // Yardımcı metot kullanıldı
             EventType = "Kullanıcıya Atandı",
-            Notes = $"{targetUser.Email} kullanıcısına atandı.{notEki}"
+            Notes = $"{targetUser.Email} kullanıcısına atandı.{FormatNotes(dto.Notes)}"
         };
 
         _context.AssetHistories.Add(historyRecord);
@@ -242,6 +239,7 @@ public class AssetsController : ControllerBase
             AssetInfo = new
             {
                 Id = asset.Id,
+                ProductId = asset.ProductId,
                 SerialNumber = asset.SerialNumber,
                 ProductName = asset.Product != null ? asset.Product.Name : "Bilinmeyen Ürün",
                 Status = asset.Status,
@@ -265,23 +263,31 @@ public class AssetsController : ControllerBase
             return BadRequest(new { message = "Ekipman bulunamadı veya şu an kimseye atanmamış." });
         }
 
-
-        string notEki = !string.IsNullOrWhiteSpace(dto.Notes) ? $" Ek not: {dto.Notes}" : "";
-
-        var historyRecord = new AssetHistory
+        using var transaction = await _context.Database.BeginTransactionAsync();
+        try
         {
-            AssetId = asset.Id,
-            UserId = GetCurrentUserId(), // Yardımcı metot kullanıldı
-            EventType = "Teslim Alındı",
-            Notes = $"{asset.AssignedTo?.FirstName} {asset.AssignedTo?.LastName} tarafından iade edildi.{notEki}"
-        };
+            var historyRecord = new AssetHistory
+            {
+                AssetId = asset.Id,
+                UserId = GetCurrentUserId(), // Yardımcı metot kullanıldı
+                EventType = "Teslim Alındı",
+                Notes = $"{asset.AssignedTo?.FirstName} {asset.AssignedTo?.LastName} tarafından teslim alındı.{FormatNotes(dto.Notes)}"
+            };
 
-        asset.AssignedToId = null;
-        asset.Status = "Available";
+            asset.AssignedToId = null;
+            asset.Status = "Available";
 
-        _context.AssetHistories.Add(historyRecord);
-        await _context.SaveChangesAsync();
-        return Ok(new { message = "Ekipman başarıyla teslim alındı." });
+            _context.AssetHistories.Add(historyRecord);
+            await _context.SaveChangesAsync();
+            await transaction.CommitAsync();
+
+            return Ok(new { message = "Ekipman başarıyla teslim alındı." });
+        }
+        catch (Exception ex)
+        {
+            await transaction.RollbackAsync();
+            return StatusCode(500, new { message = "Ekipman teslim alınırken hata oluştu: " + ex.Message });
+        }
     }
 
     // --- 6. ARIZA BİLDİRİMİ İŞLEMİ ---
@@ -318,7 +324,6 @@ public class AssetsController : ControllerBase
         var asset = await _context.Assets.FindAsync(id);
         if (asset == null) return NotFound(new { message = "Ekipman bulunamadı." });
 
-        // Eğer Ekipman bozulduğunda birindeyse statüsü tekrar "Kullanımda" olur, değilse "Boşta" olur.
         asset.Status = asset.AssignedToId != null ? "In Use" : "Available";
 
         var historyRecord = new AssetHistory
@@ -345,7 +350,6 @@ public class AssetsController : ControllerBase
 
         if (asset == null) return NotFound(new { message = "Ekipman bulunamadı." });
 
-        // Eğer yeni bir bakım tarihi seçildiyse varlığa (Asset) işle
         if (dto.NextMaintenanceDate.HasValue)
         {
             asset.NextMaintenanceDate = dto.NextMaintenanceDate;
@@ -376,23 +380,21 @@ public class AssetsController : ControllerBase
             .FirstOrDefaultAsync(a => a.Id == id);
 
         if (asset == null)
-        {
-            return NotFound(new { message = "Silinecek ekipman bulunamadı." });
-        }
+            return NotFound(new { message = "İşlem yapılacak ekipman bulunamadı." });
+
+        if (asset.Status == "Retired")
+            return BadRequest(new { message = "Bu ekipman zaten kullanımdan kaldırılmış." });
 
         using var transaction = await _context.Database.BeginTransactionAsync();
         try
         {
-            // Eğer kullanıcı "Stoğa Geri Ekle" seçeneğini seçtiyse ve bir hedef raf belirlediyse
+            // Stoka Geri Alma Rafı Seçildiyse Stoku Artırır ve Kaydeder
             if (returnLocationId.HasValue)
             {
                 var targetLocation = await _context.Locations.FindAsync(returnLocationId.Value);
                 if (targetLocation == null)
-                {
                     return BadRequest(new { message = "Belirtilen hedef raf sistemde bulunamadı." });
-                }
 
-                // Hedef raftaki stok seviyesini bul veya yoksa yeni oluştur
                 var stockLevel = await _context.StockLevels
                     .FirstOrDefaultAsync(sl => sl.ProductId == asset.ProductId && sl.LocationId == returnLocationId.Value);
 
@@ -410,51 +412,55 @@ public class AssetsController : ControllerBase
                     });
                 }
 
-                // Stok hareketini kaydet
                 var stockMovement = new StockMovement
                 {
                     ProductId = asset.ProductId,
                     MovementType = "IN",
                     Quantity = 1,
                     TargetLocationId = returnLocationId.Value,
-                    Description = $"Silinen Ekipman Stoğa Geri Eklendi (Seri No: {asset.SerialNumber})",
+                    Description = $"Kullanımdan Kaldırılan Ekipman Stoka Geri Alındı (Seri No: {asset.SerialNumber})",
                     CreatedAt = DateTime.UtcNow,
                     UserId = GetCurrentUserId()
                 };
                 _context.StockMovements.Add(stockMovement);
             }
 
-            // Ekipmanı sistemden kalıcı olarak sil
-            _context.Assets.Remove(asset);
+            // Hard Delete yerine Soft Delete yapıyoruz
+            asset.Status = "Retired";
+            asset.AssignedToId = null; // Ekipman pasife alındığı için kullanıcının ataması kaldırılır
 
-            // Yaşam döngüsü / Audit logu
             var historyRecord = new AssetHistory
             {
                 AssetId = asset.Id,
                 UserId = GetCurrentUserId(),
-                EventType = "Sistemden Silindi",
-                Notes = returnLocationId.HasValue ? "Ekipman silindi ve stoğa geri eklendi." : "Ekipman hurdaya ayrılarak sistemden silindi."
+                EventType = "Kullanımdan Kaldırıldı",
+                Notes = returnLocationId.HasValue
+                    ? "Ekipman kullanımdan kaldırıldı ve stoka geri alındı."
+                    : "Ekipman kullanımdan kaldırıldı ve hurdaya ayrıldı."
             };
             _context.AssetHistories.Add(historyRecord);
 
             await _context.SaveChangesAsync();
             await transaction.CommitAsync();
 
-            return Ok(new { message = "Ekipman başarıyla sistemden silindi." });
+            return Ok(new { message = "Ekipman başarıyla kullanımdan kaldırıldı ve pasife alındı." });
         }
         catch (Exception ex)
         {
             await transaction.RollbackAsync();
-            return StatusCode(500, new { message = "Ekipman silinirken bir hata oluştu: " + ex.Message });
+            return StatusCode(500, new { message = "Ekipman pasife alınırken bir hata oluştu: " + ex.Message });
         }
-    } // <--- Bu süslü parantez metodu düzgünce kapatır!
-
+    }
 
     // YARDIMCI METOTLAR 
-    // DRY Prensibi: Token içindeki giriş yapmış kullanıcının ID'sini döndürür
     private int? GetCurrentUserId()
     {
         var userIdString = User.FindFirstValue(ClaimTypes.NameIdentifier);
         return int.TryParse(userIdString, out int uid) ? uid : null;
+    }
+
+    private string FormatNotes(string? notes)
+    {
+        return !string.IsNullOrWhiteSpace(notes) ? $" Ek not: {notes.Trim()}" : string.Empty;
     }
 }
