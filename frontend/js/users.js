@@ -120,7 +120,10 @@ const userView = createDataView({
 
         return `
             <tr>
-                <td>${escapeHtml(user.firstName)} ${escapeHtml(user.lastName)}</td>
+                <td>
+                    ${escapeHtml(user.firstName)} ${escapeHtml(user.lastName)}
+                    ${user.identityNumber ? `<br><small class="text-muted"><i class="bi bi-person-badge"></i> ${escapeHtml(user.identityNumber)}</small>` : ''}
+                </td>
                 <td>${escapeHtml(user.email)}</td>
                 <td>${escapeHtml(user.phoneNumber || "-")}</td>
                 <td><span class="badge bg-secondary px-2 py-1">${escapeHtml(user.role)}</span></td>
@@ -215,6 +218,7 @@ async function kullaniciDuzenle(id) {
         document.getElementById("firstName").value = user.firstName;
         document.getElementById("lastName").value = user.lastName;
         document.getElementById("email").value = user.email;
+        document.getElementById("identityNumber").value = user.identityNumber || "";
         document.getElementById("phoneNumber").value = user.phoneNumber || "";
         document.getElementById("role").value = user.roleId || "";
 
@@ -242,9 +246,18 @@ async function kullaniciKaydet(e) {
         firstName: document.getElementById("firstName").value,
         lastName: document.getElementById("lastName").value,
         email: document.getElementById("email").value,
-        phoneNumber: document.getElementById("phoneNumber").value,
+        identityNumber: document.getElementById("identityNumber").value.trim(),
+        phoneNumber: document.getElementById("phoneNumber").value.trim(),
         roleId: parseInt(document.getElementById("role").value)
     };
+
+    if (dto.identityNumber && !window.isValidTC(dto.identityNumber)) {
+        return Swal.fire('Hata', 'Girdiğiniz TC Kimlik Numarası geçersiz!', 'error');
+    }
+
+    if (dto.phoneNumber && !window.isValidPhone(dto.phoneNumber)) {
+        return Swal.fire('Hata', 'Geçerli bir telefon numarası giriniz! (Örn: 0555 555 55 55)', 'error');
+    }
 
     const pwd = document.getElementById("password").value;
     if (pwd) dto.password = pwd;

@@ -670,16 +670,32 @@ const assetGrid = createDataView({
     mode: 'grid',
     emptyMessage: "Sistemde henüz kayıtlı ekipman yok.",
     pageSize: 8,
-    fetchPage: async (page, pageSize) => {
-        const response = await apiRequest(`/assets?pageNumber=${page}&pageSize=${pageSize}`, 'GET');
-        const assets = response.assets || response;
+    fetchPage: async (page, pageSize, sortKey, sortDir) => {
+        let url = `/assets?pageNumber=${page}&pageSize=${pageSize}`;
+        if (sortKey) {
+            url += `&sortKey=${sortKey}&sortDir=${sortDir}`;
+        }
+        
+        const response = await apiRequest(url, 'GET');
+        let assets = response.assets || response;
         const totalRecords = response.totalRecords || (assets ? assets.length : 0);
+
+        // Fallback: If backend didn't sort, we sort it locally just in case
+        if (sortKey && Array.isArray(assets) && assets.length > 0) {
+            window.TableUtils.sortData(assets, sortKey, sortDir === 'asc');
+        }
+
         return {
             items: assets || [],
             totalItems: totalRecords
         };
     },
     renderCard: buildAssetCardHtml
+});
+
+document.getElementById('assetGridSort')?.addEventListener('change', function () {
+    const [key, dir] = this.value.split('_');
+    assetGrid.setSortState(key, dir);
 });
 
 async function loadGridCards(page = 1) {

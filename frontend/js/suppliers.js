@@ -87,6 +87,11 @@ document.getElementById("btnTedarikciKaydet")?.addEventListener("click", async (
         taxNumber: document.getElementById("tedarikciVergiNo").value.trim() || null
     };
 
+    if (veri.contactPhone && !window.isValidPhone(veri.contactPhone)) {
+        uyariGoster("Geçerli bir telefon numarası giriniz! (Örn: 0555 555 55 55)");
+        return;
+    }
+
     const metod = id ? "PUT" : "POST";
     const adres = id ? `${API_URL}/${id}` : API_URL;
 

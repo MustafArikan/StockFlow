@@ -90,7 +90,7 @@ function createDataView(cfg) {
             : `<div class="col-12 text-center text-muted py-4"><div class="spinner-border text-primary"></div><br>Yükleniyor...</div>`;
 
         try {
-            const { items, totalItems } = await cfg.fetchPage(state.page, state.pageSize);
+            const { items, totalItems } = await cfg.fetchPage(state.page, state.pageSize, state.sortKey, state.sortDir);
             state.totalItemsServer = totalItems;
 
             if (!items || !items.length) { renderEmpty(); return; }
@@ -127,7 +127,12 @@ function createDataView(cfg) {
                 state.sortKey = key;
                 state.sortDir = 'asc';
             }
-            refreshClientSide();
+            cfg.fetchPage ? refreshServerSide() : refreshClientSide();
+        },
+        setSortState(key, dir) {
+            state.sortKey = key;
+            state.sortDir = dir || 'asc';
+            cfg.fetchPage ? refreshServerSide() : refreshClientSide();
         },
         refresh() {
             cfg.fetchPage ? refreshServerSide() : refreshClientSide();
