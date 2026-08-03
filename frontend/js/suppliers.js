@@ -1,4 +1,4 @@
-﻿const API_URL = `${CONFIG.API_BASE_URL}/suppliers`;
+const API_URL = `${CONFIG.API_BASE_URL}/suppliers`;
 const token = localStorage.getItem('token');
 if (!token) window.location.href = 'login.html';
 
@@ -6,21 +6,13 @@ let tumTedarikciler = [];
 let filtreliTedarikciler = [];
 const tabloGovdesi = document.getElementById("tedarikciTablosuGovdesi");
 let currentPage = 1;
-const pageSize = 10;
+let pageSize = 10;
 let aktifArama = '';
 let siralamaSutunu = 'id';
 let siralamaYonu = 'asc';
 
 
-function escapeHtml(text) {
-    if (!text) return "";
-    return text.toString()
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#039;");
-}
+
 
 // ---- Liste + arama + sıralama + sayfalama ----
 function veriyiGuncelle() {
@@ -44,14 +36,24 @@ function veriyiGuncelle() {
         return siralamaYonu === 'asc' ? dA - dB : dB - dA;
     });
 
-    const toplamSayfa = Math.ceil(filtreliTedarikciler.length / pageSize) || 1;
+    const totalItems = filtreliTedarikciler.length;
+    const toplamSayfa = Math.ceil(totalItems / pageSize) || 1;
     if (currentPage > toplamSayfa) currentPage = toplamSayfa;
 
     const bas = (currentPage - 1) * pageSize;
-    const sayfadaki = filtreliTedarikciler.slice(bas, bas + pageSize);
+    const bitis = Math.min(bas + pageSize, totalItems);
+    const sayfadaki = filtreliTedarikciler.slice(bas, bitis);
 
     tabloyuCiz(sayfadaki);
-    sayfalamayiCiz(toplamSayfa, currentPage);
+    
+    const container = document.getElementById("paginationContainer");
+    if (container) {
+        if (toplamSayfa > 0) {
+            container.innerHTML = buildPaginationHtml(totalItems, currentPage, pageSize, toplamSayfa, bas + 1, bitis);
+        } else {
+            container.innerHTML = "";
+        }
+    }
 }
 
 function sirala(sutun) {
@@ -71,6 +73,25 @@ document.getElementById("aramaKutusu")?.addEventListener("keyup", (e) => {
     aktifArama = e.target.value;
     currentPage = 1;
     veriyiGuncelle();
+});
+
+document.getElementById("paginationContainer")?.addEventListener("click", (e) => {
+    const btn = e.target.closest(".page-action");
+    if (btn) {
+        e.preventDefault();
+        const li = btn.closest(".page-item");
+        if (li && (li.classList.contains("disabled") || li.classList.contains("active"))) return;
+        const page = parseInt(btn.getAttribute("data-page"));
+        if (!isNaN(page)) { currentPage = page; veriyiGuncelle(); }
+    }
+});
+
+document.getElementById("paginationContainer")?.addEventListener("change", (e) => {
+    if (e.target.classList.contains("page-size-action")) {
+        pageSize = parseInt(e.target.value);
+        currentPage = 1;
+        veriyiGuncelle();
+    }
 });
 
 async function tedarikcileriYukle() {
@@ -132,31 +153,6 @@ function tabloyuCiz(liste) {
     });
     tabloGovdesi.innerHTML = html;
 }
-
-function sayfalamayiCiz(totalPages, currentPage) {
-    const container = document.getElementById("paginationContainer");
-    if (!container) return;
-    if (totalPages <= 1) { container.innerHTML = ""; return; }
-
-    let html = `<nav><ul class="pagination pagination-sm mb-0 shadow-sm justify-content-center mt-3">`;
-    html += `<li class="page-item ${currentPage === 1 ? 'disabled' : ''}"><a class="page-link page-action" href="#" data-page="${currentPage - 1}">« Önceki</a></li>`;
-    for (let i = 1; i <= totalPages; i++) {
-        html += `<li class="page-item ${currentPage === i ? 'active' : ''}"><a class="page-link page-action" href="#" data-page="${i}">${i}</a></li>`;
-    }
-    html += `<li class="page-item ${currentPage === totalPages ? 'disabled' : ''}"><a class="page-link page-action" href="#" data-page="${currentPage + 1}">Sonraki »</a></li>`;
-    html += `</ul></nav>`;
-    container.innerHTML = html;
-}
-
-document.getElementById("paginationContainer")?.addEventListener("click", (e) => {
-    e.preventDefault();
-    const btn = e.target.closest(".page-action");
-    if (!btn) return;
-    const li = btn.closest(".page-item");
-    if (li && (li.classList.contains("disabled") || li.classList.contains("active"))) return;
-    const page = parseInt(btn.getAttribute("data-page"));
-    if (!isNaN(page)) { currentPage = page; veriyiGuncelle(); }
-});
 
 // ---- Ekle / Düzenle (kaydet) ----
 document.getElementById("btnTedarikciKaydet")?.addEventListener("click", async () => {

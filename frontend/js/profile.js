@@ -1,13 +1,5 @@
 // XSS koruması eklenmiş hali
-function escapeHtml(text) {
-    if (!text) return "";
-    return text.toString()
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#039;");
-}
+
 
 // Profil sayfası yüklendiğinde mevcut bilgileri getir
 document.addEventListener("DOMContentLoaded", async () => {

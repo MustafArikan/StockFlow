@@ -28,15 +28,7 @@ if (urlSearch) {
 if (!token) window.location.href = 'login.html';
 
 // XSS Koruması
-function escapeHtml(text) {
-    if (!text) return "";
-    return text.toString()
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#039;");
-}
+
 
 // Alt kategorileri recursive (özyineli) olarak bulan fonksiyon (Senin özelliğin)
 function getAltKategoriIdleri(parentId) {

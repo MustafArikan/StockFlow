@@ -22,15 +22,7 @@ let siralamaSutunu = 'id';
 let siralamaYonu = 'asc';
 
 // XSS koruması için HTML karakterlerini encode eder
-function escapeHtml(text) {
-    if (!text) return "";
-    return text.toString()
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#039;");
-}
+
 
 function kullaniciBilgisiniDoldur() {
     try {

@@ -1,4 +1,4 @@
-﻿function buildSidebarHtml(currentPath) {
+function buildSidebarHtml(currentPath) {
     // Parametre güvenliği (Eğer path gelmezse varsayılan index.html atar)
     const path = currentPath || 'index.html';
 
@@ -27,6 +27,7 @@
             <h6 class="sidebar-heading text-uppercase text-secondary fw-bold px-4 mb-2 fs-07rem ls-1px">Sistem</h6>
             <a href="users.html" id="navUsersItem" class="sidebar-link d-none ${path === 'users.html' ? 'active' : ''}"><i class="bi bi-people"></i> <span>Kullanıcılar</span></a>
             <a href="roles.html" id="navRolesItem" class="sidebar-link d-none ${path === 'roles.html' ? 'active' : ''}"><i class="bi bi-shield-lock"></i> <span>Rol ve Yetki Yönetimi</span></a>
+            <a href="policies.html" id="navPoliciesItem" class="sidebar-link d-none ${path === 'policies.html' ? 'active' : ''}"><i class="bi bi-speedometer2"></i> <span>Yetki Politikaları</span></a>
             <a href="audit-logs.html" id="navAuditLogsItem" class="sidebar-link d-none ${path === 'audit-logs.html' ? 'active' : ''}"><i class="bi bi-journal-text"></i> <span>Sistem Logları</span></a>
             <a href="test-scanner.html" id="navTestScannerItem" class="sidebar-link d-none ${path === 'test-scanner.html' ? 'active' : ''}"><i class="bi bi-upc-scan"></i> <span>Barkod Okuyucu</span></a>
         </div>

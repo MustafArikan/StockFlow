@@ -105,6 +105,8 @@ public static class DbInitializer
             ("Role.Add", "Yeni rol oluşturma", "Yetkilendirme"),
             ("Role.Edit", "Rol yetkilerini (izinleri) düzenleme", "Yetkilendirme"),
             ("Role.Delete", "Rol silme", "Yetkilendirme"),
+            ("Policy.View", "Yetki politikalarını (Rate Limit vb.) görüntüleme", "Yetkilendirme"),
+            ("Policy.Edit", "Yetki politikalarını düzenleme", "Yetkilendirme"),
             ("Notification.View", "Sistem bildirimlerini görüntüleme", "Bildirimler"),
             ("Notification.ManageSettings", "Bildirim kurallarını ve ayarlarını yönetme", "Bildirimler"),
             ("Settings.View", "Sistem ayarlarını görüntüleme", "Sistem"),
@@ -130,6 +132,52 @@ public static class DbInitializer
         if (toInsert.Any())
         {
             context.AppPermissions.AddRange(toInsert);
+            context.SaveChanges();
+        }
+
+        if (!context.AppAuthorizationPolicies.Any())
+        {
+            var policyDefs = new List<(string Key, string Description, int Limit, int Window, string[] Perms)>
+            {
+                ("RequireAssetWrite", "Demirbaş Ekleme ve Düzenleme Yetkisi", 30, 60, new[] { "Asset.Add", "Asset.Edit" }),
+                ("RequireAuditLogRead", "Sistem Loglarını Okuma Yetkisi", 20, 60, new[] { "System.AuditLogs" }),
+                ("RequireCategoryWrite", "Kategori Ekleme ve Düzenleme Yetkisi", 30, 60, new[] { "Category.Add", "Category.Edit" }),
+                ("RequireLocationWrite", "Konum/Raf Ekleme Yetkisi", 30, 60, new[] { "Location.Add" }),
+                ("RequireProductWrite", "Ürün Ekleme ve Düzenleme Yetkisi", 30, 60, new[] { "Product.Add", "Product.Edit" }),
+                ("RequireProductSupplierWrite", "Ürün Tedarikçi Ekleme ve Düzenleme Yetkisi", 30, 60, new[] { "Supplier.Edit" }),
+                ("RequireStockMovementWrite", "Stok Hareketi (Giriş, Çıkış, Transfer) Yetkisi", 20, 60, new[] { "Movement.Inbound", "Movement.Outbound", "Movement.Transfer" }),
+                ("RequireSupplierWrite", "Tedarikçi Ekleme ve Düzenleme Yetkisi", 30, 60, new[] { "Supplier.Add", "Supplier.Edit" }),
+                ("RequireWarehouseWrite", "Depo Ekleme ve Düzenleme Yetkisi", 30, 60, new[] { "Warehouse.Add", "Warehouse.Edit" }),
+                ("RequireUserManage", "Kullanıcı Yönetim (Listele, Ekle, Düzenle, Sil) Yetkisi", 15, 60, new[] { "User.View", "User.Add", "User.Edit", "User.Delete" })
+            };
+
+            var dbPermissions = context.AppPermissions.ToList();
+
+            foreach (var pDef in policyDefs)
+            {
+                var policy = new AppAuthorizationPolicy
+                {
+                    Key = pDef.Key,
+                    Description = pDef.Description,
+                    PermitLimit = pDef.Limit,
+                    WindowSeconds = pDef.Window
+                };
+                context.AppAuthorizationPolicies.Add(policy);
+                context.SaveChanges(); // Get Id
+
+                foreach (var permName in pDef.Perms)
+                {
+                    var perm = dbPermissions.FirstOrDefault(p => p.Name == permName);
+                    if (perm != null)
+                    {
+                        context.AppPolicyPermissions.Add(new AppPolicyPermission
+                        {
+                            PolicyId = policy.Id,
+                            PermissionId = perm.Id
+                        });
+                    }
+                }
+            }
             context.SaveChanges();
         }
 
@@ -205,6 +253,39 @@ public static class DbInitializer
                 new Product { Barcode = "SSD-1TB", Name = "Samsung 990 PRO 1TB M.2", MinStockLevel = 8, CategoryId = depolamaKategori }
             };
             context.Products.AddRange(defaultProducts);
+            context.SaveChanges();
+        }
+
+        // Data migration for AttributeRule.AllowedValues -> AttributeAllowedValue
+        if (!context.AttributeAllowedValues.Any() && context.AttributeRules.Any(r => r.AllowedValues != null && r.AllowedValues != "" && r.AllowedValues != "[]"))
+        {
+            var rulesToMigrate = context.AttributeRules.Where(r => r.AllowedValues != null && r.AllowedValues != "" && r.AllowedValues != "[]").ToList();
+            foreach (var rule in rulesToMigrate)
+            {
+                if (string.IsNullOrEmpty(rule.AllowedValues) || rule.AllowedValues == "[]") continue;
+                
+                try 
+                {
+                    var parsed = System.Text.Json.JsonSerializer.Deserialize<List<string>>(rule.AllowedValues);
+                    if (parsed != null)
+                    {
+                        int order = 1;
+                        foreach (var p in parsed)
+                        {
+                            context.AttributeAllowedValues.Add(new AttributeAllowedValue { AttributeRuleId = rule.Id, Value = p, Label = p, DisplayOrder = order++ });
+                        }
+                    }
+                } 
+                catch
+                {
+                    var parts = rule.AllowedValues.Split(new[] {','}, StringSplitOptions.RemoveEmptyEntries);
+                    int order = 1;
+                    foreach (var p in parts)
+                    {
+                        context.AttributeAllowedValues.Add(new AttributeAllowedValue { AttributeRuleId = rule.Id, Value = p.Trim(), Label = p.Trim(), DisplayOrder = order++ });
+                    }
+                }
+            }
             context.SaveChanges();
         }
     }

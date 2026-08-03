@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using stok_takip.Data;
 
@@ -11,9 +12,11 @@ using stok_takip.Data;
 namespace backend.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260803075122_AddAuthorizationPolicies")]
+    partial class AddAuthorizationPolicies
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -335,51 +338,6 @@ namespace backend.Migrations
                     b.ToTable("asset_histories");
                 });
 
-            modelBuilder.Entity("stok_takip.Models.AttributeAllowedValue", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int")
-                        .HasColumnName("id");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<int>("AttributeRuleId")
-                        .HasColumnType("int")
-                        .HasColumnName("attribute_rule_id");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2")
-                        .HasColumnName("created_at");
-
-                    b.Property<int>("DisplayOrder")
-                        .HasColumnType("int")
-                        .HasColumnName("display_order");
-
-                    b.Property<bool>("IsDeleted")
-                        .HasColumnType("bit")
-                        .HasColumnName("is_deleted");
-
-                    b.Property<string>("Label")
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)")
-                        .HasColumnName("label");
-
-                    b.Property<string>("Value")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)")
-                        .HasColumnName("value");
-
-                    b.HasKey("Id")
-                        .HasName("pk_attribute_allowed_values");
-
-                    b.HasIndex("AttributeRuleId")
-                        .HasDatabaseName("ix_attribute_allowed_values_attribute_rule_id");
-
-                    b.ToTable("attribute_allowed_values");
-                });
-
             modelBuilder.Entity("stok_takip.Models.AttributeRule", b =>
                 {
                     b.Property<int>("Id")
@@ -426,13 +384,11 @@ namespace backend.Migrations
                         .HasColumnName("is_required");
 
                     b.Property<decimal?>("MaxValue")
-                        .HasPrecision(18, 4)
-                        .HasColumnType("decimal(18,4)")
+                        .HasColumnType("decimal(18,2)")
                         .HasColumnName("max_value");
 
                     b.Property<decimal?>("MinValue")
-                        .HasPrecision(18, 4)
-                        .HasColumnType("decimal(18,4)")
+                        .HasColumnType("decimal(18,2)")
                         .HasColumnName("min_value");
 
                     b.Property<string>("TargetLevel")
@@ -1239,18 +1195,6 @@ namespace backend.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("stok_takip.Models.AttributeAllowedValue", b =>
-                {
-                    b.HasOne("stok_takip.Models.AttributeRule", "AttributeRule")
-                        .WithMany("AttributeAllowedValues")
-                        .HasForeignKey("AttributeRuleId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired()
-                        .HasConstraintName("fk_attribute_allowed_values_attribute_rules_attribute_rule_id");
-
-                    b.Navigation("AttributeRule");
-                });
-
             modelBuilder.Entity("stok_takip.Models.AttributeRule", b =>
                 {
                     b.HasOne("stok_takip.Models.Category", "Category")
@@ -1435,11 +1379,6 @@ namespace backend.Migrations
             modelBuilder.Entity("stok_takip.Models.Asset", b =>
                 {
                     b.Navigation("History");
-                });
-
-            modelBuilder.Entity("stok_takip.Models.AttributeRule", b =>
-                {
-                    b.Navigation("AttributeAllowedValues");
                 });
 
             modelBuilder.Entity("stok_takip.Models.Category", b =>

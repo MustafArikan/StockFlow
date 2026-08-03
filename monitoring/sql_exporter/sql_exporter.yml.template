@@ -8,7 +8,7 @@ global:
 
 # Hedef veritabanı tanımı
 target:
-  data_source_name: 'sqlserver://sa:YourStrongPassword123!@db:1433?database=stok_takip_db&encrypt=disable'
+  data_source_name: 'sqlserver://sa:${MSSQL_SA_PASSWORD}@db:1433?database=stok_takip_db&encrypt=disable'
   collectors: [mssql_standard]
 
 collector_files:

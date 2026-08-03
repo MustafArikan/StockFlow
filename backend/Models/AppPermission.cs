@@ -10,4 +10,7 @@ public class AppPermission : BaseEntity
 
     [JsonIgnore]
     public ICollection<AppRolePermission> RolePermissions { get; set; } = new List<AppRolePermission>();
+
+    [JsonIgnore]
+    public ICollection<AppPolicyPermission> PolicyPermissions { get; set; } = new List<AppPolicyPermission>();
 }

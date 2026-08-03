@@ -7,15 +7,7 @@ if (!token) window.location.href = 'login.html';
 const MAX_ISLEM_ADEDI = 100000;
 
 // XSS koruması
-function escapeHtml(text) {
-    if (!text) return "";
-    return text.toString()
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#039;");
-}
+
 
 const urlParams = new URLSearchParams(window.location.search);
 const urlFilter = urlParams.get('filter');

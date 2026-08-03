@@ -1,18 +1,16 @@
 document.addEventListener("DOMContentLoaded", () => {
-    RolesUI.init();
-    RolesUI.attachEventListeners();
+    PoliciesUI.init();
+    PoliciesUI.attachEventListeners();
 });
 
-const RolesUI = {
-    roles: [],
+const PoliciesUI = {
+    policies: [],
     allPermissions: {},
-    selectedRoleId: null,
-    modalInstance: null,
+    selectedPolicyId: null,
 
     init: async function() {
-        this.modalInstance = new bootstrap.Modal(document.getElementById('newRoleModal'));
         await this.loadPermissions();
-        await this.loadRoles();
+        await this.loadPolicies();
     },
 
     loadPermissions: async function() {
@@ -22,7 +20,6 @@ const RolesUI = {
             });
             if (!response.ok) throw new Error("Yetkiler yüklenemedi");
             
-            // Backend might return grouped or flat array. Let's assume flat array and group it here.
             const data = await response.json();
             
             if (Array.isArray(data)) {
@@ -46,57 +43,44 @@ const RolesUI = {
         }
     },
 
-    loadRoles: async function() {
+    loadPolicies: async function() {
         try {
-            const response = await fetch(`${CONFIG.API_BASE_URL}/roles`, {
+            const response = await fetch(`${CONFIG.API_BASE_URL}/authorizationpolicies`, {
                 headers: { "Authorization": `Bearer ${localStorage.getItem('token')}` }
             });
-            if (!response.ok) throw new Error("Roller yüklenemedi");
-            this.roles = await response.json();
-            this.renderRolesList();
+            if (!response.ok) throw new Error("Politikalar yüklenemedi");
+            this.policies = await response.json();
+            this.renderPoliciesList();
             
-            if (this.selectedRoleId) {
-                this.selectRole(this.selectedRoleId);
+            if (this.selectedPolicyId) {
+                this.selectPolicy(this.selectedPolicyId);
             }
         } catch (error) {
-            document.getElementById('rolesListContainer').innerHTML = `<div class="p-3 text-danger text-center">Yükleme hatası</div>`;
+            document.getElementById('policiesListContainer').innerHTML = `<div class="p-3 text-danger text-center">Yükleme hatası</div>`;
         }
     },
 
-    renderRolesList: function() {
-        const container = document.getElementById('rolesListContainer');
+    renderPoliciesList: function() {
+        const container = document.getElementById('policiesListContainer');
         container.innerHTML = '';
 
-        if (this.roles.length === 0) {
-            container.innerHTML = '<div class="p-4 text-center text-muted">Henüz rol bulunmuyor.</div>';
+        if (this.policies.length === 0) {
+            container.innerHTML = '<div class="p-4 text-center text-muted">Henüz politika bulunmuyor.</div>';
             return;
         }
 
-        const roleOrder = ["superadmin", "admin", "muhasebe", "operator", "depo_sorumlusu", "viewer"];
-        
-        const sortedRoles = [...this.roles].sort((a, b) => {
-            const indexA = roleOrder.indexOf(a.name.toLowerCase());
-            const indexB = roleOrder.indexOf(b.name.toLowerCase());
-            
-            if (indexA === -1 && indexB === -1) return a.name.localeCompare(b.name);
-            if (indexA === -1) return 1;
-            if (indexB === -1) return -1;
-            return indexA - indexB;
-        });
-
-        sortedRoles.forEach(role => {
-            const isSelected = this.selectedRoleId === role.id ? 'active' : '';
-            const systemBadge = role.isSystemRole ? `<span class="badge bg-danger ms-2 fs-065rem">Sistem</span>` : '';
+        this.policies.forEach(policy => {
+            const isSelected = this.selectedPolicyId === policy.id ? 'active' : '';
             
             const el = document.createElement('div');
             el.className = `role-item p-3 border-bottom d-flex justify-content-between align-items-center ${isSelected}`;
-            el.setAttribute('data-id', role.id);
+            el.setAttribute('data-id', policy.id);
             el.innerHTML = `
                 <div>
-                    <h6 class="mb-1 fw-bold">${escapeHTML(role.name)} ${systemBadge}</h6>
-                    <small class="text-muted">${escapeHTML(role.description || '')}</small>
+                    <h6 class="mb-1 fw-bold">${escapeHTML(policy.key)}</h6>
+                    <small class="text-muted d-block">${escapeHTML(policy.description || '')}</small>
+                    <small class="badge bg-light text-dark border mt-1">Limit: ${policy.permitLimit} / ${policy.windowSeconds}sn</small>
                 </div>
-                <span class="badge bg-light text-dark border">${role.userCount || 0} Kişi</span>
             `;
             container.appendChild(el);
         });
@@ -161,7 +145,7 @@ const RolesUI = {
                     <div class="permission-module-card h-100 d-flex flex-column">
                         <div class="permission-module-header d-flex justify-content-between align-items-center mb-2 pb-2 border-bottom">
                             <h6 class="mb-0 fw-bold text-primary"><i class="bi ${iconClass} me-2 fs-5 align-middle"></i>${escapeHTML(moduleName)}</h6>
-                            <div class="form-check form-switch m-0 d-flex align-items-center" title="Bu modüldeki (Örn: ${escapeHTML(moduleName)}) tüm yetkileri tek tuşla verir veya kaldırır.">
+                            <div class="form-check form-switch m-0 d-flex align-items-center">
                                 <label class="form-check-label me-2 small text-muted cursor-pointer" for="selectAll_${moduleSlug}">Tümünü Seç</label>
                                 <input class="form-check-input m-0 cursor-pointer" type="checkbox" id="selectAll_${moduleSlug}">
                             </div>
@@ -208,41 +192,23 @@ const RolesUI = {
         selectAllToggle.checked = allChecked;
     },
 
-    selectRole: function(roleId) {
-        this.selectedRoleId = roleId;
-        this.renderRolesList(); // To highlight active
+    selectPolicy: function(policyId) {
+        this.selectedPolicyId = policyId;
+        this.renderPoliciesList(); // To highlight active
 
-        const role = this.roles.find(r => r.id === roleId);
-        if (!role) return;
+        const policy = this.policies.find(p => p.id === policyId);
+        if (!policy) return;
 
-        const emptyCard = document.getElementById('emptySelectionCard');
         document.getElementById('emptySelectionCard').classList.add('d-none');
-        document.getElementById('roleDetailsCard').classList.remove('d-none');
-        document.getElementById('roleDetailsCard').classList.add('d-flex');
+        document.getElementById('policyDetailsCard').classList.remove('d-none');
+        document.getElementById('policyDetailsCard').classList.add('d-flex');
 
-        document.getElementById('selectedRoleNameDisplay').textContent = role.name;
-        document.getElementById('roleName').value = role.name;
-        document.getElementById('roleId').value = role.id;
-        document.getElementById('selectedRoleUserCount').textContent = `${role.userCount || 0} Kullanıcı`;
-        document.getElementById('roleDescription').value = role.description || '';
-
-        const sysBadge = document.getElementById('selectedRoleSystemBadge');
-        const delBtn = document.getElementById('btnDeleteRole');
-        const nameInput = document.getElementById('roleName');
-        
-        if (role.isSystemRole) {
-            sysBadge.classList.remove('d-none');
-            delBtn.disabled = true;
-            delBtn.title = "Sistem rolleri silinemez";
-            nameInput.disabled = true;
-            nameInput.title = "Sistem rollerinin adı değiştirilemez";
-        } else {
-            sysBadge.classList.add('d-none');
-            delBtn.disabled = false;
-            delBtn.title = "";
-            nameInput.disabled = false;
-            nameInput.title = "";
-        }
+        document.getElementById('selectedPolicyKeyDisplay').textContent = policy.key;
+        document.getElementById('policyKey').value = policy.key;
+        document.getElementById('policyId').value = policy.id;
+        document.getElementById('policyDescription').value = policy.description || '';
+        document.getElementById('policyPermitLimit').value = policy.permitLimit;
+        document.getElementById('policyWindowSeconds').value = policy.windowSeconds;
 
         // Reset all checkboxes
         document.querySelectorAll('.perm-cb').forEach(cb => {
@@ -253,8 +219,8 @@ const RolesUI = {
         });
 
         // Check assigned permissions
-        if (role.permissionIds) {
-            role.permissionIds.forEach(permissionId => {
+        if (policy.permissionIds) {
+            policy.permissionIds.forEach(permissionId => {
                 const cb = document.getElementById(`perm_${permissionId}`);
                 if (cb) cb.checked = true;
             });
@@ -267,50 +233,20 @@ const RolesUI = {
         }
     },
 
-    showNewRoleModal: function() {
-        document.getElementById('newRoleForm').reset();
-        this.modalInstance.show();
-    },
-
-    createNewRole: async function() {
-        const name = document.getElementById('newRoleName').value.trim();
-        const desc = document.getElementById('newRoleDesc').value.trim();
+    savePolicy: async function() {
+        const id = document.getElementById('policyId').value;
+        const desc = document.getElementById('policyDescription').value.trim();
+        const limit = parseInt(document.getElementById('policyPermitLimit').value);
+        const window = parseInt(document.getElementById('policyWindowSeconds').value);
         
-        if (!name) return;
+        if (!id) return;
 
-        try {
-            const response = await fetch(`${CONFIG.API_BASE_URL}/roles`, {
-                method: 'POST',
-                headers: {
-                    "Content-Type": "application/json",
-                    "Authorization": `Bearer ${localStorage.getItem('token')}`
-                },
-                body: JSON.stringify({ name: name, description: desc, permissionIds: [] })
-            });
-
-            if (!response.ok) throw new Error("Rol oluşturulamadı");
-            const newRole = await response.json();
-            
-            this.modalInstance.hide();
-            basariToast("Yeni rol oluşturuldu. Şimdi yetkilerini ayarlayabilirsiniz.");
-
-            await this.loadRoles();
-            this.selectRole(newRole.id);
-
-        } catch (error) {
-            hataGoster(error.message);
+        if (isNaN(limit) || limit <= 0 || isNaN(window) || window <= 0) {
+            uyariGoster("Lütfen geçerli bir limit ve zaman penceresi girin (Sıfırdan büyük olmalı).");
+            return;
         }
-    },
 
-    saveRole: async function() {
-        const id = document.getElementById('roleId').value;
-        const name = document.getElementById('roleName').value.trim();
-        const desc = document.getElementById('roleDescription').value.trim();
-        const role = this.roles.find(r => r.id == id);
-        
-        if (!id || !role || !name) return;
-
-        const confirmed = await onayla(`"${name}" rolünün bilgilerini ve yetkilerini güncellemek üzeresiniz.`, "Evet, Güncelle");
+        const confirmed = await onayla(`Politikayı güncellemek üzeresiniz. Rate limit değişiklikleri uygulamanın yeniden başlatılmasını gerektirir.`, "Evet, Güncelle");
         if (!confirmed) return;
 
         // Get selected permissions
@@ -320,87 +256,41 @@ const RolesUI = {
         });
 
         try {
-            const response = await fetch(`${CONFIG.API_BASE_URL}/roles/${id}`, {
+            const response = await fetch(`${CONFIG.API_BASE_URL}/authorizationpolicies/${id}`, {
                 method: 'PUT',
                 headers: {
                     "Content-Type": "application/json",
                     "Authorization": `Bearer ${localStorage.getItem('token')}`
                 },
-                body: JSON.stringify({ name: name, description: desc, permissionIds: permissionIds })
+                body: JSON.stringify({ 
+                    description: desc, 
+                    permitLimit: limit,
+                    windowSeconds: window,
+                    permissionIds: permissionIds 
+                })
             });
 
-            if (!response.ok) throw new Error("Rol yetkileri güncellenemedi");
+            if (!response.ok) throw new Error("Politika güncellenemedi");
             
-            basariToast("Rol ve yetkileri kaydedildi.");
+            basariToast("Politika kaydedildi. Limit değişiklikleri backend yeniden başlatıldığında aktif olacaktır.");
 
-            await this.loadRoles();
+            await this.loadPolicies();
 
         } catch (error) {
             hataGoster(error.message);
         }
     },
 
-    deleteSelectedRole: async function() {
-        const id = document.getElementById('roleId').value;
-        const role = this.roles.find(r => r.id == id);
-        
-        if (!id || !role) return;
-        
-        if (role.isSystemRole) {
-            uyariGoster("Sistem rolleri silinemez.");
-            return;
-        }
-
-        if (role.userCount > 0) {
-            uyariGoster(`Bu rol şu anda ${role.userCount} kullanıcıya atanmış durumda. Lütfen önce bu kullanıcıların rollerini değiştirin!`);
-            return;
-        }
-
-        const confirmed = await onayla(`"${role.name}" rolünü kalıcı olarak silmek üzeresiniz.`, "Evet, Sil!");
-        if (confirmed) {
-            try {
-                const response = await fetch(`${CONFIG.API_BASE_URL}/roles/${id}`, {
-                    method: 'DELETE',
-                    headers: { "Authorization": `Bearer ${localStorage.getItem('token')}` }
-                });
-
-                if (!response.ok) {
-                    const data = await response.json();
-                    throw new Error(data.message || "Silme işlemi başarısız");
-                }
-
-                basariToast("Rol başarıyla silindi.");
-                
-                this.selectedRoleId = null;
-                const emptyCard = document.getElementById('emptySelectionCard');
-                const detailsCard = document.getElementById('roleDetailsCard');
-                
-                emptyCard.classList.remove('d-none');
-                emptyCard.classList.add('d-flex');
-                
-                detailsCard.classList.remove('d-flex');
-                detailsCard.classList.add('d-none');
-                
-                await this.loadRoles();
-            } catch (error) {
-                hataGoster(error.message);
-            }
-        }
-    },
-
     attachEventListeners: function() {
         document.addEventListener('click', (e) => {
-            if (e.target.closest('#btnYeniRol')) {
-                this.showNewRoleModal();
-            } else if (e.target.closest('#btnDeleteRole')) {
-                this.deleteSelectedRole();
-            } else if (e.target.closest('#btnSavePermissions')) {
-                this.saveRole();
+            if (e.target.closest('#btnSavePolicy')) {
+                e.preventDefault();
+                this.savePolicy();
             } else {
                 const roleItem = e.target.closest('.role-item');
                 if (roleItem) {
-                    const roleId = roleItem.getAttribute('data-id');
-                    if (roleId) this.selectRole(parseInt(roleId));
+                    const policyId = roleItem.getAttribute('data-id');
+                    if (policyId) this.selectPolicy(parseInt(policyId));
                 }
             }
         });
@@ -418,17 +308,7 @@ const RolesUI = {
                 }
             }
         });
-
-        document.addEventListener('submit', (e) => {
-            if (e.target.id === 'newRoleForm') {
-                e.preventDefault();
-                this.createNewRole();
-            }
-        });
     }
 };
-
-
-
 
 

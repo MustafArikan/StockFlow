@@ -50,6 +50,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (navRolesItem) navRolesItem.classList.remove("d-none");
             }
 
+            // Yetki Politikaları Gösterme Mantığı
+            if (payload.role === "superadmin" || permissions.includes("Policy.View") || permissions.includes("Policy.Edit") || permissions.includes("Role.View")) {
+                const navPoliciesItem = document.getElementById("navPoliciesItem");
+                if (navPoliciesItem) navPoliciesItem.classList.remove("d-none");
+            }
+
             // Kategoriler
             if (payload.role === "superadmin" || permissions.some(p => p.startsWith("Category."))) {
                 const navItem = document.getElementById("navCategoriesItem");
@@ -242,7 +248,3 @@ document.addEventListener('click', async (e) => {
     }
 });
 
-function escapeHtml(text) {
-    if (!text) return "";
-    return text.toString().replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
-}
