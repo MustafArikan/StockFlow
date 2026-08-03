@@ -59,6 +59,7 @@ public class UsersController : ControllerBase
                 u.FirstName,
                 u.LastName,
                 u.PhoneNumber,
+                u.IdentityNumber,
                 RoleId = u.RoleId,
                 Role = u.Role.Name,
                 u.IsEmailConfirmed,
@@ -78,9 +79,10 @@ public class UsersController : ControllerBase
     [HttpGet("{id}")]
     public async Task<IActionResult> GetUserById(int id)
     {
+        var currentUserLevel = await GetCurrentUserRoleLevelAsync();
         var user = await _context.Users
             .AsNoTracking()
-            .Where(u => u.Id == id)
+            .Where(u => u.Id == id && (u.Role == null || u.Role.Level <= currentUserLevel))
             .Select(u => new
             {
                 u.Id,
@@ -88,6 +90,7 @@ public class UsersController : ControllerBase
                 u.FirstName,
                 u.LastName,
                 u.PhoneNumber,
+                u.IdentityNumber,
                 RoleId = u.RoleId,
                 Role = u.Role.Name,
                 u.IsEmailConfirmed,
@@ -159,6 +162,7 @@ public class UsersController : ControllerBase
     public async Task<IActionResult> CreateUser([FromBody] CreateUserDto dto)
     {
         var newRole = await _context.AppRoles.FindAsync(dto.RoleId);
+        if (newRole == null) return BadRequest(new { message = "Geçersiz rol." });
         if (newRole?.Name == "superadmin" && !User.IsInRole("superadmin"))
         {
             return Forbid(); // Süper admin rolünde kullanıcı oluşturamaz
@@ -179,6 +183,7 @@ public class UsersController : ControllerBase
             LastName = dto.LastName,
             Email = dto.Email,
             PhoneNumber = dto.PhoneNumber,
+            IdentityNumber = dto.IdentityNumber,
             RoleId = dto.RoleId,
             IsEmailConfirmed = true, // Superadmin tarafından oluşturulan kullanıcılar için e-posta doğrulamasını atlıyoruz
             CreatedAt = DateTime.UtcNow
@@ -236,6 +241,7 @@ public class UsersController : ControllerBase
         user.LastName = dto.LastName;
         user.Email = dto.Email;
         user.PhoneNumber = dto.PhoneNumber;
+        user.IdentityNumber = dto.IdentityNumber;
         user.RoleId = dto.RoleId;
 
         if (!string.IsNullOrEmpty(dto.Password))

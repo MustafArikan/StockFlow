@@ -1,26 +1,13 @@
-// --- Akilli Port Tespiti (Auto-Discovery) ---
-let activePort = localStorage.getItem('API_PORT_OVERRIDE');
+// --- Dinamik API URL Tespiti ---
+let apiBase = '/api'; // Production varsayılanı (Nginx üzerinden)
 
-if (!activePort) {
-    // Eger override yoksa 5000 portuna istek at
-    // Eger override yoksa 5000 portuna istek at
-    try {
-        const xhr = new XMLHttpRequest();
-        // senkron istek
-        xhr.open('GET', 'http://localhost:5000/api/health', false);
-        xhr.send(null);
-        // Hata yoksa 5000 portu ayaktadir ve cevap veriyordur
-        // Hata yoksa 5000 portu ayaktadir ve cevap veriyordur
-        activePort = '5000';
-    } catch (error) {
-        // 5000 portuna ulasilamazsa
-        // 5000 portuna ulasilamazsa
-        activePort = '5136';
-    }
+if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.protocol === 'file:') {
+    // Geliştirme ortamı veya doğrudan dosya açılışı
+    apiBase = 'http://localhost:5000/api';
 }
 
 const CONFIG = {
-    API_BASE_URL: `http://localhost:${activePort}/api`
+    API_BASE_URL: apiBase
 };
 
 // Merkezi Yetki Denetim Sistemi (RBAC)

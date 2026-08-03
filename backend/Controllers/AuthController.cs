@@ -92,6 +92,7 @@ public async Task<IActionResult> Register([FromBody] RegisterDto dto)
 
 [AllowAnonymous]
 [HttpPost("verify-email")]
+[EnableRateLimiting("AuthLimit")]
 public async Task<IActionResult> VerifyEmail([FromBody] VerifyEmailDto dto)
     {
         if(string.IsNullOrWhiteSpace(dto.Email) || string.IsNullOrWhiteSpace(dto.VerificationCode))
@@ -243,6 +244,7 @@ public async Task<IActionResult> GetMe()
             firstName = user.FirstName,
             lastName = user.LastName,
             phoneNumber = user.PhoneNumber,
+            identityNumber = user.IdentityNumber,
             role = user.Role.Name,
             createdAt = user.CreatedAt,
         });
@@ -277,6 +279,7 @@ public async Task<IActionResult> GetMe()
         user.FirstName = dto.FirstName;
         user.LastName = dto.LastName;
         user.PhoneNumber = dto.PhoneNumber;
+        user.IdentityNumber = dto.IdentityNumber;
 
         await _context.SaveChangesAsync();
 
@@ -284,7 +287,8 @@ public async Task<IActionResult> GetMe()
             firstName = user.FirstName,
             lastName = user.LastName,  
             email = user.Email,
-            phoneNumber = user.PhoneNumber
+            phoneNumber = user.PhoneNumber,
+            identityNumber = user.IdentityNumber
             });
     }
 
@@ -426,6 +430,7 @@ public async Task<IActionResult> Logout()
 
     [AllowAnonymous]
     [HttpPost("reset-password")]
+    [EnableRateLimiting("AuthLimit")]
     public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordDto dto)
     {
         var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == dto.Email);

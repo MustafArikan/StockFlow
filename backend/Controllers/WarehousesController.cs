@@ -78,7 +78,8 @@ public class WarehousesController : ControllerBase
 
     // POST /api/warehouses yeni depo ekleme
     [HttpPost]
-    [Authorize]
+    [RequirePermission(Policies.RequireWarehouseWrite)]
+    [EnableRateLimiting(Policies.RequireWarehouseWrite)]
     public async Task<IActionResult> Create(CreateWarehouseDto dto)
     {
         var mevcut = await _context.Warehouses.FirstOrDefaultAsync(w=> w.Name == dto.Name && w.Address == dto.Address);

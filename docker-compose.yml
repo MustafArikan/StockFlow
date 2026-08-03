@@ -8,7 +8,7 @@ services:
       - MSSQL_SA_PASSWORD=${MSSQL_SA_PASSWORD}
       - MSSQL_PID=Developer
     ports:
-      - "${DB_PORT}:1433"
+      - "127.0.0.1:${DB_PORT}:1433"
     volumes:
       - mssql_data:/var/opt/mssql
     healthcheck:
@@ -24,7 +24,7 @@ services:
       dockerfile: Dockerfile
     container_name: stok_backend_api
     ports:
-      - "${BACKEND_PORT}:8080"
+      - "127.0.0.1:${BACKEND_PORT}:8080"
     environment:
       - ASPNETCORE_ENVIRONMENT=${ASPNETCORE_ENVIRONMENT}
       - ConnectionStrings__DefaultConnection=Server=db;Database=stok_takip_db;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=True;
@@ -65,7 +65,7 @@ services:
       - "--storage.tsdb.retention.time=30d"
       - "--web.enable-lifecycle"
     ports:
-      - "${PROMETHEUS_PORT}:9090"
+      - "127.0.0.1:${PROMETHEUS_PORT}:9090"
     depends_on:
       - backend
     networks:
@@ -84,7 +84,7 @@ services:
       - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
       - grafana_data:/var/lib/grafana
     ports:
-      - "${GRAFANA_PORT}:3000"
+      - "127.0.0.1:${GRAFANA_PORT}:3000"
     depends_on:
       - prometheus
 
@@ -115,7 +115,7 @@ services:
       - /var/lib/docker/:/var/lib/docker:ro
       - /dev/disk/:/dev/disk:ro
     ports:
-      - "8081:8080"
+      - "127.0.0.1:8081:8080"
 
   mssql-exporter:
     image: burningalchemist/sql_exporter:0.15.0
@@ -127,7 +127,7 @@ services:
       - ./monitoring/sql_exporter:/etc/sql_exporter:ro
     entrypoint: /bin/sh /etc/sql_exporter/entrypoint.sh
     ports:
-      - "9399:9399"
+      - "127.0.0.1:9399:9399"
     depends_on:
       db:
         condition: service_healthy
@@ -139,7 +139,7 @@ services:
     command:
       - "-nginx.scrape-uri=http://frontend/stub_status"
     ports:
-      - "9113:9113"
+      - "127.0.0.1:9113:9113"
     depends_on:
       - frontend
 
@@ -150,14 +150,14 @@ services:
     volumes:
       - ./monitoring/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
     ports:
-      - "9093:9093"
+      - "127.0.0.1:9093:9093"
 
   loki:
     image: grafana/loki:latest
     container_name: stok_loki
     restart: unless-stopped
     ports:
-      - "3100:3100"
+      - "127.0.0.1:3100:3100"
     command: -config.file=/etc/loki/local-config.yaml
     volumes:
       - loki_data:/loki
