@@ -57,14 +57,16 @@
                             Transferleri</button>
                     </div>
                 </div>
-               
+
                 <!-- Stok hareketlerini listeleyen tabloyu tanımlar -->
                 <div class="table-responsive">
                     <table class="table table-hover align-middle mb-0 min-w-700">
                         <thead>
                             <tr class="text-muted small text-uppercase">
                                 <th id="tarihBaslik" class="text-center user-select-none sortable-th">Tarih ↕</th>
-                                <th id="thUrunKodu" class="text-center d-none d-md-table-cell user-select-none sortable-th">Ürün Kodu ↕</th>
+                                <th id="thUrunKodu"
+                                    class="text-center d-none d-md-table-cell user-select-none sortable-th">Ürün Kodu ↕
+                                </th>
                                 <th id="thUrunAdi" class="user-select-none sortable-th">Ürün Adı ↕
                                 </th>
                                 <th id="thIslemTipi" class="text-center user-select-none sortable-th">İşlem Tipi ↕</th>
@@ -115,7 +117,7 @@
                                     id="btnKameraAc">
                                     <i class="bi bi-upc-scan me-1"></i> Barkod Okut
                                 </button>
-                            </div>                         
+                            </div>
 
                             <div id="kameraAlani" class="d-none mb-3 rounded-3 overflow-hidden position-relative">
                                 <div id="reader"></div>
@@ -154,6 +156,10 @@
                             <select class="form-select" id="targetLocationId" disabled>
                                 <option value="">Önce depo seçin...</option>
                             </select>
+                            <div id="targetLocationStockInfo" class="d-none mt-2 small text-primary fw-bold">
+                                <i class="bi bi-info-circle"></i> Bu raftaki mevcut stok: <span
+                                    id="targetLocationStockValue">0</span> Adet
+                            </div>
                         </div>
 
                         <!-- EK BİLGİLER (OPSİYONEL) alanını gösterir -->
@@ -201,7 +207,7 @@
             </div>
         </div>
     </div>
-    
+
     <!-- Kullanıcı profilini gösteren açılır pencereyi tanımlar -->
     <div class="modal fade" id="userProfileModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
@@ -240,12 +246,13 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.js"></script>
-    <script src="js/alerts.js"></script>    
+    <script src="js/alerts.js"></script>
     <script src="js/partials/sidebar.partial.js"></script>
     <script src="js/partials/topbar.partial.js"></script>
     <script src="js/partials/pagination.partial.js"></script>
     <script src="js/config.js"></script>
     <script src="js/scanner.js"></script>
+    <script src="js/stock-utils.js"></script>
     <script src="js/movements.js"></script>
     <script src="js/auth.js"></script>
 </body>
