@@ -12,6 +12,24 @@ if (!token) window.location.href = 'login.html';
 const barcodeBeepSound = new Audio('audio/beep-07.wav');
 
 // ==========================================
+// ORTAK YARDIMCI FONKSİYONLAR
+// ==========================================
+function getAssetStatusUI(status) {
+    switch (status) {
+        case 'Available':
+            return { text: "Müsait (Boşta)", shortText: "Boşta", badgeClass: "bg-success", iconColor: "text-success", bgClass: "bg-success bg-opacity-10" };
+        case 'In Use':
+            return { text: "Kullanımda", shortText: "Kullanımda", badgeClass: "bg-primary", iconColor: "text-primary", bgClass: "bg-primary bg-opacity-10" };
+        case 'Broken':
+            return { text: "Arızalı", shortText: "Arızalı", badgeClass: "bg-danger", iconColor: "text-danger", bgClass: "bg-danger bg-opacity-10" };
+        case 'Retired':
+            return { text: "Kullanım Dışı", shortText: "Kullanım Dışı", badgeClass: "bg-dark", iconColor: "text-secondary opacity-50", bgClass: "bg-secondary bg-opacity-10", iconExtra: "<i class='bi bi-slash-circle me-1'></i> " };
+        default:
+            return { text: "Bilinmiyor", shortText: "Bilinmiyor", badgeClass: "bg-secondary", iconColor: "text-primary", bgClass: "bg-primary bg-opacity-10" };
+    }
+}
+
+// ==========================================
 // SAYFA YÜKLENDİĞİNDE ÇALIŞACAKLAR 
 // ==========================================
 document.addEventListener("DOMContentLoaded", () => {
@@ -146,6 +164,54 @@ function initEventListeners() {
             label.innerHTML = 'Stoka Geri Alma <span class="text-danger small">(Stok miktarını artırmaz)</span>';
             if (targetGroup) targetGroup.classList.add('d-none'); // Depo/Raf seçimini gizler
         }
+    });
+
+    // YENİ EKİPMAN MODALINI KAPANDIĞINDA SIFIRLAMA     
+    document.getElementById('createAssetModal')?.addEventListener('hidden.bs.modal', () => {
+        const productSelect = document.getElementById('newAssetProduct');
+        const serialInput = document.getElementById('newAssetSerial');
+        const notesInput = document.getElementById('newAssetNotes');
+
+        if (productSelect) productSelect.value = '';
+        if (serialInput) serialInput.value = '';
+        if (notesInput) notesInput.value = '';
+
+        // WMS Dropdown'larını Kilitle ve Boşalt
+        if (typeof StockUtils !== 'undefined') {
+            StockUtils._resetDropdown('newAssetSourceWarehouse', 'Önce ürün seçiniz...', true);
+            StockUtils._resetDropdown('newAssetSourceLocation', 'Önce depo seçiniz...', true);
+        }
+
+        // Butonu eski haline getir
+        const btnEkle = document.getElementById('btnSubmitCreateAsset');
+        if (btnEkle) {
+            btnEkle.disabled = false;
+            btnEkle.innerHTML = 'Sisteme Kaydet';
+        }
+    });
+
+    // KULLANIMDAN KALDIRMA MODALI KAPANDIĞINDA SIFIRLAMA
+    document.getElementById('deleteAssetModal')?.addEventListener('hidden.bs.modal', () => {
+        const stockSwitch = document.getElementById('returnToStockSwitch');
+        if (stockSwitch) {
+            stockSwitch.checked = true;
+            stockSwitch.dispatchEvent(new Event('change')); // Etiketi günceller
+        }
+
+        document.getElementById('deleteAssetTargetWarehouse').value = '';
+        document.getElementById('targetLocationStockInfo').classList.add('d-none');
+
+        if (typeof StockUtils !== 'undefined') {
+            StockUtils._resetDropdown('deleteAssetTargetLocation', 'Önce depo seçin...', true);
+        }
+    });
+
+    // TÜM AKSİYON MODALLARI KAPANDIĞINDA İÇİNDEKİLERİ SİL
+    const actionModals = ['assignAssetModal', 'returnAssetModal', 'breakdownModal', 'resolveModal', 'maintenanceModal'];
+    actionModals.forEach(modalId => {
+        document.getElementById(modalId)?.addEventListener('hidden.bs.modal', function () {
+            this.querySelectorAll('textarea, input[type="date"], select').forEach(el => el.value = '');
+        });
     });
 
     // KAMERA 1: ARAMA EKRANI İÇİN
@@ -358,48 +424,22 @@ async function searchAsset() {
         document.getElementById('resSerialNumber').textContent = data.assetInfo.serialNumber;
 
         const status = data.assetInfo.status;
-        let detailIconColor = "text-primary";
-        let detailBgClass = "bg-primary bg-opacity-10";
+        const ui = getAssetStatusUI(status); // Ortak Yardımcı fonksiyondan UI değerlerini al
 
-        if (status === 'Available') {
-            detailIconColor = "text-success";
-            detailBgClass = "bg-success bg-opacity-10";
-        }
-        else if (status === 'In Use') {
-            detailIconColor = "text-primary";
-            detailBgClass = "bg-primary bg-opacity-10";
-        }
-        else if (status === 'Broken') {
-            detailIconColor = "text-danger";
-            detailBgClass = "bg-danger bg-opacity-10";
-        }
-        else if (status === 'Retired') {
-            detailIconColor = "text-secondary opacity-50";
-            detailBgClass = "bg-secondary bg-opacity-10";
-        }
-
-        // HTML'de atadığımız ID'ler üzerinden doğrudan tam isabet eşleştirme
         const iconContainer = document.getElementById('resIconContainer');
         const iconElement = document.getElementById('resIconElement');
 
         if (iconContainer) {
-            iconContainer.className = `d-inline-flex align-items-center justify-content-center ${detailBgClass} rounded-circle mb-3`;
+            iconContainer.className = `d-inline-flex align-items-center justify-content-center ${ui.bgClass} rounded-circle mb-3`;
             iconContainer.style.width = "90px";
             iconContainer.style.height = "90px";
         }
         if (iconElement) {
-            iconElement.className = `bi bi-laptop fs-1 ${detailIconColor}`;
+            iconElement.className = `bi bi-laptop fs-1 ${ui.iconColor}`;
         }
 
-        // Renkli Rozet Mantığı
-        let statusBadge = `<span class="badge bg-secondary">Bilinmiyor</span>`;
-        if (status === 'Available') statusBadge = `<span class="badge bg-success px-3 py-2 fs-6 rounded-pill">Müsait (Boşta)</span>`;
-        else if (status === 'In Use') statusBadge = `<span class="badge bg-primary px-3 py-2 fs-6 rounded-pill">Kullanımda</span>`;
-        else if (status === 'Broken') statusBadge = `<span class="badge bg-danger px-3 py-2 fs-6 rounded-pill">Arızalı</span>`;
-        else if (status === 'Retired') statusBadge = `<span class="badge bg-dark px-3 py-2 fs-6 rounded-pill"><i class="bi bi-slash-circle me-1"></i> Kullanım Dışı</span>`;
-
         const resStatusEl = document.getElementById('resStatus');
-        resStatusEl.innerHTML = statusBadge;
+        resStatusEl.innerHTML = `<span class="badge ${ui.badgeClass} px-3 py-2 fs-6 rounded-pill">${ui.iconExtra || ''}${ui.text}</span>`;
 
         if (data.assetInfo.nextMaintenanceDate) {
             resStatusEl.innerHTML += `<div class="mt-2"><small class="text-info fw-bold"><i class="bi bi-calendar-event"></i> Sonraki Bakım: ${new Date(data.assetInfo.nextMaintenanceDate).toLocaleDateString('tr-TR')}</small></div>`;
@@ -575,14 +615,11 @@ async function sendAssetAction(url, method, body) {
         const endpoint = url.replace(CONFIG.API_BASE_URL, '');
         const result = await apiRequest(endpoint, method, body) || {};
 
-        // Açık olan modal penceresini kapat
-        document.querySelectorAll('.modal').forEach(m => {
-            const modalInstance = bootstrap.Modal.getInstance(m);
-            if (modalInstance) modalInstance.hide();
-        });
-
-        // Form alanlarını temizler
-        document.querySelectorAll('.modal textarea, .modal input[type="date"]').forEach(el => el.value = '');
+        // Sadece ekranda aktif olarak açık olan modalı bul ve kapat
+        const activeModalEl = document.querySelector('.modal.show');
+        if (activeModalEl) {
+            bootstrap.Modal.getInstance(activeModalEl).hide();
+        }
 
         // Ekrana başarı mesajı ver ve Timeline'ı (Zaman çizelgesini) güncelle!
         basariToast("Harika! " + (result.message || "İşlem başarıyla tamamlandı."));
@@ -631,17 +668,6 @@ async function submitCreateAsset() {
         // Modalı kapatır
         const modalInstance = bootstrap.Modal.getInstance(document.getElementById('createAssetModal'));
         if (modalInstance) modalInstance.hide();
-
-        // Formu temizler
-        document.getElementById('newAssetProduct').value = '';
-        document.getElementById('newAssetSerial').value = '';
-        document.getElementById('newAssetNotes').value = '';
-
-        // Dropdownları resetler
-        if (typeof StockUtils !== 'undefined') {
-            StockUtils._resetDropdown('newAssetSourceWarehouse', 'Önce ürün seçiniz...', true);
-            StockUtils._resetDropdown('newAssetSourceLocation', 'Önce depo seçiniz...', true);
-        }
 
         // Sadece yetkisi olanlar için Grid'i YENİLER ve bitmesini BEKLER
         if (["admin", "superadmin"].includes(userRole)) {
@@ -707,29 +733,7 @@ async function loadGridCards(page = 1) {
 // KART HTML ÜRETİCİSİ (UI VE DATA AYRIMI)
 // ==========================================
 function buildAssetCardHtml(asset) {
-    // Tüm değişkenleri tek bir yerde başlatılır
-    let statusText = "Bilinmiyor";
-    let statusClass = "bg-secondary text-white";
-    let iconColor = "text-primary";
-    let iconBgClass = "bg-secondary bg-opacity-10";
-
-    // if-else bloğu ile tüm renk ve metinler aynı anda atanır
-    if (asset.status === 'Available') {
-        statusText = "Boşta"; statusClass = "bg-success text-white";
-        iconColor = "text-success"; iconBgClass = "bg-success bg-opacity-10";
-    }
-    else if (asset.status === 'In Use') {
-        statusText = "Kullanımda"; statusClass = "bg-primary text-white";
-        iconColor = "text-primary"; iconBgClass = "bg-primary bg-opacity-10";
-    }
-    else if (asset.status === 'Broken') {
-        statusText = "Arızalı"; statusClass = "bg-danger text-white";
-        iconColor = "text-danger"; iconBgClass = "bg-danger bg-opacity-10";
-    }
-    else if (asset.status === 'Retired') {
-        statusText = "Kullanım Dışı"; statusClass = "bg-dark text-white";
-        iconColor = "text-secondary opacity-50"; iconBgClass = "bg-secondary bg-opacity-10";
-    }
+    const ui = getAssetStatusUI(asset.status); // Ortak Yardımcı fonksiyondan UI değerlerini al    
 
     // Eğer cihaz kullanımdan kaldırılmışsa personeli boş göster, değilse atanmış kişiyi yaz
     const personelAdi = asset.status === 'Retired' ? "Kullanımdan Kaldırıldı" : (asset.assignedToName ?? "Şu an Boşta");
@@ -739,8 +743,8 @@ function buildAssetCardHtml(asset) {
             <div class="card border-0 shadow-sm rounded-4 h-100 equipment-grid-card position-relative asset-grid-card">
                 <div class="card-body text-center p-4">
                     <div class="mb-3">
-                        <div class="d-inline-flex align-items-center justify-content-center ${iconBgClass} rounded-circle asset-icon-circle">
-                            <i class="bi bi-laptop fs-1 ${iconColor}"></i>
+                        <div class="d-inline-flex align-items-center justify-content-center ${ui.bgClass} rounded-circle asset-icon-circle">
+                            <i class="bi bi-laptop fs-1 ${ui.iconColor}"></i>
                         </div>
                     </div>
                     <h6 class="fw-bold mb-1 text-truncate" title="${escapeHtml(asset.productName)}">${escapeHtml(asset.productName)}</h6>
@@ -748,7 +752,7 @@ function buildAssetCardHtml(asset) {
                         <span class="badge bg-dark rounded-pill fw-normal asset-sn-badge">SN: ${escapeHtml(asset.serialNumber)}</span>
                     </div>
                     <div class="d-flex justify-content-between align-items-center border-top pt-3 mt-auto">
-                        <span class="badge ${statusClass} rounded-pill">${statusText}</span>
+                        <span class="badge ${ui.badgeClass} text-white rounded-pill">${ui.shortText}</span>
                         <small class="text-muted text-truncate ms-2 asset-person-name"><i class="bi bi-person-fill"></i> ${escapeHtml(personelAdi)}</small>
                     </div>
                 </div>
@@ -794,23 +798,10 @@ async function submitDeleteAsset() {
 
         document.getElementById('assetResultContainer').classList.add('d-none');
         document.getElementById('serialSearchInput').value = '';
-        document.getElementById('targetLocationStockInfo').classList.add('d-none');
 
         currentAssetId = null;
         currentAssetProductId = null;
-        currentAssetSerialNumber = null; // Cihaz silinince hafızayı tamamen temizler
-
-        const stockSwitch = document.getElementById('returnToStockSwitch');
-        if (stockSwitch) {
-            stockSwitch.checked = true;
-            stockSwitch.dispatchEvent(new Event('change'));
-        }
-
-        document.getElementById('deleteAssetTargetWarehouse').value = ''; // Depoyu temizler
-
-        if (typeof StockUtils !== 'undefined') {
-            StockUtils._resetDropdown('deleteAssetTargetLocation', 'Önce depo seçin...', true); // Rafı temizler
-        }
+        currentAssetSerialNumber = null; // Cihaz silinince hafızayı tamamen temizler        
 
         if (["admin", "superadmin"].includes(userRole)) {
             document.getElementById('adminGridContainer').classList.remove('d-none');
