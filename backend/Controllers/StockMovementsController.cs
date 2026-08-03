@@ -2,6 +2,8 @@ using stok_takip.Constants;
 using Microsoft.AspNetCore.Authorization;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Mvc;
+using stok_takip.Attributes;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using stok_takip.Data;
 using stok_takip.Models;
@@ -101,7 +103,8 @@ namespace stok_takip.Controllers
 
         // 2. POST: Create a new stock movement (IN, OUT, or TRANSFER)
         [HttpPost]
-        [Authorize(Policy = Policies.RequireStockMovementWrite)] 
+        [RequirePermission(Policies.RequireStockMovementWrite)]
+        [EnableRateLimiting(Policies.RequireStockMovementWrite)] 
         public async Task<IActionResult> CreateMovement([FromBody] StockMovementRequestDto dto)
         {
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;

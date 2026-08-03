@@ -2,6 +2,8 @@ using stok_takip.Constants;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using stok_takip.Attributes;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using stok_takip.Data;
 using stok_takip.DTOs;
@@ -11,7 +13,8 @@ namespace stok_takip.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-[Authorize(Policy = Policies.RequireUserManage)]
+[RequirePermission(Policies.RequireUserManage)]
+[EnableRateLimiting(Policies.RequireUserManage)]
 public class UsersController : ControllerBase
 {
     private readonly AppDbContext _context;
