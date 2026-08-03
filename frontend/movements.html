@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="tr">
 
 <head>
@@ -35,36 +35,40 @@
 
                 <!-- Arama ve filtreleme alanlarını oluşturur -->
                 <div class="row mb-4 align-items-center mt-3">
-                    <div class="col-md-6">
+                    <div class="col-md-4">
                         <div class="position-relative">
-                            <span
-                                class="position-absolute top-50 translate-middle-y ms-3 text-muted pointer-events-none">🔍</span>
-                            <input type="text" id="aramaKutusu" class="form-control rounded-pill ps-5"
-                                placeholder="Ürün Adı, Kodu veya Personel Ara...">
+                            <span class="position-absolute top-50 translate-middle-y ms-3 text-muted pointer-events-none">🔍</span>
+                            <input type="text" id="aramaKutusu" class="form-control rounded-pill ps-5" placeholder="Ürün Adı, Kodu veya Personel Ara...">
                         </div>
                     </div>
-                    <div class="col-md-6 text-md-end mt-3 mt-md-0 d-flex gap-2 justify-content-md-end">
-                        <button id="btnTumu"
-                            class="btn btn-secondary btn-sm rounded-pill px-3 shadow-sm filtre-elemani">Tümü</button>
-                        <button id="btnGirisler"
-                            class="btn btn-outline-success btn-sm rounded-pill px-3 shadow-sm filtre-elemani">Stok
-                            Girişleri</button>
-                        <button id="btnCikislar"
-                            class="btn btn-outline-danger btn-sm rounded-pill px-3 shadow-sm filtre-elemani">Stok
-                            Çıkışları</button>
-                        <button id="btnTransferler"
-                            class="btn btn-outline-info btn-sm rounded-pill px-3 shadow-sm filtre-elemani">Stok
-                            Transferleri</button>
+                    <div class="col-md-3">
+                        <input type="date" id="startDate" class="form-control rounded-pill" title="Başlangıç Tarihi">
+                    </div>
+                    <div class="col-md-3">
+                        <input type="date" id="endDate" class="form-control rounded-pill" title="Bitiş Tarihi">
+                    </div>
+                    <div class="col-md-2 mt-3 mt-md-0 d-flex justify-content-md-end">
+                        <button id="filtreUygula" class="btn btn-primary rounded-pill w-100 shadow-sm">Filtrele</button>
                     </div>
                 </div>
-               
+                <div class="row mb-4">
+                    <div class="col-12 d-flex gap-2 justify-content-md-end">
+                        <button id="btnTumu" class="btn btn-secondary btn-sm rounded-pill px-3 shadow-sm filtre-elemani">Tümü</button>
+                        <button id="btnGirisler" class="btn btn-outline-success btn-sm rounded-pill px-3 shadow-sm filtre-elemani">Stok Girişleri</button>
+                        <button id="btnCikislar" class="btn btn-outline-danger btn-sm rounded-pill px-3 shadow-sm filtre-elemani">Stok Çıkışları</button>
+                        <button id="btnTransferler" class="btn btn-outline-info btn-sm rounded-pill px-3 shadow-sm filtre-elemani">Stok Transferleri</button>
+                    </div>
+                </div>
+
                 <!-- Stok hareketlerini listeleyen tabloyu tanımlar -->
                 <div class="table-responsive">
                     <table class="table table-hover align-middle mb-0 min-w-700">
                         <thead>
                             <tr class="text-muted small text-uppercase">
                                 <th id="tarihBaslik" class="text-center user-select-none sortable-th">Tarih ↕</th>
-                                <th id="thUrunKodu" class="text-center d-none d-md-table-cell user-select-none sortable-th">Ürün Kodu ↕</th>
+                                <th id="thUrunKodu"
+                                    class="text-center d-none d-md-table-cell user-select-none sortable-th">Ürün Kodu ↕
+                                </th>
                                 <th id="thUrunAdi" class="user-select-none sortable-th">Ürün Adı ↕
                                 </th>
                                 <th id="thIslemTipi" class="text-center user-select-none sortable-th">İşlem Tipi ↕</th>
@@ -73,12 +77,12 @@
                                 <th id="thPersonel" class="text-center user-select-none sortable-th">Personel ↕</th>
                             </tr>
                         </thead>
-                        <tbody id="hareketTablosuGövdesi"></tbody>
+                        <tbody id="stokHareketleriGovdesi"></tbody>
                     </table>
                 </div>
 
                 <!-- Sayfalama butonlarını barındırır -->
-                <div id="paginationContainer"></div>
+                <div id="hareketSayfalamaContainer"></div>
             </div>
         </div>
     </div>
@@ -115,7 +119,7 @@
                                     id="btnKameraAc">
                                     <i class="bi bi-upc-scan me-1"></i> Barkod Okut
                                 </button>
-                            </div>                         
+                            </div>
 
                             <div id="kameraAlani" class="d-none mb-3 rounded-3 overflow-hidden position-relative">
                                 <div id="reader"></div>
@@ -154,6 +158,10 @@
                             <select class="form-select" id="targetLocationId" disabled>
                                 <option value="">Önce depo seçin...</option>
                             </select>
+                            <div id="targetLocationStockInfo" class="d-none mt-2 small text-primary fw-bold">
+                                <i class="bi bi-info-circle"></i> Bu raftaki mevcut stok: <span
+                                    id="targetLocationStockValue">0</span> Adet
+                            </div>
                         </div>
 
                         <!-- EK BİLGİLER (OPSİYONEL) alanını gösterir -->
@@ -201,7 +209,7 @@
             </div>
         </div>
     </div>
-    
+
     <!-- Kullanıcı profilini gösteren açılır pencereyi tanımlar -->
     <div class="modal fade" id="userProfileModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
@@ -240,12 +248,16 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.js"></script>
-    <script src="js/alerts.js"></script>    
+    <script src="js/alerts.js"></script>
     <script src="js/partials/sidebar.partial.js"></script>
     <script src="js/partials/topbar.partial.js"></script>
     <script src="js/partials/pagination.partial.js"></script>
+    <script src="js/security-utils.js"></script>
+    <script src="js/table-utils.js"></script>
     <script src="js/config.js"></script>
+    <script src="js/data-view-engine.js"></script>
     <script src="js/scanner.js"></script>
+    <script src="js/stock-utils.js"></script>
     <script src="js/movements.js"></script>
     <script src="js/auth.js"></script>
 </body>

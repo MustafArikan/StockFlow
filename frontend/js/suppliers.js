@@ -1,76 +1,45 @@
-﻿const API_URL = `${CONFIG.API_BASE_URL}/suppliers`;
+const API_URL = `${CONFIG.API_BASE_URL}/suppliers`;
 const token = localStorage.getItem('token');
 if (!token) window.location.href = 'login.html';
 
 let tumTedarikciler = [];
-let filtreliTedarikciler = [];
 const tabloGovdesi = document.getElementById("tedarikciTablosuGovdesi");
-let currentPage = 1;
-const pageSize = 10;
-let aktifArama = '';
-let siralamaSutunu = 'id';
-let siralamaYonu = 'asc';
 
-
-function escapeHtml(text) {
-    if (!text) return "";
-    return text.toString()
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#039;");
-}
-
-// ---- Liste + arama + sıralama + sayfalama ----
-function veriyiGuncelle() {
-    const q = aktifArama.trim().toLowerCase();
-
-    filtreliTedarikciler = tumTedarikciler.filter(t => {
-        if (!q) return true;
-        return (t.name && t.name.toLowerCase().includes(q)) ||
-               (t.contactName && t.contactName.toLowerCase().includes(q)) ||
-               (t.contactPhone && t.contactPhone.toLowerCase().includes(q)) ||
-               (t.taxNumber && t.taxNumber.toString().toLowerCase().includes(q)) ||
-               (t.id && t.id.toString().includes(q));
-    });
-
-    filtreliTedarikciler.sort((a, b) => {
-        let dA = a[siralamaSutunu] != null ? a[siralamaSutunu] : '';
-        let dB = b[siralamaSutunu] != null ? b[siralamaSutunu] : '';
-        if (typeof dA === 'string') {
-            return siralamaYonu === 'asc' ? dA.localeCompare(dB) : dB.localeCompare(dA);
-        }
-        return siralamaYonu === 'asc' ? dA - dB : dB - dA;
-    });
-
-    const toplamSayfa = Math.ceil(filtreliTedarikciler.length / pageSize) || 1;
-    if (currentPage > toplamSayfa) currentPage = toplamSayfa;
-
-    const bas = (currentPage - 1) * pageSize;
-    const sayfadaki = filtreliTedarikciler.slice(bas, bas + pageSize);
-
-    tabloyuCiz(sayfadaki);
-    sayfalamayiCiz(toplamSayfa, currentPage);
-}
-
-function sirala(sutun) {
-    if (siralamaSutunu === sutun) {
-        siralamaYonu = siralamaYonu === 'asc' ? 'desc' : 'asc';
-    } else {
-        siralamaSutunu = sutun;
-        siralamaYonu = 'asc';
+const supplierView = createDataView({
+    containerId: "tedarikciTablosuGovdesi",
+    paginationContainerId: "paginationContainer",
+    mode: 'table',
+    emptyColspan: 6,
+    emptyMessage: "Kayıt bulunamadı.",
+    searchFields: ['name', 'contactName', 'contactPhone', 'taxNumber', 'id'],
+    defaultSortKey: 'id',
+    defaultSortDir: 'asc',
+    pageSize: 10,
+    renderRow: (t) => {
+        const duzenlenebilir = hasPermission("Supplier.Edit");
+        const silinebilir = hasPermission("Supplier.Delete");
+        let aksiyon = "";
+        aksiyon += `<button class="btn btn-sm btn-outline-info rounded-pill btn-goruntule me-1" data-id="${t.id}">Görüntüle</button>`;
+        if (duzenlenebilir) aksiyon += `<button class="btn btn-sm btn-outline-primary rounded-pill btn-duzenle me-1" data-id="${t.id}">Düzenle</button>`;
+        if (silinebilir) aksiyon += `<button class="btn btn-sm btn-outline-danger rounded-pill btn-sil" data-id="${t.id}">Sil</button>`;
+        const aksiyonTd = `<td class="text-end">${aksiyon}</td>`;
+        return `
+            <tr>
+                <td class="fw-bold text-muted small">${tarihFormatla(t.createdAt)}</td>
+                <td class="fw-bold">${escapeHtml(t.name)}</td>
+                <td>${escapeHtml(t.contactName) || '<span class="text-muted">-</span>'}</td>
+                <td>${escapeHtml(t.contactPhone) || '<span class="text-muted">-</span>'}</td>
+                <td>${escapeHtml(t.taxNumber) || '<span class="text-muted">-</span>'}</td>
+                ${aksiyonTd}
+            </tr>`;
     }
-    veriyiGuncelle();
-}
+});
 
-document.getElementById("thId")?.addEventListener("click", () => sirala("id"));
-document.getElementById("thAd")?.addEventListener("click", () => sirala("name"));
+document.getElementById("thId")?.addEventListener("click", () => supplierView.setSort("id"));
+document.getElementById("thAd")?.addEventListener("click", () => supplierView.setSort("name"));
 
 document.getElementById("aramaKutusu")?.addEventListener("keyup", (e) => {
-    aktifArama = e.target.value;
-    currentPage = 1;
-    veriyiGuncelle();
+    supplierView.setSearch(e.target.value);
 });
 
 async function tedarikcileriYukle() {
@@ -91,7 +60,7 @@ async function tedarikcileriYukle() {
 
         const sonuc = await cevap.json();
         tumTedarikciler = sonuc.items || sonuc; // GET /suppliers düz dizi döner
-        veriyiGuncelle();
+        supplierView.setItems(tumTedarikciler);
     } catch (hata) {
         tabloGovdesi.innerHTML = `<tr><td colspan="6" class="text-center text-danger py-4">Tedarikçiler yüklenemedi. (${escapeHtml(hata.message)})</td></tr>`;
         const p = document.getElementById("paginationContainer");
@@ -99,64 +68,7 @@ async function tedarikcileriYukle() {
     }
 }
 
-function tabloyuCiz(liste) {
-    tabloGovdesi.innerHTML = "";
-
-    if (!liste.length) {
-        tabloGovdesi.innerHTML = `<tr><td colspan="6" class="text-center text-muted py-4">Kayıt bulunamadı.</td></tr>`;
-        return;
-    }
-
-    const duzenlenebilir = hasPermission("Supplier.Edit");
-    const silinebilir = hasPermission("Supplier.Delete");
-
-    let html = "";
-    liste.forEach(t => {
-        let aksiyon = "";
-        aksiyon += `<button class="btn btn-sm btn-outline-info rounded-pill btn-goruntule me-1" data-id="${t.id}">Görüntüle</button>`;
-        if (duzenlenebilir) aksiyon += `<button class="btn btn-sm btn-outline-primary rounded-pill btn-duzenle me-1" data-id="${t.id}">Düzenle</button>`;
-        if (silinebilir) aksiyon += `<button class="btn btn-sm btn-outline-danger rounded-pill btn-sil" data-id="${t.id}">Sil</button>`;
-        
-
-        const aksiyonTd = `<td class="text-end">${aksiyon}</td>`;
-
-        html += `
-            <tr>
-                <td class="fw-bold text-muted small">${tarihFormatla(t.createdAt)}</td>
-                <td class="fw-bold">${escapeHtml(t.name)}</td>
-                <td>${escapeHtml(t.contactName) || '<span class="text-muted">-</span>'}</td>
-                <td>${escapeHtml(t.contactPhone) || '<span class="text-muted">-</span>'}</td>
-                <td>${escapeHtml(t.taxNumber) || '<span class="text-muted">-</span>'}</td>
-                ${aksiyonTd}
-            </tr>`;
-    });
-    tabloGovdesi.innerHTML = html;
-}
-
-function sayfalamayiCiz(totalPages, currentPage) {
-    const container = document.getElementById("paginationContainer");
-    if (!container) return;
-    if (totalPages <= 1) { container.innerHTML = ""; return; }
-
-    let html = `<nav><ul class="pagination pagination-sm mb-0 shadow-sm justify-content-center mt-3">`;
-    html += `<li class="page-item ${currentPage === 1 ? 'disabled' : ''}"><a class="page-link page-action" href="#" data-page="${currentPage - 1}">« Önceki</a></li>`;
-    for (let i = 1; i <= totalPages; i++) {
-        html += `<li class="page-item ${currentPage === i ? 'active' : ''}"><a class="page-link page-action" href="#" data-page="${i}">${i}</a></li>`;
-    }
-    html += `<li class="page-item ${currentPage === totalPages ? 'disabled' : ''}"><a class="page-link page-action" href="#" data-page="${currentPage + 1}">Sonraki »</a></li>`;
-    html += `</ul></nav>`;
-    container.innerHTML = html;
-}
-
-document.getElementById("paginationContainer")?.addEventListener("click", (e) => {
-    e.preventDefault();
-    const btn = e.target.closest(".page-action");
-    if (!btn) return;
-    const li = btn.closest(".page-item");
-    if (li && (li.classList.contains("disabled") || li.classList.contains("active"))) return;
-    const page = parseInt(btn.getAttribute("data-page"));
-    if (!isNaN(page)) { currentPage = page; veriyiGuncelle(); }
-});
+// tabloyuCiz motora taşındı
 
 // ---- Ekle / Düzenle (kaydet) ----
 document.getElementById("btnTedarikciKaydet")?.addEventListener("click", async () => {
@@ -174,6 +86,11 @@ document.getElementById("btnTedarikciKaydet")?.addEventListener("click", async (
         address: document.getElementById("tedarikciAdres").value.trim() || null,
         taxNumber: document.getElementById("tedarikciVergiNo").value.trim() || null
     };
+
+    if (veri.contactPhone && !window.isValidPhone(veri.contactPhone)) {
+        uyariGoster("Geçerli bir telefon numarası giriniz! (Örn: 0555 555 55 55)");
+        return;
+    }
 
     const metod = id ? "PUT" : "POST";
     const adres = id ? `${API_URL}/${id}` : API_URL;

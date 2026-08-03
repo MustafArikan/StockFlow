@@ -36,34 +36,44 @@ builder.Services.AddRateLimiter(options =>
         limiterOptions.QueueLimit = 0; // Kuyrukta istek bekletme
     });
 
-    // --- YENİ: appsettings.json > AuthorizationPolicies altındaki her key için
-    // otomatik olarak kullanıcı bazlı bir rate limit policy'si üretir ---
-    var policiesSection = builder.Configuration.GetSection("AuthorizationPolicies");
-    foreach (var policySection in policiesSection.GetChildren())
+    // --- YENİ: Veritabanından Authorization Policies okunarak rate limit policy'leri üretilir ---
+    // Not: Rate limiter kuralları uygulama başlarken yüklenir. DB'den değiştirildiğinde uygulamanın yeniden başlatılması gerekir.
+    var optionsBuilder = new DbContextOptionsBuilder<AppDbContext>();
+    optionsBuilder.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"));
+    using var tempContext = new AppDbContext(optionsBuilder.Options, null!);
+    
+    try
     {
-        var policyKey = policySection.Key; // "RequireProductWrite" vb.
-        var permitLimit = policySection.GetValue<int>("RateLimit:PermitLimit");
-        var windowSeconds = policySection.GetValue<int>("RateLimit:WindowSeconds");
-
-        if (permitLimit <= 0 || windowSeconds <= 0) continue; // RateLimit tanımlı değilse atla
-
-        options.AddPolicy(policyKey, httpContext =>
+        var dbPolicies = tempContext.AppAuthorizationPolicies.ToList();
+        foreach (var policy in dbPolicies)
         {
-            // IP yerine kullanıcı bazlı limit: her giriş yapmış kullanıcı kendi limitine sahip olur
-            var userId = httpContext.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
-                         ?? httpContext.Connection.RemoteIpAddress?.ToString()
-                         ?? "anonymous";
+            var policyKey = policy.Key;
+            var permitLimit = policy.PermitLimit;
+            var windowSeconds = policy.WindowSeconds;
 
-            return RateLimitPartition.GetFixedWindowLimiter(
-                $"{policyKey}:{userId}",
-                _ => new FixedWindowRateLimiterOptions
-                {
-                    PermitLimit = permitLimit,
-                    Window = TimeSpan.FromSeconds(windowSeconds),
-                    QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
-                    QueueLimit = 0
-                });
-        });
+            if (permitLimit <= 0 || windowSeconds <= 0) continue;
+
+            options.AddPolicy(policyKey, httpContext =>
+            {
+                var userId = httpContext.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
+                             ?? httpContext.Connection.RemoteIpAddress?.ToString()
+                             ?? "anonymous";
+
+                return RateLimitPartition.GetFixedWindowLimiter(
+                    $"{policyKey}:{userId}",
+                    _ => new FixedWindowRateLimiterOptions
+                    {
+                        PermitLimit = permitLimit,
+                        Window = TimeSpan.FromSeconds(windowSeconds),
+                        QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                        QueueLimit = 0
+                    });
+            });
+        }
+    }
+    catch
+    {
+        // Migrations henüz çalıştırılmadıysa tablo yok hatasını yoksay
     }
 
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests; // Too Many Requests
@@ -191,6 +201,7 @@ builder.Services.AddAuthentication(options =>
     };
 });
 
+builder.Services.AddMemoryCache();
 builder.Services.AddSingleton<IAuthorizationPolicyProvider, PermissionPolicyProvider>();
 builder.Services.AddScoped<IAuthorizationHandler, PermissionAuthorizationHandler>();
 
@@ -206,7 +217,9 @@ builder.Services.AddAuthorization(options =>
         context.User.HasClaim("Permission", "Role.View") ||
         context.User.HasClaim("Permission", "Role.Add") ||
         context.User.HasClaim("Permission", "Role.Edit") ||
-        context.User.HasClaim("Permission", "Role.Delete")
+        context.User.HasClaim("Permission", "Role.Delete") ||
+        context.User.HasClaim("Permission", "Policy.View") ||
+        context.User.HasClaim("Permission", "Policy.Edit")
     ));
     options.AddPolicy(Policies.AdminOnly, policy => policy.RequireRole("admin", "superadmin"));
 });

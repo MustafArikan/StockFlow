@@ -14,15 +14,7 @@ let siralamaYonu = 'asc';
 
 if (!token) window.location.href = 'login.html';
 
-function escapeHtml(text) {
-    if (!text) return "";
-    return text.toString()
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#039;");
-}
+
 
 function veriyiGuncelle() {
     if (aktifArama.trim() === '') {

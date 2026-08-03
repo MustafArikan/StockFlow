@@ -40,3 +40,6 @@ yarn-error.log*
 
 # JetBrains IDE settings (Rider, WebStorm, etc.)
 .idea/
+
+# SQL Exporter un-templated config
+monitoring/sql_exporter/sql_exporter.yml

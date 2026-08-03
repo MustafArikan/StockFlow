@@ -27,6 +27,7 @@ public class AppDbContext : DbContext
     public DbSet<AssetHistory> AssetHistories { get; set; } = null!;
     public DbSet<SecurityAuditLog> SecurityAuditLogs { get; set; } = null!;
     public DbSet<AttributeRule> AttributeRules { get; set; } = null!;
+    public DbSet<AttributeAllowedValue> AttributeAllowedValues { get; set; } = null!;
     public DbSet<Supplier> Suppliers { get; set; } = null!;
     public DbSet<ProductSupplier> ProductSuppliers { get; set; } = null!;
 
@@ -34,6 +35,8 @@ public class AppDbContext : DbContext
     public DbSet<AppRole> AppRoles { get; set; } = null!;
     public DbSet<AppPermission> AppPermissions { get; set; } = null!;
     public DbSet<AppRolePermission> AppRolePermissions { get; set; } = null!;
+    public DbSet<AppAuthorizationPolicy> AppAuthorizationPolicies { get; set; } = null!;
+    public DbSet<AppPolicyPermission> AppPolicyPermissions { get; set; } = null!;
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -52,12 +55,14 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<SecurityAuditLog>().HasQueryFilter(e => !e.IsDeleted);
         modelBuilder.Entity<UserSession>().HasQueryFilter(e => !e.IsDeleted);
         modelBuilder.Entity<AttributeRule>().HasQueryFilter(e => !e.IsDeleted);
+        modelBuilder.Entity<AttributeAllowedValue>().HasQueryFilter(e => !e.IsDeleted);
         modelBuilder.Entity<Supplier>().HasQueryFilter(e => !e.IsDeleted);
         modelBuilder.Entity<ProductSupplier>().HasQueryFilter(e => !e.IsDeleted);
         modelBuilder.Entity<AppRole>().HasQueryFilter(e => !e.IsDeleted);
         modelBuilder.Entity<AppPermission>().HasQueryFilter(e => !e.IsDeleted);
         modelBuilder.Entity<AppRolePermission>().HasQueryFilter(e => !e.IsDeleted);
-
+        modelBuilder.Entity<AppAuthorizationPolicy>().HasQueryFilter(e => !e.IsDeleted);
+        modelBuilder.Entity<AppPolicyPermission>().HasQueryFilter(e => !e.IsDeleted);
 
 
 
@@ -86,6 +91,26 @@ public class AppDbContext : DbContext
         
         modelBuilder.Entity<AppRolePermission>()
             .HasIndex(rp => new { rp.RoleId, rp.PermissionId })
+            .IsUnique();
+
+        modelBuilder.Entity<AppPolicyPermission>()
+            .HasOne(pp => pp.Policy)
+            .WithMany(p => p.PolicyPermissions)
+            .HasForeignKey(pp => pp.PolicyId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<AppPolicyPermission>()
+            .HasOne(pp => pp.Permission)
+            .WithMany(p => p.PolicyPermissions)
+            .HasForeignKey(pp => pp.PermissionId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<AppPolicyPermission>()
+            .HasIndex(pp => new { pp.PolicyId, pp.PermissionId })
+            .IsUnique();
+
+        modelBuilder.Entity<AppAuthorizationPolicy>()
+            .HasIndex(p => p.Key)
             .IsUnique();
 
         modelBuilder.Entity<AppRole>()
@@ -146,6 +171,20 @@ public class AppDbContext : DbContext
             .HasOne(a => a.Category)
             .WithMany(c => c.AttributeRules)
             .HasForeignKey(a => a.CategoryId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<AttributeRule>()
+            .Property(a => a.MinValue)
+            .HasPrecision(18, 4);
+
+        modelBuilder.Entity<AttributeRule>()
+            .Property(a => a.MaxValue)
+            .HasPrecision(18, 4);
+
+        modelBuilder.Entity<AttributeAllowedValue>()
+            .HasOne(a => a.AttributeRule)
+            .WithMany(r => r.AttributeAllowedValues)
+            .HasForeignKey(a => a.AttributeRuleId)
             .OnDelete(DeleteBehavior.Restrict);
 
         // Tedarikçi silinirse, geçmiş stok hareketleri bozulmasın
