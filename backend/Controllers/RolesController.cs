@@ -1,6 +1,10 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using stok_takip.Attributes;
+using stok_takip.Constants;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
 using stok_takip.Constants;
 using stok_takip.Data;
@@ -48,7 +52,7 @@ public class RolesController : ControllerBase
     }
 
     [HttpGet]
-    [Authorize]
+    [RequirePermission(Policies.RequireUserManage)]
     public async Task<IActionResult> GetRoles()
     {
         var currentUserIdStr = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;

@@ -79,9 +79,10 @@ public class UsersController : ControllerBase
     [HttpGet("{id}")]
     public async Task<IActionResult> GetUserById(int id)
     {
+        var currentUserLevel = await GetCurrentUserRoleLevelAsync();
         var user = await _context.Users
             .AsNoTracking()
-            .Where(u => u.Id == id)
+            .Where(u => u.Id == id && (u.Role == null || u.Role.Level <= currentUserLevel))
             .Select(u => new
             {
                 u.Id,
@@ -161,6 +162,7 @@ public class UsersController : ControllerBase
     public async Task<IActionResult> CreateUser([FromBody] CreateUserDto dto)
     {
         var newRole = await _context.AppRoles.FindAsync(dto.RoleId);
+        if (newRole == null) return BadRequest(new { message = "Geçersiz rol." });
         if (newRole?.Name == "superadmin" && !User.IsInRole("superadmin"))
         {
             return Forbid(); // Süper admin rolünde kullanıcı oluşturamaz

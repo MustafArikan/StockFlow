@@ -4,6 +4,7 @@ using Scalar.AspNetCore;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.AspNetCore.HttpOverrides;
@@ -81,8 +82,9 @@ builder.Services.AddRateLimiter(options =>
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
 {
     options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
-    options.KnownNetworks.Clear(); // Tüm ağları bilinen olarak kabul et
-    options.KnownProxies.Clear();  // Tüm proxyleri bilinen olarak kabul et
+    // Güvenlik: KnownNetworks ve KnownProxies'i tamamen temizlemek (Clear) IP spoofing'e yol açar.
+    // Eğer Nginx başka bir sunucuda veya docker network'ünde ise, Nginx'in IP'sini KnownProxies'e eklemelisiniz.
+    // Örnek: options.KnownProxies.Add(IPAddress.Parse("192.168.1.5"));
 });
 builder.Services.AddHttpContextAccessor();
 
@@ -146,13 +148,24 @@ builder.Services.AddAuthentication(options =>
                 return;
             }
 
-            var session = await dbContext.UserSessions
-                .Include(s => s.User)
-                    .ThenInclude(u => u.Role)
-                        .ThenInclude(r => r.RolePermissions)
-                            .ThenInclude(rp => rp.Permission)
-                .AsNoTracking()
-                .FirstOrDefaultAsync(s => s.SessionToken == sessionToken);
+            var cache = context.HttpContext.RequestServices.GetRequiredService<Microsoft.Extensions.Caching.Memory.IMemoryCache>();
+            var cacheKey = $"Session_{sessionToken}";
+
+            if (!cache.TryGetValue(cacheKey, out UserSession session))
+            {
+                session = await dbContext.UserSessions
+                    .Include(s => s.User)
+                        .ThenInclude(u => u.Role)
+                            .ThenInclude(r => r.RolePermissions)
+                                .ThenInclude(rp => rp.Permission)
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(s => s.SessionToken == sessionToken);
+
+                if (session != null)
+                {
+                    cache.Set(cacheKey, session, TimeSpan.FromSeconds(60));
+                }
+            }
 
             if (session == null || !session.IsActive || session.ExpiresAt < DateTime.UtcNow)
             {
