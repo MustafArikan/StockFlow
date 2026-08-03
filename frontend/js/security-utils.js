@@ -36,3 +36,24 @@ window.isValidPhone = function(phone) {
     const cleanPhone = String(phone).replace(/[\s\-\(\)]/g, '');
     return /^(05|5)[0-9]{9}$/.test(cleanPhone);
 };
+
+// Gerçek zamanlı tuş filtresi (Harfleri engellemek için)
+document.addEventListener("DOMContentLoaded", () => {
+    // Telefon alanları: type="tel" veya id'sinde phone/telefon geçenler
+    const phoneInputs = document.querySelectorAll('input[type="tel"], input[id*="Phone" i], input[id*="telefon" i]');
+    phoneInputs.forEach(input => {
+        input.addEventListener('input', function(e) {
+            // Sadece rakam, boşluk, artı, eksi ve parantezlere izin ver
+            this.value = this.value.replace(/[^0-9\s\-\+\(\)]/g, '');
+        });
+    });
+
+    // TC Kimlik alanları: id'sinde identity veya tc geçenler
+    const tcInputs = document.querySelectorAll('input[id*="identity" i], input[id*="tcKimlik" i]');
+    tcInputs.forEach(input => {
+        input.addEventListener('input', function(e) {
+            // Sadece rakamlara izin ver
+            this.value = this.value.replace(/[^0-9]/g, '');
+        });
+    });
+});
