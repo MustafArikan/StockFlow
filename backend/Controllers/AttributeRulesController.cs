@@ -42,23 +42,27 @@ public class AttributeRulesController : ControllerBase
 
             currentId = category.ParentId;
         }
-            var rules = await _context.AttributeRules
-                .AsNoTracking()
-                .Where(a => targetCategoryIds.Contains(a.CategoryId) && !a.IsDeleted)
-                .OrderBy(a => a.DisplayOrder)
-                .Select(rule => new stok_takip.DTOs.AttributeRuleResponseDto(
-                    rule.Id,
-                    rule.CategoryId,
-                    rule.AttributeKey,
-                    rule.DataType,
-                    rule.IsRequired,
-                    rule.AllowedValues,
-                    rule.UiComponent,
-                    rule.MinValue,
-                    rule.MaxValue,
-                    rule.TargetLevel,
-                    rule.DisplayOrder))
-                .ToListAsync();
+        var rulesFromDb = await _context.AttributeRules
+            .Include(a => a.AttributeAllowedValues)
+            .AsNoTracking()
+            .Where(a => targetCategoryIds.Contains(a.CategoryId) && !a.IsDeleted)
+            .OrderBy(a => a.DisplayOrder)
+            .ToListAsync();
+
+        var rules = rulesFromDb.Select(rule => new stok_takip.DTOs.AttributeRuleResponseDto(
+            rule.Id,
+            rule.CategoryId,
+            rule.AttributeKey,
+            rule.DataType,
+            rule.IsRequired,
+            System.Text.Json.JsonSerializer.Serialize(rule.AttributeAllowedValues.Where(v => !v.IsDeleted).OrderBy(v => v.DisplayOrder).Select(v => v.Value)),
+            rule.UiComponent,
+            rule.MinValue,
+            rule.MaxValue,
+            rule.TargetLevel,
+            rule.DisplayOrder,
+            rule.AttributeAllowedValues.Where(v => !v.IsDeleted).OrderBy(v => v.DisplayOrder).Select(v => new stok_takip.DTOs.AttributeAllowedValueDto(v.Value, v.Label, v.DisplayOrder)).ToList()))
+        .ToList();
 
                 return Ok(rules);
     }
@@ -87,41 +91,153 @@ public class AttributeRulesController : ControllerBase
             TargetLevel = dto.TargetLevel
         };
 
+        if (dto.AllowedValueList != null && dto.AllowedValueList.Any())
+        {
+            foreach (var val in dto.AllowedValueList)
+            {
+                rule.AttributeAllowedValues.Add(new AttributeAllowedValue
+                {
+                    Value = val.Value,
+                    Label = val.Label,
+                    DisplayOrder = val.DisplayOrder
+                });
+            }
+        }
+        else if (!string.IsNullOrEmpty(dto.AllowedValues) && dto.AllowedValues != "[]")
+        {
+            try 
+            {
+                var parsed = System.Text.Json.JsonSerializer.Deserialize<List<string>>(dto.AllowedValues);
+                if (parsed != null)
+                {
+                    int order = 1;
+                    foreach (var p in parsed)
+                    {
+                        rule.AttributeAllowedValues.Add(new AttributeAllowedValue { Value = p, Label = p, DisplayOrder = order++ });
+                    }
+                }
+            } 
+            catch
+            {
+                var parts = dto.AllowedValues.Split(new[] {','}, StringSplitOptions.RemoveEmptyEntries);
+                int order = 1;
+                foreach (var p in parts)
+                {
+                    rule.AttributeAllowedValues.Add(new AttributeAllowedValue { Value = p.Trim(), Label = p.Trim(), DisplayOrder = order++ });
+                }
+            }
+        }
+
         _context.AttributeRules.Add(rule);
         await _context.SaveChangesAsync();
-        return Ok(new stok_takip.DTOs.AttributeRuleResponseDto(rule.Id, rule.CategoryId, rule.AttributeKey, rule.DataType, rule.IsRequired, rule.AllowedValues, rule.UiComponent, rule.MinValue, rule.MaxValue, rule.TargetLevel, rule.DisplayOrder));
+        
+        var responseDto = new stok_takip.DTOs.AttributeRuleResponseDto(
+            rule.Id, rule.CategoryId, rule.AttributeKey, rule.DataType, rule.IsRequired, 
+            System.Text.Json.JsonSerializer.Serialize(rule.AttributeAllowedValues.Select(x => x.Value)), 
+            rule.UiComponent, rule.MinValue, rule.MaxValue, rule.TargetLevel, rule.DisplayOrder, 
+            rule.AttributeAllowedValues.Select(v => new stok_takip.DTOs.AttributeAllowedValueDto(v.Value, v.Label, v.DisplayOrder)).ToList());
+        return Ok(responseDto);
     }
 
     // Kural güncelleme
     [HttpPut("{id}")]
     public async Task<IActionResult> Update(int id, [FromBody] stok_takip.DTOs.CreateAttributeRuleDto dto)
     {
-        var rule = await _context.AttributeRules.FindAsync(id);
+        var rule = await _context.AttributeRules
+            .Include(r => r.AttributeAllowedValues)
+            .FirstOrDefaultAsync(r => r.Id == id);
+            
         if (rule == null || rule.IsDeleted)
             return NotFound(new { message = "Kural bulunamadı." });
 
         rule.AttributeKey = dto.AttributeKey;
         rule.DataType = dto.DataType;
         rule.IsRequired = dto.IsRequired;
-        rule.AllowedValues = dto.AllowedValues;
+        rule.AllowedValues = dto.AllowedValues; // Keep original in DB for now
         rule.UiComponent = dto.UiComponent;
         rule.MinValue = dto.MinValue;
         rule.MaxValue = dto.MaxValue;
         rule.TargetLevel = dto.TargetLevel;
 
+        // Gelen yeni değer listesini hazırla
+        var incomingValues = new List<string>();
+        if (dto.AllowedValueList != null)
+        {
+            incomingValues = dto.AllowedValueList.Select(x => x.Value).ToList();
+        }
+        else if (!string.IsNullOrEmpty(dto.AllowedValues) && dto.AllowedValues != "[]")
+        {
+            try 
+            {
+                var parsed = System.Text.Json.JsonSerializer.Deserialize<List<string>>(dto.AllowedValues);
+                if (parsed != null) incomingValues = parsed;
+            } 
+            catch
+            {
+                incomingValues = dto.AllowedValues.Split(new[] {','}, StringSplitOptions.RemoveEmptyEntries).Select(s => s.Trim()).ToList();
+            }
+        }
+
+        // 1. Veritabanında olup da yeni listede olmayanları SOFT DELETE yap (Silme)
+        foreach (var existing in rule.AttributeAllowedValues)
+        {
+            if (!incomingValues.Contains(existing.Value))
+            {
+                existing.IsDeleted = true; // Sadece gizle, eski ürünlerdeki veriler patlamasın!
+            }
+            else
+            {
+                existing.IsDeleted = false; // Belki daha önce silinmişti, geri eklendi
+            }
+        }
+
+        // 2. Yeni listede olup da veritabanında HİÇ olmayanları EKLE
+        int order = 1;
+        foreach (var incomingVal in incomingValues)
+        {
+            var existing = rule.AttributeAllowedValues.FirstOrDefault(x => x.Value == incomingVal);
+            if (existing == null)
+            {
+                rule.AttributeAllowedValues.Add(new AttributeAllowedValue 
+                { 
+                    Value = incomingVal, 
+                    Label = incomingVal, 
+                    DisplayOrder = order++ 
+                });
+            }
+            else
+            {
+                existing.DisplayOrder = order++;
+            }
+        }
+
         await _context.SaveChangesAsync();
-        return Ok(new stok_takip.DTOs.AttributeRuleResponseDto(rule.Id, rule.CategoryId, rule.AttributeKey, rule.DataType, rule.IsRequired, rule.AllowedValues, rule.UiComponent, rule.MinValue, rule.MaxValue, rule.TargetLevel, rule.DisplayOrder));
+        
+        var responseDto = new stok_takip.DTOs.AttributeRuleResponseDto(
+            rule.Id, rule.CategoryId, rule.AttributeKey, rule.DataType, rule.IsRequired, 
+            System.Text.Json.JsonSerializer.Serialize(rule.AttributeAllowedValues.Select(x => x.Value)), 
+            rule.UiComponent, rule.MinValue, rule.MaxValue, rule.TargetLevel, rule.DisplayOrder, 
+            rule.AttributeAllowedValues.Select(v => new stok_takip.DTOs.AttributeAllowedValueDto(v.Value, v.Label, v.DisplayOrder)).ToList());
+        return Ok(responseDto);
     }
 
     // Kural silme (Soft Delete)
     [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(int id)
     {
-        var rule = await _context.AttributeRules.FindAsync(id);
+        var rule = await _context.AttributeRules
+            .Include(r => r.AttributeAllowedValues)
+            .FirstOrDefaultAsync(r => r.Id == id);
+            
         if (rule == null)
             return NotFound(new { message = "Kural bulunamadı." });
 
         rule.IsDeleted = true;
+        foreach (var val in rule.AttributeAllowedValues)
+        {
+            val.IsDeleted = true;
+        }
+        
         await _context.SaveChangesAsync();
         return Ok(new { message = "Kural başarıyla silindi." });
     }

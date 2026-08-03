@@ -19,6 +19,7 @@ public class AttributeRule : BaseEntity
 
     public bool IsRequired { get; set; } = false;
 
+    [Obsolete("Use AttributeAllowedValues instead. Preserved for backward compatibility.")]
     public string? AllowedValues { get; set; }
 
     [MaxLength(50)]
@@ -33,4 +34,5 @@ public class AttributeRule : BaseEntity
 
     public int DisplayOrder { get; set; } = 0;
 
+    public ICollection<AttributeAllowedValue> AttributeAllowedValues { get; set; } = new List<AttributeAllowedValue>();
 }

@@ -2,12 +2,10 @@ using Microsoft.AspNetCore.Authorization;
 
 namespace stok_takip.Authorization;
 
-/// <summary>
 /// PermissionRequirement'ı değerlendiren handler.
 /// Program.cs > OnTokenValidated tarafından her istekte DB'den taze
 /// yüklenen "Permission" claim'lerine bakar — bu sayede DB'deki
 /// permission değişiklikleri bir sonraki istekte anında yansır.
-/// </summary>
 public class PermissionAuthorizationHandler : AuthorizationHandler<PermissionRequirement>
 {
     protected override Task HandleRequirementAsync(

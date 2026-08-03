@@ -125,8 +125,7 @@ services:
       - MSSQL_SA_PASSWORD=${MSSQL_SA_PASSWORD}
     volumes:
       - ./monitoring/sql_exporter:/etc/sql_exporter:ro
-    command:
-      - "-config.file=/etc/sql_exporter/sql_exporter.yml"
+    entrypoint: /bin/sh /etc/sql_exporter/entrypoint.sh
     ports:
       - "9399:9399"
     depends_on:

@@ -1,13 +1,5 @@
 // XSS koruması eklenmiş hali
-function escapeHtml(text) {
-    if (!text) return "";
-    return text.toString()
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#039;");
-}
+
 
 // Profil sayfası yüklendiğinde mevcut bilgileri getir
 document.addEventListener("DOMContentLoaded", async () => {
@@ -16,6 +8,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     const inputFirstName = document.getElementById("profileFirstName");
     const inputLastName = document.getElementById("profileLastName");
     const inputEmail = document.getElementById("profileEmail");
+    const inputIdentityNumber = document.getElementById("profileIdentityNumber");
     const inputPhone = document.getElementById("profilePhone");
     const btnSaveProfile = document.getElementById("btnSaveProfile");
 
@@ -33,6 +26,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         inputFirstName.value = userData.firstName || "";
         inputLastName.value = userData.lastName || "";
         inputEmail.value = userData.email || "";
+        inputIdentityNumber.value = userData.identityNumber || "";
         inputPhone.value = userData.phoneNumber || "";
     } catch (error) {
         Swal.fire({
@@ -51,8 +45,17 @@ document.addEventListener("DOMContentLoaded", async () => {
             firstName: inputFirstName.value.trim(),
             lastName: inputLastName.value.trim(),
             email: inputEmail.value.trim(),
+            identityNumber: inputIdentityNumber.value.trim(),
             phoneNumber: inputPhone.value.trim()
         };
+
+        if (updateData.identityNumber && !window.isValidTC(updateData.identityNumber)) {
+            return Swal.fire('Hata', 'Girdiğiniz TC Kimlik Numarası geçersiz!', 'error');
+        }
+
+        if (updateData.phoneNumber && !window.isValidPhone(updateData.phoneNumber)) {
+            return Swal.fire('Hata', 'Geçerli bir telefon numarası giriniz! (Örn: 0555 555 55 55)', 'error');
+        }
 
         const orjinalMetin = btnSaveProfile.innerHTML;
         btnSaveProfile.disabled = true;

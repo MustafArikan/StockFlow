@@ -6,30 +6,22 @@ if (!token) {
 }
 
 let logsData = [];
-let currentPage = 1;
-let pageSize = 50;
-
-async function loglariYukle(page = 1) {
-    currentPage = page;
-    try {
-        const responseData = await apiRequest(`/audit-logs?pageNumber=${page}&pageSize=${pageSize}`, 'GET');
-        logsData = responseData.items || responseData; // Geriye dönük uyumluluk
-        tabloyuCiz(logsData);
-        sayfalamaCiz(responseData.totalRecords || 0, responseData.currentPage || 1);
-    } catch (e) {
-        console.error(e);
-    }
-}
-
-function tabloyuCiz(veriler) {
-    const govde = document.getElementById("logTablosuGövdesi");
-    govde.innerHTML = "";
-    if (veriler.length === 0) {
-        govde.innerHTML = `<tr><td colspan="5" class="text-center text-muted py-4"><i class="bi bi-inbox fs-4 d-block mb-2"></i>Kayıt bulunamadı.</td></tr>`;
-        return;
-    }
-
-    const mHtml = veriler.map((l, index) => {
+const logsView = createDataView({
+    containerId: "logTablosuGövdesi",
+    paginationContainerId: "paginationContainer",
+    mode: 'table',
+    emptyColspan: 5,
+    emptyMessage: "Kayıt bulunamadı.",
+    pageSize: 50,
+    fetchPage: async (page, size) => {
+        const responseData = await apiRequest(`/audit-logs?pageNumber=${page}&pageSize=${size}`, 'GET');
+        logsData = responseData.items || responseData; // For event listeners
+        return {
+            items: logsData,
+            totalItems: responseData.totalRecords || 0
+        };
+    },
+    renderRow: (l, index) => {
         const trh = new Date(l.timestamp).toLocaleString("tr-TR");
         let islemTipi = `<span class="badge bg-secondary">${escapeHtml(l.actionType)}</span>`;
         if (l.actionType === "Added") islemTipi = `<span class="badge bg-success">Eklendi</span>`;
@@ -55,24 +47,11 @@ function tabloyuCiz(veriler) {
                 </button>
             </td>
         </tr>`;
-    }).join("");
-    govde.innerHTML = mHtml;
-}
+    }
+});
 
-function sayfalamaCiz(totalRecords, current) {
-    buildPagination(
-        "paginationContainer", 
-        totalRecords, 
-        current, 
-        pageSize, 
-        (newPage) => {
-            loglariYukle(newPage);
-        },
-        (newSize) => {
-            pageSize = newSize;
-            loglariYukle(1);
-        }
-    );
+function loglariYukle(page = 1) {
+    logsView.load(page);
 }
 
 async function kullaniciProfiliGoster(userId) {

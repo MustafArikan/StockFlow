@@ -7,168 +7,44 @@ if (!token) window.location.href = 'login.html';
 const MAX_ISLEM_ADEDI = 100000;
 
 // XSS koruması
-function escapeHtml(text) {
-    if (!text) return "";
-    return text.toString()
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#039;");
-}
+
 
 const urlParams = new URLSearchParams(window.location.search);
 const urlFilter = urlParams.get('filter');
 
-let stokHareketleri = [];
 let tumUrunler = [];
 
-const tabloGovdesi = document.getElementById("hareketTablosuGövdesi");
-const aramaKutusu = document.getElementById("aramaKutusu");
-
-let currentPage = 1;
-let pageSize = 10;
 let aktifFiltre = urlFilter ? urlFilter : 'TUMU';
-let aktifArama = '';
-let siralamaSutunu = 'tarih';
-let siralamaYonu = 'desc';
 
-function veriyiGuncelle() {
-    let islenmisVeri = stokHareketleri || [];
-
-    if (aktifFiltre !== 'TUMU') {
-        if (aktifFiltre === 'GIRIS') {
-            islenmisVeri = islenmisVeri.filter(h => {
-                let type = h.movementType || h.islemTipi || h.type;
-                return type === 'IN' || type === 'GIRIS';
-            });
-        } else if (aktifFiltre === 'CIKIS') {
-            islenmisVeri = islenmisVeri.filter(h => {
-                let type = h.movementType || h.islemTipi || h.type;
-                return type === 'OUT' || type === 'CIKIS';
-            });
-        } else if (aktifFiltre === 'TRANSFER') {
-            islenmisVeri = islenmisVeri.filter(h => {
-                let type = h.movementType || h.islemTipi || h.type;
-                return type === 'TRANSFER';
-            });
+const hareketView = createDataView({
+    containerId: "stokHareketleriGovdesi",
+    paginationContainerId: "hareketSayfalamaContainer",
+    mode: 'table',
+    emptyColspan: 6,
+    emptyMessage: "Kayıt bulunamadı.",
+    pageSize: 10,
+    fetchPage: async (page, size) => {
+        const sd = document.getElementById('startDate')?.value || '';
+        const ed = document.getElementById('endDate')?.value || '';
+        
+        let url = `/stock/movements?pageNumber=${page}&pageSize=${size}`;
+        if (sd) url += `&startDate=${sd}`;
+        if (ed) url += `&endDate=${ed}`;
+        
+        if (aktifFiltre !== 'TUMU') {
+             url += `&movementType=${aktifFiltre === 'GIRIS' ? 'IN' : aktifFiltre === 'CIKIS' ? 'OUT' : 'TRANSFER'}`;
         }
-    }
+        
+        const arama = document.getElementById("aramaKutusu")?.value || "";
+        if (arama) url += `&search=${encodeURIComponent(arama)}`;
 
-    if (aktifArama.trim() !== '') {
-        islenmisVeri = islenmisVeri.filter(h => {
-            let uAdi = h.urunAdi || h.urunAdı || h.productName || h.name || "";
-            let uKodu = h.urunKodu || h.productCode || h.barcode || "";
-            let personel = h.personelName || h.personel || h.userName || h.fullName || h.userEmail || "";
-            return uAdi.toLowerCase().includes(aktifArama) ||
-                uKodu.toLowerCase().includes(aktifArama) ||
-                personel.toLowerCase().includes(aktifArama);
-        });
-    }
-
-    // KESİN ÇÖZÜM: TÜRKÇE ALFABETİK SIRALAMA MOTORU
-    islenmisVeri.sort((a, b) => {
-        let valA = '';
-        let valB = '';
-
-        if (siralamaSutunu === "urunAdi") {
-            valA = a.urunAdi || a.urunAdı || a.productName || a.name || '';
-            valB = b.urunAdi || b.urunAdı || b.productName || b.name || '';
-        } else if (siralamaSutunu === "urunKodu") {
-            valA = a.urunKodu || a.productCode || a.barcode || '';
-            valB = b.urunKodu || b.productCode || b.barcode || '';
-        } else if (siralamaSutunu === "islemTipi") {
-            let typeA = a.movementType || a.islemTipi || a.type || '';
-            let typeB = b.movementType || b.islemTipi || b.type || '';
-            valA = (typeA === 'IN' || typeA === 'GIRIS') ? 'Stok Girişi' : (typeA === 'TRANSFER' ? 'Stok Transferi' : 'Stok Çıkışı');
-            valB = (typeB === 'IN' || typeB === 'GIRIS') ? 'Stok Girişi' : (typeB === 'TRANSFER' ? 'Stok Transferi' : 'Stok Çıkışı');
-        } else if (siralamaSutunu === "personel") {
-            valA = a.personelName || a.personel || a.userName || a.fullName || a.userEmail || '';
-            valB = b.personelName || b.personel || b.userName || b.fullName || b.userEmail || '';
-        } else if (siralamaSutunu === "tarih") {
-            valA = a.tarih || a.createdAt || a.date || 0;
-            valB = b.tarih || b.createdAt || b.date || 0;
-        } else if (siralamaSutunu === "quantity") {
-            valA = Number(a.quantity) || 0;
-            valB = Number(b.quantity) || 0;
-        }
-
-        if (siralamaSutunu === 'tarih') {
-            const tarihA = new Date(valA).getTime() || 0;
-            const tarihB = new Date(valB).getTime() || 0;
-            return siralamaYonu === 'asc' ? tarihA - tarihB : tarihB - tarihA;
-        }
-
-        if (siralamaSutunu === 'quantity') {
-            return siralamaYonu === 'asc' ? valA - valB : valB - valA;
-        }
-
-        const trCollator = new Intl.Collator('tr-TR', { numeric: true, sensitivity: 'base' });
-        return siralamaYonu === 'asc'
-            ? trCollator.compare(valA.toString(), valB.toString())
-            : trCollator.compare(valB.toString(), valA.toString());
-    });
-
-    const toplamSayfa = Math.ceil(islenmisVeri.length / pageSize) || 1;
-    if (currentPage > toplamSayfa) currentPage = toplamSayfa;
-
-    const baslangic = (currentPage - 1) * pageSize;
-    const bitis = baslangic + pageSize;
-    const sayfadakiVeriler = islenmisVeri.slice(baslangic, bitis);
-
-    tabloyuCiz(sayfadakiVeriler);
-    sayfalamayiCiz(islenmisVeri.length, currentPage);
-}
-
-function sirala(sutun) {
-    if (siralamaSutunu === sutun) {
-        siralamaYonu = siralamaYonu === 'asc' ? 'desc' : 'asc';
-    } else {
-        siralamaSutunu = sutun;
-        siralamaYonu = 'asc';
-    }
-
-    const sutunlar = { tarih: 'tarihBaslik', urunKodu: 'thUrunKodu', urunAdi: 'thUrunAdi', islemTipi: 'thIslemTipi', quantity: 'thAdet', personel: 'thPersonel' };
-    const metinler = { tarih: 'Tarih', urunKodu: 'Ürün Kodu', urunAdi: 'Ürün Adı', islemTipi: 'İşlem Tipi', quantity: 'Adet', personel: 'Personel' };
-
-    Object.keys(sutunlar).forEach(key => {
-        const el = document.getElementById(sutunlar[key]);
-        if (el) {
-            el.innerText = siralamaSutunu === key ? (siralamaYonu === 'asc' ? `${metinler[key]} ↑` : `${metinler[key]} ↓`) : `${metinler[key]} ↕`;
-        }
-    });
-
-    veriyiGuncelle();
-}
-
-async function hareketleriYukle() {
-    try {
-        const sonuc = await apiRequest('/stock/movements?pageSize=100000', 'GET');
-        stokHareketleri = sonuc.items || sonuc.data || sonuc || [];
-        veriyiGuncelle();
-    } catch (hata) {
-        tabloGovdesi.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-danger">Bağlantı Hatası: ${hata.message}</td></tr>`;
-        const paginationContainer = document.getElementById("paginationContainer");
-        if (paginationContainer) paginationContainer.innerHTML = "";
-    }
-}
-
-function parseJwt(t) {
-    try {
-        return JSON.parse(decodeURIComponent(atob(t.split('.')[1]).split('').map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join('')));
-    } catch (e) { return null; }
-}
-const isAdmin = ["admin", "superadmin"].includes(getUserRole());
-
-function tabloyuCiz(veriListesi) {
-    tabloGovdesi.innerHTML = "";
-    if (!veriListesi || veriListesi.length === 0) {
-        tabloGovdesi.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-muted">Kayıt bulunamadı.</td></tr>`;
-        return;
-    }
-
-    let satirlar = [];
-    veriListesi.forEach(hareket => {
+        const response = await apiRequest(url, 'GET');
+        return {
+            items: response.items || response.data || response || [],
+            totalItems: response.totalRecords || response.totalCount || (response.items ? response.items.length : response.length)
+        };
+    },
+    renderRow: (hareket) => {
         let nType = hareket.movementType || hareket.islemTipi || hareket.type;
         let isGiris = nType === "IN" || nType === "GIRIS";
 
@@ -192,17 +68,14 @@ function tabloyuCiz(veriListesi) {
 
         let uId = hareket.userId || hareket.id;
 
-        const kisiAdElementi = uId
-            ? `<a href="#" data-action="view-profile" data-user-id="${uId}" class="text-decoration-none fw-bold text-primary text-truncate mw-150"><i class="bi bi-person-badge me-1"></i>${escapeHtml(kisiIsmi)}</a>`
-            : `<span class="fw-bold text-secondary text-truncate mw-150">${escapeHtml(kisiIsmi)}</span>`;
-
-        finalKisiHtml = `
+        if (uId) {
+            finalKisiHtml = `
             <div class="d-flex flex-column align-items-center justify-content-center">
                 ${kisiAdElementi}
                 ${kisiMail ? `<small class="text-muted text-truncate mw-150 fs-075rem">${escapeHtml(kisiMail)}</small>` : ''}
             </div>`;
 
-        const satir = `
+        return `
             <tr>
                 <td class="text-muted small align-middle fw-bold text-center">${escapeHtml(formatliTarih)}</td>
                 <td class="fw-bold align-middle d-none d-md-table-cell text-center">${escapeHtml(pCode)}</td>
@@ -211,30 +84,13 @@ function tabloyuCiz(veriListesi) {
                 <td class="fw-bold text-center align-middle ${adetRengi}">${adetIsareti}${hareket.quantity}</td>
                 <td class="text-center align-middle">${finalKisiHtml}</td>
             </tr>`;
-        satirlar.push(satir);
-    });
-    tabloGovdesi.innerHTML = satirlar.join("");
-}
-
-function sayfalamayiCiz(totalItems, curPage) {
-    buildPagination(
-        "paginationContainer",
-        totalItems,
-        curPage,
-        pageSize,
-        (newPage) => {
-            currentPage = newPage;
-            veriyiGuncelle();
-        },
-        (newSize) => {
-            pageSize = newSize;
-            currentPage = 1;
-            veriyiGuncelle();
         }
-    );
-}
+    }
+});
 
-tabloGovdesi.addEventListener('click', (e) => {
+const tabloGovdesi = document.getElementById("stokHareketleriGovdesi");
+
+tabloGovdesi?.addEventListener('click', (e) => {
     const profileLink = e.target.closest('[data-action="view-profile"]');
     if (profileLink) {
         e.preventDefault();
@@ -264,55 +120,43 @@ function aktifButonuGuncelle(aktifId) {
     });
 }
 
-document.getElementById("btnTumu").addEventListener("click", () => {
+document.getElementById("btnTumu")?.addEventListener("click", () => {
     aktifFiltre = 'TUMU';
     aktifButonuGuncelle("btnTumu");
-    currentPage = 1;
     window.history.pushState({}, document.title, window.location.pathname);
-    veriyiGuncelle();
+    hareketView.load(1);
 });
 
-document.getElementById("btnGirisler").addEventListener("click", () => {
+document.getElementById("btnGirisler")?.addEventListener("click", () => {
     aktifFiltre = 'GIRIS';
     aktifButonuGuncelle("btnGirisler");
-    currentPage = 1;
     window.history.pushState({}, document.title, `${window.location.pathname}?filter=GIRIS`);
-    veriyiGuncelle();
+    hareketView.load(1);
 });
 
-document.getElementById("btnCikislar").addEventListener("click", () => {
+document.getElementById("btnCikislar")?.addEventListener("click", () => {
     aktifFiltre = 'CIKIS';
     aktifButonuGuncelle("btnCikislar");
-    currentPage = 1;
     window.history.pushState({}, document.title, `${window.location.pathname}?filter=CIKIS`);
-    veriyiGuncelle();
+    hareketView.load(1);
 });
 
-const btnTransferler = document.getElementById("btnTransferler");
-if (btnTransferler) {
-    btnTransferler.addEventListener("click", () => {
-        aktifFiltre = 'TRANSFER';
-        aktifButonuGuncelle("btnTransferler");
-        currentPage = 1;
-        window.history.pushState({}, document.title, `${window.location.pathname}?filter=TRANSFER`);
-        veriyiGuncelle();
-    });
-}
+document.getElementById("btnTransferler")?.addEventListener("click", () => {
+    aktifFiltre = 'TRANSFER';
+    aktifButonuGuncelle("btnTransferler");
+    window.history.pushState({}, document.title, `${window.location.pathname}?filter=TRANSFER`);
+    hareketView.load(1);
+});
 
-if (aramaKutusu) {
-    aramaKutusu.addEventListener("keyup", (event) => {
-        aktifArama = event.target.value.toLowerCase();
-        currentPage = 1;
-        veriyiGuncelle();
-    });
-}
+document.getElementById("filtreUygula")?.addEventListener("click", () => {
+    hareketView.load(1);
+});
 
-if (document.getElementById("tarihBaslik")) document.getElementById("tarihBaslik").addEventListener("click", () => sirala("tarih"));
-if (document.getElementById("thUrunKodu")) document.getElementById("thUrunKodu").addEventListener("click", () => sirala("urunKodu"));
-if (document.getElementById("thUrunAdi")) document.getElementById("thUrunAdi").addEventListener("click", () => sirala("urunAdi"));
-if (document.getElementById("thIslemTipi")) document.getElementById("thIslemTipi").addEventListener("click", () => sirala("islemTipi"));
-if (document.getElementById("thAdet")) document.getElementById("thAdet").addEventListener("click", () => sirala("quantity"));
-if (document.getElementById("thPersonel")) document.getElementById("thPersonel").addEventListener("click", () => sirala("personel"));
+document.getElementById("aramaKutusu")?.addEventListener("keyup", (event) => {
+    if (event.key === "Enter") {
+        hareketView.load(1);
+    }
+});
 
 async function dropdownUrunleriYukle() {
     const urunSelect = document.getElementById("urunSecimi");
@@ -591,7 +435,7 @@ if (stokIslemFormu) {
             if (sourceGroup) sourceGroup.classList.add("d-none");
             if (targetGroup) targetGroup.classList.add("d-none");
 
-            await hareketleriYukle();
+            hareketView.refresh();
             basariToast("Stok hareketi kaydedildi");
             kaydetButonu.innerText = orjinalMetin;
         } catch (hata) {
@@ -698,7 +542,7 @@ async function dropdownTedarikcileriYukle() {
 
 async function baslat() {
     await dropdownTedarikcileriYukle();
-    await hareketleriYukle();
+    hareketView.load(1);
 
     if (aktifFiltre === 'GIRIS') {
         aktifButonuGuncelle("btnGirisler");

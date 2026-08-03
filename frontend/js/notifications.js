@@ -23,14 +23,7 @@ function getUserRole() {
 const userRole = getUserRole();
 
 // XSS Protection Helper
-function escapeHtml(text) {
-    return text
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#039;");
-}
+
 
 // 3. FETCH NOTIFICATIONS FROM API
 async function loadNotifications() {
