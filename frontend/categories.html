@@ -95,87 +95,109 @@
                     <div class="card bg-light border-0 mb-4 rounded-3">
                         <div class="card-body">
                             <h6 class="fw-bold mb-3 text-muted small text-uppercase">Yeni Kural Ekle</h6>
-                            <form id="yeniKuralFormu" class="row g-2 align-items-end">
-                                <div class="col-md-3">
-                                    <label class="form-label small fw-bold text-muted">Kural Adı / Özellik</label>
-                                    <input type="text" class="form-control form-control-sm" id="kuralAd" placeholder="Örn: RAM_GB">
-                                </div>
-                                <div class="col-md-2">
-                                    <label class="form-label small fw-bold text-muted">Ait Olduğu Yer</label>
-                                    <select class="form-select form-select-sm" id="kuralTargetLevel">
-                                        <option value="Product">Katalog (Ürün)</option>
-                                        <option value="Asset">Demirbaş (Cihaz)</option>
-                                    </select>
-                                </div>
-                                <div class="col-md-3">
-                                    <label class="form-label small fw-bold text-muted">Veri Tipi & Görsel</label>
-                                    <select class="form-select form-select-sm" id="kuralTip">
-                                        <optgroup label="Yazı (Text)">
-                                            <option value="text">Düz Metin (TextBox)</option>
-                                            <option value="autocomplete">Otomatik Tamamlama (Autocomplete)</option>
-                                            <option value="masked_textbox">Maskeli Metin (IMEI vb.)</option>
-                                        </optgroup>
-                                        <optgroup label="Sayısal (Number)">
-                                            <option value="number">Tam Sayı (Integer)</option>
-                                            <option value="decimal">Ondalıklı Sayı (Decimal)</option>
-                                            <option value="range_slider_integer">Kaydırıcı (Range Slider - Tam Sayı)</option>
-                                            <option value="range_slider_decimal">Kaydırıcı (Range Slider - Ondalık)</option>
-                                        </optgroup>
-                                        <optgroup label="Seçim (Select)">
-                                            <option value="dropdown">Açılır Liste (Dropdown)</option>
-                                            <option value="icon_dropdown">İkonlu Liste (Icon + Dropdown)</option>
-                                            <option value="searchable_dropdown">Aramalı Liste (Searchable Dropdown)</option>
-                                            <option value="radio">Tekli Seçim (Radio Button)</option>
-                                            <option value="segmented_button">Segmentli Buton (Segmented Button)</option>
-                                            <option value="checkbox_group">Çoklu Seçim (Checkbox Group)</option>
-                                            <option value="color_picker">Renk Seçici (Color Picker + Etiket)</option>
-                                        </optgroup>
-                                        <optgroup label="Mantıksal (Boolean)">
-                                            <option value="toggle_switch">Aç-Kapat (Toggle Switch)</option>
-                                            <option value="boolean">Onay Kutusu (Checkbox)</option>
-                                        </optgroup>
-                                    </select>
-                                </div>
-                                <div class="col-md-4 d-none" id="kuralSeceneklerDiv">
-                                    <label class="form-label small fw-bold text-muted">Seçenekler</label>
-                                    <div class="input-group input-group-sm position-relative">
-                                        <input type="text" class="form-control" id="kuralSecenekYeniDeger" placeholder="Örn: Siyah" autocomplete="off">
-                                        <button type="button" class="btn btn-outline-primary" id="btnSecenekEkle">
-                                            <i class="bi bi-plus-lg"></i> Ekle
-                                        </button>
-                                        <!-- Renk tipinde arama önerileri buraya açılır (Bölüm 3) -->
-                                        <div id="renkOneriKutusu" class="dropdown-menu w-100 d-none scrollable-dropdown"></div>
-                                    </div>
-                                    <ul class="list-group list-group-flush mt-2 rounded border scrollable-list" id="kuralSecenekListesi">
-                                        <!-- JS ile doldurulacak, boşken gizli -->
-                                    </ul>
-                                    <!-- Backend'e gönderilecek gizli alan; artık virgüllü metin değil, JSON dizi -->
-                                    <input type="hidden" id="kuralSecenekler">
-                                </div>
-                                <div class="col-md-2 d-none" id="kuralMinDiv">
-                                    <label class="form-label small fw-bold text-muted">Min. Değer</label>
-                                    <input type="number" class="form-control form-control-sm" id="kuralMin" step="any">
-                                </div>
-                                <div class="col-md-2 d-none" id="kuralMaxDiv">
-                                    <label class="form-label small fw-bold text-muted">Max. Değer</label>
-                                    <input type="number" class="form-control form-control-sm" id="kuralMax" step="any">
-                                </div>
-                                <div class="col-md-2 d-flex align-items-center pb-1">
-                                    <div class="form-check form-switch mt-4">
-                                        <input class="form-check-input" type="checkbox" id="kuralZorunlu">
-                                        <label class="form-check-label small fw-bold text-muted" for="kuralZorunlu">Zorunlu</label>
-                                    </div>
-                                </div>
-                                
-                                <!-- BAĞLAMSAL (INLINE) ÖNİZLEME -->
-                                <div class="col-md-10 mt-3 d-flex align-items-center justify-content-start d-none" id="inlinePreviewBox">
-                                    <span class="badge bg-info text-dark me-3"><i class="bi bi-eye"></i>Örnek UI Görünümü</span>
-                                    <div id="inlinePreviewContent" class="w-100"></div>
-                                </div>
+                            <form id="yeniKuralFormu">
+                                <div class="row">
+                                    <!-- Left Column -->
+                                    <div class="col-md-5 pe-md-4">
+                                        <div class="mb-3">
+                                            <label class="form-label small fw-bold text-muted">Kural Adı / Özellik</label>
+                                            <input type="text" class="form-control form-control-sm" id="kuralAd" placeholder="Örn: RAM_GB">
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label small fw-bold text-muted">Ait Olduğu Yer</label>
+                                            <select class="form-select form-select-sm" id="kuralTargetLevel">
+                                                <option value="Product">Katalog (Ürün)</option>
+                                                <option value="Asset">Demirbaş (Cihaz)</option>
+                                            </select>
+                                        </div>
+                                        <!-- BAĞLAMSAL (INLINE) ÖNİZLEME -->
+                                        <div class="mb-3 p-3 bg-white border rounded shadow-sm d-none" id="inlinePreviewBox">
+                                            <div class="mb-2"><span class="badge bg-info text-dark"><i class="bi bi-eye"></i> Örnek UI Görünümü</span></div>
+                                            <div id="inlinePreviewContent" class="w-100"></div>
+                                        </div>
 
-                                <div class="col-md-12 text-end mt-3">
-                                    <button type="button" id="btnKuralEkle" class="btn btn-sm btn-primary rounded-pill px-4 fw-bold">
-                                        + Kuralı Ekle
+                                        <div class="mb-3">
+                                            <label class="form-label small fw-bold text-muted">Veri Tipi & Görsel</label>
+                                            <select class="form-select form-select-sm" id="kuralTip">
+                                                <optgroup label="Yazı (Text)">
+                                                    <option value="text">Düz Metin (TextBox)</option>
+                                                    <option value="autocomplete">Otomatik Tamamlama (Autocomplete)</option>
+                                                    <option value="masked_textbox">Maskeli Metin (IMEI vb.)</option>
+                                                </optgroup>
+                                                <optgroup label="Sayısal (Number)">
+                                                    <option value="number">Tam Sayı (Integer)</option>
+                                                    <option value="decimal">Ondalıklı Sayı (Decimal)</option>
+                                                    <option value="range_slider_integer">Kaydırıcı (Range Slider - Tam Sayı)</option>
+                                                    <option value="range_slider_decimal">Kaydırıcı (Range Slider - Ondalık)</option>
+                                                </optgroup>
+                                                <optgroup label="Seçim (Select)">
+                                                    <option value="dropdown">Açılır Liste (Dropdown)</option>
+                                                    <option value="icon_dropdown">İkonlu Liste (Icon + Dropdown)</option>
+                                                    <option value="searchable_dropdown">Aramalı Liste (Searchable Dropdown)</option>
+                                                    <option value="radio">Tekli Seçim (Radio Button)</option>
+                                                    <option value="segmented_button">Segmentli Buton (Segmented Button)</option>
+                                                    <option value="checkbox_group">Çoklu Seçim (Checkbox Group)</option>
+                                                    <option value="color_picker">Renk Seçici (Color Picker + Etiket)</option>
+                                                </optgroup>
+                                                <optgroup label="Mantıksal (Boolean)">
+                                                    <option value="toggle_switch">Aç-Kapat (Toggle Switch)</option>
+                                                    <option value="boolean">Onay Kutusu (Checkbox)</option>
+                                                </optgroup>
+                                            </select>
+                                        </div>
+
+                                        <div class="row g-2 mb-3">
+                                            <div class="col-6 d-none" id="kuralMinDiv">
+                                                <label class="form-label small fw-bold text-muted">Min. Değer</label>
+                                                <input type="number" class="form-control form-control-sm" id="kuralMin" step="any">
+                                            </div>
+                                            <div class="col-6 d-none" id="kuralMaxDiv">
+                                                <label class="form-label small fw-bold text-muted">Max. Değer</label>
+                                                <input type="number" class="form-control form-control-sm" id="kuralMax" step="any">
+                                            </div>
+                                        </div>
+
+                                        <div class="mb-3 d-flex align-items-center">
+                                            <div class="form-check form-switch m-0">
+                                                <input class="form-check-input cursor-pointer" type="checkbox" id="kuralZorunlu">
+                                                <label class="form-check-label small fw-bold text-muted cursor-pointer" for="kuralZorunlu">Zorunlu</label>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Right Column -->
+                                    <div class="col-md-7 border-start ps-md-4">
+                                        <div id="kuralSeceneklerWrapper" class="d-none h-100">
+                                            <div class="d-flex h-100 flex-column" id="kuralSeceneklerDiv">
+                                                <label class="form-label small fw-bold text-muted">Seçenekler</label>
+                                                <div class="input-group input-group-sm position-relative mb-3">
+                                                    <input type="text" class="form-control" id="kuralSecenekYeniDeger" placeholder="Örn: Siyah" autocomplete="off">
+                                                    <button type="button" class="btn btn-outline-primary fw-bold" id="btnSecenekEkle">
+                                                        <i class="bi bi-plus-lg"></i> Ekle
+                                                    </button>
+                                                    <!-- Renk tipinde arama önerileri buraya açılır -->
+                                                    <div id="renkOneriKutusu" class="dropdown-menu w-100 d-none scrollable-dropdown"></div>
+                                                </div>
+
+                                            <div class="d-flex justify-content-between align-items-center mb-2" id="kuralSeceneklerTopluIslem">
+                                                <label class="form-label small fw-bold text-muted mb-0">Seçenekler Listesi</label>
+                                                <div class="form-check form-switch m-0">
+                                                    <input class="form-check-input cursor-pointer" type="checkbox" role="switch" id="switchTumunuSec" checked>
+                                                    <label class="form-check-label small text-muted user-select-none cursor-pointer" for="switchTumunuSec">Tümünü Seç</label>
+                                                </div>
+                                            </div>
+
+                                            <ul class="list-group list-group-flush rounded border scrollable-list mb-2" id="kuralSecenekListesi" style="max-height: 280px; overflow-y: auto;">
+                                                <!-- JS ile doldurulacak, boşken gizli -->
+                                            </ul>
+                                            <input type="hidden" id="kuralSecenekler">
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="d-flex justify-content-end mt-4 pt-3 border-top">
+                                    <button type="button" id="btnKuralEkle" class="btn btn-primary rounded-pill px-5 py-2 fw-bold shadow-sm">
+                                        Güncelle
                                     </button>
                                 </div>
                             </form>
