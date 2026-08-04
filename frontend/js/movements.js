@@ -501,10 +501,8 @@ if (btnOpenCamera) {
                         formuDenetle();
                         closeCamera();
                     } else {
-                        // Kamerayı kapat
                         closeCamera();
 
-                        // Uyarıyı göster
                         setTimeout(async () => {
                             await uyariGoster(`Taranan barkod (${scannedText}) sistemde bulunamadı!`);
                         }, 100);

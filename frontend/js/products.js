@@ -1513,24 +1513,24 @@ document.getElementById('btnKameraAcUrunler')?.addEventListener('click', async (
                 isProcessingQR = true;
 
                 try {
-                    barcodeBeepSound.currentTime = 0;
-                    barcodeBeepSound.play().catch(() => { });
-
-                    if (durumEl) {
-                        durumEl.textContent = `Barkod Okundu: ${scannedText}. Ürün aranıyor...`;
-                        durumEl.className = "text-center text-success small mt-3 fw-bold";
-                    }
-
-                    const aramaKutusu = document.getElementById('aramaKutusu');
-                    if (aramaKutusu) {
-                        aramaKutusu.value = scannedText;
-                        aktifArama = scannedText.toLowerCase();
-                        veriyiGuncelle();
-                    }
-
                     const bulunanUrun = tumUrunler.find(u => (u.barcode || "").toLowerCase() === scannedText.toLowerCase());
 
                     if (bulunanUrun) {
+                        barcodeBeepSound.currentTime = 0;
+                        barcodeBeepSound.play().catch(() => { });
+
+                        if (durumEl) {
+                            durumEl.textContent = `Barkod Okundu: ${scannedText}. Ürün aranıyor...`;
+                            durumEl.className = "text-center text-success small mt-3 fw-bold";
+                        }
+
+                        const aramaKutusu = document.getElementById('aramaKutusu');
+                        if (aramaKutusu) {
+                            aramaKutusu.value = scannedText;
+                            aktifArama = scannedText.toLowerCase();
+                            veriyiGuncelle();
+                        }
+
                         stopScanner();
                         setTimeout(() => scannerModalInstance.hide(), 400);
 
@@ -1538,10 +1538,7 @@ document.getElementById('btnKameraAcUrunler')?.addEventListener('click', async (
                             urunDetayAc(bulunanUrun.id, { tedarikciYonetimi: hasPermission("Supplier.Edit") });
                         }, 800);
                     } else {
-                        // Önce kamerayı güvenli bir şekilde durdur
                         stopScanner();
-
-                        // Modalı kapat
                         scannerModalInstance.hide();
 
                         setTimeout(async () => {

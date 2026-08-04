@@ -35,16 +35,22 @@ function onScanError(errorMessage) {
 function copyResult() {
     const text = document.getElementById('result-text')?.innerText;
     if (!text || text === '-') return;
-
-    navigator.clipboard.writeText(text).then(() => {
-        if (typeof basariToast === 'function') {
-            basariToast("Kod panoya kopyalandı!");
-        }
-    }).catch(err => {
+    
+    if (navigator.clipboard) {
+        navigator.clipboard.writeText(text).then(() => {
+            if (typeof basariToast === 'function') {
+                basariToast("Kod panoya kopyalandı!");
+            }
+        }).catch(err => {
+            if (typeof hataGoster === 'function') {
+                hataGoster("Kopyalama başarısız: " + err.message);
+            }
+        });
+    } else {
         if (typeof hataGoster === 'function') {
-            hataGoster("Kopyalama başarısız: " + err.message);
+            hataGoster("Tarayıcınız panoya kopyalama işlemini desteklemiyor.");
         }
-    });
+    }
 }
 
 // 5. Olay Dinleyicilerini Bağlama (DOMContentLoaded)
