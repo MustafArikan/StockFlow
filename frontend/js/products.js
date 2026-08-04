@@ -1513,24 +1513,24 @@ document.getElementById('btnKameraAcUrunler')?.addEventListener('click', async (
                 isProcessingQR = true;
 
                 try {
-                    barcodeBeepSound.currentTime = 0;
-                    barcodeBeepSound.play().catch(() => { });
-
-                    if (durumEl) {
-                        durumEl.textContent = `Barkod Okundu: ${scannedText}. Ürün aranıyor...`;
-                        durumEl.className = "text-center text-success small mt-3 fw-bold";
-                    }
-
-                    const aramaKutusu = document.getElementById('aramaKutusu');
-                    if (aramaKutusu) {
-                        aramaKutusu.value = scannedText;
-                        aktifArama = scannedText.toLowerCase();
-                        veriyiGuncelle();
-                    }
-
                     const bulunanUrun = tumUrunler.find(u => (u.barcode || "").toLowerCase() === scannedText.toLowerCase());
 
                     if (bulunanUrun) {
+                        barcodeBeepSound.currentTime = 0;
+                        barcodeBeepSound.play().catch(() => { });
+
+                        if (durumEl) {
+                            durumEl.textContent = `Barkod Okundu: ${scannedText}. Ürün aranıyor...`;
+                            durumEl.className = "text-center text-success small mt-3 fw-bold";
+                        }
+
+                        const aramaKutusu = document.getElementById('aramaKutusu');
+                        if (aramaKutusu) {
+                            aramaKutusu.value = scannedText;
+                            aktifArama = scannedText.toLowerCase();
+                            veriyiGuncelle();
+                        }
+
                         stopScanner();
                         setTimeout(() => scannerModalInstance.hide(), 400);
 
@@ -1538,20 +1538,12 @@ document.getElementById('btnKameraAcUrunler')?.addEventListener('click', async (
                             urunDetayAc(bulunanUrun.id, { tedarikciYonetimi: hasPermission("Supplier.Edit") });
                         }, 800);
                     } else {
-                        if (typeof html5QrCode !== 'undefined' && html5QrCode) {
-                            html5QrCode.pause();
-                        }
+                        stopScanner();
+                        scannerModalInstance.hide();
 
-                        await uyariGoster(`Okutulan barkod (${scannedText}) sistemde bulunamadı!`);
-
-                        if (typeof html5QrCode !== 'undefined' && html5QrCode) {
-                            html5QrCode.resume();
-                        }
-
-                        if (durumEl) {
-                            durumEl.textContent = "Karekod veya Barkod aranıyor, kameraya gösterin...";
-                            durumEl.className = "text-center text-muted small mt-3 fw-bold";
-                        }
+                        setTimeout(async () => {
+                            await uyariGoster(`Okutulan barkod (${scannedText}) sistemde bulunamadı!`);
+                        }, 100);
                     }
                 } finally {
                     isProcessingQR = false;
