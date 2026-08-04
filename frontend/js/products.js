@@ -1538,20 +1538,15 @@ document.getElementById('btnKameraAcUrunler')?.addEventListener('click', async (
                             urunDetayAc(bulunanUrun.id, { tedarikciYonetimi: hasPermission("Supplier.Edit") });
                         }, 800);
                     } else {
-                        if (typeof html5QrCode !== 'undefined' && html5QrCode) {
-                            html5QrCode.pause();
-                        }
+                        // Önce kamerayı güvenli bir şekilde durdur
+                        stopScanner();
 
-                        await uyariGoster(`Okutulan barkod (${scannedText}) sistemde bulunamadı!`);
+                        // Modalı kapat
+                        scannerModalInstance.hide();
 
-                        if (typeof html5QrCode !== 'undefined' && html5QrCode) {
-                            html5QrCode.resume();
-                        }
-
-                        if (durumEl) {
-                            durumEl.textContent = "Karekod veya Barkod aranıyor, kameraya gösterin...";
-                            durumEl.className = "text-center text-muted small mt-3 fw-bold";
-                        }
+                        setTimeout(async () => {
+                            await uyariGoster(`Okutulan barkod (${scannedText}) sistemde bulunamadı!`);
+                        }, 100);
                     }
                 } finally {
                     isProcessingQR = false;

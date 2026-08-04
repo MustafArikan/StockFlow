@@ -501,13 +501,13 @@ if (btnOpenCamera) {
                         formuDenetle();
                         closeCamera();
                     } else {
-                        if (typeof html5QrCode !== 'undefined' && html5QrCode) {
-                            html5QrCode.pause();
-                        }
-                        await uyariGoster(`Taranan barkod (${scannedText}) sistemde bulunamadı!`);
-                        if (typeof html5QrCode !== 'undefined' && html5QrCode) {
-                            html5QrCode.resume();
-                        }
+                        // Kamerayı kapat
+                        closeCamera();
+
+                        // Uyarıyı göster
+                        setTimeout(async () => {
+                            await uyariGoster(`Taranan barkod (${scannedText}) sistemde bulunamadı!`);
+                        }, 100);
                     }
                 } finally {
                     isProcessingQR = false;

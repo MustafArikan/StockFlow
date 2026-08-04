@@ -556,7 +556,6 @@ async function submitAssignAsset() {
         return;
     }
 
-    // C# controller [HttpPut] beklediği için 'PUT' kullanıyoruz
     await sendAssetAction(`${CONFIG.API_BASE_URL}/assets/${currentAssetId}/assign`, 'PUT', {
         userId: parseInt(userId, 10),
         notes: notes
@@ -567,7 +566,6 @@ async function submitReturnAsset() {
     if (!currentAssetId) return;
     const notes = document.getElementById('returnNotes').value;
 
-    // C# controller [HttpPut] beklediği için 'PUT' kullanıyoruz
     await sendAssetAction(`${CONFIG.API_BASE_URL}/assets/${currentAssetId}/return`, 'PUT', { notes });
 }
 
@@ -580,7 +578,6 @@ async function submitBreakdown() {
         return;
     }
 
-    // C# controller [HttpPost] beklediği için 'POST' kullanıyoruz
     await sendAssetAction(`${CONFIG.API_BASE_URL}/assets/${currentAssetId}/breakdown`, 'POST', { description });
 }
 
@@ -593,7 +590,6 @@ async function submitResolve() {
         return;
     }
 
-    // C# controller [HttpPost] beklediği için 'POST' kullanıyoruz
     await sendAssetAction(`${CONFIG.API_BASE_URL}/assets/${currentAssetId}/resolve`, 'POST', { solution });
 }
 
@@ -610,7 +606,6 @@ async function submitMaintenance() {
     const payload = { details };
     if (nextDate) payload.nextMaintenanceDate = new Date(nextDate).toISOString();
 
-    // C# controller [HttpPost] beklediği için 'POST' kullanıyoruz
     await sendAssetAction(`${CONFIG.API_BASE_URL}/assets/${currentAssetId}/maintenance`, 'POST', payload);
 }
 
