@@ -1,4 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
+using stok_takip.Attributes;
+using stok_takip.Constants;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using stok_takip.Data;
@@ -69,6 +71,7 @@ public class AttributeRulesController : ControllerBase
 
     // Kategoriye yeni bir kural ekle
     [HttpPost]
+    [RequirePermission(Policies.RequireCategoryWrite)]
     public async Task<IActionResult> Create([FromBody] stok_takip.DTOs.CreateAttributeRuleDto dto)
     {
         if (dto.CategoryId.HasValue)
@@ -141,6 +144,7 @@ public class AttributeRulesController : ControllerBase
 
     // Kural güncelleme
     [HttpPut("{id}")]
+    [RequirePermission(Policies.RequireCategoryWrite)]
     public async Task<IActionResult> Update(int id, [FromBody] stok_takip.DTOs.CreateAttributeRuleDto dto)
     {
         var rule = await _context.AttributeRules
@@ -223,6 +227,7 @@ public class AttributeRulesController : ControllerBase
 
     // Kural silme (Soft Delete)
     [HttpDelete("{id}")]
+    [RequirePermission(Policies.RequireCategoryWrite)]
     public async Task<IActionResult> Delete(int id)
     {
         var rule = await _context.AttributeRules
@@ -244,6 +249,7 @@ public class AttributeRulesController : ControllerBase
 
     // Kural sıralamasını güncelleme
     [HttpPut("reorder")]
+    [RequirePermission(Policies.RequireCategoryWrite)]
     public async Task<IActionResult> Reorder([FromBody] List<stok_takip.DTOs.UpdateRuleOrderDto> dtos)
     {
         if (dtos == null || !dtos.Any()) return BadRequest(new { message = "Geçersiz sıralama verisi." });

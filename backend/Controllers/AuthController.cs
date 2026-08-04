@@ -23,19 +23,22 @@ public class AuthController : ControllerBase
     private readonly IConfiguration _configuration;
     private readonly IEmailService _emailService;
     private readonly stok_takip.Metrics.StockFlowMetrics _metrics;
+    private readonly Microsoft.Extensions.Caching.Memory.IMemoryCache _cache;
 
     public AuthController(
         AppDbContext context,
         IPasswordHasher<User> passwordHasher,
         IConfiguration configuration,
         IEmailService emailService,
-        stok_takip.Metrics.StockFlowMetrics metrics)
+        stok_takip.Metrics.StockFlowMetrics metrics,
+        Microsoft.Extensions.Caching.Memory.IMemoryCache cache)
     {
         _context = context;
         _passwordHasher = passwordHasher;
         _configuration = configuration;
         _emailService = emailService;
         _metrics = metrics;
+        _cache = cache;
     }
 
 [AllowAnonymous]
@@ -92,6 +95,7 @@ public async Task<IActionResult> Register([FromBody] RegisterDto dto)
 
 [AllowAnonymous]
 [HttpPost("verify-email")]
+[EnableRateLimiting("AuthLimit")]
 public async Task<IActionResult> VerifyEmail([FromBody] VerifyEmailDto dto)
     {
         if(string.IsNullOrWhiteSpace(dto.Email) || string.IsNullOrWhiteSpace(dto.VerificationCode))
@@ -243,6 +247,7 @@ public async Task<IActionResult> GetMe()
             firstName = user.FirstName,
             lastName = user.LastName,
             phoneNumber = user.PhoneNumber,
+            identityNumber = user.IdentityNumber,
             role = user.Role.Name,
             createdAt = user.CreatedAt,
         });
@@ -277,6 +282,7 @@ public async Task<IActionResult> GetMe()
         user.FirstName = dto.FirstName;
         user.LastName = dto.LastName;
         user.PhoneNumber = dto.PhoneNumber;
+        user.IdentityNumber = dto.IdentityNumber;
 
         await _context.SaveChangesAsync();
 
@@ -284,7 +290,8 @@ public async Task<IActionResult> GetMe()
             firstName = user.FirstName,
             lastName = user.LastName,  
             email = user.Email,
-            phoneNumber = user.PhoneNumber
+            phoneNumber = user.PhoneNumber,
+            identityNumber = user.IdentityNumber
             });
     }
 
@@ -299,6 +306,7 @@ public async Task<IActionResult> Logout()
             if (session != null)
             {
                 session.IsActive = false; // Oturumu devre dışı bırak
+                _cache.Remove($"Session_{session.SessionToken}");
                 await _context.SaveChangesAsync();
             }
         }
@@ -426,6 +434,7 @@ public async Task<IActionResult> Logout()
 
     [AllowAnonymous]
     [HttpPost("reset-password")]
+    [EnableRateLimiting("AuthLimit")]
     public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordDto dto)
     {
         var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == dto.Email);
@@ -456,6 +465,7 @@ public async Task<IActionResult> Logout()
         foreach (var session in activeSessions)
         {
             session.IsActive = false; // Tüm aktif oturumları devre dışı bırak
+            _cache.Remove($"Session_{session.SessionToken}");
         }
 
         await _context.SaveChangesAsync();
@@ -492,6 +502,16 @@ public async Task<IActionResult> Logout()
         }
 
         user.PasswordHash = _passwordHasher.HashPassword(user, dto.NewPassword);
+
+        var activeSessions = await _context.UserSessions
+            .Where(s => s.UserId == user.Id && s.IsActive)
+            .ToListAsync();
+        foreach (var session in activeSessions)
+        {
+            session.IsActive = false;
+            _cache.Remove($"Session_{session.SessionToken}");
+        }
+
         await _context.SaveChangesAsync();
 
         // Güvenlik Bilgilendirme E-postası Gönder

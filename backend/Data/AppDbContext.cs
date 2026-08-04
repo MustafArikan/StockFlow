@@ -280,6 +280,8 @@ public class AppDbContext : DbContext
             if (entry.Entity is SecurityAuditLog || entry.State == EntityState.Detached || entry.State == EntityState.Unchanged)
                 continue;
 
+            var sensitiveProperties = new[] { "PasswordHash", "PasswordResetCode", "PasswordResetCodeExpiry", "EmailConfirmationCode", "ConfirmationCodeExpiry", "SessionToken", "IdentityNumber" };
+
             var auditLog = new SecurityAuditLog
             {
                 EntityName = entry.Entity.GetType().Name,
@@ -297,8 +299,16 @@ public class AppDbContext : DbContext
                 {
                     if (property.IsModified)
                     {
-                        oldValues[property.Metadata.Name] = property.OriginalValue;
-                        newValues[property.Metadata.Name] = property.CurrentValue;
+                        if (sensitiveProperties.Contains(property.Metadata.Name))
+                        {
+                            oldValues[property.Metadata.Name] = "***";
+                            newValues[property.Metadata.Name] = "***";
+                        }
+                        else
+                        {
+                            oldValues[property.Metadata.Name] = property.OriginalValue;
+                            newValues[property.Metadata.Name] = property.CurrentValue;
+                        }
                     }
                 }
                 auditLog.OldValues = JsonSerializer.Serialize(oldValues);
@@ -315,7 +325,14 @@ public class AppDbContext : DbContext
                 var newValues = new Dictionary<string, object?>();
                 foreach (var property in entry.Properties)
                 {
-                    newValues[property.Metadata.Name] = property.CurrentValue;
+                    if (sensitiveProperties.Contains(property.Metadata.Name))
+                    {
+                        newValues[property.Metadata.Name] = "***";
+                    }
+                    else
+                    {
+                        newValues[property.Metadata.Name] = property.CurrentValue;
+                    }
                 }
                 auditLog.NewValues = JsonSerializer.Serialize(newValues);
             }
@@ -324,7 +341,14 @@ public class AppDbContext : DbContext
                 var oldValues = new Dictionary<string, object?>();
                 foreach (var property in entry.Properties)
                 {
-                    oldValues[property.Metadata.Name] = property.OriginalValue;
+                    if (sensitiveProperties.Contains(property.Metadata.Name))
+                    {
+                        oldValues[property.Metadata.Name] = "***";
+                    }
+                    else
+                    {
+                        oldValues[property.Metadata.Name] = property.OriginalValue;
+                    }
                 }
                 auditLog.OldValues = JsonSerializer.Serialize(oldValues);
 

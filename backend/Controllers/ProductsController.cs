@@ -187,7 +187,7 @@ public class ProductsController : ControllerBase
     // 🎯 YENİ EKLENEN TOPLU İÇE AKTARMA (EXCEL) - YENİ DTO DOSYASI GEREKTİRMEZ
     // =========================================================================
     [HttpPost("import")]
-    [Authorize] 
+    [RequirePermission(Policies.RequireProductWrite)] 
     public async Task<IActionResult> ImportExcel(IFormFile file)
     {
         if (file == null || file.Length == 0)

@@ -19,11 +19,13 @@ public class UsersController : ControllerBase
 {
     private readonly AppDbContext _context;
     private readonly IPasswordHasher<User> _passwordHasher;
+    private readonly Microsoft.Extensions.Caching.Memory.IMemoryCache _cache;
 
-    public UsersController(AppDbContext context, IPasswordHasher<User> passwordHasher)
+    public UsersController(AppDbContext context, IPasswordHasher<User> passwordHasher, Microsoft.Extensions.Caching.Memory.IMemoryCache cache)
     {
         _context = context;
         _passwordHasher = passwordHasher;
+        _cache = cache;
     }
 
     private async Task<int> GetCurrentUserRoleLevelAsync()
@@ -59,6 +61,7 @@ public class UsersController : ControllerBase
                 u.FirstName,
                 u.LastName,
                 u.PhoneNumber,
+                u.IdentityNumber,
                 RoleId = u.RoleId,
                 Role = u.Role.Name,
                 u.IsEmailConfirmed,
@@ -78,9 +81,10 @@ public class UsersController : ControllerBase
     [HttpGet("{id}")]
     public async Task<IActionResult> GetUserById(int id)
     {
+        var currentUserLevel = await GetCurrentUserRoleLevelAsync();
         var user = await _context.Users
             .AsNoTracking()
-            .Where(u => u.Id == id)
+            .Where(u => u.Id == id && (u.Role == null || u.Role.Level <= currentUserLevel))
             .Select(u => new
             {
                 u.Id,
@@ -88,6 +92,7 @@ public class UsersController : ControllerBase
                 u.FirstName,
                 u.LastName,
                 u.PhoneNumber,
+                u.IdentityNumber,
                 RoleId = u.RoleId,
                 Role = u.Role.Name,
                 u.IsEmailConfirmed,
@@ -148,6 +153,7 @@ public class UsersController : ControllerBase
         foreach (var session in activeSessions)
         {
             session.IsActive = false;
+            _cache.Remove($"Session_{session.SessionToken}");
         }
 
         await _context.SaveChangesAsync();
@@ -159,6 +165,7 @@ public class UsersController : ControllerBase
     public async Task<IActionResult> CreateUser([FromBody] CreateUserDto dto)
     {
         var newRole = await _context.AppRoles.FindAsync(dto.RoleId);
+        if (newRole == null) return BadRequest(new { message = "Geçersiz rol." });
         if (newRole?.Name == "superadmin" && !User.IsInRole("superadmin"))
         {
             return Forbid(); // Süper admin rolünde kullanıcı oluşturamaz
@@ -179,6 +186,7 @@ public class UsersController : ControllerBase
             LastName = dto.LastName,
             Email = dto.Email,
             PhoneNumber = dto.PhoneNumber,
+            IdentityNumber = dto.IdentityNumber,
             RoleId = dto.RoleId,
             IsEmailConfirmed = true, // Superadmin tarafından oluşturulan kullanıcılar için e-posta doğrulamasını atlıyoruz
             CreatedAt = DateTime.UtcNow
@@ -236,6 +244,7 @@ public class UsersController : ControllerBase
         user.LastName = dto.LastName;
         user.Email = dto.Email;
         user.PhoneNumber = dto.PhoneNumber;
+        user.IdentityNumber = dto.IdentityNumber;
         user.RoleId = dto.RoleId;
 
         if (!string.IsNullOrEmpty(dto.Password))
@@ -244,7 +253,11 @@ public class UsersController : ControllerBase
             var activeSessions = await _context.UserSessions
                 .Where(s => s.UserId == id && s.IsActive)
                 .ToListAsync();
-            foreach (var session in activeSessions) session.IsActive = false;
+            foreach (var session in activeSessions)
+            {
+                session.IsActive = false;
+                _cache.Remove($"Session_{session.SessionToken}");
+            }
             
         }
 
@@ -277,7 +290,11 @@ public class UsersController : ControllerBase
 
         user.IsDeleted = true;
         var activeSessions = await _context.UserSessions.Where(s => s.UserId == id && s.IsActive).ToListAsync();
-        foreach (var session in activeSessions) session.IsActive = false;
+        foreach (var session in activeSessions)
+        {
+            session.IsActive = false;
+            _cache.Remove($"Session_{session.SessionToken}");
+        }
 
         await _context.SaveChangesAsync();
         return Ok(new { message = "Kullanıcı başarıyla silindi ve aktif oturumlar sonlandırıldı." });

@@ -18,9 +18,12 @@ namespace stok_takip.DTOs
 
     [Required(ErrorMessage = "Password is required.")]
     [StringLength(100, MinimumLength = 8, ErrorMessage = "Password must be at least 8 characters.")]
+    [RegularExpression(@"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^\da-zA-Z]).{8,}$", ErrorMessage = "Password must contain at least one uppercase letter, one lowercase letter, one number and one special character.")]
     public string Password { get; set; } = string.Empty;
 
     public string? PhoneNumber { get; set; }
+    [RegularExpression(@"^[1-9][0-9]{10}$", ErrorMessage = "TC Kimlik No 11 haneli olmalı ve 0 ile başlamamalıdır.")]
+    public string? IdentityNumber { get; set; }
 
     [Required]
     public int RoleId { get; set; }
@@ -41,12 +44,15 @@ namespace stok_takip.DTOs
         public string Email { get; set; } = string.Empty;
 
         public string? PhoneNumber { get; set; }
+        [RegularExpression(@"^[1-9][0-9]{10}$", ErrorMessage = "TC Kimlik No 11 haneli olmalı ve 0 ile başlamamalıdır.")]
+        public string? IdentityNumber { get; set; }
 
         [Required]
         public int RoleId { get; set; }
 
         // Şifre boş bırakılırsa güncellenmeyecek
         [StringLength(100, MinimumLength = 8, ErrorMessage = "Password must be at least 8 characters.")]
+        [RegularExpression(@"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^\da-zA-Z]).{8,}$", ErrorMessage = "Password must contain at least one uppercase letter, one lowercase letter, one number and one special character.")]
         public string? Password { get; set; }
     }
 }
