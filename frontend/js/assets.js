@@ -253,15 +253,12 @@ function initSearchCamera() {
                         durumEl.className = "text-center text-success small mt-3 fw-bold";
                     }
 
-                    // Arama kutusuna değeri yaz
-                    document.getElementById('serialSearchInput').value = scannedText;
-
                     stopScanner();
 
                     scannerModalInstance.hide();
 
                     setTimeout(async () => {
-                        await searchAsset();
+                        await searchAsset(scannedText); // DOĞRUSU: Parametreyi ilet
                     }, 100);
 
                 } finally {
@@ -411,10 +408,18 @@ async function loadUsersForDropdown() {
     }
 }
 
-async function searchAsset() {
-    // 1. Arama kutusuna bak, 2. Boşsa hafızadaki cihaza bak
-    const inputSerial = document.getElementById('serialSearchInput').value.trim();
-    const serial = inputSerial || currentAssetSerialNumber; // EĞER INPUT BOŞSA HAFIZADAKİNİ KULLAN
+async function searchAsset(kameraBarkodu = null) {
+    let serial = "";
+    let isManualInput = false;
+
+    if (kameraBarkodu && typeof kameraBarkodu === "string") {
+        serial = kameraBarkodu.trim();
+    } else {
+        const inputVal = document.getElementById('serialSearchInput').value.trim();
+        serial = inputVal || currentAssetSerialNumber;
+        if (inputVal) isManualInput = true;
+    }
+
     if (!serial) return;
 
     try {
@@ -533,14 +538,16 @@ async function searchAsset() {
         // Sonuç alanını göster, input'u temizle
         document.getElementById('assetResultContainer').classList.remove('d-none');
 
-        // Eğer arama gerçekten inputtan yapıldıysa inputu temizler
-        if (inputSerial) {
+        // Eğer arama başarılıysa ve inputtan yapıldıysa kutuyu temizle
+        if (isManualInput) {
             document.getElementById('serialSearchInput').value = '';
         }
 
     } catch (error) {
         hataGoster(error.message);
         document.getElementById('assetResultContainer').classList.add('d-none');
+
+        document.getElementById('serialSearchInput').value = '';
 
         // Hata alındığında kullanıcı yetkiliyse boş ekranda kalmaması için Grid'i (Tabloyu) geri getiriyoruz
         if (["admin", "superadmin"].includes(userRole)) {
