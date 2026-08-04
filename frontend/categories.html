@@ -110,12 +110,6 @@
                                                 <option value="Asset">Demirbaş (Cihaz)</option>
                                             </select>
                                         </div>
-                                        <!-- BAĞLAMSAL (INLINE) ÖNİZLEME -->
-                                        <div class="mb-3 p-3 bg-white border rounded shadow-sm d-none" id="inlinePreviewBox">
-                                            <div class="mb-2"><span class="badge bg-info text-dark"><i class="bi bi-eye"></i> Örnek UI Görünümü</span></div>
-                                            <div id="inlinePreviewContent" class="w-100"></div>
-                                        </div>
-
                                         <div class="mb-3">
                                             <label class="form-label small fw-bold text-muted">Veri Tipi & Görsel</label>
                                             <select class="form-select form-select-sm" id="kuralTip">
@@ -145,7 +139,11 @@
                                                 </optgroup>
                                             </select>
                                         </div>
-
+                                        <!-- BAĞLAMSAL (INLINE) ÖNİZLEME -->
+                                        <div class="mb-3 p-3 bg-white border rounded shadow-sm d-none" id="inlinePreviewBox">
+                                            <div class="mb-2"><span class="badge bg-info text-dark"><i class="bi bi-eye"></i> Örnek UI Görünümü</span></div>
+                                            <div id="inlinePreviewContent" class="w-100"></div>
+                                        </div>
                                         <div class="row g-2 mb-3">
                                             <div class="col-6 d-none" id="kuralMinDiv">
                                                 <label class="form-label small fw-bold text-muted">Min. Değer</label>
@@ -187,9 +185,10 @@
                                                 </div>
                                             </div>
 
-                                            <ul class="list-group list-group-flush rounded border scrollable-list mb-2" id="kuralSecenekListesi" style="max-height: 280px; overflow-y: auto;">
-                                                <!-- JS ile doldurulacak, boşken gizli -->
-                                            </ul>
+                                            <ul class="list-group list-group-flush rounded border scrollable-list mb-2"
+                                                id="kuralSecenekListesi">
+                                            </ul>                                                
+                                            <!-- JS ile doldurulacak, boşken gizli -->
                                             <input type="hidden" id="kuralSecenekler">
                                             </div>
                                         </div>
