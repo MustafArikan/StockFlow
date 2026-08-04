@@ -102,10 +102,12 @@ class DynamicUI {
             if (options && options.length > 0) {
                 inputHtml = `<div class="d-flex flex-wrap mt-2 dynamic-rule-input" data-rule-id="${rule.id}" data-rule-key="${escapeHtml(rule.attributeKey)}" data-rule-type="color_picker">`;
                 options.forEach((opt, idx) => {
+                    let deger = (typeof opt === 'object') ? opt.value : opt;
+                    let hex = (typeof opt === 'object' && opt.hex) ? opt.hex : "#cccccc";
                     inputHtml += `<div class="form-check form-check-inline m-0 me-2 mb-2 p-0">
                                     <label class="form-check-label d-flex align-items-center p-1 border rounded cursor-pointer" for="color_${rule.id}_${idx}">
-                                        <input class="form-check-input color-radio-item ms-1 me-2" type="radio" name="rule_${rule.id}" id="color_${rule.id}_${idx}" value="${escapeHtml(opt)}" ${requiredAttr}>
-                                        <span class="d-inline-block rounded-circle shadow-sm color-swatch-span" title="${escapeHtml(opt)}" data-bg-color="${escapeHtml(opt)}"></span>
+                                        <input class="visually-hidden color-radio-item" type="radio" name="rule_${rule.id}" id="color_${rule.id}_${idx}" value="${escapeHtml(deger)}" ${requiredAttr}>
+                                        <span class="d-inline-block rounded-circle shadow-sm color-swatch-span" title="${escapeHtml(deger)}" data-bg-color="${hex}"></span>
                                     </label>
                                   </div>`;
                 });
@@ -172,7 +174,10 @@ class DynamicUI {
                          </div>`;
         }
         else if (uiType === 'dropdown' || uiType === 'icon_dropdown' || uiType === 'radio' || uiType === 'segmented_button' || uiType === 'color_picker') {
-            let optionsHtml = options.map(opt => `<option value="${escapeHtml(opt)}">${escapeHtml(opt)}</option>`).join('');
+            let optionsHtml = options.map(opt => {
+                let deger = (typeof opt === 'object') ? opt.value : opt;
+                return `<option value="${escapeHtml(deger)}">${escapeHtml(deger)}</option>`;
+            }).join('');
             inputHtml = `<select class="form-select form-select-sm kural-filtresi" data-rule-id="${rule.id}" data-rule-key="${escapeHtml(rule.attributeKey)}">
                             <option value="">Tümü</option>
                             ${optionsHtml}
@@ -310,10 +315,12 @@ class DynamicUI {
             if (secenekler && secenekler.length > 0) {
                 inputHtml = `<div class="d-flex flex-wrap">`;
                 secenekler.forEach((opt, idx) => {
+                    let deger = (typeof opt === 'object') ? opt.value : opt;
+                    let hex = (typeof opt === 'object' && opt.hex) ? opt.hex : "#cccccc";
                     inputHtml += `<div class="form-check form-check-inline m-0 me-2 p-0">
                                     <label class="form-check-label d-flex align-items-center p-1 border rounded cursor-pointer" for="prev_color_${idx}">
-                                        <input class="form-check-input ms-1 me-2" type="radio" name="prev_color" id="prev_color_${idx}">
-                                        <span class="d-inline-block rounded-circle shadow-sm color-swatch-span-sm" title="${escapeHTML(opt)}" data-bg-color="${escapeHTML(opt)}"></span>
+                                        <input class="visually-hidden color-radio-item" type="radio" name="prev_color" id="prev_color_${idx}">
+                                        <span class="d-inline-block rounded-circle shadow-sm color-swatch-span-sm" title="${escapeHTML(deger)}" data-bg-color="${hex}"></span>
                                     </label>
                                   </div>`;
                 });
@@ -791,6 +798,38 @@ class DynamicUI {
         }, 150);
     }
 }
+
+// CSP Uyumlu Renk Uygulama (Global) - Inline style kullanımını önlemek için
+document.addEventListener('DOMContentLoaded', () => {
+    const applyColors = (nodeList) => {
+        nodeList.forEach(node => {
+            if (node.nodeType === 1) { // ELEMENT_NODE
+                if (node.dataset && node.dataset.bgColor) {
+                    node.style.backgroundColor = node.dataset.bgColor;
+                }
+                const elements = node.querySelectorAll ? node.querySelectorAll('[data-bg-color]') : [];
+                elements.forEach(el => {
+                    if (el.dataset.bgColor) {
+                        el.style.backgroundColor = el.dataset.bgColor;
+                    }
+                });
+            }
+        });
+    };
+
+    const observer = new MutationObserver((mutations) => {
+        mutations.forEach((mutation) => {
+            if (mutation.addedNodes.length) {
+                applyColors(mutation.addedNodes);
+            }
+        });
+    });
+
+    observer.observe(document.body, { childList: true, subtree: true });
+    
+    // Sayfa yüklendiğinde mevcut olanları da uygula
+    applyColors([document.body]);
+});
 
 // Make it available globally if we are in browser
 if (typeof window !== 'undefined') {

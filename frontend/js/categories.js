@@ -645,15 +645,219 @@ async function kurallariYukle(categoryId) {
 }
 
 // ==========================================
-// KURAL TİPİ VE ÖNİZLEME TETİKLEYİCİLERİ
+// SEÇENEK LİSTESİ (Tek tek ekle / sil / aktif-pasif)
 // ==========================================
+let mevcutSecenekListesi = []; // [{ value, label, isActive }]
+
+function seceneklerHiddenInputuGuncelle() {
+    // Backend'e sadece Value'ları JSON dizi olarak (geriye dönük uyumluluk için)
+    document.getElementById("kuralSecenekler").value = JSON.stringify(mevcutSecenekListesi.map(s => s.value));
+    gorselOnizlemeGuncelle();
+}
+
+function secenekListesiniCiz() {
+    const liste = document.getElementById("kuralSecenekListesi");
+    liste.innerHTML = "";
+
+    if (mevcutSecenekListesi.length === 0) {
+        liste.innerHTML = `<li class="list-group-item text-center text-muted small py-2">Henüz seçenek eklenmedi</li>`;
+        seceneklerHiddenInputuGuncelle();
+        return;
+    }
+
+    mevcutSecenekListesi.forEach((secenek, index) => {
+        const li = document.createElement("li");
+        li.className = "list-group-item d-flex align-items-center justify-content-between py-1 px-2";
+        li.setAttribute("data-index", index);
+
+        const tipSelect = document.getElementById("kuralTip").value;
+        let renkOnizleme = "";
+        if (tipSelect === "color_picker" && secenek.label) {
+            renkOnizleme = `<span class="d-inline-block rounded-circle me-2 border color-preview-swatch" data-bg-color="${escapeHtml(secenek.label)}"></span>`;
+        }
+
+        li.innerHTML = `
+            <div class="d-flex align-items-center flex-grow-1">
+                ${renkOnizleme}
+                <span class="small ${secenek.isActive ? '' : 'text-muted text-decoration-line-through'}">${escapeHtml(secenek.value)}</span>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+                <div class="form-check form-switch m-0" title="Bu kuralda kullanılsın mı?">
+                    <input class="form-check-input secenek-aktif-checkbox" type="checkbox" role="switch" data-index="${index}" ${secenek.isActive ? "checked" : ""}>
+                </div>
+                <button type="button" class="btn btn-sm btn-link text-danger p-0 secenek-sil-btn" data-index="${index}" title="Sil">
+                    <i class="bi bi-trash3"></i>
+                </button>
+            </div>
+        `;
+        liste.appendChild(li);
+    });
+
+    seceneklerHiddenInputuGuncelle();
+}
+
+function secenekEkle(value, label = null) {
+    const temizValue = value.trim();
+    if (!temizValue) return;
+
+    // Aynı değer zaten eklenmiş mi kontrolü (büyük/küçük harf duyarsız)
+    const zatenVar = mevcutSecenekListesi.some(s => s.value.toLowerCase() === temizValue.toLowerCase());
+    if (zatenVar) {
+        uyariGoster("Bu seçenek zaten listede var.");
+        return;
+    }
+
+    mevcutSecenekListesi.push({ value: temizValue, label: label || temizValue, isActive: true });
+    secenekListesiniCiz();
+}
+
+function secenekListesiniSifirla(baslangicListesi = []) {
+    mevcutSecenekListesi = baslangicListesi.map(s => ({
+        value: s.value,
+        label: s.label || s.value,
+        isActive: s.isActive !== undefined ? s.isActive : true
+    }));
+    secenekListesiniCiz();
+}
+
+// Liste içi olaylar: sil / aktif-pasif tik
+document.getElementById("kuralSecenekListesi").addEventListener("click", (e) => {
+    const silBtn = e.target.closest(".secenek-sil-btn");
+    if (silBtn) {
+        const index = parseInt(silBtn.getAttribute("data-index"));
+        mevcutSecenekListesi.splice(index, 1);
+        secenekListesiniCiz();
+    }
+});
+
+document.getElementById("kuralSecenekListesi").addEventListener("change", (e) => {
+    if (e.target.classList.contains("secenek-aktif-checkbox")) {
+        const index = parseInt(e.target.getAttribute("data-index"));
+        mevcutSecenekListesi[index].isActive = e.target.checked;
+        seceneklerHiddenInputuGuncelle();
+    }
+});
+
+// "Ekle" butonu ve Enter tuşu
+document.getElementById("btnSecenekEkle").addEventListener("click", async () => {
+    const input = document.getElementById("kuralSecenekYeniDeger");
+    const tip = document.getElementById("kuralTip").value;
+    const girilenDeger = input.value.trim();
+    if (!girilenDeger) return;
+
+    if (tip === "color_picker") {
+        const eslesme = renkAra(girilenDeger).find(r => r.name.toLocaleLowerCase("tr-TR") === girilenDeger.toLocaleLowerCase("tr-TR"));
+        if (eslesme) {
+            // Sözlükte birebir eşleşen isim bulundu -> doğru hex ile ekle
+            secenekEkle(eslesme.name, eslesme.hex);
+        } else if (gecerliHexMi(girilenDeger)) {
+            // Kullanıcı doğrudan hex kodu girdiyse (#8a8d8f gibi)
+            secenekEkle(girilenDeger, hexNormalize(girilenDeger));
+        } else {
+            const benzer = benzerRenkBul(girilenDeger);
+            if (benzer) {
+                const onay = await Swal.fire({
+                    icon: 'question',
+                    title: 'Renk Bulunamadı',
+                    text: `Bunu mu demek istediniz: ${benzer.name}?`,
+                    showCancelButton: true,
+                    confirmButtonText: 'Evet, Ekle',
+                    cancelButtonText: 'Hayır, Yeni Ekle',
+                    target: document.getElementById('kurallarModal')
+                });
+
+                if (onay.isConfirmed) {
+                    secenekEkle(benzer.name, benzer.hex);
+                    input.value = "";
+                    document.getElementById("renkOneriKutusu").classList.add("d-none");
+                    input.focus();
+                    return;
+                }
+            }
+            
+            const hexResult = await Swal.fire({
+                title: 'Yeni Renk Ekle',
+                text: `'${girilenDeger}' için geçerli bir Hex kodu girin (Örn: #ff0000):`,
+                input: 'text',
+                inputPlaceholder: '#000000',
+                showCancelButton: true,
+                confirmButtonText: 'Ekle',
+                cancelButtonText: 'İptal',
+                target: document.getElementById('kurallarModal'),
+                inputValidator: (value) => {
+                    if (!value || !gecerliHexMi(value)) {
+                        return 'Geçerli bir hex kod giriniz (# ile başlayabilir)';
+                    }
+                }
+            });
+
+            if (hexResult.isConfirmed) {
+                secenekEkle(girilenDeger, hexNormalize(hexResult.value));
+            } else {
+                return; // Kullanıcı iptal etti, inputu temizlemeden çık
+            }
+        }
+    } else {
+        secenekEkle(girilenDeger);
+    }
+
+    input.value = "";
+    document.getElementById("renkOneriKutusu").classList.add("d-none");
+    input.focus();
+});
+
+document.getElementById("kuralSecenekYeniDeger").addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+        e.preventDefault(); // Formun submit olmasını engelle
+        document.getElementById("btnSecenekEkle").click();
+    }
+});
+
+document.getElementById("kuralSecenekYeniDeger").addEventListener("input", (e) => {
+    const tip = document.getElementById("kuralTip").value;
+    const oneriKutusu = document.getElementById("renkOneriKutusu");
+
+    if (tip !== "color_picker") {
+        oneriKutusu.classList.add("d-none");
+        return;
+    }
+
+    const sonuclar = renkAra(e.target.value);
+    if (sonuclar.length === 0) {
+        oneriKutusu.classList.add("d-none");
+        return;
+    }
+
+    oneriKutusu.innerHTML = sonuclar.map(r => `
+        <button type="button" class="dropdown-item d-flex align-items-center renk-oneri-item" data-name="${escapeHtml(r.name)}" data-hex="${r.hex}">
+            <span class="d-inline-block rounded-circle me-2 border color-preview-swatch" data-bg-color="${r.hex}"></span>
+            ${escapeHtml(r.name)}
+        </button>
+    `).join("");
+    oneriKutusu.classList.remove("d-none");
+});
+
+document.getElementById("renkOneriKutusu").addEventListener("click", (e) => {
+    const item = e.target.closest(".renk-oneri-item");
+    if (!item) return;
+    secenekEkle(item.getAttribute("data-name"), item.getAttribute("data-hex"));
+    document.getElementById("kuralSecenekYeniDeger").value = "";
+    document.getElementById("renkOneriKutusu").classList.add("d-none");
+});
+
+// Dışarı tıklanınca öneri kutusunu kapat
+document.addEventListener("click", (e) => {
+    if (!e.target.closest("#kuralSeceneklerDiv")) {
+        document.getElementById("renkOneriKutusu").classList.add("d-none");
+    }
+});
+
 function gorselOnizlemeGuncelle() {
     const tip = document.getElementById("kuralTip").value;
-    const seceneklerStr = document.getElementById("kuralSecenekler").value;
-    let secenekler = [];
-    if (seceneklerStr.trim() !== "") {
-        secenekler = seceneklerStr.split(',').map(s => s.trim()).filter(s => s.length > 0);
-    }
+    // Artık virgüllü string yerine mevcutSecenekListesi'nden besleniyor
+    const secenekler = (tip === "color_picker")
+        ? mevcutSecenekListesi.filter(s => s.isActive).map(s => ({ value: s.value, hex: s.label }))
+        : mevcutSecenekListesi.filter(s => s.isActive).map(s => s.value);
     const minVal = document.getElementById("kuralMin").value || 0;
     const maxVal = document.getElementById("kuralMax").value || 100;
     
@@ -737,16 +941,21 @@ document.getElementById("btnKuralEkle").addEventListener("click", async () => {
     }
 
     let parsedAllowedValues = "[]";
-    if (["dropdown", "icon_dropdown", "searchable_dropdown", "radio", "segmented_button", "checkbox_group", "color_picker"].includes(uiComponent)) {
-        if (!allowedValues || allowedValues.trim() === "") {
-            uyariGoster("Bu tip için seçenekler zorunludur (virgülle ayırarak girin).");
-            return;
-        }
-        if (allowedValues && allowedValues.trim() !== "") {
-            const arr = allowedValues.split(',').map(s => s.trim()).filter(s => s.length > 0);
-            parsedAllowedValues = JSON.stringify(arr);
-        }
+    let allowedValueList = null;
+    const secenekliTipler = ["dropdown", "icon_dropdown", "searchable_dropdown", "radio", "segmented_button", "checkbox_group", "color_picker"];
+
+    if (secenekliTipler.includes(uiComponent) && mevcutSecenekListesi.length === 0) {
+        uyariGoster("Bu tip için en az bir seçenek eklemelisiniz.");
+        return;
     }
+
+    parsedAllowedValues = JSON.stringify(mevcutSecenekListesi.map(s => s.value));
+    allowedValueList = mevcutSecenekListesi.map((s, idx) => ({
+        value: s.value,
+        label: s.label,
+        displayOrder: idx,
+        isActive: s.isActive
+    }));
     
     const kuralVerisi = {
         categoryId: parseInt(categoryId),
@@ -754,6 +963,7 @@ document.getElementById("btnKuralEkle").addEventListener("click", async () => {
         dataType: dataType,
         isRequired: isRequired,
         allowedValues: parsedAllowedValues,
+        allowedValueList: secenekliTipler.includes(uiComponent) ? allowedValueList : null,
         uiComponent: uiComponent,
         minValue: minVal !== "" ? parseFloat(minVal) : null,
         maxValue: maxVal !== "" ? parseFloat(maxVal) : null,
@@ -777,6 +987,7 @@ document.getElementById("btnKuralEkle").addEventListener("click", async () => {
         document.getElementById("kuralTargetLevel").value = "Product";
         document.getElementById("kuralZorunlu").checked = false;
         document.getElementById("kuralSecenekler").value = "";
+        secenekListesiniSifirla(); // Seçenek listesini de temizle
         document.getElementById("kuralMin").value = "";
         document.getElementById("kuralMax").value = "";
         
@@ -833,13 +1044,17 @@ document.getElementById("kurallarTabloGovdesi").addEventListener("click", async 
             // Seçenekler kutusunun görünürlüğünü tetikle
             document.getElementById("kuralTip").dispatchEvent(new Event('change'));
 
-            if (kural.allowedValues && kural.allowedValues !== "[]") {
+            if (kural.allowedValueList && kural.allowedValueList.length > 0) {
+                // Backend'den gelen tam liste (Value + Label + IsActive dahil)
+                secenekListesiniSifirla(kural.allowedValueList);
+            } else if (kural.allowedValues && kural.allowedValues !== "[]") {
+                // Eski kayıtlar için geriye dönük uyumluluk (Label/IsActive yok, varsayılan uygula)
                 try {
                     const parsed = JSON.parse(kural.allowedValues);
-                    document.getElementById("kuralSecenekler").value = parsed.join(", ");
-                } catch(err){}
+                    secenekListesiniSifirla(parsed.map(v => ({ value: v, label: v, isActive: true })));
+                } catch(err){ secenekListesiniSifirla(); }
             } else {
-                document.getElementById("kuralSecenekler").value = "";
+                secenekListesiniSifirla();
             }
 
             const btnEkle = document.getElementById("btnKuralEkle");
@@ -875,10 +1090,11 @@ document.getElementById('kuralTip').addEventListener('change', (e) => {
     
     if (['dropdown', 'icon_dropdown', 'searchable_dropdown', 'radio', 'segmented_button', 'checkbox_group', 'color_picker'].includes(tip)) {
         secDiv.classList.remove('d-none');
-        secInput.placeholder = "Örn: Siyah, Beyaz, Kırmızı";
+        // secInput.placeholder = "Örn: Siyah, Beyaz, Kırmızı"; // Removed because input type changed
     } else {
         secDiv.classList.add('d-none');
         secInput.value = "";
+        secenekListesiniSifirla(); // Tip değişince önceki tipin seçeneklerini temizle
     }
 
     if (['range_slider_integer', 'range_slider_decimal'].includes(tip)) {
