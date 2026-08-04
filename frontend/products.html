@@ -12,13 +12,15 @@
     <link href="https://cdn.jsdelivr.net/npm/nouislider@15.7.1/dist/nouislider.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/nouislider@15.7.1/dist/nouislider.min.js"></script>
     <script src="js/theme.js"></script>
-    <!-- 🎯 İstemci Taraflı Export Kütüphaneleri -->
+    <!-- İstemci Taraflı Export Kütüphaneleri -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+    <!-- Barkod Çizim Kütüphanesi -->
+    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
 </head>
 
-<body>  
+<body>
     <div class="container my-5">
         <div class="d-flex justify-content-between align-items-center mb-4">
             <div>
@@ -28,8 +30,10 @@
             <div class="d-flex gap-2">
                 <!-- 🎯 TOPLU VERİ İÇE AKTARMA (EXCEL IMPORT) ALANI -->
                 <div class="input-group">
-                    <input type="file" class="form-control form-control-sm rounded-start-pill" id="excelImportFile" accept=".xlsx">
-                    <button class="btn btn-sm btn-outline-success px-3 rounded-end-pill" type="button" id="btnExcelImport">
+                    <input type="file" class="form-control form-control-sm rounded-start-pill" id="excelImportFile"
+                        accept=".xlsx">
+                    <button class="btn btn-sm btn-outline-success px-3 rounded-end-pill" type="button"
+                        id="btnExcelImport">
                         <i class="bi bi-file-earmark-excel-fill"></i> Yükle
                     </button>
                 </div>
@@ -46,25 +50,39 @@
                 <!-- Arama ve Filtreleme Alanı -->
                 <div class="row g-3 mb-4 align-items-center">
                     <div class="col-md-4">
-                        <input type="text" id="aramaKutusu" class="form-control rounded-pill"
-                            placeholder="Ürün Adı veya Barkod ile Ara...">
+                        <div class="position-relative d-flex align-items-center">
+                            <span class="position-absolute ms-3 text-muted"><i class="bi bi-search"></i></span>
+                            <input type="text" id="aramaKutusu" class="form-control rounded-pill ps-5 pe-5"
+                                placeholder="Ürün Adı veya Barkod ile Ara...">
+                            <button type="button"
+                                class="btn btn-link position-absolute end-0 text-primary text-decoration-none me-2"
+                                id="btnKameraAcUrunler" title="Kamera ile Okut">
+                                <i class="bi bi-qr-code-scan fs-5"></i>
+                            </button>
+                        </div>
                     </div>
                     <div class="col-md-3">
                         <div id="filtreKategoriContainer" class="d-flex flex-column gap-2"></div>
                         <input type="hidden" id="filtreKategoriId" value="">
                     </div>
                     <div class="col-md-2">
-                        <button type="button" id="btnFiltreleriTemizle" class="btn btn-outline-secondary rounded-pill w-100">Temizle</button>
+                        <button type="button" id="btnFiltreleriTemizle"
+                            class="btn btn-outline-secondary rounded-pill w-100">Temizle</button>
                     </div>
                     <!-- 🎯 ÇEŞİTLİ FORMATLARDA DIŞA AKTARMA (EXPORT) BUTONLARI -->
                     <div class="col-md-3 d-flex justify-content-end gap-1">
-                        <button id="btnExportExcel" class="btn btn-success btn-sm rounded-pill px-3 shadow-sm text-nowrap" title="Excel Olarak İndir">
+                        <button id="btnExportExcel"
+                            class="btn btn-success btn-sm rounded-pill px-3 shadow-sm text-nowrap"
+                            title="Excel Olarak İndir">
                             <i class="bi bi-file-earmark-excel"></i> Excel
                         </button>
-                        <button id="btnExportPdf" class="btn btn-danger btn-sm rounded-pill px-3 shadow-sm text-nowrap" title="PDF Olarak İndir">
+                        <button id="btnExportPdf" class="btn btn-danger btn-sm rounded-pill px-3 shadow-sm text-nowrap"
+                            title="PDF Olarak İndir">
                             <i class="bi bi-file-earmark-pdf"></i> PDF
                         </button>
-                        <button id="btnExportCsv" class="btn btn-secondary btn-sm rounded-pill px-3 shadow-sm text-nowrap" title="CSV Olarak İndir">
+                        <button id="btnExportCsv"
+                            class="btn btn-secondary btn-sm rounded-pill px-3 shadow-sm text-nowrap"
+                            title="CSV Olarak İndir">
                             <i class="bi bi-file-earmark-spreadsheet"></i> CSV
                         </button>
                     </div>
@@ -73,7 +91,8 @@
                 <!-- Dinamik Özellik Filtreleme Alanı -->
                 <div class="row g-3 mb-4 d-none bg-light p-3 rounded-3 mx-0 border" id="dynamicFilterArea">
                     <div class="col-12 mb-2 border-bottom pb-2">
-                        <h6 class="small fw-bold text-muted mb-0"><i class="bi bi-funnel-fill me-1"></i> Kategori Özelliklerine Göre Filtrele</h6>
+                        <h6 class="small fw-bold text-muted mb-0"><i class="bi bi-funnel-fill me-1"></i> Kategori
+                            Özelliklerine Göre Filtrele</h6>
                     </div>
                     <div class="row m-0 p-0" id="dynamicFilterContainer">
                         <!-- JS ile kural filter inputları buraya gelecek -->
@@ -117,7 +136,7 @@
                 <div class="modal-body p-4 p-md-5">
                     <form id="urunFormu">
                         <input type="hidden" id="urunId">
-                        
+
                         <div class="row g-4">
                             <!-- Sol Kolon: Temel Bilgiler -->
                             <div class="col-lg-6">
@@ -125,56 +144,67 @@
                                     <h6 class="fw-bold text-primary mb-4 border-bottom pb-2">
                                         <i class="bi bi-info-circle me-1"></i> Temel Bilgiler
                                     </h6>
-                                    
+
                                     <div class="mb-4">
-                                        <label class="form-label text-muted small fw-bold">Ürün Adı <span class="text-danger">*</span></label>
-                                        <input type="text" class="form-control" id="urunAdi" placeholder="Örn: M5 Vida" required>
+                                        <label class="form-label text-muted small fw-bold">Ürün Adı <span
+                                                class="text-danger">*</span></label>
+                                        <input type="text" class="form-control" id="urunAdi" placeholder="Örn: M5 Vida"
+                                            required>
                                     </div>
-                                    
+
                                     <div class="mb-4">
-                                        <label class="form-label text-muted small fw-bold">Barkod (SKU) <span class="text-danger">*</span></label>
+                                        <label class="form-label text-muted small fw-bold">Barkod (SKU) <span
+                                                class="text-danger">*</span></label>
                                         <div class="input-group">
-                                            <span class="input-group-text bg-light"><i class="bi bi-upc-scan"></i></span>
-                                            <input type="text" class="form-control" id="urunBarkod" placeholder="Kendi barkodunuzu girin veya üretin">
+                                            <span class="input-group-text bg-light"><i
+                                                    class="bi bi-upc-scan"></i></span>
+                                            <input type="text" class="form-control" id="urunBarkod"
+                                                placeholder="Kendi barkodunuzu girin veya üretin">
                                             <button class="btn btn-outline-primary" type="button" id="btnSkuUret">
                                                 <i class="bi bi-magic"></i> SKU Üret
                                             </button>
                                         </div>
-                                        <div class="form-text small text-muted"><i class="bi bi-info-circle"></i> Kurallı SKU üretmek için önce kategoriyi ve alttaki nitelikleri doldurun.</div>
+                                        <div class="form-text small text-muted"><i class="bi bi-info-circle"></i>
+                                            Kurallı SKU üretmek için önce kategoriyi ve alttaki nitelikleri doldurun.
+                                        </div>
                                     </div>
-                                    
+
                                     <div class="mb-2">
-                                        <label class="form-label text-muted small fw-bold">Kategori <span class="text-danger">*</span></label>
+                                        <label class="form-label text-muted small fw-bold">Kategori <span
+                                                class="text-danger">*</span></label>
                                         <div id="urunKategoriContainer" class="d-flex flex-column gap-2"></div>
                                         <input type="hidden" id="urunKategoriId" value="">
                                     </div>
                                 </div>
                             </div>
-                            
+
                             <!-- Sağ Kolon: Stok ve Yerleşim -->
                             <div class="col-lg-6">
                                 <div class="bg-white p-4 rounded-3 shadow-sm border h-100">
                                     <h6 class="fw-bold text-success mb-4 border-bottom pb-2">
                                         <i class="bi bi-box me-1"></i> Stok ve Yerleşim Bilgileri
                                     </h6>
-                                    
+
                                     <div class="mb-4">
                                         <label class="form-label text-muted small fw-bold">Minimum Stok Seviyesi</label>
-                                        <input type="number" class="form-control" id="urunMinStok" placeholder="Örn: 10" min="0">
+                                        <input type="number" class="form-control" id="urunMinStok" placeholder="Örn: 10"
+                                            min="0">
                                     </div>
-                                    
+
                                     <div class="mb-4" id="depoSecimiAlani">
                                         <label class="form-label text-muted small fw-bold">Yerleştirilecek Depo</label>
                                         <div class="input-group">
-                                            <span class="input-group-text bg-light"><i class="bi bi-building"></i></span>
+                                            <span class="input-group-text bg-light"><i
+                                                    class="bi bi-building"></i></span>
                                             <select class="form-select" id="urunDepoId">
                                                 <option value="">Önce depo seçin...</option>
                                             </select>
                                         </div>
                                     </div>
-                                    
+
                                     <div class="mb-4" id="rafSecimiAlani">
-                                        <label class="form-label text-muted small fw-bold">Yerleştirilecek Raf (Zorunlu)</label>
+                                        <label class="form-label text-muted small fw-bold">Yerleştirilecek Raf
+                                            (Zorunlu)</label>
                                         <div class="input-group">
                                             <span class="input-group-text bg-light"><i class="bi bi-layers"></i></span>
                                             <select class="form-select" id="urunRafId" disabled>
@@ -182,30 +212,35 @@
                                             </select>
                                         </div>
                                     </div>
-                                    
+
                                     <div class="mb-2" id="baslangicStokAlani">
                                         <label class="form-label text-muted small fw-bold">Başlangıç Stok Adedi</label>
-                                        <input type="number" class="form-control" id="urunBaslangicStok" placeholder="Örn: 10" min="0" value="0">
+                                        <input type="number" class="form-control" id="urunBaslangicStok"
+                                            placeholder="Örn: 10" min="0" value="0">
                                     </div>
                                 </div>
                             </div>
                         </div>
 
                         <!-- Dinamik Nitelikler (Kural Formu) -->
-                        <div class="row bg-light rounded-3 p-4 mx-0 mt-4 border shadow-sm d-none" id="dynamicAttributesArea">
+                        <div class="row bg-light rounded-3 p-4 mx-0 mt-4 border shadow-sm d-none"
+                            id="dynamicAttributesArea">
                             <div class="col-12 mb-3 border-bottom pb-2">
                                 <h6 class="fw-bold text-secondary mb-0">
                                     <i class="bi bi-funnel-fill me-1"></i> Kategoriye Özel Nitelikler
                                 </h6>
-                                <small class="text-muted">Seçtiğiniz kategoriye göre doldurmanız gereken ek özellikler.</small>
+                                <small class="text-muted">Seçtiğiniz kategoriye göre doldurmanız gereken ek
+                                    özellikler.</small>
                             </div>
                             <div class="row p-0 m-0 w-100" id="dynamicAttributesContainer">
                             </div>
                         </div>
-                        
+
                         <div class="d-flex justify-content-end align-items-center mt-5 pt-3 border-top">
-                            <button type="button" class="btn btn-outline-secondary rounded-pill px-4 me-3 fw-bold" data-bs-dismiss="modal">İptal</button>
-                            <button type="button" id="btnUrunKaydet" class="btn btn-primary rounded-pill px-5 py-2 fw-bold shadow">
+                            <button type="button" class="btn btn-outline-secondary rounded-pill px-4 me-3 fw-bold"
+                                data-bs-dismiss="modal">İptal</button>
+                            <button type="button" id="btnUrunKaydet"
+                                class="btn btn-primary rounded-pill px-5 py-2 fw-bold shadow">
                                 <i class="bi bi-check-lg me-1"></i> Ekle ve Kaydet
                             </button>
                         </div>
@@ -215,7 +250,52 @@
         </div>
     </div>
 
+    <!-- Barkod Yazdırma (Print) Modalı -->
+    <div class="modal fade" id="barcodePrintModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered modal-sm">
+            <div class="modal-content border-0 shadow-lg rounded-4">
+                <div class="modal-header bg-light border-0 rounded-top-4">
+                    <h5 class="modal-title fw-bold text-dark"><i class="bi bi-printer me-2 text-primary"></i>Barkod
+                        Yazdır</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Kapat"></button>
+                </div>
+                <div class="modal-body text-center p-4">
+                    <div id="printArea" class="bg-white p-3 rounded border d-inline-block">
+                        <img id="barcodeCanvas" class="img-fluid" alt="Barkod" />
+                    </div>
+                    <p class="text-muted small mt-3 mb-0" id="barcodeProductName">Ürün Adı</p>
+                </div>
+                <div class="modal-footer border-0 justify-content-center">
+                    <button type="button" class="btn btn-primary rounded-pill px-4 shadow-sm"
+                        id="btnPrintBarcodeAction">
+                        <i class="bi bi-printer-fill me-1"></i> Yazdır
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
 
+    <!-- Kamera Tarayıcı Modalı -->
+    <div class="modal fade bottom-sheet-modal" id="scannerModalUrunler" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg rounded-4">
+                <div class="modal-header border-0 bg-light rounded-top-4">
+                    <h5 class="modal-title fw-bold text-dark"><i class="bi bi-qr-code-scan me-2 text-primary"></i>Kamera
+                        ile Ürün Bul</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Kapat"></button>
+                </div>
+                <div class="modal-body p-4 text-center">
+                    <div id="readerUrunler"
+                        class="mx-auto overflow-hidden rounded-3 border shadow-sm w-100 scanner-viewport"></div>
+                    <div id="kameraDurumUrunler" class="text-muted small mt-3 fw-bold">Kamera başlatılıyor, lütfen
+                        bekleyin...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+    <script src="js/scanner.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.js"></script>
