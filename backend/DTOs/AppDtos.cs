@@ -2,7 +2,7 @@ namespace stok_takip.DTOs;
 
 // --- REQUEST DTOs ---
 public record CreateSupplierDto(string Name, string? ContactName, string? ContactEmail, string? ContactPhone, string? Address, string? TaxNumber);
-public record AttributeAllowedValueDto(string Value, string? Label, int DisplayOrder);
+public record AttributeAllowedValueDto(string Value, string? Label, int DisplayOrder, bool IsActive = true);
 
 public record CreateAttributeRuleDto(int? CategoryId, string AttributeKey, string DataType, bool IsRequired, string? AllowedValues, string UiComponent = "textbox", decimal? MinValue = null, decimal? MaxValue = null, string TargetLevel = "Product", List<AttributeAllowedValueDto>? AllowedValueList = null);
 

@@ -32,19 +32,28 @@ namespace stok_takip.Controllers
 
                 var totalStockQuantity = await _context.StockLevels
                     .Include(sl => sl.Product)
+                    .Include(sl => sl.Location).ThenInclude(l => l.Warehouse)
                     .AsNoTracking()
-                    .Where(sl => !sl.IsDeleted && sl.Product != null && !sl.Product.IsDeleted)
+                    .Where(sl => !sl.IsDeleted 
+                                 && sl.Product != null && !sl.Product.IsDeleted
+                                 && sl.Location != null && !sl.Location.IsDeleted
+                                 && sl.Location.Warehouse != null && !sl.Location.Warehouse.IsDeleted)
                     .SumAsync(sl => sl.Quantity);
 
                 var totalWarehouseValue = await _context.StockLevels
                     .Include(sl => sl.Product)
+                    .Include(sl => sl.Location).ThenInclude(l => l.Warehouse)
                     .AsNoTracking()
-                    .Where(sl => !sl.IsDeleted && sl.Product != null && !sl.Product.IsDeleted)
+                    .Where(sl => !sl.IsDeleted 
+                                 && sl.Product != null && !sl.Product.IsDeleted
+                                 && sl.Location != null && !sl.Location.IsDeleted
+                                 && sl.Location.Warehouse != null && !sl.Location.Warehouse.IsDeleted)
                     .SumAsync(sl => sl.Quantity * sl.Product.Cost);
 
                 var transactionVolume = await _context.StockMovements
+                    .Include(m => m.Product)
                     .AsNoTracking()
-                    .Where(m => !m.IsDeleted)
+                    .Where(m => !m.IsDeleted && m.Product != null && !m.Product.IsDeleted)
                     .SumAsync(m => m.TotalPrice);
 
                 return Ok(new
@@ -65,18 +74,19 @@ namespace stok_takip.Controllers
 
         // SON 30 GÜNÜN HAREKET TRENDİ
         [HttpGet("trend")]
-        public async Task<IActionResult> GetTrend([FromQuery] string? barcode)
+        public async Task<IActionResult> GetTrend([FromQuery] int? productId)
         {
             try
             {
                 var query = _context.StockMovements
                     .Include(m => m.Product)
-                    .Where(m => m.Product != null && !m.Product.IsDeleted)
+                    .AsNoTracking()
+                    .Where(m => !m.IsDeleted && m.Product != null && !m.Product.IsDeleted)
                     .AsQueryable();
 
-                if (!string.IsNullOrEmpty(barcode))
+                if (productId.HasValue && productId.Value > 0)
                 {
-                    query = query.Where(m => m.Product.Barcode == barcode);
+                    query = query.Where(m => m.ProductId == productId.Value);
                 }
 
                 var thirtyDaysAgo = DateTime.UtcNow.AddDays(-30); 
@@ -111,9 +121,13 @@ namespace stok_takip.Controllers
                 var result = await _context.StockLevels
                     .Include(sl => sl.Product)
                     .ThenInclude(p => p.Category)
+                    .Include(sl => sl.Location).ThenInclude(l => l.Warehouse)
                     .AsNoTracking()
-                    .Where(sl => !sl.IsDeleted && sl.Product != null && !sl.Product.IsDeleted)
-                    .GroupBy(sl => sl.Product.Category != null ? sl.Product.Category.Name : "Kategorisiz")
+                    .Where(sl => !sl.IsDeleted 
+                                 && sl.Product != null && !sl.Product.IsDeleted
+                                 && sl.Location != null && !sl.Location.IsDeleted
+                                 && sl.Location.Warehouse != null && !sl.Location.Warehouse.IsDeleted)
+                    .GroupBy(sl => sl.Product.Category != null && !sl.Product.Category.IsDeleted ? sl.Product.Category.Name : "Kategorisiz")
                     .Select(g => new
                     {
                         kategoriAdi = g.Key,
@@ -169,6 +183,7 @@ namespace stok_takip.Controllers
             try
             {
                 var summary = await _context.StockMovements
+                    .Include(m => m.Product)
                     .AsNoTracking()
                     .Where(m => !m.IsDeleted && m.Product != null && !m.Product.IsDeleted)
                     .GroupBy(m => m.MovementType)

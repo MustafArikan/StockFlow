@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="tr">
 
 <head>
@@ -137,8 +137,20 @@
                                     </select>
                                 </div>
                                 <div class="col-md-4 d-none" id="kuralSeceneklerDiv">
-                                    <label class="form-label small fw-bold text-muted">Seçenekler (Virgülle)</label>
-                                    <input type="text" class="form-control form-control-sm" id="kuralSecenekler" placeholder="Örn: Siyah, Beyaz, Kırmızı">
+                                    <label class="form-label small fw-bold text-muted">Seçenekler</label>
+                                    <div class="input-group input-group-sm position-relative">
+                                        <input type="text" class="form-control" id="kuralSecenekYeniDeger" placeholder="Örn: Siyah" autocomplete="off">
+                                        <button type="button" class="btn btn-outline-primary" id="btnSecenekEkle">
+                                            <i class="bi bi-plus-lg"></i> Ekle
+                                        </button>
+                                        <!-- Renk tipinde arama önerileri buraya açılır (Bölüm 3) -->
+                                        <div id="renkOneriKutusu" class="dropdown-menu w-100 d-none scrollable-dropdown"></div>
+                                    </div>
+                                    <ul class="list-group list-group-flush mt-2 rounded border scrollable-list" id="kuralSecenekListesi">
+                                        <!-- JS ile doldurulacak, boşken gizli -->
+                                    </ul>
+                                    <!-- Backend'e gönderilecek gizli alan; artık virgüllü metin değil, JSON dizi -->
+                                    <input type="hidden" id="kuralSecenekler">
                                 </div>
                                 <div class="col-md-2 d-none" id="kuralMinDiv">
                                     <label class="form-label small fw-bold text-muted">Min. Değer</label>
@@ -205,6 +217,7 @@
     <script src="js/security-utils.js"></script>
     <script src="js/table-utils.js"></script>
     <script src="js/config.js"></script>
+    <script src="js/color-names.js"></script>
     <script src="js/dynamic-ui.js"></script>
     <script src="js/categories.js?v=4"></script>
     <script src="js/auth.js"></script>

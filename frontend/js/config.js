@@ -310,3 +310,9 @@ function tarihSaatFormatla(t) {
     return t ? new Date(t).toLocaleString("tr-TR") : "-";
 }
 document.addEventListener('DOMContentLoaded', renderProfessionalLayout);
+// Fix Bootstrap 5 Modal aria-hidden focus warnings in Chrome
+document.addEventListener('hide.bs.modal', function () {
+    if (document.activeElement) {
+        document.activeElement.blur();
+    }
+});

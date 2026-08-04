@@ -339,20 +339,8 @@ body {
     width: 100%;
 }
 
-.trend-wrapper {
-    height: 420px;
-}
-
-.summary-wrapper {
-    height: 400px;
-}
-
-.category-wrapper {
-    height: 400px;
-}
-
-.top-products-wrapper {
-    height: 500px;
+.trend-wrapper, .summary-wrapper, .category-wrapper, .top-products-wrapper {
+    height: 350px;
 }
 
 /* Barkod Okuyucu (Kamera) arayüzünü şekillendirir. */
@@ -798,6 +786,31 @@ button:disabled,
     margin-bottom: 0;
     height: fit-content;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+}
+
+/* CSP Uyumlu Yükseklik / Kaydırma ve Boyut Sınıfları */
+.scrollable-dropdown {
+    max-height: 220px;
+    overflow-y: auto;
+}
+
+.scrollable-list {
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.color-preview-swatch {
+    width: 16px;
+    height: 16px;
+}
+
+.color-radio-item:checked + .color-swatch-span,
+.color-radio-item:checked + .color-swatch-span-sm {
+    outline: 2px solid #0d6efd;
+    outline-offset: 2px;
+}
+
+.permission-module-card {
     transition: transform 0.2s, box-shadow 0.2s;
     overflow: hidden;
 }
@@ -1256,12 +1269,12 @@ button:disabled,
 
     /* --- GRAFİKLER VE KAMERA --- */
     .custom-chart-wrapper {
-        min-height: 320px !important;
+        height: 300px !important;
         padding-bottom: 10px;
     }
 
     .top-products-wrapper {
-        min-height: 450px !important;
+        height: 350px !important;
     }
 
     #reader video {

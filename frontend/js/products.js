@@ -649,6 +649,22 @@ if (urunKategoriSelectForm) {
 
                 inputHtml = DynamicUI.renderFormInput(rule, options, escapeHtml);
                 let uiType = rule.uiComponent || rule.dataType;
+            let options = [];
+            if (rule.allowedValues && rule.allowedValues !== "[]") {
+                try { options = JSON.parse(rule.allowedValues); } 
+                catch(e) { options = rule.allowedValues.split(',').map(s => s.trim()); }
+            }
+
+            // Renk tipinde: hex kodlarını (Label) rule.allowedValueList'ten eşleştir
+            if (rule.uiComponent === "color_picker" && rule.allowedValueList) {
+                options = options.map(val => {
+                    const eslesen = rule.allowedValueList.find(a => a.value === val);
+                    return { value: val, hex: eslesen ? eslesen.label : val };
+                });
+            }
+            
+            inputHtml = DynamicUI.renderFormInput(rule, options, escapeHtml);
+            let uiType = rule.uiComponent || rule.dataType;
 
                 if (uiType === 'searchable_dropdown' || uiType === 'autocomplete') {
                     let optionsHtml = options.map(opt => `<option value="${escapeHtml(opt)}">`).join('');
@@ -716,14 +732,15 @@ if (urunKategoriSelectForm) {
                     };
 
                     let liHtml = colors.map((opt, idx) => {
-                        let hex = getColorHex(opt);
+                        let deger = (typeof opt === 'object') ? opt.value : opt;
+                        let hex = (typeof opt === 'object' && opt.hex) ? opt.hex : getColorHex(deger);
                         return `<div class="form-check mb-1">
-                                    <input class="form-check-input color-radio-item" type="radio" name="color_${rule.id}" id="color_${rule.id}_${idx}" value="${escapeHtml(opt)}" data-rule-id="${rule.id}" ${requiredAttr}>
+                                    <input class="form-check-input color-radio-item" type="radio" name="color_${rule.id}" id="color_${rule.id}_${idx}" value="${escapeHtml(deger)}" data-rule-id="${rule.id}" ${requiredAttr}>
                                     <label class="form-check-label d-flex align-items-center cursor-pointer" for="color_${rule.id}_${idx}">
                                         <svg width="18" height="18" class="svg-color-circle" xmlns="http://www.w3.org/2000/svg">
                                             <circle cx="9" cy="9" r="8" fill="${hex}" stroke="#aaa" stroke-width="1"/>
                                         </svg>
-                                        ${escapeHtml(opt)}
+                                        ${escapeHtml(deger)}
                                     </label>
                                 </div>`;
                     }).join('');
@@ -1168,6 +1185,14 @@ document.getElementById('filtreKategoriId')?.addEventListener('change', async fu
             if (rule.allowedValues && rule.allowedValues !== "[]") {
                 try { options = JSON.parse(rule.allowedValues); }
                 catch (e) { options = rule.allowedValues.split(',').map(s => s.trim()); }
+            }
+
+            // Renk tipinde: hex kodlarını (Label) rule.allowedValueList'ten eşleştir
+            if (rule.uiComponent === "color_picker" && rule.allowedValueList) {
+                options = options.map(val => {
+                    const eslesen = rule.allowedValueList.find(a => a.value === val);
+                    return { value: val, hex: eslesen ? eslesen.label : val };
+                });
             }
 
             let inputHtml = DynamicUI.renderFilterInput(rule, options, escapeHtml);

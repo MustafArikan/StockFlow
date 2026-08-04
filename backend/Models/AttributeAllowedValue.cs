@@ -18,4 +18,6 @@ public class AttributeAllowedValue : BaseEntity
     public string? Label { get; set; }
 
     public int DisplayOrder { get; set; } = 0;
+
+    public bool IsActive { get; set; } = true;
 }
