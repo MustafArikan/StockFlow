@@ -280,7 +280,7 @@ public class AppDbContext : DbContext
             if (entry.Entity is SecurityAuditLog || entry.State == EntityState.Detached || entry.State == EntityState.Unchanged)
                 continue;
 
-            var sensitiveProperties = new[] { "PasswordHash", "PasswordResetCode", "PasswordResetCodeExpiry", "EmailConfirmationCode", "ConfirmationCodeExpiry", "SessionToken" };
+            var sensitiveProperties = new[] { "PasswordHash", "PasswordResetCode", "PasswordResetCodeExpiry", "EmailConfirmationCode", "ConfirmationCodeExpiry", "SessionToken", "IdentityNumber" };
 
             var auditLog = new SecurityAuditLog
             {

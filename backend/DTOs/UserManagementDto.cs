@@ -22,6 +22,7 @@ namespace stok_takip.DTOs
     public string Password { get; set; } = string.Empty;
 
     public string? PhoneNumber { get; set; }
+    [RegularExpression(@"^[1-9][0-9]{10}$", ErrorMessage = "TC Kimlik No 11 haneli olmalı ve 0 ile başlamamalıdır.")]
     public string? IdentityNumber { get; set; }
 
     [Required]
@@ -43,6 +44,7 @@ namespace stok_takip.DTOs
         public string Email { get; set; } = string.Empty;
 
         public string? PhoneNumber { get; set; }
+        [RegularExpression(@"^[1-9][0-9]{10}$", ErrorMessage = "TC Kimlik No 11 haneli olmalı ve 0 ile başlamamalıdır.")]
         public string? IdentityNumber { get; set; }
 
         [Required]
