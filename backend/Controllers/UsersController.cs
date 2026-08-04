@@ -19,11 +19,13 @@ public class UsersController : ControllerBase
 {
     private readonly AppDbContext _context;
     private readonly IPasswordHasher<User> _passwordHasher;
+    private readonly Microsoft.Extensions.Caching.Memory.IMemoryCache _cache;
 
-    public UsersController(AppDbContext context, IPasswordHasher<User> passwordHasher)
+    public UsersController(AppDbContext context, IPasswordHasher<User> passwordHasher, Microsoft.Extensions.Caching.Memory.IMemoryCache cache)
     {
         _context = context;
         _passwordHasher = passwordHasher;
+        _cache = cache;
     }
 
     private async Task<int> GetCurrentUserRoleLevelAsync()
@@ -151,6 +153,7 @@ public class UsersController : ControllerBase
         foreach (var session in activeSessions)
         {
             session.IsActive = false;
+            _cache.Remove($"Session_{session.SessionToken}");
         }
 
         await _context.SaveChangesAsync();
@@ -250,7 +253,11 @@ public class UsersController : ControllerBase
             var activeSessions = await _context.UserSessions
                 .Where(s => s.UserId == id && s.IsActive)
                 .ToListAsync();
-            foreach (var session in activeSessions) session.IsActive = false;
+            foreach (var session in activeSessions)
+            {
+                session.IsActive = false;
+                _cache.Remove($"Session_{session.SessionToken}");
+            }
             
         }
 
@@ -283,7 +290,11 @@ public class UsersController : ControllerBase
 
         user.IsDeleted = true;
         var activeSessions = await _context.UserSessions.Where(s => s.UserId == id && s.IsActive).ToListAsync();
-        foreach (var session in activeSessions) session.IsActive = false;
+        foreach (var session in activeSessions)
+        {
+            session.IsActive = false;
+            _cache.Remove($"Session_{session.SessionToken}");
+        }
 
         await _context.SaveChangesAsync();
         return Ok(new { message = "Kullanıcı başarıyla silindi ve aktif oturumlar sonlandırıldı." });
