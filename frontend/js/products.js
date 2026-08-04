@@ -25,6 +25,36 @@ if (urlSearch) {
     });
 }
 
+const viewProductId = urlParams.get('viewProductId');
+if (viewProductId) {
+    document.addEventListener("DOMContentLoaded", () => {
+        setTimeout(async () => {
+            if (typeof urunDetayAc === 'function') {
+                await urunDetayAc(parseInt(viewProductId), { tedarikciYonetimi: hasPermission("Supplier.Edit") });
+                // URL'den parametreyi temizle
+                window.history.replaceState({}, document.title, window.location.pathname);
+            }
+        }, 300); // UI yüklendikten sonra modalı aç
+    });
+}
+
+const viewProductBarcode = urlParams.get('viewProductBarcode');
+if (viewProductBarcode) {
+    document.addEventListener("DOMContentLoaded", () => {
+        const checkInterval = setInterval(() => {
+            if (window.tumUrunler && window.tumUrunler.length > 0) {
+                clearInterval(checkInterval);
+                const p = window.tumUrunler.find(u => (u.barcode || "").toLowerCase() === viewProductBarcode.toLowerCase());
+                if (p && typeof urunDetayAc === 'function') {
+                    urunDetayAc(p.id, { tedarikciYonetimi: hasPermission("Supplier.Edit") });
+                    window.history.replaceState({}, document.title, window.location.pathname);
+                }
+            }
+        }, 200);
+    });
+}
+
+
 if (!token) window.location.href = 'login.html';
 
 // Alt kategorileri recursive olarak bulan fonksiyon
@@ -174,6 +204,7 @@ const productView = createDataView({
                     <button class="btn btn-sm btn-outline-secondary rounded-pill btn-print-barcode d-inline-flex align-items-center shadow-sm" 
                             data-barcode="${escapeHtml(urun.barcode)}" 
                             data-name="${escapeHtml(urun.name)}" 
+                            data-id="${urun.id}"
                             title="Barkod Çıktısı Al">
                         <i class="bi bi-upc-scan me-2"></i>
                         <span class="fw-bold">${escapeHtml(urun.barcode)}</span>
@@ -643,28 +674,20 @@ if (urunKategoriSelectForm) {
 
                 let options = [];
                 if (rule.allowedValues && rule.allowedValues !== "[]") {
-                    try { options = JSON.parse(rule.allowedValues); }
-                    catch (e) { options = rule.allowedValues.split(',').map(s => s.trim()); }
+                    try { options = JSON.parse(rule.allowedValues); } 
+                    catch(e) { options = rule.allowedValues.split(',').map(s => s.trim()); }
                 }
 
+                // Renk tipinde: hex kodlarını (Label) rule.allowedValueList'ten eşleştir
+                if (rule.uiComponent === "color_picker" && rule.allowedValueList) {
+                    options = options.map(val => {
+                        const eslesen = rule.allowedValueList.find(a => a.value === val);
+                        return { value: val, hex: eslesen ? eslesen.label : val };
+                    });
+                }
+                
                 inputHtml = DynamicUI.renderFormInput(rule, options, escapeHtml);
                 let uiType = rule.uiComponent || rule.dataType;
-            let options = [];
-            if (rule.allowedValues && rule.allowedValues !== "[]") {
-                try { options = JSON.parse(rule.allowedValues); } 
-                catch(e) { options = rule.allowedValues.split(',').map(s => s.trim()); }
-            }
-
-            // Renk tipinde: hex kodlarını (Label) rule.allowedValueList'ten eşleştir
-            if (rule.uiComponent === "color_picker" && rule.allowedValueList) {
-                options = options.map(val => {
-                    const eslesen = rule.allowedValueList.find(a => a.value === val);
-                    return { value: val, hex: eslesen ? eslesen.label : val };
-                });
-            }
-            
-            inputHtml = DynamicUI.renderFormInput(rule, options, escapeHtml);
-            let uiType = rule.uiComponent || rule.dataType;
 
                 if (uiType === 'searchable_dropdown' || uiType === 'autocomplete') {
                     let optionsHtml = options.map(opt => `<option value="${escapeHtml(opt)}">`).join('');
@@ -1077,7 +1100,7 @@ if (tabloGovdesi) {
         const btnIncele = e.target.closest(".btn-incele");
 
         if (btnPrint) {
-            openBarcodePrintModal(btnPrint.getAttribute("data-barcode"), btnPrint.getAttribute("data-name"));
+            openBarcodePrintModal(btnPrint.getAttribute("data-barcode"), btnPrint.getAttribute("data-name"), btnPrint.getAttribute("data-id"));
         } else if (btnIncele) {
             urunDetayAc(parseInt(btnIncele.getAttribute("data-id")), { tedarikciYonetimi: hasPermission("Supplier.Edit") });
         } else if (btnDuzenle) {
@@ -1427,28 +1450,86 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('btnExportExcel')?.addEventListener('click', exportProductsToExcel);
     document.getElementById('btnExportPdf')?.addEventListener('click', exportProductsToPDF);
     document.getElementById('btnExportCsv')?.addEventListener('click', exportProductsToCSV);
+    
+    // Özel dosya seçici UI'ı için dosya adını güncelleme
+    document.getElementById('excelImportFile')?.addEventListener('change', function(e) {
+        const fileName = e.target.files[0] ? e.target.files[0].name : "Dosya yok";
+        const nameSpan = document.getElementById('excelFileName');
+        if (nameSpan) nameSpan.textContent = fileName;
+    });
 });
 
 // =========================================================================
 // BARKOD ÇİZİM VE YAZDIRMA (PRINT) İŞLEMLERİ
 // =========================================================================
-function openBarcodePrintModal(barcode, productName) {
+function openBarcodePrintModal(barcode, productName, productId) {
     document.getElementById("barcodeProductName").textContent = productName;
 
     // JsBarcode kütüphanesi ile SVG elementine Code128 formatında çizim yapıyoruz
     JsBarcode("#barcodeCanvas", barcode, {
         format: "CODE128",
         lineColor: "#000",
-        width: 2,
-        height: 80,
+        width: 1.5, // Uzun barkodlar çok genişleyip bulanıklaşmasın diye çizgileri biraz incelttik
+        height: 60,
         displayValue: true,
-        fontSize: 16,
+        fontSize: 14, // Yazı tipini biraz küçülttük
         margin: 10
     });
+
+    // QR Kod oluşturma (CSP Uyumlu QRious kütüphanesi)
+    const qrCanvas = document.getElementById("qrcodeCanvas");
+    if (qrCanvas) {
+        // QR Kodu, direkt uygulamanın ürün inceleme sayfasına yönlendirir
+        const qrUrl = `${window.location.origin}${window.location.pathname}?viewProductId=${productId}`;
+        
+        new QRious({
+            element: qrCanvas,
+            value: qrUrl,
+            size: 120, // 100 yerine 120 yapalım daha net çıksın
+            background: 'white',
+            foreground: 'black',
+            level: 'H'
+        });
+    }
+
+    // Modal açılırken her zaman varsayılan olarak Barkod görünümüne sıfırla
+    const barcodeCanvas = document.getElementById('barcodeCanvas');
+    const qrcodeCanvas = document.getElementById('qrcodeCanvas');
+    const btnToggle = document.getElementById('btnToggleCodeType');
+    
+    if (barcodeCanvas && qrcodeCanvas && btnToggle) {
+        qrcodeCanvas.classList.add('d-none');
+        qrcodeCanvas.classList.remove('d-flex');
+        barcodeCanvas.classList.remove('d-none');
+        btnToggle.innerHTML = '<i class="bi bi-qr-code me-1"></i> QR Koda Geç';
+        document.querySelector('#barcodePrintModal .modal-title').innerHTML = '<i class="bi bi-printer me-2 text-primary"></i>Barkod Yazdır';
+    }
 
     const modalInstance = bootstrap.Modal.getOrCreateInstance(document.getElementById('barcodePrintModal'));
     modalInstance.show();
 }
+
+document.getElementById('btnToggleCodeType')?.addEventListener('click', function() {
+    const barcodeCanvas = document.getElementById('barcodeCanvas');
+    const qrcodeCanvas = document.getElementById('qrcodeCanvas');
+    const isQrVisible = !qrcodeCanvas.classList.contains('d-none');
+
+    if (isQrVisible) {
+        // Barkoda Geç
+        qrcodeCanvas.classList.add('d-none');
+        qrcodeCanvas.classList.remove('d-flex');
+        barcodeCanvas.classList.remove('d-none');
+        this.innerHTML = '<i class="bi bi-qr-code me-1"></i> QR Koda Geç';
+        document.querySelector('#barcodePrintModal .modal-title').innerHTML = '<i class="bi bi-printer me-2 text-primary"></i>Barkod Yazdır';
+    } else {
+        // QR Koda Geç
+        barcodeCanvas.classList.add('d-none');
+        qrcodeCanvas.classList.remove('d-none');
+        qrcodeCanvas.classList.add('d-flex');
+        this.innerHTML = '<i class="bi bi-upc-scan me-1"></i> Barkoda Geç';
+        document.querySelector('#barcodePrintModal .modal-title').innerHTML = '<i class="bi bi-printer me-2 text-primary"></i>QR Kod Yazdır';
+    }
+});
 
 function printBarcode() {
     const printContent = document.getElementById('printArea').innerHTML;
@@ -1464,16 +1545,35 @@ function printBarcode() {
 
     const iframe = document.createElement('iframe');
     iframe.id = 'print-iframe';
-    iframe.style.position = 'fixed';
-    iframe.style.right = '0';
-    iframe.style.bottom = '0';
-    iframe.style.width = '0';
-    iframe.style.height = '0';
-    iframe.style.border = '0';
+    
+    // CSP Uyumlu: Inline style yerine HTML attribute ve Bootstrap class'ları kullanıyoruz
+    iframe.className = 'position-fixed bottom-0 end-0 border-0 opacity-0'; 
+    iframe.setAttribute('width', '0');
+    iframe.setAttribute('height', '0');
+    // opacity-0 kullandık çünkü bazı tarayıcılar display:none olan iframe'leri yazdırmaz
+    
     document.body.appendChild(iframe);
 
     const iframeDoc = iframe.contentWindow.document;
     iframeDoc.open();
+    
+    // Canvas elementini img etiketine çevirerek inline style hatalarının önüne geçiyoruz (CSP'ye takılmaz)
+    let safePrintContent = printContent.replace(/<canvas[^>]*id=["']qrcodeCanvas["'][^>]*><\/canvas>/gi, () => {
+        const qrCanvas = document.getElementById('qrcodeCanvas');
+        if (qrCanvas) {
+            const dataUrl = qrCanvas.toDataURL("image/png");
+            // Sadece qrcode açıldıysa img olarak renderla, gizliyse d-none koy
+            const isHidden = qrCanvas.classList.contains('d-none');
+            const classStr = isHidden ? "mx-auto d-none justify-content-center" : "mx-auto mt-2 d-flex justify-content-center";
+            return `<img id="qrcodeCanvasImg" src="${dataUrl}" class="${classStr}" alt="QR Kod">`;
+        }
+        return '';
+    });
+    
+    // JsBarcode'un ürettiği olası style etiketlerini temizle
+    safePrintContent = safePrintContent.replace(/style\s*=\s*['"]display:\s*none;?['"]/gi, 'class="d-none"');
+    safePrintContent = safePrintContent.replace(/ style\s*=\s*['"][^'"]*['"]/gi, '');
+
     iframeDoc.write(`
         <!DOCTYPE html>
         <html lang="tr">
@@ -1490,7 +1590,7 @@ function printBarcode() {
             </div>
             
             <!-- Orta Kısım: Barkod Görseli -->
-            ${printContent}
+            ${safePrintContent}
             
             <!-- Alt Kısım: Ürün Adı -->
             <div class="mt-2 fw-bold text-dark fs-6">

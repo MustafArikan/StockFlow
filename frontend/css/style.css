@@ -1419,3 +1419,5 @@ button:disabled,
         object-fit: contain !important;
     }
 }
+.cursor-pointer { cursor: pointer !important; }
+.file-name-truncate { max-width: 90px; }
