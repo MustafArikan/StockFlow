@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using System.Text;
+using System.Net;
 using Scalar.AspNetCore;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity;
@@ -82,9 +83,7 @@ builder.Services.AddRateLimiter(options =>
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
 {
     options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
-    // Güvenlik: KnownNetworks ve KnownProxies'i tamamen temizlemek (Clear) IP spoofing'e yol açar.
-    // Eğer Nginx başka bir sunucuda veya docker network'ünde ise, Nginx'in IP'sini KnownProxies'e eklemelisiniz.
-    // Örnek: options.KnownProxies.Add(IPAddress.Parse("192.168.1.5"));
+    options.KnownNetworks.Add(new Microsoft.AspNetCore.HttpOverrides.IPNetwork(System.Net.IPAddress.Parse("172.16.0.0"), 12));
 });
 builder.Services.AddHttpContextAccessor();
 

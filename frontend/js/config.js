@@ -1,8 +1,8 @@
 // --- Dinamik API URL Tespiti ---
 let apiBase = '/api'; // Production varsayılanı (Nginx üzerinden)
 
-if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.protocol === 'file:') {
-    // Geliştirme ortamı veya doğrudan dosya açılışı
+// Sadece hiçbir web sunucusu olmadan dosyaya çift tıklayıp açıldığında doğrudan API'ye gitmesi için:
+if (window.location.protocol === 'file:') {
     apiBase = 'http://localhost:5000/api';
 }
 

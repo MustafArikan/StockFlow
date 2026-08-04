@@ -23,19 +23,22 @@ public class AuthController : ControllerBase
     private readonly IConfiguration _configuration;
     private readonly IEmailService _emailService;
     private readonly stok_takip.Metrics.StockFlowMetrics _metrics;
+    private readonly Microsoft.Extensions.Caching.Memory.IMemoryCache _cache;
 
     public AuthController(
         AppDbContext context,
         IPasswordHasher<User> passwordHasher,
         IConfiguration configuration,
         IEmailService emailService,
-        stok_takip.Metrics.StockFlowMetrics metrics)
+        stok_takip.Metrics.StockFlowMetrics metrics,
+        Microsoft.Extensions.Caching.Memory.IMemoryCache cache)
     {
         _context = context;
         _passwordHasher = passwordHasher;
         _configuration = configuration;
         _emailService = emailService;
         _metrics = metrics;
+        _cache = cache;
     }
 
 [AllowAnonymous]
@@ -303,6 +306,7 @@ public async Task<IActionResult> Logout()
             if (session != null)
             {
                 session.IsActive = false; // Oturumu devre dışı bırak
+                _cache.Remove($"Session_{session.SessionToken}");
                 await _context.SaveChangesAsync();
             }
         }
@@ -461,6 +465,7 @@ public async Task<IActionResult> Logout()
         foreach (var session in activeSessions)
         {
             session.IsActive = false; // Tüm aktif oturumları devre dışı bırak
+            _cache.Remove($"Session_{session.SessionToken}");
         }
 
         await _context.SaveChangesAsync();
@@ -497,6 +502,16 @@ public async Task<IActionResult> Logout()
         }
 
         user.PasswordHash = _passwordHasher.HashPassword(user, dto.NewPassword);
+
+        var activeSessions = await _context.UserSessions
+            .Where(s => s.UserId == user.Id && s.IsActive)
+            .ToListAsync();
+        foreach (var session in activeSessions)
+        {
+            session.IsActive = false;
+            _cache.Remove($"Session_{session.SessionToken}");
+        }
+
         await _context.SaveChangesAsync();
 
         // Güvenlik Bilgilendirme E-postası Gönder
