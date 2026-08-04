@@ -682,8 +682,8 @@ function secenekListesiniCiz() {
                 <span class="small ${secenek.isActive ? '' : 'text-muted text-decoration-line-through'}">${escapeHtml(secenek.value)}</span>
             </div>
             <div class="d-flex align-items-center gap-2">
-                <div class="form-check form-switch m-0" title="Bu kuralda kullanılsın mı?">
-                    <input class="form-check-input secenek-aktif-checkbox" type="checkbox" role="switch" data-index="${index}" ${secenek.isActive ? "checked" : ""}>
+                <div class="form-check m-0" title="Bu kuralda kullanılsın mı?">
+                    <input class="form-check-input secenek-aktif-checkbox" type="checkbox" data-index="${index}" ${secenek.isActive ? "checked" : ""}>
                 </div>
                 <button type="button" class="btn btn-sm btn-link text-danger p-0 secenek-sil-btn" data-index="${index}" title="Sil">
                     <i class="bi bi-trash3"></i>
@@ -692,6 +692,12 @@ function secenekListesiniCiz() {
         `;
         liste.appendChild(li);
     });
+
+    const allActive = mevcutSecenekListesi.every(s => s.isActive);
+    const switchTumunuSec = document.getElementById("switchTumunuSec");
+    if (switchTumunuSec) {
+        switchTumunuSec.checked = mevcutSecenekListesi.length > 0 && allActive;
+    }
 
     seceneklerHiddenInputuGuncelle();
 }
@@ -734,8 +740,22 @@ document.getElementById("kuralSecenekListesi").addEventListener("change", (e) =>
     if (e.target.classList.contains("secenek-aktif-checkbox")) {
         const index = parseInt(e.target.getAttribute("data-index"));
         mevcutSecenekListesi[index].isActive = e.target.checked;
+        
+        const allActive = mevcutSecenekListesi.every(s => s.isActive);
+        const switchTumunuSec = document.getElementById("switchTumunuSec");
+        if (switchTumunuSec) {
+            switchTumunuSec.checked = mevcutSecenekListesi.length > 0 && allActive;
+        }
+        
         seceneklerHiddenInputuGuncelle();
     }
+});
+
+document.getElementById("switchTumunuSec").addEventListener("change", (e) => {
+    if (mevcutSecenekListesi.length === 0) return;
+    const isActive = e.target.checked;
+    mevcutSecenekListesi.forEach(s => s.isActive = isActive);
+    secenekListesiniCiz();
 });
 
 // "Ekle" butonu ve Enter tuşu
@@ -847,7 +867,7 @@ document.getElementById("renkOneriKutusu").addEventListener("click", (e) => {
 
 // Dışarı tıklanınca öneri kutusunu kapat
 document.addEventListener("click", (e) => {
-    if (!e.target.closest("#kuralSeceneklerDiv")) {
+    if (!e.target.closest("#kuralSeceneklerWrapper")) {
         document.getElementById("renkOneriKutusu").classList.add("d-none");
     }
 });
@@ -876,7 +896,7 @@ function gorselOnizlemeGuncelle() {
 
 document.getElementById("kuralTip").addEventListener("change", function() {
     const tip = this.value;
-    const seceneklerDiv = document.getElementById("kuralSeceneklerDiv");
+    const seceneklerDiv = document.getElementById("kuralSeceneklerWrapper");
     const minDiv = document.getElementById("kuralMinDiv");
     const maxDiv = document.getElementById("kuralMaxDiv");
     
@@ -1083,7 +1103,7 @@ document.getElementById("kurallarTabloGovdesi").addEventListener("click", async 
 // Kural tipi değiştiğinde Seçenekler kutusunu göster/gizle ve ipucunu güncelle
 document.getElementById('kuralTip').addEventListener('change', (e) => {
     const tip = e.target.value;
-    const secDiv = document.getElementById('kuralSeceneklerDiv');
+    const secDiv = document.getElementById('kuralSeceneklerWrapper');
     const secInput = document.getElementById('kuralSecenekler');
     const minDiv = document.getElementById('kuralMinDiv');
     const maxDiv = document.getElementById('kuralMaxDiv');
