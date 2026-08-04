@@ -503,6 +503,11 @@ body {
     width: 20%;
 }
 
+.scrollable-list {
+    max-height: 280px;
+    overflow-y: auto;
+}
+
 /* Sabit Ölçü ve Hizalamaları Belirler */
 .w-40px {
     width: 40px;
