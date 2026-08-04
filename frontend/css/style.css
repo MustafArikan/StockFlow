@@ -339,20 +339,8 @@ body {
     width: 100%;
 }
 
-.trend-wrapper {
-    height: 420px;
-}
-
-.summary-wrapper {
-    height: 400px;
-}
-
-.category-wrapper {
-    height: 400px;
-}
-
-.top-products-wrapper {
-    height: 500px;
+.trend-wrapper, .summary-wrapper, .category-wrapper, .top-products-wrapper {
+    height: 350px;
 }
 
 /* Barkod Okuyucu (Kamera) arayüzünü şekillendirir. */
@@ -1073,12 +1061,12 @@ button:disabled,
 
     /* --- GRAFİKLER VE KAMERA --- */
     .custom-chart-wrapper {
-        min-height: 320px !important;
+        height: 300px !important;
         padding-bottom: 10px;
     }
 
     .top-products-wrapper {
-        min-height: 450px !important;
+        height: 350px !important;
     }
 
     #reader video {

@@ -408,6 +408,7 @@ function renderTopProductsChart(data) {
                         backgroundColor: '#198754',
                         barPercentage: 0.65,
                         categoryPercentage: 0.85,
+                        maxBarThickness: 40,
                         borderRadius: 3
                     },
                     {
@@ -416,6 +417,7 @@ function renderTopProductsChart(data) {
                         backgroundColor: '#dc3545',
                         barPercentage: 0.65,
                         categoryPercentage: 0.85,
+                        maxBarThickness: 40,
                         borderRadius: 3
                     },
                     {
@@ -424,6 +426,7 @@ function renderTopProductsChart(data) {
                         backgroundColor: '#0dcaf0',
                         barPercentage: 0.65,
                         categoryPercentage: 0.85,
+                        maxBarThickness: 40,
                         borderRadius: 3
                     }
                 ]

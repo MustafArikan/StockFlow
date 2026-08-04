@@ -43,8 +43,9 @@ namespace stok_takip.Controllers
                     .SumAsync(sl => sl.Quantity * sl.Product.Cost);
 
                 var transactionVolume = await _context.StockMovements
+                    .Include(m => m.Product)
                     .AsNoTracking()
-                    .Where(m => !m.IsDeleted)
+                    .Where(m => !m.IsDeleted && m.Product != null && !m.Product.IsDeleted)
                     .SumAsync(m => m.TotalPrice);
 
                 return Ok(new
@@ -65,18 +66,19 @@ namespace stok_takip.Controllers
 
         // SON 30 GÜNÜN HAREKET TRENDİ
         [HttpGet("trend")]
-        public async Task<IActionResult> GetTrend([FromQuery] string? barcode)
+        public async Task<IActionResult> GetTrend([FromQuery] int? productId)
         {
             try
             {
                 var query = _context.StockMovements
                     .Include(m => m.Product)
-                    .Where(m => m.Product != null && !m.Product.IsDeleted)
+                    .AsNoTracking()
+                    .Where(m => !m.IsDeleted && m.Product != null && !m.Product.IsDeleted)
                     .AsQueryable();
 
-                if (!string.IsNullOrEmpty(barcode))
+                if (productId.HasValue && productId.Value > 0)
                 {
-                    query = query.Where(m => m.Product.Barcode == barcode);
+                    query = query.Where(m => m.ProductId == productId.Value);
                 }
 
                 var thirtyDaysAgo = DateTime.UtcNow.AddDays(-30); 

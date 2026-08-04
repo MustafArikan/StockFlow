@@ -8,6 +8,96 @@ const PoliciesUI = {
     allPermissions: {},
     selectedPolicyId: null,
 
+    formatPermissionName: function(sysName) {
+        if (!sysName) return "";
+        const lowerSysName = sysName.toLowerCase();
+        const dictionary = {
+            "dashboard.view": "Ana Sayfayı Görüntüleme",
+            "product.view": "Ürünleri Görüntüleme",
+            "product.add": "Yeni Ürün Ekleme",
+            "product.edit": "Ürün Düzenleme",
+            "product.delete": "Ürün Silme",
+            "category.view": "Kategorileri Görüntüleme",
+            "category.add": "Kategori Ekleme",
+            "category.edit": "Kategori Düzenleme",
+            "category.delete": "Kategori Silme",
+            "movement.view": "Stok Hareketlerini Görüntüleme",
+            "movement.inbound": "Depoya Mal Girişi",
+            "movement.outbound": "Depodan Mal Çıkışı",
+            "movement.transfer": "Depolar Arası Transfer",
+            "movement.edit": "Stok Hareketini Düzenleme",
+            "movement.cancel": "Stok Hareketini İptal Etme",
+            "warehouse.view": "Depoları Görüntüleme",
+            "warehouse.add": "Depo Ekleme",
+            "warehouse.edit": "Depo Düzenleme",
+            "warehouse.delete": "Depo Silme",
+            "location.view": "Konumları Görüntüleme",
+            "location.add": "Konum Ekleme",
+            "location.edit": "Konum Düzenleme",
+            "location.delete": "Konum Silme",
+            "supplier.view": "Tedarikçileri Görüntüleme",
+            "supplier.add": "Tedarikçi Ekleme",
+            "supplier.edit": "Tedarikçi Düzenleme",
+            "supplier.delete": "Tedarikçi Silme",
+            "asset.view": "Demirbaşları Görüntüleme",
+            "asset.add": "Demirbaş Ekleme",
+            "asset.edit": "Demirbaş Düzenleme",
+            "asset.delete": "Demirbaş Silme",
+            "asset.assign": "Demirbaş Zimmetleme",
+            "scanner.use": "Barkod Okuyucu Kullanma",
+            "report.view": "Raporları Görüntüleme",
+            "report.export": "Raporları Dışa Aktarma",
+            "report.import": "Rapor İçe Aktarma",
+            "user.view": "Kullanıcıları Görüntüleme",
+            "user.add": "Kullanıcı Ekleme",
+            "user.edit": "Kullanıcı Düzenleme",
+            "user.delete": "Kullanıcı Silme",
+            "user.resetpassword": "Şifre Sıfırlama",
+            "role.view": "Rolleri Görüntüleme",
+            "role.add": "Rol Ekleme",
+            "role.edit": "Rol Düzenleme",
+            "role.delete": "Rol Silme",
+            "policy.view": "Politikaları Görüntüleme",
+            "policy.edit": "Politika Düzenleme",
+            "notification.view": "Bildirimleri Görüntüleme",
+            "notification.managesettings": "Bildirim Ayarlarını Yönetme",
+            "settings.view": "Ayarları Görüntüleme",
+            "settings.edit": "Ayarları Düzenleme",
+            "system.auditlogs": "Güvenlik Loglarını Görüntüleme"
+        };
+        
+        if (dictionary[lowerSysName]) return dictionary[lowerSysName];
+
+        let parts = sysName.split('.');
+        if(parts.length === 2) {
+            let action = parts[1].toLowerCase();
+            const actionDict = {
+                "view": "Görüntüleme",
+                "create": "Oluşturma",
+                "add": "Ekleme",
+                "edit": "Düzenleme",
+                "update": "Güncelleme",
+                "delete": "Silme",
+                "manage": "Yönetim",
+                "export": "Dışa Aktarma",
+                "import": "İçe Aktarma",
+                "print": "Yazdırma",
+                "remove": "Çıkarma",
+                "inbound": "Mal Girişi",
+                "outbound": "Mal Çıkışı",
+                "transfer": "Transfer",
+                "cancel": "İptal Etme",
+                "use": "Kullanma",
+                "assign": "Atama",
+                "managesettings": "Ayarları Yönetme"
+            };
+            if(actionDict[action]) {
+                return `${parts[0]} ${actionDict[action]}`;
+            }
+        }
+        return sysName.replace(/\./g, ' ');
+    },
+
     init: async function() {
         await this.loadPermissions();
         await this.loadPolicies();
@@ -157,8 +247,8 @@ const PoliciesUI = {
                 html += `
                     <div class="permission-item">
                         <div class="pe-3">
-                            <span class="fw-semibold d-block text-dark">${escapeHTML(p.name)}</span>
-                            <small class="text-muted d-block roles-desc-text">${escapeHTML(p.description || '')}</small>
+                            <span class="fw-semibold d-block text-dark">${escapeHTML(this.formatPermissionName(p.name))}</span>
+                            <small class="text-muted d-block roles-desc-text mt-1"><span class="badge bg-light text-secondary border me-1 font-monospace" style="font-size:0.7rem;">${escapeHTML(p.name)}</span> ${escapeHTML(p.description || '')}</small>
                         </div>
                         <div class="form-check form-switch m-0 flex-shrink-0">
                             <input class="form-check-input perm-cb module-cb-${moduleSlug}" type="checkbox" value="${p.id}" id="perm_${p.id}">
