@@ -357,52 +357,45 @@ function initAddAssetCamera() {
                     barcodeBeepSound.currentTime = 0;
                     barcodeBeepSound.play().catch(() => { });
 
-                    inputNewAssetSerial.value = scannedText;
-                    basariToast("Barkod başarıyla okundu!");
+                    let serial = scannedText;
+                    let productBarcode = scannedText;
+                    
+                    const delimiters = ['|', ';', ',', '_'];
+                    for (let d of delimiters) {
+                        if (scannedText.includes(d)) {
+                            const parts = scannedText.split(d);
+                            if (parts.length >= 2) {
+                                productBarcode = parts[0].trim();
+                                serial = parts.slice(1).join(d).trim();
+                                break;
+                            }
+                        }
+                    }
+
+                    inputNewAssetSerial.value = serial;
+
+                    const productSelect = document.getElementById('newAssetProduct');
+                    let productFound = false;
+                    if (productSelect) {
+                        const options = Array.from(productSelect.options);
+                        const matchedOption = options.find(opt => opt.dataset.barcode === productBarcode || opt.dataset.barcode === scannedText);
+                        if (matchedOption) {
+                            productSelect.value = matchedOption.value;
+                            productSelect.dispatchEvent(new Event('change'));
+                            productFound = true;
+                        }
+                    }
+
+                    if (productFound) {
+                        basariToast("Ürün ve Seri No eşleştirildi!");
+                    } else {
+                        basariToast("Barkod okundu (Ürün bulunamadı)");
+                    }
 
                     closeScannerEkle();
                 } finally {
                     isProcessingQR = false;
                 }
-                barcodeBeepSound.currentTime = 0; // Sesi başa sarar
-                barcodeBeepSound.play().catch(() => { }); // Sesi çalar
-
-                let serial = scannedText;
-                let productBarcode = scannedText;
-                
-                const delimiters = ['|', ';', ',', '_'];
-                for (let d of delimiters) {
-                    if (scannedText.includes(d)) {
-                        const parts = scannedText.split(d);
-                        if (parts.length >= 2) {
-                            productBarcode = parts[0].trim();
-                            serial = parts.slice(1).join(d).trim();
-                            break;
-                        }
-                    }
-                }
-
-                inputNewAssetSerial.value = serial;
-
-                const productSelect = document.getElementById('newAssetProduct');
-                let productFound = false;
-                if (productSelect) {
-                    const options = Array.from(productSelect.options);
-                    const matchedOption = options.find(opt => opt.dataset.barcode === productBarcode || opt.dataset.barcode === scannedText);
-                    if (matchedOption) {
-                        productSelect.value = matchedOption.value;
-                        productSelect.dispatchEvent(new Event('change'));
-                        productFound = true;
-                    }
-                }
-
-                if (productFound) {
-                    basariToast("Ürün ve Seri No eşleştirildi!");
-                } else {
-                    basariToast("Barkod okundu (Ürün bulunamadı)");
-                }
-
-                closeScannerEkle();
             }, () => { });
         } catch (error) {
             uyariGoster("Kameraya erişilemedi!");

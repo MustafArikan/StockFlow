@@ -1,4 +1,4 @@
-﻿// ==========================================
+// ==========================================
 // HİBRİT TARAYICI TEST PANELİ SCRİPTİ
 // ==========================================
 
@@ -24,6 +24,21 @@ function onScanSuccess(decodedText, decodedResult) {
         const formatName = decodedResult?.result?.format?.formatName || "Belirlenemedi";
         resultFormat.textContent = formatName;
     }
+
+    // Kamera durdurulur ve yönlendirme yapılır
+    setTimeout(async () => {
+        if (typeof stopScanner === 'function') {
+            await stopScanner();
+        }
+        
+        // Eğer okunan kod bir URL (QR Kod) ise direkt o URL'ye (ürün kartına) git
+        if (decodedText.startsWith('http://') || decodedText.startsWith('https://')) {
+            window.location.href = decodedText;
+        } else {
+            // Sadece numara/metin ise (Barkod) parametre olarak ürün sayfasına gönder
+            window.location.href = `products.html?viewProductBarcode=${encodeURIComponent(decodedText)}`;
+        }
+    }, 800); // Kullanıcının ekranda yeşil başarılı yazısını görmesi için kısa bir bekleme
 }
 
 // 3. Anlık Tarama Hataları (Sessiz Dinleme - Konsol Kirliliğini Önler)

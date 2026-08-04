@@ -1,4 +1,4 @@
-﻿/**
+/**
  * StockFlow Hibrit QR ve Barkod Okuyucu Modülü
  */
 
@@ -42,12 +42,13 @@ function initializeAndStart(elementId, onScanSuccess, onScanFailure) {
 
         const config = {
             fps: 15, // Tarama hızı (kare/saniye)
-            qrbox: function (width, height) {
-                const minEdge = Math.min(width, height);
-                const qrboxSize = Math.floor(minEdge * 0.6);
+            qrbox: function (viewfinderWidth, viewfinderHeight) {
+                // Uzun barkodların kenarlardan kesilmemesi için okuma alanını (crop box) alabildiğince geniş (dikdörtgen) yapıyoruz
+                const qrWidth = Math.floor(viewfinderWidth * 0.95); // Genişliğin %95'i
+                const qrHeight = Math.floor(viewfinderHeight * 0.6); // Yüksekliğin %60'ı
                 return {
-                    width: qrboxSize < 220 ? 220 : qrboxSize,
-                    height: qrboxSize < 220 ? 220 : qrboxSize
+                    width: qrWidth,
+                    height: qrHeight
                 };
             },
             aspectRatio: 1.0

@@ -16,7 +16,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
-    <!-- Barkod Çizim Kütüphanesi -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
 </head>
 
@@ -29,12 +29,14 @@
             </div>
             <div class="d-flex gap-2">
                 <!-- 🎯 TOPLU VERİ İÇE AKTARMA (EXCEL IMPORT) ALANI -->
-                <div class="input-group">
-                    <input type="file" class="form-control form-control-sm rounded-start-pill" id="excelImportFile"
-                        accept=".xlsx">
-                    <button class="btn btn-sm btn-outline-success px-3 rounded-end-pill" type="button"
-                        id="btnExcelImport">
-                        <i class="bi bi-file-earmark-excel-fill"></i> Yükle
+                <div class="d-flex align-items-center gap-2 bg-white rounded-pill shadow-sm px-2 py-1 border">
+                    <input type="file" id="excelImportFile" class="d-none" accept=".xlsx">
+                    <label for="excelImportFile" class="btn btn-sm btn-light rounded-pill mb-0 border cursor-pointer">
+                        <i class="bi bi-paperclip"></i> Seç
+                    </label>
+                    <span id="excelFileName" class="text-muted small text-truncate file-name-truncate">Dosya yok</span>
+                    <button class="btn btn-sm btn-success rounded-pill px-3 ms-1" type="button" id="btnExcelImport">
+                        <i class="bi bi-upload"></i> Yükle
                     </button>
                 </div>
                 <button class="btn btn-primary rounded-pill px-4 shadow-sm text-nowrap" data-bs-toggle="modal"
@@ -260,8 +262,14 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Kapat"></button>
                 </div>
                 <div class="modal-body text-center p-4">
-                    <div id="printArea" class="bg-white p-3 rounded border d-inline-block">
+                    <div class="mb-3">
+                        <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill fw-bold" id="btnToggleCodeType">
+                            <i class="bi bi-qr-code me-1"></i> QR Koda Geç
+                        </button>
+                    </div>
+                    <div id="printArea" class="bg-white p-3 rounded border d-inline-block text-center">
                         <img id="barcodeCanvas" class="img-fluid" alt="Barkod" />
+                        <canvas id="qrcodeCanvas" class="mx-auto d-none justify-content-center"></canvas>
                     </div>
                     <p class="text-muted small mt-3 mb-0" id="barcodeProductName">Ürün Adı</p>
                 </div>
