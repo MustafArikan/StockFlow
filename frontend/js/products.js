@@ -1434,10 +1434,22 @@ function printBarcode() {
         hour: '2-digit', minute: '2-digit'
     });
 
-    // Yeni ve temiz bir yazdırma penceresi açıyoruz
-    const printWindow = window.open('', '', 'width=600,height=400');
+    let oldFrame = document.getElementById('print-iframe');
+    if (oldFrame) oldFrame.remove();
 
-    printWindow.document.write(`
+    const iframe = document.createElement('iframe');
+    iframe.id = 'print-iframe';
+    iframe.style.position = 'fixed';
+    iframe.style.right = '0';
+    iframe.style.bottom = '0';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = '0';
+    document.body.appendChild(iframe);
+
+    const iframeDoc = iframe.contentWindow.document;
+    iframeDoc.open();
+    iframeDoc.write(`
         <!DOCTYPE html>
         <html lang="tr">
         <head>
@@ -1463,13 +1475,11 @@ function printBarcode() {
         </body>
         </html>
     `);
-
-    printWindow.document.close();
-    printWindow.focus();
+    iframeDoc.close();
 
     setTimeout(() => {
-        printWindow.print();
-        printWindow.close();
+        iframe.contentWindow.focus();
+        iframe.contentWindow.print();
     }, 500);
 }
 
@@ -1485,20 +1495,8 @@ document.getElementById('btnKameraAcUrunler')?.addEventListener('click', async (
     const btnKameraAc = document.getElementById("btnKameraAcUrunler");
     const scannerModalEl = document.getElementById("scannerModalUrunler");
     const durumEl = document.getElementById('kameraDurumUrunler');
-    const originalHtml = btnKameraAc ? btnKameraAc.innerHTML : '';
-
-    if (btnKameraAc) {
-        btnKameraAc.disabled = true;
-        btnKameraAc.innerHTML = `<span class="spinner-border spinner-border-sm"></span>`;
-    }
 
     try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-        stream.getTracks().forEach(track => track.stop());
-
-        btnKameraAc.disabled = false;
-        btnKameraAc.innerHTML = originalHtml;
-
         const scannerModalInstance = bootstrap.Modal.getOrCreateInstance(scannerModalEl);
         scannerModalInstance.show();
 
@@ -1507,47 +1505,65 @@ document.getElementById('btnKameraAcUrunler')?.addEventListener('click', async (
             durumEl.className = "text-center text-muted small mt-3 fw-bold";
         }
 
-        // scanner.js motorunu başlatıyoruz
         if (typeof startScanner === 'function') {
-            startScanner("readerUrunler", (scannedText) => {
-                barcodeBeepSound.currentTime = 0;
-                barcodeBeepSound.play().catch(() => { });
+            let isProcessingQR = false;
 
-                if (durumEl) {
-                    durumEl.textContent = `Barkod Okundu: ${scannedText}. Ürün aranıyor...`;
-                    durumEl.className = "text-center text-success small mt-3 fw-bold";
+            startScanner("readerUrunler", async (scannedText) => {
+                if (isProcessingQR) return;
+                isProcessingQR = true;
+
+                try {
+                    barcodeBeepSound.currentTime = 0;
+                    barcodeBeepSound.play().catch(() => { });
+
+                    if (durumEl) {
+                        durumEl.textContent = `Barkod Okundu: ${scannedText}. Ürün aranıyor...`;
+                        durumEl.className = "text-center text-success small mt-3 fw-bold";
+                    }
+
+                    const aramaKutusu = document.getElementById('aramaKutusu');
+                    if (aramaKutusu) {
+                        aramaKutusu.value = scannedText;
+                        aktifArama = scannedText.toLowerCase();
+                        veriyiGuncelle();
+                    }
+
+                    const bulunanUrun = tumUrunler.find(u => (u.barcode || "").toLowerCase() === scannedText.toLowerCase());
+
+                    if (bulunanUrun) {
+                        stopScanner();
+                        setTimeout(() => scannerModalInstance.hide(), 400);
+
+                        setTimeout(() => {
+                            urunDetayAc(bulunanUrun.id, { tedarikciYonetimi: hasPermission("Supplier.Edit") });
+                        }, 800);
+                    } else {
+                        if (typeof html5QrCode !== 'undefined' && html5QrCode) {
+                            html5QrCode.pause();
+                        }
+
+                        await uyariGoster(`Okutulan barkod (${scannedText}) sistemde bulunamadı!`);
+
+                        if (typeof html5QrCode !== 'undefined' && html5QrCode) {
+                            html5QrCode.resume();
+                        }
+
+                        if (durumEl) {
+                            durumEl.textContent = "Karekod veya Barkod aranıyor, kameraya gösterin...";
+                            durumEl.className = "text-center text-muted small mt-3 fw-bold";
+                        }
+                    }
+                } finally {
+                    isProcessingQR = false;
                 }
-
-                // Kamerayı durdur ve modalı kapat
-                stopScanner();
-                setTimeout(() => scannerModalInstance.hide(), 400);
-
-                // Arama kutusuna yaz ve filtrelemeyi tetikle
-                const aramaKutusu = document.getElementById('aramaKutusu');
-                if (aramaKutusu) {
-                    aramaKutusu.value = scannedText;
-                    aktifArama = scannedText.toLowerCase();
-                    veriyiGuncelle();
-                }
-
-                // Okunan barkod ile eşleşen ürünü bul ve Detay Modalını doğrudan göster
-                const bulunanUrun = tumUrunler.find(u => (u.barcode || "").toLowerCase() === scannedText.toLowerCase());
-
-                if (bulunanUrun) {
-                    setTimeout(() => {
-                        urunDetayAc(bulunanUrun.id, { tedarikciYonetimi: hasPermission("Supplier.Edit") });
-                    }, 800);
-                } else {
-                    setTimeout(() => uyariGoster("Okutulan barkoda ait ürün sistemde bulunamadı!"), 800);
-                }
-
             }, () => {
-                if (durumEl && durumEl.className.includes("text-muted")) durumEl.textContent = "Barkod aranıyor, kameraya gösterin...";
+                if (durumEl && durumEl.className.includes("text-muted") && !isProcessingQR) {
+                    durumEl.textContent = "Karekod veya Barkod aranıyor, kameraya gösterin...";
+                }
             });
         }
     } catch (error) {
-        btnKameraAc.disabled = false;
-        btnKameraAc.innerHTML = originalHtml;
+        if (btnKameraAc) btnKameraAc.disabled = false;
         uyariGoster("Kameraya erişilemedi! Lütfen tarayıcı izinlerini kontrol edin.");
     }
 });

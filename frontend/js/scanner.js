@@ -79,22 +79,27 @@ function initializeAndStart(elementId, onScanSuccess, onScanFailure) {
  * Çalışan tarayıcıyı ve kamerayı kapatır
  * @returns {Promise}
  */
+
 function stopScanner() {
     if (html5QrCode) {
-        if (html5QrCode.isScanning) {
+        const isCameraActive = html5QrCode.isScanning || (typeof html5QrCode.getState === 'function' && html5QrCode.getState() === 3);
+
+        if (isCameraActive) {
             return html5QrCode.stop()
                 .then(() => {
-                    console.log("Kamera ve tarayıcı kapatıldı.");
+                    try { html5QrCode.clear(); } catch (e) { }
+                    console.log("Kamera ve tarayıcı tamamen kapatıldı.");
                     html5QrCode = null;
                 })
                 .catch((err) => {
                     console.error("Kamera kapatılırken hata oluştu: ", err);
+                    try { html5QrCode.clear(); } catch (e) { }
                     html5QrCode = null;
                 });
         } else {
+            try { html5QrCode.clear(); } catch (e) { }
             html5QrCode = null;
         }
     }
-
     return Promise.resolve();
 }

@@ -26,15 +26,15 @@ const hareketView = createDataView({
     fetchPage: async (page, size) => {
         const sd = document.getElementById('startDate')?.value || '';
         const ed = document.getElementById('endDate')?.value || '';
-        
+
         let url = `/stock/movements?pageNumber=${page}&pageSize=${size}`;
         if (sd) url += `&startDate=${sd}`;
         if (ed) url += `&endDate=${ed}`;
-        
+
         if (aktifFiltre !== 'TUMU') {
-             url += `&movementType=${aktifFiltre === 'GIRIS' ? 'IN' : aktifFiltre === 'CIKIS' ? 'OUT' : 'TRANSFER'}`;
+            url += `&movementType=${aktifFiltre === 'GIRIS' ? 'IN' : aktifFiltre === 'CIKIS' ? 'OUT' : 'TRANSFER'}`;
         }
-        
+
         const arama = document.getElementById("aramaKutusu")?.value || "";
         if (arama) url += `&search=${encodeURIComponent(arama)}`;
 
@@ -466,61 +466,69 @@ const cameraArea = document.getElementById("kameraAlani");
 const btnOpenCamera = document.getElementById("btnKameraAc");
 const btnCloseCamera = document.getElementById("btnKameraKapat");
 const productSelect = document.getElementById("urunSecimi");
+const barcodeBeepSound = new Audio('audio/beep-07.wav');
 
 if (btnOpenCamera) {
     btnOpenCamera.addEventListener("click", async () => {
         if (btnOpenCamera.disabled) return;
-
-        const originalText = btnOpenCamera.innerHTML;
         btnOpenCamera.disabled = true;
-        btnOpenCamera.innerHTML = `<span class="spinner-border spinner-border-sm"></span> İzin Bekleniyor...`;
 
         try {
-            const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-            stream.getTracks().forEach(track => track.stop());
-
             cameraArea.classList.remove("d-none");
-            btnOpenCamera.innerHTML = originalText;
 
-            startScanner("reader", (scannedText) => {
-                let isProductFound = false;
-                if (productSelect && tumUrunler.length > 0) {
-                    const bulunanUrun = tumUrunler.find(u => (u.barcode ?? u.Barcode) === scannedText);
+            let isProcessingQR = false;
 
-                    if (bulunanUrun) {
-                        const hedefId = bulunanUrun.id ?? bulunanUrun.Id;
-                        productSelect.value = hedefId;
-                        isProductFound = true;
+            startScanner("reader", async (scannedText) => {
+                if (isProcessingQR) return;
+                isProcessingQR = true;
+
+                try {
+                    let isProductFound = false;
+                    if (productSelect && tumUrunler.length > 0) {
+                        const bulunanUrun = tumUrunler.find(u => (u.barcode ?? u.Barcode) === scannedText);
+
+                        if (bulunanUrun) {
+                            const hedefId = bulunanUrun.id ?? bulunanUrun.Id;
+                            productSelect.value = hedefId;
+                            isProductFound = true;
+                        }
                     }
-                }
 
-                if (isProductFound) {
-                    let audio = new Audio('audio/beep-07.wav');
-                    audio.play().catch(() => { });
-                    formuDenetle();
-                    closeCamera();
-                } else {
-                    uyariGoster(`Taranan barkod (${scannedText}) sistemde bulunamadı!`);
+                    if (isProductFound) {
+                        barcodeBeepSound.currentTime = 0;
+                        barcodeBeepSound.play().catch(() => { });
+
+                        formuDenetle();
+                        closeCamera();
+                    } else {
+                        if (typeof html5QrCode !== 'undefined' && html5QrCode) {
+                            html5QrCode.pause();
+                        }
+                        await uyariGoster(`Taranan barkod (${scannedText}) sistemde bulunamadı!`);
+                        if (typeof html5QrCode !== 'undefined' && html5QrCode) {
+                            html5QrCode.resume();
+                        }
+                    }
+                } finally {
+                    isProcessingQR = false;
                 }
             }, () => { });
 
         } catch (error) {
             uyariGoster("Kameraya erişilemedi! Lütfen tarayıcı adres çubuğundaki kilit/kamera simgesinden izin verin.");
             btnOpenCamera.disabled = false;
-            btnOpenCamera.innerHTML = originalText;
         }
     });
 }
 
 if (btnCloseCamera) btnCloseCamera.addEventListener("click", closeCamera);
 
+document.getElementById('stokIslemModal')?.addEventListener('hidden.bs.modal', closeCamera);
+
 function closeCamera() {
     if (cameraArea) cameraArea.classList.add("d-none");
-    if (btnOpenCamera) {
-        btnOpenCamera.disabled = false;
-        btnOpenCamera.innerHTML = `<i class="bi bi-upc-scan me-1"></i> Barkod Okut`;
-    }
-    stopScanner();
+    if (btnOpenCamera) btnOpenCamera.disabled = false;
+    if (typeof stopScanner === 'function') stopScanner();
 }
 
 async function dropdownTedarikcileriYukle() {

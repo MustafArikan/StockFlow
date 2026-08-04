@@ -225,23 +225,11 @@ function initEventListeners() {
 function initSearchCamera() {
     const btnKameraAcAsset = document.getElementById("btnKameraAcAsset");
     const scannerModalEl = document.getElementById("scannerModalAsset");
-    const originalHtml = btnKameraAcAsset ? btnKameraAcAsset.innerHTML : '';
 
     btnKameraAcAsset?.addEventListener("click", async () => {
         const durumEl = document.getElementById('kameraDurumAsset');
 
-        if (btnKameraAcAsset) {
-            btnKameraAcAsset.disabled = true;
-            btnKameraAcAsset.innerHTML = `<span class="spinner-border spinner-border-sm"></span>`;
-        }
-
         try {
-            const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-            stream.getTracks().forEach(track => track.stop());
-
-            btnKameraAcAsset.disabled = false;
-            btnKameraAcAsset.innerHTML = originalHtml;
-
             const scannerModalInstance = bootstrap.Modal.getOrCreateInstance(scannerModalEl);
             scannerModalInstance.show();
 
@@ -250,22 +238,39 @@ function initSearchCamera() {
                 durumEl.className = "text-center text-muted small mt-3 fw-bold";
             }
 
-            startScanner("readerAsset", (scannedText) => {
-                barcodeBeepSound.currentTime = 0; // Sesi başa sarar
-                barcodeBeepSound.play().catch(() => { }); // Sesi çalar
-                document.getElementById('serialSearchInput').value = scannedText;
-                if (durumEl) {
-                    durumEl.textContent = "Barkod Okundu! Yönlendiriliyor...";
-                    durumEl.className = "text-center text-success small mt-3 fw-bold";
+            let isProcessingQR = false;
+
+            startScanner("readerAsset", async (scannedText) => {
+                if (isProcessingQR) return;
+                isProcessingQR = true;
+
+                try {
+                    barcodeBeepSound.currentTime = 0;
+                    barcodeBeepSound.play().catch(() => { });
+                    document.getElementById('serialSearchInput').value = scannedText;
+
+                    if (durumEl) {
+                        durumEl.textContent = "Barkod Okundu! Yönlendiriliyor...";
+                        durumEl.className = "text-center text-success small mt-3 fw-bold";
+                    }
+
+                    if (typeof html5QrCode !== 'undefined' && html5QrCode) {
+                        html5QrCode.pause();
+                    }
+
+                    await searchAsset();
+
+                    scannerModalInstance.hide();
+                } finally {
+                    isProcessingQR = false;
                 }
-                searchAsset();
-                setTimeout(() => scannerModalInstance.hide(), 600);
             }, () => {
-                if (durumEl && durumEl.className.includes("text-muted")) durumEl.textContent = "Karekod veya Barkod aranıyor, kameraya gösterin...";
+                if (durumEl && durumEl.className.includes("text-muted") && !isProcessingQR) {
+                    durumEl.textContent = "Karekod veya Barkod aranıyor, kameraya gösterin...";
+                }
             });
         } catch (error) {
-            btnKameraAcAsset.disabled = false;
-            btnKameraAcAsset.innerHTML = originalHtml;
+            if (btnKameraAcAsset) btnKameraAcAsset.disabled = false;
             uyariGoster("Kameraya erişilemedi! Lütfen tarayıcı izinlerini kontrol edin.");
         }
     });
@@ -278,31 +283,34 @@ function initAddAssetCamera() {
     const btnKameraKapatEkle = document.getElementById("btnKameraKapatEkle");
     const kameraAlaniEkle = document.getElementById("kameraAlaniEkle");
     const inputNewAssetSerial = document.getElementById("newAssetSerial");
-    const defaultBtnHtml = btnKameraAcEkle ? btnKameraAcEkle.innerHTML : '';
 
     btnKameraAcEkle?.addEventListener("click", async () => {
         if (btnKameraAcEkle.disabled) return;
         btnKameraAcEkle.disabled = true;
-        btnKameraAcEkle.innerHTML = `<span class="spinner-border spinner-border-sm"></span> Bekleniyor...`;
 
         try {
-            const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-            stream.getTracks().forEach(track => track.stop());
-
             kameraAlaniEkle.classList.remove("d-none");
-            btnKameraAcEkle.innerHTML = defaultBtnHtml;
+            let isProcessingQR = false;
 
             startScanner("readerEkle", (scannedText) => {
-                barcodeBeepSound.currentTime = 0; // Sesi başa sarar
-                barcodeBeepSound.play().catch(() => { }); // Sesi çalar
-                inputNewAssetSerial.value = scannedText;
-                closeScannerEkle();
-                basariToast("Barkod başarıyla okundu!");
+                if (isProcessingQR) return;
+                isProcessingQR = true;
+
+                try {
+                    barcodeBeepSound.currentTime = 0;
+                    barcodeBeepSound.play().catch(() => { });
+
+                    inputNewAssetSerial.value = scannedText;
+                    basariToast("Barkod başarıyla okundu!");
+
+                    closeScannerEkle();
+                } finally {
+                    isProcessingQR = false;
+                }
             }, () => { });
         } catch (error) {
             uyariGoster("Kameraya erişilemedi!");
             btnKameraAcEkle.disabled = false;
-            btnKameraAcEkle.innerHTML = defaultBtnHtml;
         }
     });
 
@@ -311,10 +319,7 @@ function initAddAssetCamera() {
 
     function closeScannerEkle() {
         kameraAlaniEkle?.classList.add("d-none");
-        if (btnKameraAcEkle) {
-            btnKameraAcEkle.disabled = false;
-            btnKameraAcEkle.innerHTML = defaultBtnHtml;
-        }
+        if (btnKameraAcEkle) btnKameraAcEkle.disabled = false;
         stopScanner();
     }
 }
@@ -701,7 +706,7 @@ const assetGrid = createDataView({
         if (sortKey) {
             url += `&sortKey=${sortKey}&sortDir=${sortDir}`;
         }
-        
+
         const response = await apiRequest(url, 'GET');
         let assets = response.assets || response;
         const totalRecords = response.totalRecords || (assets ? assets.length : 0);
