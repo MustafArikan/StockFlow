@@ -43,7 +43,7 @@
                                 </span>
                                 <input type="text" id="serialSearchInput"
                                     class="form-control form-control-lg rounded-pill ps-5 pe-5 bg-light border-0"
-                                    placeholder="Ekipmanın seri numarasını, IMEI veya QR kodunu okutun...">
+                                    placeholder="Ekipmanın seri numarasını veya Barkod/QR kodunu okutun...">
 
                                 <!-- Kamera ile Okut Butonu -->
                                 <button type="button"
@@ -227,7 +227,7 @@
                         <div class="col-12">
                             <div class="d-flex justify-content-between align-items-center mb-2">
                                 <label for="newAssetSerial" class="form-label small fw-bold text-muted mb-0">Seri
-                                    Numarası / IMEI / Barkod <span class="text-danger">*</span></label>
+                                    Numarası / Barkod <span class="text-danger">*</span></label>
                                 <button type="button"
                                     class="btn btn-sm btn-outline-primary rounded-pill py-0 px-3 fw-bold"
                                     id="btnKameraAcEkle">
@@ -246,6 +246,7 @@
                             <input type="text" id="newAssetSerial" class="form-control"
                                 placeholder="Ekipmanın üzerindeki benzersiz kod...">
                         </div>
+                        <div class="col-12" id="newAssetAttributesContainer"></div>
                     </div>
 
                     <!-- Stok Çıkış Konumu (WMS Entegrasyonu) -->

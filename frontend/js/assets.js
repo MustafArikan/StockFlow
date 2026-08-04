@@ -116,6 +116,63 @@ function initEventListeners() {
         if (typeof StockUtils !== 'undefined') {
             await StockUtils.loadSmartWarehousesForProduct(selectedProductId, 'newAssetSourceWarehouse', 'newAssetSourceLocation');
         }
+
+        const selectedOption = this.options[this.selectedIndex];
+        const categoryId = selectedOption?.dataset?.categoryId;
+        const attrContainer = document.getElementById('newAssetAttributesContainer');
+        if (attrContainer) {
+            attrContainer.innerHTML = '';
+            if (categoryId) {
+                try {
+                    const rules = await apiRequest(`/attribute-rules/category/${categoryId}`, 'GET');
+                    const assetRules = rules.filter(r => r.targetLevel === 'Asset' || r.TargetLevel === 'Asset');
+                    if (assetRules.length > 0) {
+                        attrContainer.innerHTML = `<h6 class="fw-bold text-info mb-3 mt-4"><i class="bi bi-list-check me-2"></i>4. Ekipman Özellikleri</h6>`;
+                        const row = document.createElement('div');
+                        row.className = 'row g-3';
+                        assetRules.forEach(rule => {
+                            const isReq = rule.isRequired || rule.IsRequired;
+                            const key = rule.attributeKey || rule.AttributeKey;
+                            const type = rule.dataType || rule.DataType;
+                            const uiComp = rule.uiComponent || rule.UiComponent;
+                            const allowedVals = rule.attributeAllowedValues || rule.AttributeAllowedValues;
+
+                            const col = document.createElement('div');
+                            col.className = 'col-md-6';
+                            const label = document.createElement('label');
+                            label.className = 'form-label small fw-bold text-muted';
+                            label.innerHTML = `${key} ${isReq ? '<span class="text-danger">*</span>' : ''}`;
+                            
+                            let input;
+                            if (uiComp === 'select' && allowedVals && allowedVals.length > 0) {
+                                input = document.createElement('select');
+                                input.className = 'form-select dynamic-asset-attr';
+                                input.add(new Option('Seçiniz...', ''));
+                                allowedVals.forEach(val => {
+                                    const v = val.value || val.Value;
+                                    input.add(new Option(v, v));
+                                });
+                            } else {
+                                input = document.createElement('input');
+                                input.type = (type === 'number' || type === 'decimal') ? 'number' : 'text';
+                                input.className = 'form-control dynamic-asset-attr';
+                                input.placeholder = key + ' giriniz...';
+                            }
+                            input.dataset.key = key;
+                            input.dataset.type = type;
+                            if (isReq) input.required = true;
+                            
+                            col.appendChild(label);
+                            col.appendChild(input);
+                            row.appendChild(col);
+                        });
+                        attrContainer.appendChild(row);
+                    }
+                } catch (e) {
+                    console.error("Özellik kuralları alınamadı", e);
+                }
+            }
+        }
     });
 
     document.getElementById('deleteAssetTargetLocation')?.addEventListener('change', async function () {
@@ -295,9 +352,43 @@ function initAddAssetCamera() {
             startScanner("readerEkle", (scannedText) => {
                 barcodeBeepSound.currentTime = 0; // Sesi başa sarar
                 barcodeBeepSound.play().catch(() => { }); // Sesi çalar
-                inputNewAssetSerial.value = scannedText;
+
+                let serial = scannedText;
+                let productBarcode = scannedText;
+                
+                const delimiters = ['|', ';', ',', '_'];
+                for (let d of delimiters) {
+                    if (scannedText.includes(d)) {
+                        const parts = scannedText.split(d);
+                        if (parts.length >= 2) {
+                            productBarcode = parts[0].trim();
+                            serial = parts.slice(1).join(d).trim();
+                            break;
+                        }
+                    }
+                }
+
+                inputNewAssetSerial.value = serial;
+
+                const productSelect = document.getElementById('newAssetProduct');
+                let productFound = false;
+                if (productSelect) {
+                    const options = Array.from(productSelect.options);
+                    const matchedOption = options.find(opt => opt.dataset.barcode === productBarcode || opt.dataset.barcode === scannedText);
+                    if (matchedOption) {
+                        productSelect.value = matchedOption.value;
+                        productSelect.dispatchEvent(new Event('change'));
+                        productFound = true;
+                    }
+                }
+
+                if (productFound) {
+                    basariToast("Ürün ve Seri No eşleştirildi!");
+                } else {
+                    basariToast("Barkod okundu (Ürün bulunamadı)");
+                }
+
                 closeScannerEkle();
-                basariToast("Barkod başarıyla okundu!");
             }, () => { });
         } catch (error) {
             uyariGoster("Kameraya erişilemedi!");
@@ -356,7 +447,13 @@ async function loadProductsForDropdown() {
                 const stokText = product.stockQuantity ?? product.StockQuantity ?? 'Bilinmiyor';
                 const name = product.name ?? product.Name;
                 const id = product.id ?? product.Id;
-                select.add(new Option(`${name} (Stok: ${stokText})`, id));
+                const catId = product.categoryId ?? product.CategoryId;
+                const barcode = product.barcode ?? product.Barcode;
+                
+                const option = new Option(`${name} (Stok: ${stokText})`, id);
+                if (catId) option.dataset.categoryId = catId;
+                if (barcode) option.dataset.barcode = barcode;
+                select.add(option);
             });
             select.disabled = false;
         } else {
@@ -655,14 +752,38 @@ async function submitCreateAsset() {
         btnEkle.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Kaydediliyor...';
     }
 
-    try {
-        const result = await apiRequest('/assets', 'POST', {
-            productId: parseInt(productId, 10),
-            locationId: parseInt(locationId, 10),
-            serialNumber: serialNumber,
-            notes: notes
-        }) || {};
+    const attrInputs = document.querySelectorAll('.dynamic-asset-attr');
+    const attributesObj = [];
+    let hasValidationError = false;
+    attrInputs.forEach(input => {
+        if (input.required && !input.value.trim()) {
+            hasValidationError = true;
+        }
+        if (input.value.trim()) {
+            attributesObj.push({ key: input.dataset.key, value: input.value.trim(), type: input.dataset.type });
+        }
+    });
 
+    if (hasValidationError) {
+        if (btnEkle) {
+            btnEkle.disabled = false;
+            btnEkle.innerHTML = originalText;
+        }
+        return uyariGoster("Lütfen zorunlu ekipman özelliklerini doldurunuz.");
+    }
+
+    const attributes = attributesObj.length > 0 ? JSON.stringify(attributesObj) : null;
+
+    try {
+        const body = {
+            productId: parseInt(productId, 10),
+            serialNumber: serialNumber,
+            notes: notes,
+            locationId: parseInt(locationId, 10),
+            attributes: attributes
+        };
+
+        const res = await apiRequest('/assets', 'POST', body);
         basariToast("Harika! Yeni Ekipman başarıyla sisteme kaydedildi.");
 
         // Modalı kapatır
@@ -786,12 +907,12 @@ async function submitDeleteAsset() {
 
     try {
         const endpoint = isReturnToStock
-            ? `/assets/${currentAssetId}/retire?returnLocationId=${locationId}`
-            : `/assets/${currentAssetId}/retire`;
+            ? `/assets/${currentAssetId}?returnLocationId=${locationId}`
+            : `/assets/${currentAssetId}`;
 
-        await apiRequest(endpoint, 'PUT');
+        await apiRequest(endpoint, 'DELETE');
 
-        basariToast("Ekipman kullanımdan kaldırıldı ve pasife alındı.");
+        basariToast("Ekipman başarıyla silindi/pasife alındı.");
 
         const modalInstance = bootstrap.Modal.getInstance(document.getElementById('deleteAssetModal'));
         if (modalInstance) modalInstance.hide();

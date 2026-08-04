@@ -57,13 +57,13 @@ public class AttributeRulesController : ControllerBase
             rule.AttributeKey,
             rule.DataType,
             rule.IsRequired,
-            System.Text.Json.JsonSerializer.Serialize(rule.AttributeAllowedValues.Where(v => !v.IsDeleted).OrderBy(v => v.DisplayOrder).Select(v => v.Value)),
+            System.Text.Json.JsonSerializer.Serialize(rule.AttributeAllowedValues.Where(v => !v.IsDeleted && v.IsActive).OrderBy(v => v.DisplayOrder).Select(v => v.Value)),
             rule.UiComponent,
             rule.MinValue,
             rule.MaxValue,
             rule.TargetLevel,
             rule.DisplayOrder,
-            rule.AttributeAllowedValues.Where(v => !v.IsDeleted).OrderBy(v => v.DisplayOrder).Select(v => new stok_takip.DTOs.AttributeAllowedValueDto(v.Value, v.Label, v.DisplayOrder)).ToList()))
+            rule.AttributeAllowedValues.Where(v => !v.IsDeleted).OrderBy(v => v.DisplayOrder).Select(v => new stok_takip.DTOs.AttributeAllowedValueDto(v.Value, v.Label, v.DisplayOrder, v.IsActive)).ToList()))
         .ToList();
 
                 return Ok(rules);
@@ -102,7 +102,8 @@ public class AttributeRulesController : ControllerBase
                 {
                     Value = val.Value,
                     Label = val.Label,
-                    DisplayOrder = val.DisplayOrder
+                    DisplayOrder = val.DisplayOrder,
+                    IsActive = val.IsActive
                 });
             }
         }
@@ -136,9 +137,9 @@ public class AttributeRulesController : ControllerBase
         
         var responseDto = new stok_takip.DTOs.AttributeRuleResponseDto(
             rule.Id, rule.CategoryId, rule.AttributeKey, rule.DataType, rule.IsRequired, 
-            System.Text.Json.JsonSerializer.Serialize(rule.AttributeAllowedValues.Select(x => x.Value)), 
+            System.Text.Json.JsonSerializer.Serialize(rule.AttributeAllowedValues.Where(v => !v.IsDeleted && v.IsActive).OrderBy(v => v.DisplayOrder).Select(x => x.Value)), 
             rule.UiComponent, rule.MinValue, rule.MaxValue, rule.TargetLevel, rule.DisplayOrder, 
-            rule.AttributeAllowedValues.Select(v => new stok_takip.DTOs.AttributeAllowedValueDto(v.Value, v.Label, v.DisplayOrder)).ToList());
+            rule.AttributeAllowedValues.Where(v => !v.IsDeleted).OrderBy(v => v.DisplayOrder).Select(v => new stok_takip.DTOs.AttributeAllowedValueDto(v.Value, v.Label, v.DisplayOrder, v.IsActive)).ToList());
         return Ok(responseDto);
     }
 
@@ -164,23 +165,31 @@ public class AttributeRulesController : ControllerBase
         rule.TargetLevel = dto.TargetLevel;
 
         // Gelen yeni değer listesini hazırla
-        var incomingValues = new List<string>();
+        List<stok_takip.DTOs.AttributeAllowedValueDto> incomingList = new();
         if (dto.AllowedValueList != null)
         {
-            incomingValues = dto.AllowedValueList.Select(x => x.Value).ToList();
+            incomingList = dto.AllowedValueList;
         }
         else if (!string.IsNullOrEmpty(dto.AllowedValues) && dto.AllowedValues != "[]")
         {
             try 
             {
                 var parsed = System.Text.Json.JsonSerializer.Deserialize<List<string>>(dto.AllowedValues);
-                if (parsed != null) incomingValues = parsed;
+                if (parsed != null)
+                {
+                    int i = 0;
+                    incomingList = parsed.Select(p => new stok_takip.DTOs.AttributeAllowedValueDto(p, p, i++, true)).ToList();
+                }
             } 
             catch
             {
-                incomingValues = dto.AllowedValues.Split(new[] {','}, StringSplitOptions.RemoveEmptyEntries).Select(s => s.Trim()).ToList();
+                var parts = dto.AllowedValues.Split(new[] {','}, StringSplitOptions.RemoveEmptyEntries).Select(s => s.Trim()).ToList();
+                int i = 0;
+                incomingList = parts.Select(p => new stok_takip.DTOs.AttributeAllowedValueDto(p, p, i++, true)).ToList();
             }
         }
+
+        var incomingValues = incomingList.Select(x => x.Value).ToList();
 
         // 1. Veritabanında olup da yeni listede olmayanları SOFT DELETE yap (Silme)
         foreach (var existing in rule.AttributeAllowedValues)
@@ -195,23 +204,26 @@ public class AttributeRulesController : ControllerBase
             }
         }
 
-        // 2. Yeni listede olup da veritabanında HİÇ olmayanları EKLE
+        // 2. Yeni listedeki her öğeyi ekle veya güncelle (IsActive ve Label dahil)
         int order = 1;
-        foreach (var incomingVal in incomingValues)
+        foreach (var incoming in incomingList)
         {
-            var existing = rule.AttributeAllowedValues.FirstOrDefault(x => x.Value == incomingVal);
+            var existing = rule.AttributeAllowedValues.FirstOrDefault(x => x.Value == incoming.Value);
             if (existing == null)
             {
                 rule.AttributeAllowedValues.Add(new AttributeAllowedValue 
                 { 
-                    Value = incomingVal, 
-                    Label = incomingVal, 
-                    DisplayOrder = order++ 
+                    Value = incoming.Value, 
+                    Label = incoming.Label ?? incoming.Value, 
+                    DisplayOrder = order++,
+                    IsActive = incoming.IsActive
                 });
             }
             else
             {
                 existing.DisplayOrder = order++;
+                existing.Label = incoming.Label ?? existing.Label;
+                existing.IsActive = incoming.IsActive;
             }
         }
 
@@ -219,9 +231,9 @@ public class AttributeRulesController : ControllerBase
         
         var responseDto = new stok_takip.DTOs.AttributeRuleResponseDto(
             rule.Id, rule.CategoryId, rule.AttributeKey, rule.DataType, rule.IsRequired, 
-            System.Text.Json.JsonSerializer.Serialize(rule.AttributeAllowedValues.Select(x => x.Value)), 
+            System.Text.Json.JsonSerializer.Serialize(rule.AttributeAllowedValues.Where(v => !v.IsDeleted && v.IsActive).OrderBy(v => v.DisplayOrder).Select(x => x.Value)), 
             rule.UiComponent, rule.MinValue, rule.MaxValue, rule.TargetLevel, rule.DisplayOrder, 
-            rule.AttributeAllowedValues.Select(v => new stok_takip.DTOs.AttributeAllowedValueDto(v.Value, v.Label, v.DisplayOrder)).ToList());
+            rule.AttributeAllowedValues.Where(v => !v.IsDeleted).OrderBy(v => v.DisplayOrder).Select(v => new stok_takip.DTOs.AttributeAllowedValueDto(v.Value, v.Label, v.DisplayOrder, v.IsActive)).ToList());
         return Ok(responseDto);
     }
 

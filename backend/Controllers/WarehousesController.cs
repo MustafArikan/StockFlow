@@ -28,7 +28,7 @@ public class WarehousesController : ControllerBase
     public async Task<IActionResult> GetWarehouseStocks(int id)
     {
         var stocks = await _context.StockLevels
-            .Where(sl => sl.Location.WarehouseId == id) // Raflar üzerinden depoya ulaşıyoruz
+            .Where(sl => sl.Location.WarehouseId == id && sl.Quantity > 0) // Sadece stoğu olan (0 olmayan) kayıtları getir
             .Select(sl => new 
             {
                 Id = sl.ProductId,

@@ -9,11 +9,11 @@ using stok_takip.Data;
 
 #nullable disable
 
-namespace backend.Data.Migrations
+namespace backend.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260803141213_AddIdentityNumberToUser")]
-    partial class AddIdentityNumberToUser
+    [Migration("20260804084840_AddAssetAttributes")]
+    partial class AddAssetAttributes
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -244,6 +244,10 @@ namespace backend.Data.Migrations
                         .HasColumnType("int")
                         .HasColumnName("assigned_to_id");
 
+                    b.Property<string>("Attributes")
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("attributes");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2")
                         .HasColumnName("created_at");
@@ -358,6 +362,10 @@ namespace backend.Data.Migrations
                     b.Property<int>("DisplayOrder")
                         .HasColumnType("int")
                         .HasColumnName("display_order");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit")
+                        .HasColumnName("is_active");
 
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("bit")
