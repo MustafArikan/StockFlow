@@ -247,20 +247,23 @@ function initSearchCamera() {
                 try {
                     barcodeBeepSound.currentTime = 0;
                     barcodeBeepSound.play().catch(() => { });
-                    document.getElementById('serialSearchInput').value = scannedText;
 
                     if (durumEl) {
                         durumEl.textContent = "Barkod Okundu! Yönlendiriliyor...";
                         durumEl.className = "text-center text-success small mt-3 fw-bold";
                     }
 
-                    if (typeof html5QrCode !== 'undefined' && html5QrCode) {
-                        html5QrCode.pause();
-                    }
+                    // Arama kutusuna değeri yaz
+                    document.getElementById('serialSearchInput').value = scannedText;
 
-                    await searchAsset();
+                    stopScanner();
 
                     scannerModalInstance.hide();
+
+                    setTimeout(async () => {
+                        await searchAsset();
+                    }, 100);
+
                 } finally {
                     isProcessingQR = false;
                 }
