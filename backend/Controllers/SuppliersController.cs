@@ -76,6 +76,12 @@ public class SuppliersController : ControllerBase
         if(supplier == null)
             return NotFound();
 
+        var mevcut = await _context.Suppliers.FirstOrDefaultAsync(s => s.Name == dto.Name && s.Address == dto.Address && s.TaxNumber == dto.TaxNumber && s.Id != id);
+        if (mevcut != null)
+        {
+            return BadRequest("Bu isim, adres ve vergi numarasına sahip bir tedarikçi zaten var.");
+        }
+
         supplier.Name = dto.Name;
         supplier.ContactName = dto.ContactName;
         supplier.ContactEmail = dto.ContactEmail;

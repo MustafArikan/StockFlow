@@ -28,6 +28,7 @@ namespace stok_takip.Controllers
 
         // 1. GET: Fetch all movements with optional filters (For frontend table)
         [HttpGet]
+        [NormalizePagination]
         public async Task<IActionResult> GetAllMovements([FromQuery] string? type, [FromQuery] string? search, [FromQuery] string? sort, [FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
         {
             var query = _context.StockMovements
@@ -126,6 +127,12 @@ namespace stok_takip.Controllers
                 return StatusCode(403, new { message = "You do not have permission to perform stock inbound operations." });
             if (upperType == "OUT" && !User.HasClaim("Permission", "Movement.Outbound") && !isSuperAdmin)
                 return StatusCode(403, new { message = "You do not have permission to perform stock outbound operations." });
+
+            if (dto.SourceLocationId.HasValue && !await _context.Locations.AnyAsync(l => l.Id == dto.SourceLocationId.Value && !l.IsDeleted))
+                return BadRequest(new { message = "Belirtilen kaynak raf bulunamadı." });
+
+            if (dto.TargetLocationId.HasValue && !await _context.Locations.AnyAsync(l => l.Id == dto.TargetLocationId.Value && !l.IsDeleted))
+                return BadRequest(new { message = "Belirtilen hedef raf bulunamadı." });
 
             // ACID Compliant Transaction for TRANSFER type
             if (upperType == "TRANSFER")

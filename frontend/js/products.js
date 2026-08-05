@@ -646,12 +646,14 @@ if (urunKategoriSelectForm) {
 
         if (!categoryId) {
             if (attributeArea) attributeArea.classList.add('d-none');
+            document.getElementById('skuGenerationArea')?.classList.add('d-none');
             if (container) container.innerHTML = '';
             return;
         }
 
         try {
             if (attributeArea) attributeArea.classList.remove('d-none');
+            document.getElementById('skuGenerationArea')?.classList.remove('d-none');
             if (container) container.innerHTML = '<div class="col-12 text-center"><div class="spinner-border spinner-border-sm text-primary"></div> Kurallar yükleniyor...</div>';
 
             const rules = await apiRequest(`/attribute-rules/category/${categoryId}`, 'GET');
@@ -798,6 +800,9 @@ if (urunKategoriSelectForm) {
                 const div = document.createElement('div');
                 div.className = `col-md-6 mb-4 dynamic-rule-wrapper ${validRuleIndex > 0 ? 'd-none' : ''}`;
                 div.dataset.index = validRuleIndex;
+                if (uiType === 'toggle_switch' || uiType === 'checkbox' || uiType === 'boolean') {
+                    div.dataset.isBoolean = 'true';
+                }
 
                 if (rule.dataType === 'color_picker') {
                     div.innerHTML = `<a class="text-decoration-none text-dark d-flex align-items-center mb-2" data-bs-toggle="collapse" href="#collapseColor_${rule.id}" role="button" aria-expanded="true">
@@ -1085,6 +1090,7 @@ function urunDuzenle(id) {
         document.querySelectorAll('.dynamic-rule-wrapper').forEach(wrapper => {
             wrapper.classList.remove('d-none');
         });
+        document.getElementById('skuGenerationArea')?.classList.remove('d-none');
     }, 500);
 
     const modalElement = document.getElementById("urunModal");
@@ -1130,6 +1136,7 @@ if (btnYeniUrunModal) {
 
         const dynamicAttr = document.getElementById("dynamicAttributesArea");
         if (dynamicAttr) dynamicAttr.classList.add("d-none");
+        document.getElementById("skuGenerationArea")?.classList.add('d-none');
         const dynamicContainer = document.getElementById("dynamicAttributesContainer");
         if (dynamicContainer) dynamicContainer.innerHTML = "";
 
@@ -1427,7 +1434,22 @@ async function generateSku() {
         });
 
         if (response && response.sku) {
-            document.getElementById("urunBarkod").value = response.sku;
+            Swal.fire({
+                title: 'Barkod Üretildi!',
+                html: `Oluşturulan Barkod: <strong class="fs-4 text-primary">${response.sku}</strong><br><br>Bu barkodu kullanmak istiyor musunuz? İstemezseniz formun üst kısmından kendiniz girebilirsiniz.`,
+                icon: 'success',
+                showCancelButton: true,
+                confirmButtonText: '<i class="bi bi-check-lg"></i> Evet, Kullan',
+                cancelButtonText: '<i class="bi bi-x-lg"></i> Hayır, Kendim Gireceğim',
+                confirmButtonColor: '#0d6efd',
+                cancelButtonColor: '#6c757d',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    document.getElementById("urunBarkod").value = response.sku;
+                    basariToast("Üretilen barkod uygulandı.");
+                }
+            });
         }
     } catch (hata) {
         hataGoster("SKU üretilirken hata oluştu: " + hata.message);

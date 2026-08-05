@@ -1,10 +1,65 @@
+using System.ComponentModel.DataAnnotations;
+
 namespace stok_takip.DTOs;
 
 // --- REQUEST DTOs ---
-public record CreateSupplierDto(string Name, string? ContactName, string? ContactEmail, string? ContactPhone, string? Address, string? TaxNumber);
-public record AttributeAllowedValueDto(string Value, string? Label, int DisplayOrder, bool IsActive = true);
+public class CreateSupplierDto
+{
+    [Required(ErrorMessage = "Tedarikçi adı boş bırakılamaz.")]
+    [StringLength(150, MinimumLength = 2)]
+    public string Name { get; set; } = string.Empty;
 
-public record CreateAttributeRuleDto(int? CategoryId, string AttributeKey, string DataType, bool IsRequired, string? AllowedValues, string UiComponent = "textbox", decimal? MinValue = null, decimal? MaxValue = null, string TargetLevel = "Product", List<AttributeAllowedValueDto>? AllowedValueList = null);
+    [StringLength(100)]
+    public string? ContactName { get; set; }
+
+    [EmailAddress(ErrorMessage = "Geçerli bir e-posta adresi giriniz.")]
+    [StringLength(100)]
+    public string? ContactEmail { get; set; }
+
+    [RegularExpression(@"^[0-9+()\s-]{7,20}$", ErrorMessage = "Geçerli bir telefon numarası giriniz.")]
+    public string? ContactPhone { get; set; }
+
+    [StringLength(250)]
+    public string? Address { get; set; }
+
+    [RegularExpression(@"^\d{10,11}$", ErrorMessage = "Vergi/TC kimlik numarası 10-11 haneli rakamlardan oluşmalıdır.")]
+    public string? TaxNumber { get; set; }
+}
+
+public record AttributeAllowedValueDto(
+    [property: Required, StringLength(100, MinimumLength = 1)] string Value,
+    string? Label,
+    int DisplayOrder,
+    bool IsActive = true);
+
+public class CreateAttributeRuleDto
+{
+    public int? CategoryId { get; set; }
+
+    [Required(ErrorMessage = "Özellik anahtarı boş bırakılamaz.")]
+    [StringLength(100, MinimumLength = 2)]
+    public string AttributeKey { get; set; } = string.Empty;
+
+    [Required]
+    [RegularExpression("^(text|number|integer|decimal|boolean)$",
+        ErrorMessage = "Geçersiz veri tipi. İzin verilen: text, number, integer, decimal, boolean.")]
+    public string DataType { get; set; } = string.Empty;
+
+    public bool IsRequired { get; set; }
+    public string? AllowedValues { get; set; }
+
+    [RegularExpression("^(textbox|dropdown|searchable_dropdown|radio|segmented_button|discrete_slider|range_slider|range_slider_decimal|range_slider_integer|slider)$",
+        ErrorMessage = "Geçersiz arayüz bileşeni.")]
+    public string UiComponent { get; set; } = "textbox";
+
+    public decimal? MinValue { get; set; }
+    public decimal? MaxValue { get; set; }
+
+    [RegularExpression("^(Product|Asset)$", ErrorMessage = "Geçersiz hedef seviye.")]
+    public string TargetLevel { get; set; } = "Product";
+
+    public List<AttributeAllowedValueDto>? AllowedValueList { get; set; }
+}
 
 // --- RESPONSE DTOs ---
 public record CategoryResponseDto(int Id, string Name, int? ParentId);
