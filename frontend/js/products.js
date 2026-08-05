@@ -1699,39 +1699,7 @@ document.addEventListener("keydown", (e) => {
         return;
     }
 
-    if (e.key.length === 1) { 
-        scannerBuffer += e.key;
-        clearTimeout(scannerTimer);
-        scannerTimer = setTimeout(() => { scannerBuffer = ""; }, 100);
-    }
-});
-
-// =========================================================================
-// BARKOD OKUYUCU DİNLEYİCİ (SCANNER LISTENER)
-// =========================================================================
-let scannerBuffer = "";
-let scannerTimer = null;
-
-document.addEventListener("keydown", (e) => {
-    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) return;
-
-    if (e.key === "Enter") {
-        if (scannerBuffer.length > 2) {
-            e.preventDefault();
-            const p = tumUrunler.find(u => (u.barcode || "").toLowerCase() === scannerBuffer.toLowerCase());
-            if (p && typeof urunDetayAc === 'function') {
-                urunDetayAc(p.id, { tedarikciYonetimi: hasPermission("Supplier.Edit") });
-                if (typeof basariToast === 'function') basariToast(`"${scannerBuffer}" barkodlu ürün okundu.`);
-            } else {
-                if (typeof hataGoster === 'function') hataGoster(`"${scannerBuffer}" kodlu ürün bulunamadı.`);
-            }
-        }
-        scannerBuffer = "";
-        clearTimeout(scannerTimer);
-        return;
-    }
-
-    if (e.key.length === 1) { 
+    if (e.key.length === 1) {
         scannerBuffer += e.key;
         clearTimeout(scannerTimer);
         scannerTimer = setTimeout(() => { scannerBuffer = ""; }, 100);
