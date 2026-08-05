@@ -42,9 +42,9 @@ const viewProductBarcode = urlParams.get('viewProductBarcode');
 if (viewProductBarcode) {
     document.addEventListener("DOMContentLoaded", () => {
         const checkInterval = setInterval(() => {
-            if (window.tumUrunler && window.tumUrunler.length > 0) {
+            if (tumUrunler && tumUrunler.length > 0) {
                 clearInterval(checkInterval);
-                const p = window.tumUrunler.find(u => (u.barcode || "").toLowerCase() === viewProductBarcode.toLowerCase());
+                const p = tumUrunler.find(u => (u.barcode || "").toLowerCase() === viewProductBarcode.toLowerCase());
                 if (p && typeof urunDetayAc === 'function') {
                     urunDetayAc(p.id, { tedarikciYonetimi: hasPermission("Supplier.Edit") });
                     window.history.replaceState({}, document.title, window.location.pathname);
@@ -1443,11 +1443,9 @@ function openBarcodePrintModal(barcode, productName, productId) {
     const qrCanvas = document.getElementById("qrcodeCanvas");
     if (qrCanvas) {
         // QR Kodu, direkt uygulamanın ürün inceleme sayfasına yönlendirir
-        const qrUrl = `${window.location.origin}${window.location.pathname}?viewProductId=${productId}`;
-        
         new QRious({
             element: qrCanvas,
-            value: qrUrl,
+            value: barcode,
             size: 120, // 100 yerine 120 yapalım daha net çıksın
             background: 'white',
             foreground: 'black',
@@ -1651,4 +1649,36 @@ document.getElementById('btnKameraAcUrunler')?.addEventListener('click', async (
 // Modal kapandığında kamerayı güvenli bir şekilde kapatır
 document.getElementById('scannerModalUrunler')?.addEventListener('hidden.bs.modal', () => {
     if (typeof stopScanner === 'function') stopScanner();
+});
+
+// =========================================================================
+// BARKOD OKUYUCU DİNLEYİCİ (SCANNER LISTENER)
+// =========================================================================
+let scannerBuffer = "";
+let scannerTimer = null;
+
+document.addEventListener("keydown", (e) => {
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) return;
+
+    if (e.key === "Enter") {
+        if (scannerBuffer.length > 2) {
+            e.preventDefault();
+            const p = tumUrunler.find(u => (u.barcode || "").toLowerCase() === scannerBuffer.toLowerCase());
+            if (p && typeof urunDetayAc === 'function') {
+                urunDetayAc(p.id, { tedarikciYonetimi: hasPermission("Supplier.Edit") });
+                if (typeof basariToast === 'function') basariToast(`"${scannerBuffer}" barkodlu ürün okundu.`);
+            } else {
+                if (typeof hataGoster === 'function') hataGoster(`"${scannerBuffer}" kodlu ürün bulunamadı.`);
+            }
+        }
+        scannerBuffer = "";
+        clearTimeout(scannerTimer);
+        return;
+    }
+
+    if (e.key.length === 1) { 
+        scannerBuffer += e.key;
+        clearTimeout(scannerTimer);
+        scannerTimer = setTimeout(() => { scannerBuffer = ""; }, 100);
+    }
 });
