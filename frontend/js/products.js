@@ -12,49 +12,6 @@ let aktifArama = '';
 let siralamaSutunu = 'id';
 let siralamaYonu = 'asc';
 
-// 1. URL'den search parametresini güvenli ve tek bir noktadan yakala
-const urlParams = new URLSearchParams(window.location.search);
-const urlSearch = urlParams.get('search');
-if (urlSearch) {
-    aktifArama = urlSearch.toLowerCase();
-    document.addEventListener("DOMContentLoaded", () => {
-        const aramaInput = document.getElementById("aramaKutusu");
-        if (aramaInput) {
-            aramaInput.value = urlSearch;
-        }
-    });
-}
-
-const viewProductId = urlParams.get('viewProductId');
-if (viewProductId) {
-    document.addEventListener("DOMContentLoaded", () => {
-        setTimeout(async () => {
-            if (typeof urunDetayAc === 'function') {
-                await urunDetayAc(parseInt(viewProductId), { tedarikciYonetimi: hasPermission("Supplier.Edit") });
-                // URL'den parametreyi temizle
-                window.history.replaceState({}, document.title, window.location.pathname);
-            }
-        }, 300); // UI yüklendikten sonra modalı aç
-    });
-}
-
-const viewProductBarcode = urlParams.get('viewProductBarcode');
-if (viewProductBarcode) {
-    document.addEventListener("DOMContentLoaded", () => {
-        const checkInterval = setInterval(() => {
-            if (tumUrunler && tumUrunler.length > 0) {
-                clearInterval(checkInterval);
-                const p = tumUrunler.find(u => (u.barcode || "").toLowerCase() === viewProductBarcode.toLowerCase());
-                if (p && typeof urunDetayAc === 'function') {
-                    urunDetayAc(p.id, { tedarikciYonetimi: hasPermission("Supplier.Edit") });
-                    window.history.replaceState({}, document.title, window.location.pathname);
-                }
-            }
-        }, 200);
-    });
-}
-
-
 if (!token) window.location.href = 'login.html';
 
 // Alt kategorileri recursive olarak bulan fonksiyon
@@ -226,7 +183,7 @@ function veriyiGuncelle() {
     productView.load(1);
 }
 
-// Tablonun altına filtrelenen ürün çeşidini ve TOPLAM STOK ADEDİNİ yazar (Senin özelliğin)
+// Tablonun altına filtrelenen ürün çeşidini ve TOPLAM STOK ADEDİNİ yazar
 function kategoriOzetiniGuncelle(filtreliListe) {
     let ozetContainer = document.getElementById("kategoriOzetBilgisi");
     if (!ozetContainer) {
@@ -257,7 +214,7 @@ function kategoriOzetiniGuncelle(filtreliListe) {
 }
 
 // =========================================================================
-// DIŞA AKTARMA (EXPORT) FONKSİYONLARI (Mustafa'nın Eklediği Kısım)
+// DIŞA AKTARMA (EXPORT) FONKSİYONLARI
 // =========================================================================
 function exportProductsToExcel() {
     const productData = filtreliUrunler;
@@ -284,11 +241,11 @@ function exportProductsToPDF() {
 
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF();
-    const tableColumn = ["ID", "Ürün Adı", "Barkod", "Kategori", "Mevcut Stok"];
+    const tableColumn = ["ID", "Ürün Adı", "Barkod", "Kategori", "Kritik Stok", "Mevcut Stok"];
     const tableRows = [];
 
     productData.forEach(p => {
-        tableRows.push([p.id, p.name, p.barcode, p.categoryName || "-", p.stockQuantity]);
+        tableRows.push([p.id, p.name, p.barcode, p.categoryName || "-", p.minStockLevel, p.stockQuantity]);
     });
 
     doc.text("Stok Takip - Ürün Envanter Raporu", 14, 15);
@@ -304,7 +261,10 @@ function exportProductsToCSV() {
     csvContent += "ID;Ürün Adı;Barkod;Kritik Stok;Kategori;Mevcut Stok\n";
 
     productData.forEach(p => {
-        csvContent += `${p.id};"${p.name}";"${p.barcode}";${p.minStockLevel};"${p.categoryName || "-"}";${p.stockQuantity}\n`;
+        const safeName = (p.name || "").replace(/"/g, '""');
+        const safeCategory = (p.categoryName || "-").replace(/"/g, '""');
+
+        csvContent += `${p.id};"${safeName}";"${p.barcode}";${p.minStockLevel};"${safeCategory}";${p.stockQuantity}\n`;
     });
 
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -315,8 +275,6 @@ function exportProductsToCSV() {
     link.click();
     document.body.removeChild(link);
 }
-
-
 
 // =========================================================================
 // SIRALAMA, ARAMA VE CRUD FONKSİYONLARI
@@ -1093,15 +1051,6 @@ if (btnYeniUrunModal) {
     });
 }
 
-if (!hasPermission("Product.Add")) {
-    const btnEkle = document.querySelector('[data-bs-target="#urunModal"]');
-    if (btnEkle) btnEkle.classList.add('d-none');
-}
-
-
-urunleriYukle(currentPage);
-dropdownKategorileriniYukle();
-
 async function dropdownDepolariYukle() {
     try {
         const data = await apiRequest('/warehouses?pageSize=1000', 'GET');
@@ -1120,9 +1069,6 @@ async function dropdownDepolariYukle() {
         console.error("Depo dropdown yükleme hatası:", hata);
     }
 }
-
-dropdownDepolariYukle();
-
 
 // --- FİLTRELEME İŞLEMLERİ ---
 document.getElementById('filtreKategoriId')?.addEventListener('change', async function () {
@@ -1143,12 +1089,11 @@ document.getElementById('filtreKategoriId')?.addEventListener('change', async fu
         // Önce filtreleri temizle ki eski filtreler yeni kategoriye etki etmesin
         filterContainer.innerHTML = '<div class="col-12 text-center text-muted"><div class="spinner-border spinner-border-sm me-2"></div>Özellikler yükleniyor...</div>';
 
-        // Şimdi listeyi güncelle (dinamik filtreler temizlendiği için sadece kategoriye göre günceller)
+        // Şimdi listeyi güncelle
         currentPage = 1;
         veriyiGuncelle();
 
         const rules = await apiRequest(`/attribute-rules/category/${categoryId}`, 'GET');
-        // rules.reverse(); KALDIRILDI çünkü DisplayOrder kullanılıyor
 
         filterContainer.innerHTML = '';
 
@@ -1166,7 +1111,6 @@ document.getElementById('filtreKategoriId')?.addEventListener('change', async fu
                 catch (e) { options = rule.allowedValues.split(',').map(s => s.trim()); }
             }
 
-            // Renk tipinde: hex kodlarını (Label) rule.allowedValueList'ten eşleştir
             if (rule.uiComponent === "color_picker" && rule.allowedValueList) {
                 options = options.map(val => {
                     const eslesen = rule.allowedValueList.find(a => a.value === val);
@@ -1183,7 +1127,6 @@ document.getElementById('filtreKategoriId')?.addEventListener('change', async fu
             filterContainer.appendChild(div);
         });
 
-        // Initialize noUiSliders
         document.querySelectorAll('.double-slider').forEach(el => {
             try {
                 let id = el.id.replace('slider_', '');
@@ -1410,17 +1353,10 @@ async function generateSku() {
     }
 }
 
-// Event Listener for SKU Generate Button
 const btnSkuUretEl = document.getElementById('btnSkuUret');
 if (btnSkuUretEl) {
     btnSkuUretEl.addEventListener('click', generateSku);
 }
-
-document.addEventListener('DOMContentLoaded', () => {
-    document.getElementById('btnExportExcel')?.addEventListener('click', exportProductsToExcel);
-    document.getElementById('btnExportPdf')?.addEventListener('click', exportProductsToPDF);
-    document.getElementById('btnExportCsv')?.addEventListener('click', exportProductsToCSV);
-});
 
 // =========================================================================
 // BARKOD ÇİZİM VE YAZDIRMA (PRINT) İŞLEMLERİ
@@ -1442,11 +1378,13 @@ function openBarcodePrintModal(barcode, productName, productId) {
     // QR Kod oluşturma (CSP Uyumlu QRious kütüphanesi)
     const qrCanvas = document.getElementById("qrcodeCanvas");
     if (qrCanvas) {
-        // QR Kodu, direkt uygulamanın ürün inceleme sayfasına yönlendirir
+        // QR Kodu, direkt uygulamanın ürün inceleme sayfasına yönlendirir        
+        const qrUrl = `${window.location.origin}${window.location.pathname}?viewProductBarcode=${encodeURIComponent(barcode)}`;
+
         new QRious({
             element: qrCanvas,
-            value: barcode,
-            size: 120, // 100 yerine 120 yapalım daha net çıksın
+            value: qrUrl, // Akıllı yönlendirme linki
+            size: 120,
             background: 'white',
             foreground: 'black',
             level: 'H'
@@ -1669,11 +1607,6 @@ function initProductSearchCamera() {
     });
 }
 
-// Sayfa yüklendiğinde kamera dinleyicilerini aktif eder
-document.addEventListener("DOMContentLoaded", () => {
-    initProductSearchCamera();
-});
-
 // =========================================================================
 // BARKOD OKUYUCU DİNLEYİCİ (SCANNER LISTENER)
 // =========================================================================
@@ -1681,7 +1614,7 @@ let scannerBuffer = "";
 let scannerTimer = null;
 
 document.addEventListener("keydown", (e) => {
-    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) return;
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT' || e.target.isContentEditable) return;
 
     if (e.key === "Enter") {
         if (scannerBuffer.length > 2) {
@@ -1703,5 +1636,56 @@ document.addEventListener("keydown", (e) => {
         scannerBuffer += e.key;
         clearTimeout(scannerTimer);
         scannerTimer = setTimeout(() => { scannerBuffer = ""; }, 100);
+    }
+});
+
+// =========================================================================
+// UYGULAMA BAŞLATICI FONKSİYON
+// =========================================================================
+document.addEventListener("DOMContentLoaded", async () => {
+
+    // 1. Kamera ve barkod dinleyicilerini aktif et
+    initProductSearchCamera();
+
+    // 2. Yetki kontrolü (Ürün ekleme yetkisi yoksa butonu gizle)
+    if (!hasPermission("Product.Add")) {
+        const btnEkle = document.querySelector('[data-bs-target="#urunModal"]');
+        if (btnEkle) btnEkle.classList.add('d-none');
+    }
+
+    // 3. Dışa Aktarma (Export) butonlarını bağla
+    document.getElementById('btnExportExcel')?.addEventListener('click', exportProductsToExcel);
+    document.getElementById('btnExportPdf')?.addEventListener('click', exportProductsToPDF);
+    document.getElementById('btnExportCsv')?.addEventListener('click', exportProductsToCSV);
+
+    // 4. TEMEL VERİLERİ SIRAYLA VE GÜVENLE YÜKLE 
+    await dropdownDepolariYukle();
+    await dropdownKategorileriniYukle();
+    await urunleriYukle(currentPage);
+
+    // 5. Veriler başarıyla indikten sonra URL'den gelen özel parametreleri güvenle işle
+    const urlParams = new URLSearchParams(window.location.search);
+    const urlSearch = urlParams.get('search');
+
+    if (urlSearch) {
+        aktifArama = urlSearch.toLowerCase();
+        const aramaInput = document.getElementById("aramaKutusu");
+        if (aramaInput) aramaInput.value = urlSearch;
+        veriyiGuncelle();
+    }
+
+    const viewProductId = urlParams.get('viewProductId');
+    if (viewProductId && typeof urunDetayAc === 'function') {
+        await urunDetayAc(parseInt(viewProductId), { tedarikciYonetimi: hasPermission("Supplier.Edit") });
+        window.history.replaceState({}, document.title, window.location.pathname);
+    }
+
+    const viewProductBarcode = urlParams.get('viewProductBarcode');
+    if (viewProductBarcode && typeof urunDetayAc === 'function') {
+        const p = tumUrunler.find(u => (u.barcode || "").toLowerCase() === viewProductBarcode.toLowerCase());
+        if (p) {
+            urunDetayAc(p.id, { tedarikciYonetimi: hasPermission("Supplier.Edit") });
+            window.history.replaceState({}, document.title, window.location.pathname);
+        }
     }
 });
