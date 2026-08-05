@@ -161,6 +161,11 @@ document.getElementById("aramaKutusu")?.addEventListener("keyup", (event) => {
 
 async function dropdownUrunleriYukle() {
     const urunSelect = document.getElementById("urunSecimi");
+
+    if (tumUrunler.length > 0 && urunSelect && urunSelect.options.length > 1) {
+        return;
+    }
+
     try {
         const data = await apiRequest('/products?pageSize=10000', 'GET');
         tumUrunler = data.items || data;
@@ -462,23 +467,30 @@ if (modalTrigger) {
     });
 }
 
-const cameraArea = document.getElementById("kameraAlani");
-const btnOpenCamera = document.getElementById("btnKameraAc");
-const btnCloseCamera = document.getElementById("btnKameraKapat");
-const productSelect = document.getElementById("urunSecimi");
-const barcodeBeepSound = new Audio('audio/beep-07.wav');
+function initMovementCamera() {
+    const cameraArea = document.getElementById("kameraAlani");
+    const btnOpenCamera = document.getElementById("btnKameraAc");
+    const btnCloseCamera = document.getElementById("btnKameraKapat");
+    const productSelect = document.getElementById("urunSecimi");
 
-if (btnOpenCamera) {
-    btnOpenCamera.addEventListener("click", async () => {
+    btnOpenCamera?.addEventListener("click", async () => {
         if (btnOpenCamera.disabled) return;
+
+        // Çoklu tıklamaları engeller
         btnOpenCamera.disabled = true;
 
         try {
-            cameraArea.classList.remove("d-none");
+            // Kamera donanımını ve tarayıcı izinlerini denetler.
+            if (typeof checkCameraPermission === 'function') {
+                await checkCameraPermission();
+            }
+
+            // İzin varsa alanı görünür yapar
+            if (cameraArea) cameraArea.classList.remove("d-none");
 
             let isProcessingQR = false;
 
-            startScanner("reader", async (scannedText) => {
+            await startScanner("reader", async (scannedText) => {
                 if (isProcessingQR) return;
                 isProcessingQR = true;
 
@@ -490,19 +502,18 @@ if (btnOpenCamera) {
                         if (bulunanUrun) {
                             const hedefId = bulunanUrun.id ?? bulunanUrun.Id;
                             productSelect.value = hedefId;
+
+                            productSelect.dispatchEvent(new Event('change'));
+
                             isProductFound = true;
                         }
                     }
 
                     if (isProductFound) {
-                        barcodeBeepSound.currentTime = 0;
-                        barcodeBeepSound.play().catch(() => { });
-
                         formuDenetle();
                         closeCamera();
                     } else {
                         closeCamera();
-
                         setTimeout(async () => {
                             await uyariGoster(`Taranan barkod (${scannedText}) sistemde bulunamadı!`);
                         }, 100);
@@ -513,20 +524,22 @@ if (btnOpenCamera) {
             }, () => { });
 
         } catch (error) {
-            uyariGoster("Kameraya erişilemedi! Lütfen tarayıcı adres çubuğundaki kilit/kamera simgesinden izin verin.");
-            btnOpenCamera.disabled = false;
+            if (btnOpenCamera) btnOpenCamera.disabled = false;
+
+            // scanner.js'den gelen Türkçe hatayı basar.
+            const hataMetni = error?.message ? error.message : "Kameraya erişilemedi veya izin reddedildi.";
+            uyariGoster(hataMetni);
         }
     });
-}
 
-if (btnCloseCamera) btnCloseCamera.addEventListener("click", closeCamera);
+    if (btnCloseCamera) btnCloseCamera.addEventListener("click", closeCamera);
+    document.getElementById('stokIslemModal')?.addEventListener('hidden.bs.modal', closeCamera);
 
-document.getElementById('stokIslemModal')?.addEventListener('hidden.bs.modal', closeCamera);
-
-function closeCamera() {
-    if (cameraArea) cameraArea.classList.add("d-none");
-    if (btnOpenCamera) btnOpenCamera.disabled = false;
-    if (typeof stopScanner === 'function') stopScanner();
+    function closeCamera() {
+        if (cameraArea) cameraArea.classList.add("d-none");
+        if (btnOpenCamera) btnOpenCamera.disabled = false;
+        if (typeof stopScanner === 'function') stopScanner();
+    }
 }
 
 async function dropdownTedarikcileriYukle() {
@@ -546,22 +559,6 @@ async function dropdownTedarikcileriYukle() {
         if (tedarikciSelect) tedarikciSelect.innerHTML = '<option value="" selected disabled>Yüklenemedi!</option>';
     }
 }
-
-async function baslat() {
-    await dropdownTedarikcileriYukle();
-    hareketView.load(1);
-
-    if (aktifFiltre === 'GIRIS') {
-        aktifButonuGuncelle("btnGirisler");
-    } else if (aktifFiltre === 'CIKIS') {
-        aktifButonuGuncelle("btnCikislar");
-    } else if (aktifFiltre === 'TRANSFER') {
-        aktifButonuGuncelle("btnTransferler");
-    } else {
-        aktifButonuGuncelle("btnTumu");
-    }
-}
-baslat();
 
 async function kullaniciProfiliGoster(userId) {
     try {
@@ -585,10 +582,28 @@ async function kullaniciProfiliGoster(userId) {
     }
 }
 
-// Yetkiye göre buton/kolon gizleme
-document.addEventListener("DOMContentLoaded", () => {
+// UYGULAMA BAŞLATICI 
+document.addEventListener("DOMContentLoaded", async () => {
+    initMovementCamera();
+
+    // Yetkiye göre buton/kolon gizleme. Kullanıcının yetkilerini kontrol et, yetkisi yoksa "Yeni İşlem" butonunu gizle
     if (typeof hasPermission === "function" && !hasPermission("Movement.Inbound") && !hasPermission("Movement.Outbound") && !hasPermission("Movement.Transfer")) {
         const btnYeniIslem = document.getElementById("btnYeniIslem");
         if (btnYeniIslem) btnYeniIslem.classList.add('d-none');
+    }
+
+    // Tarayıcı hazır, yetkiler tamam. Artık veritabanından güvenle verileri çekebiliriz
+    await dropdownTedarikcileriYukle();
+    hareketView.load(1);
+
+    // URL'deki filtreye göre ilgili butonu renkli hale getir
+    if (aktifFiltre === 'GIRIS') {
+        aktifButonuGuncelle("btnGirisler");
+    } else if (aktifFiltre === 'CIKIS') {
+        aktifButonuGuncelle("btnCikislar");
+    } else if (aktifFiltre === 'TRANSFER') {
+        aktifButonuGuncelle("btnTransferler");
+    } else {
+        aktifButonuGuncelle("btnTumu");
     }
 });
