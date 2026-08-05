@@ -1426,3 +1426,15 @@ button:disabled,
 }
 .cursor-pointer { cursor: pointer !important; }
 .file-name-truncate { max-width: 90px; }
+
+/* iOS Tarih Filtresi (Boşken gg.aa.yyyy gösterme hilesi) */
+.native-date:invalid::-webkit-datetime-edit { color: transparent; }
+.native-date:focus::-webkit-datetime-edit { color: inherit; }
+.native-date:valid + .placeholder-span,
+.native-date:focus + .placeholder-span { display: none !important; }
+
+.date-placeholder-span {
+    left: 1rem;
+    pointer-events: none;
+    font-size: 0.875rem;
+}

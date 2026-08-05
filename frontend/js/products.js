@@ -78,6 +78,45 @@ const productView = createDataView({
                 (urun.id && urun.id.toString().includes(aktifArama));
             if (!textMatch) return false;
 
+            // --- TEMEL FİLTRELER (Tüm Kategoriler İçin Ortak) ---
+            const seciliStokDurumu = document.getElementById('filtreStokDurumu')?.value;
+            if (seciliStokDurumu) {
+                if (seciliStokDurumu === 'tukendi' && urun.stockQuantity > 0) return false;
+                if (seciliStokDurumu === 'stokta_var' && urun.stockQuantity <= 0) return false;
+                if (seciliStokDurumu === 'kritik' && (urun.stockQuantity > urun.minStockLevel || urun.stockQuantity <= 0)) return false;
+            }
+
+            const minFiyat = parseFloat(document.getElementById('filtreMinFiyat')?.value);
+            const maxFiyat = parseFloat(document.getElementById('filtreMaxFiyat')?.value);
+            // urun.price backend'den sayı olarak geliyor, eğer gelmiyorsa sıfır varsayılır
+            const fiyat = urun.price || 0;
+            if (!isNaN(minFiyat) && fiyat < minFiyat) return false;
+            if (!isNaN(maxFiyat) && fiyat > maxFiyat) return false;
+
+            const seciliTedarikciId = document.getElementById('filtreTedarikci')?.value;
+            if (seciliTedarikciId) {
+                if (!urun.productSuppliers || !urun.productSuppliers.some(ps => ps.supplierId.toString() === seciliTedarikciId)) {
+                    return false;
+                }
+            }
+
+            const baslangicTarihi = document.getElementById('filtreBaslangicTarihi')?.value;
+            const bitisTarihi = document.getElementById('filtreBitisTarihi')?.value;
+            if (baslangicTarihi || bitisTarihi) {
+                const urunTarih = new Date(urun.createdAt);
+                if (baslangicTarihi) {
+                    const bas = new Date(baslangicTarihi);
+                    bas.setHours(0, 0, 0, 0);
+                    if (urunTarih < bas) return false;
+                }
+                if (bitisTarihi) {
+                    const bit = new Date(bitisTarihi);
+                    bit.setHours(23, 59, 59, 999);
+                    if (urunTarih > bit) return false;
+                }
+            }
+            // ----------------------------------------------------
+
             if (seciliKategoriId) {
                 const gecerliIdler = getAltKategoriIdleri(seciliKategoriId);
                 if (!gecerliIdler.includes(urun.categoryId)) {
@@ -327,6 +366,7 @@ async function urunleriYukle(page = 1) {
     try {
         const sonuc = await apiRequest('/products?pageNumber=1&pageSize=1000', 'GET');
         tumUrunler = sonuc.items || sonuc || [];
+        if (typeof updatePriceSliderMax === 'function') updatePriceSliderMax();
         productView.load(page);
     } catch (hata) {
         if (tabloGovdesi) {
@@ -1070,6 +1110,27 @@ async function dropdownDepolariYukle() {
     }
 }
 
+dropdownDepolariYukle();
+
+async function dropdownTedarikcileriYukle() {
+    try {
+        const data = await apiRequest('/suppliers?pageSize=1000', 'GET');
+        const tedarikciler = data.items || data;
+        const sel = document.getElementById('filtreTedarikci');
+        if (!sel) return;
+        tedarikciler.forEach(t => {
+            const opt = document.createElement('option');
+            opt.value = t.id;
+            opt.textContent = t.name;
+            sel.appendChild(opt);
+        });
+    } catch (err) {
+        console.error("Tedarikçiler yüklenemedi", err);
+    }
+}
+dropdownTedarikcileriYukle();
+
+
 // --- FİLTRELEME İŞLEMLERİ ---
 document.getElementById('filtreKategoriId')?.addEventListener('change', async function () {
     const categoryId = this.value;
@@ -1121,7 +1182,7 @@ document.getElementById('filtreKategoriId')?.addEventListener('change', async fu
             let inputHtml = DynamicUI.renderFilterInput(rule, options, escapeHtml);
 
             const div = document.createElement('div');
-            div.className = 'col-md-3 mb-2';
+            div.className = 'col-12 mb-3'; // Dikey liste için tam genişlik
             div.innerHTML = `<label class="form-label small fw-bold mb-1">${escapeHtml(rule.attributeKey)}</label>
                              ${inputHtml}`;
             filterContainer.appendChild(div);
@@ -1247,9 +1308,99 @@ document.getElementById('filtreKategoriId')?.addEventListener('change', async fu
     }
 });
 
+document.getElementById('filtreStokDurumu')?.addEventListener('change', () => { currentPage = 1; veriyiGuncelle(); });
+document.getElementById('filtreTedarikci')?.addEventListener('change', () => { currentPage = 1; veriyiGuncelle(); });
+document.getElementById('filtreBaslangicTarihi')?.addEventListener('change', () => { currentPage = 1; veriyiGuncelle(); });
+document.getElementById('filtreBitisTarihi')?.addEventListener('change', () => { currentPage = 1; veriyiGuncelle(); });
+
+// --- Temel Fiyat Aralığı Slider Başlangıç ---
+const priceSlider = document.getElementById('slider_baseFiyat');
+const minPriceIn = document.getElementById('filtreMinFiyat');
+const maxPriceIn = document.getElementById('filtreMaxFiyat');
+
+if (priceSlider) {
+    noUiSlider.create(priceSlider, {
+        start: [0, 100000],
+        connect: true,
+        step: 100,
+        range: { 'min': 0, 'max': 100000 }
+    });
+
+    priceSlider.noUiSlider.on('update', function (values, handle) {
+        let currentMin = Math.round(values[0]);
+        let currentMax = Math.round(values[1]);
+        let rangeMax = parseFloat(priceSlider.dataset.dynamicMax) || 999999;
+
+        if (handle === 0 && minPriceIn) {
+            minPriceIn.value = (currentMin <= 0) ? '' : currentMin;
+        }
+        if (handle === 1 && maxPriceIn) {
+            maxPriceIn.value = (currentMax >= rangeMax) ? '' : currentMax;
+        }
+    });
+
+    priceSlider.noUiSlider.on('change', function () {
+        currentPage = 1; veriyiGuncelle();
+    });
+
+    if (minPriceIn) {
+        minPriceIn.addEventListener('change', function () {
+            let currentValues = priceSlider.noUiSlider.get();
+            let newVal = parseFloat(this.value);
+            if (isNaN(newVal)) newVal = 0;
+            priceSlider.noUiSlider.set([newVal, currentValues[1]]);
+            currentPage = 1; veriyiGuncelle();
+        });
+    }
+    if (maxPriceIn) {
+        maxPriceIn.addEventListener('change', function () {
+            let currentValues = priceSlider.noUiSlider.get();
+            let newVal = parseFloat(this.value);
+            if (isNaN(newVal)) newVal = parseFloat(priceSlider.dataset.dynamicMax) || 999999;
+            priceSlider.noUiSlider.set([currentValues[0], newVal]);
+            currentPage = 1; veriyiGuncelle();
+        });
+    }
+}
+
+function updatePriceSliderMax() {
+    const pSlider = document.getElementById('slider_baseFiyat');
+    if (!pSlider || !pSlider.noUiSlider) return;
+
+    let maxPrice = 0;
+    if (typeof tumUrunler !== 'undefined' && tumUrunler && tumUrunler.length > 0) {
+        maxPrice = Math.max(...tumUrunler.map(u => parseFloat(u.price) || 0));
+    }
+    
+    if (maxPrice <= 0 || !isFinite(maxPrice)) {
+        maxPrice = 999999;
+    }
+
+    pSlider.dataset.dynamicMax = maxPrice;
+    
+    // Slider sınırını ve kolları max değere göre genişlet (böylece inputlar otomatik boş/placeholder moduna geçer)
+    pSlider.noUiSlider.updateOptions({
+        start: [0, maxPrice],
+        range: { 'min': 0, 'max': maxPrice }
+    });
+}
+// --- Temel Fiyat Aralığı Slider Bitiş ---
+
 document.getElementById('btnFiltreleriTemizle')?.addEventListener('click', () => {
     document.getElementById('aramaKutusu').value = '';
     aktifArama = '';
+    
+    if (document.getElementById('filtreTedarikci')) document.getElementById('filtreTedarikci').value = '';
+    if (document.getElementById('filtreBaslangicTarihi')) document.getElementById('filtreBaslangicTarihi').value = '';
+    if (document.getElementById('filtreBitisTarihi')) document.getElementById('filtreBitisTarihi').value = '';
+    if (document.getElementById('filtreStokDurumu')) document.getElementById('filtreStokDurumu').value = '';
+    if (document.getElementById('filtreMinFiyat')) document.getElementById('filtreMinFiyat').value = '';
+    if (document.getElementById('filtreMaxFiyat')) document.getElementById('filtreMaxFiyat').value = '';
+    
+    if (priceSlider && priceSlider.noUiSlider) {
+        let maxVal = priceSlider.dataset.dynamicMax ? parseFloat(priceSlider.dataset.dynamicMax) : 999999;
+        priceSlider.noUiSlider.set([0, maxVal]);
+    }
 
     const catSelect = document.getElementById('filtreKategoriId');
     if (catSelect) {

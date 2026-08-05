@@ -1,125 +1,123 @@
 let aktifDetayUrunId = null;
-function renderUrunDetay(urun, secenekler ={}){
-    return `
-    <div class="modal fade" id="urunDetayModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
-                <div class="modal-header bg-gradient-primary text-white border-bottom-0 pb-4 pt-4 position-relative">
-                    <div class="position-absolute top-0 end-0 p-3">
-                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Kapat"></button>
-                    </div>
-                    <div class="d-flex align-items-center w-100 mt-2">
-                        <div class="bg-white text-primary rounded-circle d-flex align-items-center justify-content-center shadow product-detail-icon">
-                            <i class="bi bi-box-seam"></i>
-                        </div>
-                        <div class="ms-3">
-                            <h4 class="modal-title fw-bold mb-0">${escapeHtml(urun.name)}</h4>
-                            <span class="badge bg-white text-dark mt-1">${escapeHtml(urun.categoryName)}</span>
-                        </div>
-                    </div>
-                </div>
-                <div class="modal-body p-4 bg-light">
-                    <div class="row g-3 mb-4">
-                        <div class="col-6">
-                            <div class="bg-white p-3 rounded-3 shadow-sm border border-light">
-                                <small class="text-muted text-uppercase fw-bold fs-07rem">Barkod</small>
-                                <div class="fw-bold fs-6 mt-1 text-dark">${escapeHtml(urun.barcode)}</div>
-                            </div>
-                        </div>
-                        <div class="col-6">
-                            <div class="bg-white p-3 rounded-3 shadow-sm border border-light">
-                                <small class="text-muted text-uppercase fw-bold fs-07rem">Tarih</small>
-                                <div class="fw-bold fs-6 mt-1 text-dark">${tarihFormatla(urun.createdAt)}</div>
-                            </div>
-                        </div>
-                        <div class="col-6">
-                            <div class="bg-white p-3 rounded-3 shadow-sm border border-light">
-                                <small class="text-muted text-uppercase fw-bold fs-07rem">Mevcut Stok</small>
-                                <div class="fw-bold fs-5 mt-1 ${urun.stockQuantity <= urun.minStockLevel ? 'text-danger' : 'text-success'}">${urun.stockQuantity}</div>
-                            </div>
-                        </div>
-                        <div class="col-6">
-                            <div class="bg-white p-3 rounded-3 shadow-sm border border-light">
-                                <small class="text-muted text-uppercase fw-bold fs-07rem">Min. Stok</small>
-                                <div class="fw-bold fs-6 mt-1 text-dark">${urun.minStockLevel}</div>
-                            </div>
-                        </div>
 
-                        <h6 class="fw-bold text-secondary text-uppercase small mb-3 border-bottom pb-2">Ürün Özellikleri (Kurallar)</h6>
-                        <div class="bg-white p-3 rounded-3 shadow-sm border border-light">
-                            <table class="table table-sm table-borderless mb-0">
-                                ${urun.attributes && urun.attributes.length > 0
-                                    ? urun.attributes.map(attr => {
-                                        let val = attr.value;
-                                        if (val === "true" || val === true) val = "Var";
-                                        if (val === "false" || val === false) val = "Yok";
-                                        return `
-                                        <tr>
-                                            <td class="text-muted fw-bold w-40">${escapeHtml(attr.key)}</td>
-                                            <td class="text-dark fw-semibold">${escapeHtml(val)}</td>    
-                                        </tr>`;
-                                    }).join('')
-                                    : `<tr><td class="text-muted fst-italic">Özel nitelik (kural) bulunamadı.</td></tr>`
-                                }
-                            </table>
-                        </div>
-
-                        <h6 class="fw-bold text-secondary text-uppercase small mb-3 border-bottom pb-2"> Tedarikçiler</h6>
-                        <div class="bg-white p-3 rounded-3 shadow-sm border border-light">
-                            <table class="table table-sm table-borderless mb-0" id="detayTedarikciListesi">
-                                <tr><td class="text-muted fst-italic">Tedarikçi bulunamadı.</td></tr>
-                            </table>
-                            ${secenekler.tedarikciYonetimi ? `
-                                <div class="d-flex gap-3 mb-3 align-items-center">
-                                    <div class="flex-grow-1">
-                                        <select class="form-select mb-2" id="detayTedarikciSelect">
-                                            <option value="">Tedarikçi seçin...</option>
-                                        </select>
-                                        <input type="number" class="form-control" id="detayTedarikciFiyat" placeholder="Alış Fiyatı" min="0">
-                                    </div>
-                                        <button type="button" id="btnDetayTedarikciEkle" class="btn btn-primary w-25 rounded-pill py-2 fw-bold">Bağla</button>
-                                </div>`:""}
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    `;
-}
-
-
-async function urunDetayAc(productId, secenekler = {}){
+async function urunDetayAc(productId, secenekler = {}) {
     const token = localStorage.getItem('token');
 
-const cevap = await fetch(`${CONFIG.API_BASE_URL}/products/${productId}`, {
-    headers: { "Authorization": `Bearer ${token}` }
-});
-
-    if (!cevap.ok) {
-        hataGoster("Ürün bilgisi alınamadı. ") 
-        return; 
+    // Ürün temel bilgilerini çek
+    let urun;
+    try {
+        const cevap = await fetch(`${CONFIG.API_BASE_URL}/products/${productId}`, {
+            headers: { "Authorization": `Bearer ${token}` }
+        });
+        if (!cevap.ok) throw new Error("Ürün bilgisi alınamadı.");
+        urun = await cevap.json();
+    } catch(e) {
+        hataGoster(e.message);
+        return;
     }
 
-    const urun = await cevap.json();
-
-    let kap = document.getElementById("urunDetayKap");
-    if(!kap){
-        kap = document.createElement("div");
-        kap.id = "urunDetayKap";
-        document.body.appendChild(kap);
+    // Ürün stok/depo seviyelerini çek
+    let stokBilgileri = [];
+    try {
+        const stokCevap = await fetch(`${CONFIG.API_BASE_URL}/stock-levels/by-product/${productId}`, {
+            headers: { "Authorization": `Bearer ${token}` }
+        });
+        if (stokCevap.ok) {
+            stokBilgileri = await stokCevap.json();
+        }
+    } catch(e) {
+        console.warn("Stok detayları alınamadı:", e);
     }
 
-    kap.innerHTML = renderUrunDetay(urun, secenekler);
     aktifDetayUrunId = productId;
+    
+    // Model Bilgisini Çıkarma
+    let urunModeli = "Belirtilmemiş";
+    if (urun.attributes && urun.attributes.length > 0) {
+        const modelAttr = urun.attributes.find(a => a.key.toLowerCase().includes('model'));
+        if (modelAttr) urunModeli = modelAttr.value;
+    }
+
+    // --- DOM MANİPÜLASYONLARI (XSS KORUMALI) ---
+
+    // 1. Sekme: Temel Bilgiler
+    document.getElementById("detayUrunAdi").textContent = urun.name;
+    document.getElementById("detayKategoriAdi").textContent = urun.categoryName;
+    document.getElementById("detayUrunModeli").textContent = urunModeli;
+    document.getElementById("detayBarkod").textContent = urun.barcode;
+    document.getElementById("detayTarih").textContent = tarihFormatla(urun.createdAt);
+    
+    const mevcutStokElem = document.getElementById("detayMevcutStok");
+    const mevcutStokIcon = document.getElementById("detayMevcutStokIcon");
+    mevcutStokElem.textContent = urun.stockQuantity;
+    
+    if (urun.stockQuantity <= urun.minStockLevel) {
+        mevcutStokElem.className = "fw-bold fs-3 mt-1 text-danger";
+        mevcutStokIcon.className = "bi bi-boxes fs-3 mb-2 text-danger";
+    } else {
+        mevcutStokElem.className = "fw-bold fs-3 mt-1 text-success";
+        mevcutStokIcon.className = "bi bi-boxes fs-3 mb-2 text-success";
+    }
+    document.getElementById("detayMinStok").textContent = urun.minStockLevel;
+
+    // 2. Sekme: Özellikler
+    const ozelliklerListesi = document.getElementById("detayOzelliklerListesi");
+    if (urun.attributes && urun.attributes.length > 0) {
+        ozelliklerListesi.innerHTML = urun.attributes.map(attr => {
+            let val = attr.value;
+            if (val === "true" || val === true) val = "Var";
+            if (val === "false" || val === false) val = "Yok";
+            return `
+            <tr>
+                <td class="text-muted fw-bold w-50">${escapeHtml(attr.key)}</td>
+                <td class="text-dark fw-semibold">${escapeHtml(val.toString())}</td>    
+            </tr>`;
+        }).join('');
+    } else {
+        ozelliklerListesi.innerHTML = `<tr><td colspan="2" class="text-center text-muted fst-italic py-3">Özel nitelik (kural) bulunamadı.</td></tr>`;
+    }
+
+    // 4. Sekme: Stok Dağılımı
+    const stokListesi = document.getElementById("detayStokDagitimListesi");
+    const stokFooter = document.getElementById("detayStokDagitimFooter");
+    if (stokBilgileri && stokBilgileri.length > 0) {
+        stokListesi.innerHTML = stokBilgileri.map(stok => `
+            <tr>
+                <td class="fw-semibold text-dark">${escapeHtml(stok.warehouseName)}</td>
+                <td class="text-secondary">${escapeHtml(stok.locationCode)}</td>    
+                <td class="text-end fw-bold text-primary fs-6">${escapeHtml(stok.quantity.toString())}</td>    
+            </tr>`).join('');
+        
+        stokFooter.classList.remove("d-none");
+        document.getElementById("detayGenelToplamStok").textContent = urun.stockQuantity;
+    } else {
+        stokListesi.innerHTML = `<tr><td colspan="3" class="text-muted fst-italic text-center py-4">Bu ürün için stok kaydı bulunamadı.</td></tr>`;
+        stokFooter.classList.add("d-none");
+    }
+
+    // 3. Sekme: Tedarikçi Yönetimi Alanlarını Göster/Gizle
+    const tedarikciYonetimiAlani = document.getElementById("detayTedarikciYonetimAlani");
+    const tedarikciIslemBasligi = document.getElementById("detayTedarikciIslemSutunuBasligi");
+    
+    if (secenekler.tedarikciYonetimi) {
+        tedarikciYonetimiAlani.classList.remove("d-none");
+        tedarikciIslemBasligi.classList.remove("d-none");
+        tedarikciSecenekleriniYukle();
+    } else {
+        tedarikciYonetimiAlani.classList.add("d-none");
+        tedarikciIslemBasligi.classList.add("d-none");
+    }
+
+    // Tedarikçi listesini çek ve tabloyu güncelle
     detayTedarkciYukle(productId, secenekler.tedarikciYonetimi);                        
-    if (secenekler.tedarikciYonetimi) tedarikciSecenekleriniYukle();
     
+    // Modalı her açılışta 1. sekmeye (Temel Bilgiler) sıfırla
+    const carousel = document.getElementById('urunDetayCarousel');
+    const bsCarousel = bootstrap.Carousel.getInstance(carousel) || new bootstrap.Carousel(carousel);
+    bsCarousel.to(0);
+    
+    // Modalı göster
     new bootstrap.Modal(document.getElementById("urunDetayModal")).show();
-
-
-    
 }
 
 async function detayTedarkciYukle(productId, yonetim = false) {
@@ -135,21 +133,22 @@ async function detayTedarkciYukle(productId, yonetim = false) {
         tablo.innerHTML = "";
 
         if (liste.length === 0) { 
-            tablo.innerHTML = `<tr><td class="text-muted fst-italic">Bu ürüne bağlı tedarikçi yok.</td></tr>`; return; 
+            tablo.innerHTML = `<tr><td colspan="3" class="text-center text-muted fst-italic py-4">Bu ürüne bağlı tedarikçi bulunmamaktadır.</td></tr>`; return; 
         }
 
         liste.forEach(ps => {
-            tablo.innerHTML += `<tr><td class="fw-semibold">${escapeHtml(ps.supplierName)}</td>
-                <td class="text-muted small">${ps.purchasePrice != null ? ps.purchasePrice + ' ₺' : '-'}</td>
+            tablo.innerHTML += `<tr>
+                <td class="fw-semibold">${escapeHtml(ps.supplierName)}</td>
+                <td class="text-muted fw-bold">${ps.purchasePrice != null ? escapeHtml(ps.purchasePrice.toString()) + ' ₺' : '-'}</td>
                 ${yonetim ? `<td class="text-end">
-                    <button class="btn btn-sm btn-outline-danger rounded-pill btn-tedarikci-kaldir" data-sid="${ps.supplierId}">Kaldır</button>
+                    <button class="btn btn-sm btn-outline-danger rounded-pill btn-tedarikci-kaldir shadow-sm px-3" data-sid="${escapeHtml(ps.supplierId.toString())}">
+                        <i class="bi bi-trash3 me-1"></i> Kaldır
+                    </button>
                 </td>` : ""}
             </tr>`;
-                
         });
-    }catch(hata) {
-        tablo.innerHTML = `<tr><td class="text-danger">${hata.message}</td></tr>`;
-
+    } catch(hata) {
+        tablo.innerHTML = `<tr><td colspan="3" class="text-center text-danger py-4">${escapeHtml(hata.message)}</td></tr>`;
     }
 }
 
