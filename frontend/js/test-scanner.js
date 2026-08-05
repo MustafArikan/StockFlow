@@ -62,10 +62,25 @@ function onScanSuccess(decodedText, decodedResult) {
         if (decodedText.startsWith('http://') || decodedText.startsWith('https://')) {
             window.location.href = decodedText;
         } else {
-            // Sadece numara/metin ise (Barkod) parametre olarak ürün sayfasına gönder
+            try {
+                // Barkod numarası / kodu bir raf mı diye veritabanından kontrol et
+                const rafSonuc = await apiRequest(`/locations?pageSize=10000`, 'GET');
+                const raflar = rafSonuc.items || rafSonuc;
+                const hedefRaf = raflar.find(r => (r.code || "").toLowerCase() === decodedText.toLowerCase());
+
+                if (hedefRaf) {
+                    // Eğer raf ise warehouses sayfasına gönderip rafın içini açtırıyoruz
+                    window.location.href = `warehouses.html?viewShelfCode=${encodeURIComponent(decodedText)}`;
+                    return;
+                }
+            } catch (e) {
+                console.error("Raf sorgulama hatası:", e);
+            }
+
+            // Raf değilse (varsayılan) ürün sayfasına gönder
             window.location.href = `products.html?viewProductBarcode=${encodeURIComponent(decodedText)}`;
         }
-    }, 800);
+    }, 800); // Kullanıcının ekranda yeşil başarılı yazısını görmesi için kısa bir bekleme
 }
 
 // 3. Anlık Tarama Hataları (Sessiz Dinleme - Konsol Kirliliğini Önler)

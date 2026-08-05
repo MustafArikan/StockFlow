@@ -1371,13 +1371,13 @@ function updatePriceSliderMax() {
     if (typeof tumUrunler !== 'undefined' && tumUrunler && tumUrunler.length > 0) {
         maxPrice = Math.max(...tumUrunler.map(u => parseFloat(u.price) || 0));
     }
-    
+
     if (maxPrice <= 0 || !isFinite(maxPrice)) {
         maxPrice = 999999;
     }
 
     pSlider.dataset.dynamicMax = maxPrice;
-    
+
     // Slider sınırını ve kolları max değere göre genişlet (böylece inputlar otomatik boş/placeholder moduna geçer)
     pSlider.noUiSlider.updateOptions({
         start: [0, maxPrice],
@@ -1389,14 +1389,14 @@ function updatePriceSliderMax() {
 document.getElementById('btnFiltreleriTemizle')?.addEventListener('click', () => {
     document.getElementById('aramaKutusu').value = '';
     aktifArama = '';
-    
+
     if (document.getElementById('filtreTedarikci')) document.getElementById('filtreTedarikci').value = '';
     if (document.getElementById('filtreBaslangicTarihi')) document.getElementById('filtreBaslangicTarihi').value = '';
     if (document.getElementById('filtreBitisTarihi')) document.getElementById('filtreBitisTarihi').value = '';
     if (document.getElementById('filtreStokDurumu')) document.getElementById('filtreStokDurumu').value = '';
     if (document.getElementById('filtreMinFiyat')) document.getElementById('filtreMinFiyat').value = '';
     if (document.getElementById('filtreMaxFiyat')) document.getElementById('filtreMaxFiyat').value = '';
-    
+
     if (priceSlider && priceSlider.noUiSlider) {
         let maxVal = priceSlider.dataset.dynamicMax ? parseFloat(priceSlider.dataset.dynamicMax) : 999999;
         priceSlider.noUiSlider.set([0, maxVal]);
@@ -1529,12 +1529,11 @@ function openBarcodePrintModal(barcode, productName, productId) {
     // QR Kod oluşturma (CSP Uyumlu QRious kütüphanesi)
     const qrCanvas = document.getElementById("qrcodeCanvas");
     if (qrCanvas) {
-        // QR Kodu, direkt uygulamanın ürün inceleme sayfasına yönlendirir        
-        const qrUrl = `${window.location.origin}${window.location.pathname}?viewProductBarcode=${encodeURIComponent(barcode)}`;
+        // QR Kodu, direkt uygulamanın ürün inceleme sayfasına yönlendirir 
 
         new QRious({
             element: qrCanvas,
-            value: qrUrl, // Akıllı yönlendirme linki
+            value: barcode, // Akıllı yönlendirme linki
             size: 120,
             background: 'white',
             foreground: 'black',
