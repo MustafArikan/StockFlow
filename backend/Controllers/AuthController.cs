@@ -147,13 +147,14 @@ public async Task<IActionResult> Login([FromBody] LoginDto dto)
         if (user == null)
         {
             _metrics.LoginAttemptsTotal.WithLabels("failed").Inc();
-            return Unauthorized(new { message = "Invalid email or password." });
+            return Unauthorized(new { message = "Invalid email or password, or email is not verified." });
         }
 
         // E-Mail doğrulamasını kontrol et
         if (!user.IsEmailConfirmed)
         {
-            return Unauthorized(new { message = "Email is not verified. Please verify your email before logging in. Verification code sent to your email." });
+            _metrics.LoginAttemptsTotal.WithLabels("failed").Inc();
+            return Unauthorized(new { message = "Invalid email or password, or email is not verified." });
         }
 
         if (user.LastFailedLoginAttempt.HasValue && user.FailedLoginAttempts >= 5 )
@@ -177,11 +178,11 @@ public async Task<IActionResult> Login([FromBody] LoginDto dto)
             _metrics.LoginAttemptsTotal.WithLabels("failed").Inc();
             if (remainingAttempts > 0)
             {
-                return Unauthorized(new { message = $"Invalid email or password. Kalan deneme hakkınız: {remainingAttempts}" });
+                return Unauthorized(new { message = "Invalid email or password, or email is not verified." });
             }
             else
             {
-                return Unauthorized(new { message = "Çok fazla hatalı giriş yaptınız. Hesabınız geçici olarak kilitlendi. Lütfen 15 dakika sonra tekrar deneyin." });
+                return Unauthorized(new { message = "Giriş başarısız. Çok fazla hatalı deneme yapıldığı için hesap kilitlenmiş olabilir." });
             }
         }
 

@@ -165,6 +165,7 @@ public class AssetsController : ControllerBase
     }
 
     // --- 3. TÜM EKİPMANLARI LİSTELEME ---
+    [RequirePermission(Policies.RequireAssetRead)]
     [HttpGet]
     [NormalizePagination]
     public async Task<IActionResult> GetAllAssets([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
@@ -207,6 +208,7 @@ public class AssetsController : ControllerBase
     }
 
     // --- 4. ZAMAN ÇİZELGESİ (YAŞAM DÖNGÜSÜ) GETİRME ---
+    [RequirePermission(Policies.RequireAssetRead)]
     [HttpGet("{serialNumber}/timeline")]
     public async Task<IActionResult> GetAssetTimeLine(string serialNumber)
     {

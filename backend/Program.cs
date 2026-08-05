@@ -29,13 +29,19 @@ builder.Services.AddControllers()
     });
 builder.Services.AddRateLimiter(options =>
 {
-    // Mevcut login/register limiter'ı — AYNEN KALIYOR
-    options.AddFixedWindowLimiter("AuthLimit", limiterOptions =>
+    // --- YENİ: IP bazlı rate limiter (Global DoS önlemi) ---
+    options.AddPolicy("AuthLimit", httpContext =>
     {
-        limiterOptions.PermitLimit = 5; // 5 istek
-        limiterOptions.Window = TimeSpan.FromMinutes(1); // 1 dakika
-        limiterOptions.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
-        limiterOptions.QueueLimit = 0; // Kuyrukta istek bekletme
+        var ip = httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+        return RateLimitPartition.GetFixedWindowLimiter(
+            $"AuthLimit:{ip}",
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 5,
+                Window = TimeSpan.FromMinutes(1),
+                QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                QueueLimit = 0
+            });
     });
 
     // --- YENİ: Veritabanından Authorization Policies okunarak rate limit policy'leri üretilir ---
@@ -308,7 +314,7 @@ using (var scope = app.Services.CreateScope())
     try
     {
         var context = services.GetRequiredService<stok_takip.Data.AppDbContext>();
-        stok_takip.Data.DbInitializer.Initialize(context);
+        stok_takip.Data.DbInitializer.Initialize(context, app.Environment.IsDevelopment(), app.Configuration["AdminPassword"]);
     }
     catch (Exception ex)
     {

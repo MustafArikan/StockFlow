@@ -23,6 +23,7 @@ public class LocationsController : ControllerBase
     }
 
     // GET /api/locations  tüm rafları listele
+    [RequirePermission(Policies.RequireLocationRead)]
     [HttpGet]
     [NormalizePagination]
     public async Task<IActionResult> GetAll([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
@@ -46,6 +47,7 @@ public class LocationsController : ControllerBase
     }
 
     // GET /api/locations/by-warehouse/5  belirli bir deponun raflarını getir
+    [RequirePermission(Policies.RequireLocationRead)]
     [HttpGet("by-warehouse/{warehouseId}")]
     [NormalizePagination]
     public async Task<IActionResult> GetByWarehouse(int warehouseId, [FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
@@ -117,3 +119,4 @@ var stokVarMi = await _context.StockLevels.AnyAsync(sl => sl.LocationId == id);
         return NoContent();
     }
 }
+

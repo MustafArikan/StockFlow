@@ -27,6 +27,7 @@ namespace stok_takip.Controllers
         }
 
         // 1. GET: Fetch all movements with optional filters (For frontend table)
+        [RequirePermission(Policies.RequireStockMovementRead)]
         [HttpGet]
         [NormalizePagination]
         public async Task<IActionResult> GetAllMovements([FromQuery] string? type, [FromQuery] string? search, [FromQuery] string? sort, [FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
@@ -80,6 +81,7 @@ namespace stok_takip.Controllers
         }
 
         // GET /api/stock/movements/product/{productId}
+        [RequirePermission(Policies.RequireStockMovementRead)]
         [HttpGet("product/{productId}")]
         public async Task<IActionResult> GetMovementsByProduct(int productId)
         {

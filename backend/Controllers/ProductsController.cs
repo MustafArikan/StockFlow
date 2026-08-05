@@ -26,6 +26,7 @@ public class ProductsController : ControllerBase
     }
     
     // GET /api/products : tüm ürünleri listele
+    [RequirePermission(Policies.RequireProductRead)]
     [HttpGet]
     [NormalizePagination]
     public async Task<IActionResult> GetAll([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
@@ -75,6 +76,7 @@ public class ProductsController : ControllerBase
     }
 
     //GET / api/products/5 : tek bir ürünü getir
+    [RequirePermission(Policies.RequireProductRead)]
     [HttpGet("{id}")]
     public async Task<IActionResult> GetById(int id)
     {
@@ -395,6 +397,7 @@ public class ProductsController : ControllerBase
         return NoContent();
     }
 
+    [RequirePermission(Policies.RequireProductRead)]
     [HttpGet("search")]
     public async Task<IActionResult> SearchProducts([FromQuery] string q)
     {

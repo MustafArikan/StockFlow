@@ -21,6 +21,7 @@ public class AttributeRulesController : ControllerBase
     }
 
     // Belirli bir kategoriye ait kuralları getir
+    [RequirePermission(Policies.RequireCategoryRead)]
     [HttpGet("category/{categoryId}")]
     public async Task<IActionResult> GetByCategory(int categoryId)
     {
@@ -282,3 +283,4 @@ public class AttributeRulesController : ControllerBase
         return Ok(new { message = "Sıralama başarıyla güncellendi." });
     }
 }
+
