@@ -18,6 +18,7 @@ public class Asset : BaseEntity
     public string Status { get; set; } = "Available";
 
     public string? Notes { get; set; }
+    public string? Attributes { get; set; }
     public DateTime? NextMaintenanceDate { get; set; }
 
     public ICollection<AssetHistory>History { get; set; } = new List<AssetHistory>();

@@ -49,11 +49,16 @@ function renderUrunDetay(urun, secenekler ={}){
                         <div class="bg-white p-3 rounded-3 shadow-sm border border-light">
                             <table class="table table-sm table-borderless mb-0">
                                 ${urun.attributes && urun.attributes.length > 0
-                                    ? urun.attributes.map(attr => `
+                                    ? urun.attributes.map(attr => {
+                                        let val = attr.value;
+                                        if (val === "true" || val === true) val = "Var";
+                                        if (val === "false" || val === false) val = "Yok";
+                                        return `
                                         <tr>
                                             <td class="text-muted fw-bold w-40">${escapeHtml(attr.key)}</td>
-                                            <td class="text-dark fw-semibold">${escapeHtml(attr.value)}</td>    
-                                        </tr>`).join('')
+                                            <td class="text-dark fw-semibold">${escapeHtml(val)}</td>    
+                                        </tr>`;
+                                    }).join('')
                                     : `<tr><td class="text-muted fst-italic">Özel nitelik (kural) bulunamadı.</td></tr>`
                                 }
                             </table>

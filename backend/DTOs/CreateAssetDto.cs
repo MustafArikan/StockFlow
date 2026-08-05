@@ -12,5 +12,7 @@ public class CreateAssetDto
 
     public string? Notes { get; set; }
 
+    public string? Attributes { get; set; }
+
     public int LocationId { get; set; }
 }

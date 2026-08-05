@@ -29,6 +29,7 @@ public class CategoriesController : ControllerBase
 
     // GET /api/categories : tüm kategorileri listele
     [HttpGet]
+    [NormalizePagination]
     public async Task<IActionResult> GetAll([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
     {
         var query = _context.Categories.AsNoTracking();
@@ -71,6 +72,12 @@ public class CategoriesController : ControllerBase
             return BadRequest("Bu isimde bir kateori zaten var.");
         }
         
+        if (dto.ParentId.HasValue)
+        {
+            var parentExists = await _context.Categories.AnyAsync(c => c.Id == dto.ParentId.Value && !c.IsDeleted);
+            if (!parentExists)
+                return BadRequest(new { message = "Belirtilen üst kategori bulunamadı." });
+        }
         
         var category = new Category
         {
@@ -165,6 +172,10 @@ public class CategoriesController : ControllerBase
 
         if (dto.ParentId.HasValue)
         {
+            var parentExists = await _context.Categories.AnyAsync(c => c.Id == dto.ParentId.Value && !c.IsDeleted);
+            if (!parentExists)
+                return BadRequest(new { message = "Belirtilen üst kategori bulunamadı." });
+
             var currentParentId = dto.ParentId;
             while (currentParentId.HasValue)
             {

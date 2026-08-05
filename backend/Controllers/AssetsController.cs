@@ -86,12 +86,12 @@ public class AssetsController : ControllerBase
             };
             _context.StockMovements.Add(stockMovement);
 
-            // Yeni Ekipman (Asset) nesnesinin oluşturulması
             var newAsset = new Asset
             {
                 ProductId = dto.ProductId,
                 SerialNumber = dto.SerialNumber,
                 Notes = dto.Notes,
+                Attributes = dto.Attributes,
                 Status = "Available" // İlk eklendiğinde durumu 'Müsait/Boşta' olur
             };
 
@@ -166,6 +166,7 @@ public class AssetsController : ControllerBase
 
     // --- 3. TÜM EKİPMANLARI LİSTELEME ---
     [HttpGet]
+    [NormalizePagination]
     public async Task<IActionResult> GetAllAssets([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
     {
         var query = _context.Assets
@@ -185,6 +186,7 @@ public class AssetsController : ControllerBase
                 a.SerialNumber,
                 a.Status,
                 a.Notes,
+                a.Attributes,
 
                 ProductId = a.ProductId,
                 ProductName = a.Product != null ? a.Product.Name : "Bilinmeyen Ürün",
@@ -244,7 +246,8 @@ public class AssetsController : ControllerBase
                 ProductName = asset.Product != null ? asset.Product.Name : "Bilinmeyen Ürün",
                 Status = asset.Status,
                 AssignedTo = asset.AssignedTo != null ? $"{asset.AssignedTo.FirstName} {asset.AssignedTo.LastName}" : "Şu an Boşta",
-                Notes = asset.Notes
+                Notes = asset.Notes,
+                Attributes = asset.Attributes
             },
             Timeline = timeline
         });

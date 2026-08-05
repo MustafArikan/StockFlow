@@ -24,6 +24,7 @@ public class LocationsController : ControllerBase
 
     // GET /api/locations  tüm rafları listele
     [HttpGet]
+    [NormalizePagination]
     public async Task<IActionResult> GetAll([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
     {
         var query = _context.Locations.AsNoTracking();
@@ -46,6 +47,7 @@ public class LocationsController : ControllerBase
 
     // GET /api/locations/by-warehouse/5  belirli bir deponun raflarını getir
     [HttpGet("by-warehouse/{warehouseId}")]
+    [NormalizePagination]
     public async Task<IActionResult> GetByWarehouse(int warehouseId, [FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
     {
         var query = _context.Locations
@@ -78,6 +80,10 @@ public class LocationsController : ControllerBase
         var warehouseExists = await _context.Warehouses.AnyAsync(w => w.Id == dto.WarehouseId);
         if (!warehouseExists)
             return BadRequest(new { message = "Belirtilen depo bulunamadı." });
+
+        var codeExists = await _context.Locations.AnyAsync(l => l.WarehouseId == dto.WarehouseId && l.Code == dto.Code && !l.IsDeleted);
+        if (codeExists)
+            return BadRequest(new { message = "Bu depoda aynı koda sahip bir raf zaten var." });
 
         var location = new Location
         {

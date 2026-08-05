@@ -28,7 +28,7 @@ public class WarehousesController : ControllerBase
     public async Task<IActionResult> GetWarehouseStocks(int id)
     {
         var stocks = await _context.StockLevels
-            .Where(sl => sl.Location.WarehouseId == id) // Raflar üzerinden depoya ulaşıyoruz
+            .Where(sl => sl.Location.WarehouseId == id && sl.Quantity > 0) // Sadece stoğu olan (0 olmayan) kayıtları getir
             .Select(sl => new 
             {
                 Id = sl.ProductId,
@@ -46,6 +46,7 @@ public class WarehousesController : ControllerBase
     }
     // GET /api/warehouses tüm depoları listeleme
     [HttpGet]
+    [NormalizePagination]
     public async Task<IActionResult> GetAll([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
     {
         var query = _context.Warehouses.AsNoTracking();
@@ -111,6 +112,12 @@ public class WarehousesController : ControllerBase
         var warehouse = await _context.Warehouses.FindAsync(id);
         if(warehouse == null)
             return NotFound();
+
+        var mevcut = await _context.Warehouses.FirstOrDefaultAsync(w => w.Name == dto.Name && w.Address == dto.Address && w.Id != id);
+        if (mevcut != null)
+        {
+            return BadRequest("Bu isim ve adrese sahip bir depo zaten var.");
+        }
 
         warehouse.Name = dto.Name;
         warehouse.Address = dto.Address;
