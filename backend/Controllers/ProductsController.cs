@@ -27,6 +27,7 @@ public class ProductsController : ControllerBase
     
     // GET /api/products : tüm ürünleri listele
     [HttpGet]
+    [NormalizePagination]
     public async Task<IActionResult> GetAll([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
     {
         var totalRecords = await _context.Products.CountAsync(p => !p.IsDeleted);
@@ -190,10 +191,15 @@ public class ProductsController : ControllerBase
     [RequirePermission(Policies.RequireProductWrite)] 
     public async Task<IActionResult> ImportExcel(IFormFile file)
     {
+        const long MaxFileSizeBytes = 10 * 1024 * 1024; // 10 MB
+
         if (file == null || file.Length == 0)
             return BadRequest(new { message = "Geçerli bir dosya yükleyin." });
 
-        if (!file.FileName.EndsWith(".xlsx"))
+        if (file.Length > MaxFileSizeBytes)
+            return BadRequest(new { message = "Dosya boyutu 10 MB'ı geçemez." });
+
+        if (!file.FileName.EndsWith(".xlsx", StringComparison.OrdinalIgnoreCase))
             return BadRequest(new { message = "Sadece .xlsx formatında dosyalar desteklenmektedir." });
 
         // Yeni DTO dosyası açmamak için değişkenleri burada tutuyoruz
@@ -210,58 +216,65 @@ public class ProductsController : ControllerBase
         using (var stream = new MemoryStream())
         {
             await file.CopyToAsync(stream);
-            using (var workbook = new XLWorkbook(stream))
+            try
             {
-                var worksheet = workbook.Worksheet(1); 
-                var usedRange = worksheet.RangeUsed(); 
-                
-                if (usedRange == null) return BadRequest(new { message = "Yüklenen Excel dosyası tamamen boş veya formatı hatalı." });
-
-                var rows = usedRange.RowsUsed().Skip(1); // Başlık satırını atla
-                
-                int rowIndex = 2; 
-                foreach (var row in rows)
+                using (var workbook = new XLWorkbook(stream))
                 {
-                    totalRows++;
-                    var name = row.Cell(1).GetString().Trim();
-                    var barcode = row.Cell(2).GetString().Trim();
-                    var minStockStr = row.Cell(3).GetString().Trim();
-                    var categoryName = row.Cell(4).GetString().Trim();
-
-                    var rowErrors = new List<string>();
-
-                    if (string.IsNullOrEmpty(name)) rowErrors.Add("Ürün adı boş olamaz.");
-                    if (string.IsNullOrEmpty(barcode)) rowErrors.Add("Barkod boş olamaz.");
+                    var worksheet = workbook.Worksheet(1); 
+                    var usedRange = worksheet.RangeUsed(); 
                     
-                    if (existingBarcodes.Contains(barcode) || newProducts.Any(p => p.Barcode == barcode))
-                        rowErrors.Add($"'{barcode}' barkodu sistemde veya excel içinde mükerrer.");
+                    if (usedRange == null) return BadRequest(new { message = "Yüklenen Excel dosyası tamamen boş veya formatı hatalı." });
 
-                    int categoryId = 0;
-                    if (!validCategories.TryGetValue(categoryName.ToLower(), out categoryId))
-                        rowErrors.Add($"'{categoryName}' adlı kategori sistemde tanımsız.");
-
-                    if (!int.TryParse(minStockStr, out int minStock))
-                        rowErrors.Add("Kritik stok seviyesi tam sayı olmalıdır.");
-
-                    if (rowErrors.Any())
+                    var rows = usedRange.RowsUsed().Skip(1); // Başlık satırını atla
+                    
+                    int rowIndex = 2; 
+                    foreach (var row in rows)
                     {
-                        errorCount++;
-                        errorsList.Add(new { RowNumber = rowIndex, Errors = rowErrors });
+                        totalRows++;
+                        var name = row.Cell(1).GetString().Trim();
+                        var barcode = row.Cell(2).GetString().Trim();
+                        var minStockStr = row.Cell(3).GetString().Trim();
+                        var categoryName = row.Cell(4).GetString().Trim();
+
+                        var rowErrors = new List<string>();
+
+                        if (string.IsNullOrEmpty(name)) rowErrors.Add("Ürün adı boş olamaz.");
+                        if (string.IsNullOrEmpty(barcode)) rowErrors.Add("Barkod boş olamaz.");
+                        
+                        if (existingBarcodes.Contains(barcode) || newProducts.Any(p => p.Barcode == barcode))
+                            rowErrors.Add($"'{barcode}' barkodu sistemde veya excel içinde mükerrer.");
+
+                        int categoryId = 0;
+                        if (!validCategories.TryGetValue(categoryName.ToLower(), out categoryId))
+                            rowErrors.Add($"'{categoryName}' adlı kategori sistemde tanımsız.");
+
+                        if (!int.TryParse(minStockStr, out int minStock))
+                            rowErrors.Add("Kritik stok seviyesi tam sayı olmalıdır.");
+
+                        if (rowErrors.Any())
+                        {
+                            errorCount++;
+                            errorsList.Add(new { RowNumber = rowIndex, Errors = rowErrors });
+                        }
+                        else
+                        {
+                            newProducts.Add(new Product 
+                            { 
+                                Name = name, 
+                                Barcode = barcode, 
+                                MinStockLevel = minStock, 
+                                CategoryId = categoryId,
+                                Attributes = "[]" 
+                            });
+                            successCount++;
+                        }
+                        rowIndex++;
                     }
-                    else
-                    {
-                        newProducts.Add(new Product 
-                        { 
-                            Name = name, 
-                            Barcode = barcode, 
-                            MinStockLevel = minStock, 
-                            CategoryId = categoryId,
-                            Attributes = "[]" 
-                        });
-                        successCount++;
-                    }
-                    rowIndex++;
                 }
+            }
+            catch
+            {
+                return BadRequest(new { message = "Dosya okunamadı, formatını kontrol edin." });
             }
         }
 
@@ -295,6 +308,9 @@ public class ProductsController : ControllerBase
         {
             return BadRequest("Bu barkoda sahip bir ürün zaten var.");
         }
+
+        var categoryExists = await _context.Categories.AnyAsync(c => c.Id == dto.CategoryId);
+        if (!categoryExists) return BadRequest(new { message = "Belirtilen kategori bulunamadı." });
 
         if (dto.Attributes != null && dto.Attributes.Any())
         {

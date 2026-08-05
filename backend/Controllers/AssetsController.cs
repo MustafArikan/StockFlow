@@ -166,6 +166,7 @@ public class AssetsController : ControllerBase
 
     // --- 3. TÜM EKİPMANLARI LİSTELEME ---
     [HttpGet]
+    [NormalizePagination]
     public async Task<IActionResult> GetAllAssets([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
     {
         var query = _context.Assets

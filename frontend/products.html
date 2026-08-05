@@ -139,106 +139,95 @@
                     <form id="urunFormu">
                         <input type="hidden" id="urunId">
 
-                        <div class="row g-4">
-                            <!-- Sol Kolon: Temel Bilgiler -->
-                            <div class="col-lg-6">
-                                <div class="bg-white p-4 rounded-3 shadow-sm border h-100">
-                                    <h6 class="fw-bold text-primary mb-4 border-bottom pb-2">
-                                        <i class="bi bi-info-circle me-1"></i> Temel Bilgiler
-                                    </h6>
-
-                                    <div class="mb-4">
-                                        <label class="form-label text-muted small fw-bold">Ürün Adı <span
-                                                class="text-danger">*</span></label>
-                                        <input type="text" class="form-control" id="urunAdi" placeholder="Örn: M5 Vida"
-                                            required>
-                                    </div>
-
-                                    <div class="mb-4">
-                                        <label class="form-label text-muted small fw-bold">Barkod (SKU) <span
-                                                class="text-danger">*</span></label>
-                                        <div class="input-group">
-                                            <span class="input-group-text bg-light"><i
-                                                    class="bi bi-upc-scan"></i></span>
-                                            <input type="text" class="form-control" id="urunBarkod"
-                                                placeholder="Kendi barkodunuzu girin veya üretin">
-                                            <button class="btn btn-outline-primary" type="button" id="btnSkuUret">
-                                                <i class="bi bi-magic"></i> SKU Üret
-                                            </button>
-                                        </div>
-                                        <div class="form-text small text-muted"><i class="bi bi-info-circle"></i>
-                                            Kurallı SKU üretmek için önce kategoriyi ve alttaki nitelikleri doldurun.
-                                        </div>
-                                    </div>
-
-                                    <div class="mb-2">
-                                        <label class="form-label text-muted small fw-bold">Kategori <span
-                                                class="text-danger">*</span></label>
-                                        <div id="urunKategoriContainer" class="d-flex flex-column gap-2"></div>
-                                        <input type="hidden" id="urunKategoriId" value="">
-                                    </div>
+                        <!-- Temel Bilgiler -->
+                        <div class="bg-white p-4 rounded-3 shadow-sm border mb-4">
+                            <h6 class="fw-bold text-primary mb-4 border-bottom pb-2">
+                                <i class="bi bi-info-circle me-1"></i> Temel Bilgiler
+                            </h6>
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label text-muted small fw-bold">Ürün Adı <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" id="urunAdi" placeholder="Örn: M5 Vida" required>
                                 </div>
-                            </div>
-
-                            <!-- Sağ Kolon: Stok ve Yerleşim -->
-                            <div class="col-lg-6">
-                                <div class="bg-white p-4 rounded-3 shadow-sm border h-100">
-                                    <h6 class="fw-bold text-success mb-4 border-bottom pb-2">
-                                        <i class="bi bi-box me-1"></i> Stok ve Yerleşim Bilgileri
-                                    </h6>
-
-                                    <div class="mb-4">
-                                        <label class="form-label text-muted small fw-bold">Minimum Stok Seviyesi</label>
-                                        <input type="number" class="form-control" id="urunMinStok" placeholder="Örn: 10"
-                                            min="0">
-                                    </div>
-
-                                    <div class="mb-4" id="depoSecimiAlani">
-                                        <label class="form-label text-muted small fw-bold">Yerleştirilecek Depo</label>
-                                        <div class="input-group">
-                                            <span class="input-group-text bg-light"><i
-                                                    class="bi bi-building"></i></span>
-                                            <select class="form-select" id="urunDepoId">
-                                                <option value="">Önce depo seçin...</option>
-                                            </select>
-                                        </div>
-                                    </div>
-
-                                    <div class="mb-4" id="rafSecimiAlani">
-                                        <label class="form-label text-muted small fw-bold">Yerleştirilecek Raf
-                                            (Zorunlu)</label>
-                                        <div class="input-group">
-                                            <span class="input-group-text bg-light"><i class="bi bi-layers"></i></span>
-                                            <select class="form-select" id="urunRafId" disabled>
-                                                <option value="">Depo bekleniyor...</option>
-                                            </select>
-                                        </div>
-                                    </div>
-
-                                    <div class="mb-2" id="baslangicStokAlani">
-                                        <label class="form-label text-muted small fw-bold">Başlangıç Stok Adedi</label>
-                                        <input type="number" class="form-control" id="urunBaslangicStok"
-                                            placeholder="Örn: 10" min="0" value="0">
-                                    </div>
+                                <div class="col-md-6">
+                                    <label class="form-label text-muted small fw-bold">Kategori <span class="text-danger">*</span></label>
+                                    <div id="urunKategoriContainer" class="d-flex flex-column gap-2"></div>
+                                    <input type="hidden" id="urunKategoriId" value="">
                                 </div>
                             </div>
                         </div>
 
                         <!-- Dinamik Nitelikler (Kural Formu) -->
-                        <div class="row bg-light rounded-3 p-4 mx-0 mt-4 border shadow-sm d-none"
-                            id="dynamicAttributesArea">
+                        <div class="row bg-light rounded-3 p-4 mx-0 mb-4 border shadow-sm d-none" id="dynamicAttributesArea">
                             <div class="col-12 mb-3 border-bottom pb-2">
                                 <h6 class="fw-bold text-secondary mb-0">
                                     <i class="bi bi-funnel-fill me-1"></i> Kategoriye Özel Nitelikler
                                 </h6>
-                                <small class="text-muted">Seçtiğiniz kategoriye göre doldurmanız gereken ek
-                                    özellikler.</small>
+                                <small class="text-muted">Seçtiğiniz kategoriye göre doldurmanız gereken ek özellikler.</small>
                             </div>
                             <div class="row p-0 m-0 w-100" id="dynamicAttributesContainer">
                             </div>
                         </div>
 
-                        <div class="d-flex justify-content-end align-items-center mt-5 pt-3 border-top">
+                        <!-- Barkod (SKU) Alanı -->
+                        <div class="bg-white p-4 rounded-3 shadow-sm border mb-4">
+                            <h6 class="fw-bold text-primary mb-4 border-bottom pb-2">
+                                <i class="bi bi-upc-scan me-1"></i> Barkod (SKU) Bilgisi
+                            </h6>
+                            <div class="mb-3">
+                                <label class="form-label text-muted small fw-bold">Barkod (SKU) <span class="text-danger">*</span></label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light"><i class="bi bi-upc-scan"></i></span>
+                                    <input type="text" class="form-control" id="urunBarkod" placeholder="Kendi barkodunuzu girin veya otomatik üretin" required>
+                                </div>
+                            </div>
+
+                            <!-- Barkod Üretim Alanı (Otomatik) -->
+                            <div class="bg-light rounded-3 p-4 border border-primary border-opacity-25 text-center d-none" id="skuGenerationArea">
+                                <h6 class="fw-bold text-primary mb-2"><i class="bi bi-magic"></i> Otomatik Barkod (SKU) Üretimi</h6>
+                                <p class="small text-muted mb-3">Yukarıda girdiğiniz özelliklere göre standartlara uygun bir barkod oluşturabilirsiniz.</p>
+                                <button class="btn btn-primary rounded-pill px-4 shadow-sm" type="button" id="btnSkuUret">
+                                    <i class="bi bi-upc-scan me-2"></i> SKU Üret
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Stok ve Yerleşim -->
+                        <div class="bg-white p-4 rounded-3 shadow-sm border mb-4">
+                            <h6 class="fw-bold text-success mb-4 border-bottom pb-2">
+                                <i class="bi bi-box me-1"></i> Stok ve Yerleşim Bilgileri
+                            </h6>
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label text-muted small fw-bold">Minimum Stok Seviyesi</label>
+                                    <input type="number" class="form-control" id="urunMinStok" placeholder="Örn: 10" min="0">
+                                </div>
+                                <div class="col-md-6" id="baslangicStokAlani">
+                                    <label class="form-label text-muted small fw-bold">Başlangıç Stok Adedi</label>
+                                    <input type="number" class="form-control" id="urunBaslangicStok" placeholder="Örn: 10" min="0" value="0">
+                                </div>
+                                <div class="col-md-6" id="depoSecimiAlani">
+                                    <label class="form-label text-muted small fw-bold">Yerleştirilecek Depo</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text bg-light"><i class="bi bi-building"></i></span>
+                                        <select class="form-select" id="urunDepoId">
+                                            <option value="">Önce depo seçin...</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="col-md-6" id="rafSecimiAlani">
+                                    <label class="form-label text-muted small fw-bold">Yerleştirilecek Raf (Zorunlu)</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text bg-light"><i class="bi bi-layers"></i></span>
+                                        <select class="form-select" id="urunRafId" disabled>
+                                            <option value="">Depo bekleniyor...</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="d-flex justify-content-end align-items-center pt-2">
                             <button type="button" class="btn btn-outline-secondary rounded-pill px-4 me-3 fw-bold"
                                 data-bs-dismiss="modal">İptal</button>
                             <button type="button" id="btnUrunKaydet"

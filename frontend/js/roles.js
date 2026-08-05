@@ -264,7 +264,7 @@ const RolesUI = {
                     <div class="permission-item">
                         <div class="pe-3">
                             <span class="fw-semibold d-block text-dark">${escapeHTML(this.formatPermissionName(p.name))}</span>
-                            <small class="text-muted d-block roles-desc-text mt-1"><span class="badge bg-light text-secondary border me-1 font-monospace" style="font-size:0.7rem;">${escapeHTML(p.name)}</span> ${escapeHTML(p.description || '')}</small>
+                            <small class="text-muted d-block roles-desc-text mt-1"><span class="badge bg-light text-secondary border me-1 font-monospace fs-065rem">${escapeHTML(p.name)}</span> ${escapeHTML(p.description || '')}</small>
                         </div>
                         <div class="form-check form-switch m-0 flex-shrink-0">
                             <input class="form-check-input perm-cb module-cb-${moduleSlug}" type="checkbox" value="${p.id}" id="perm_${p.id}">
