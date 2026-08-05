@@ -97,7 +97,8 @@ namespace stok_takip.Controllers
                 FileBytes = bytes,
                 ExcelHeaders = headers,
                 PreviewRows = previewRows,
-                TotalRowCount = totalRows
+                TotalRowCount = totalRows,
+                FileName = file.FileName
             };
             _sessionStore.Save(session);
 
@@ -213,7 +214,7 @@ namespace stok_takip.Controllers
             // Mevcut kuralları çekiyoruz
             var attributeRules = await _context.AttributeRules.Where(r => !r.IsDeleted).ToListAsync();
 
-            var newProducts = new List<Product>();
+            var newProducts = new List<(Product Product, int InitialQuantity)>();
             var newStockLevels = new List<StockLevel>();
             var newStockMovements = new List<StockMovement>();
             var errors = new List<object>();
@@ -243,7 +244,7 @@ namespace stok_takip.Controllers
 
                     if (string.IsNullOrEmpty(name)) rowErrors.Add("Ürün adı boş.");
                     if (string.IsNullOrEmpty(barcode)) rowErrors.Add("Barkod boş.");
-                    if (existingBarcodes.Contains(barcode) || newProducts.Any(p => p.Barcode.Equals(barcode, StringComparison.OrdinalIgnoreCase)))
+                    if (existingBarcodes.Contains(barcode) || newProducts.Any(p => p.Product.Barcode.Equals(barcode, StringComparison.OrdinalIgnoreCase)))
                         rowErrors.Add($"'{barcode}' barkodu mükerrer.");
 
                     int minStockLevel = 0;
@@ -309,35 +310,83 @@ namespace stok_takip.Controllers
                             MinStockLevel = minStockLevel,
                             Attributes = JsonSerializer.Serialize(productAttributes)
                         };
-                        newProducts.Add(product);
+                        newProducts.Add((product, initialQuantity));
                         existingBarcodes.Add(barcode); 
-                        
-                        // Stok başlangıç miktarı eklenecekse (bunu savechanges sonrası yapamayız bulk insertte,
-                        // ama entity framework navigation property olarak izin vermediğinden ID'leri bilemeyiz. 
-                        // Bulk insert için Guid id veya iki aşamalı save gerekiyor.)
                     }
                     rowNum++;
 
                     if (newProducts.Count >= BatchSize)
                     {
-                        await _context.Products.AddRangeAsync(newProducts);
+                        await _context.Products.AddRangeAsync(newProducts.Select(p => p.Product));
                         await _context.SaveChangesAsync(); // Ürün ID'leri alınır
                         
                         foreach(var p in newProducts)
                         {
-                            // Stokları ekle (eğer initial quantity varsa, burada row üzerinden nasıl buluruz?)
-                            // Yukarıdaki gibi bir dictionary'de tutmalıyız
+                            if (p.InitialQuantity > 0)
+                            {
+                                _context.StockLevels.Add(new StockLevel
+                                {
+                                    ProductId = p.Product.Id,
+                                    LocationId = dto.TargetLocationId,
+                                    Quantity = p.InitialQuantity
+                                });
+
+                                _context.StockMovements.Add(new StockMovement
+                                {
+                                    ProductId = p.Product.Id,
+                                    UserId = userId,
+                                    MovementType = "IN",
+                                    Quantity = p.InitialQuantity,
+                                    Description = "İçe Aktarma Sihirbazı ile Başlangıç Stoğu"
+                                });
+                            }
                         }
                         
+                        await _context.SaveChangesAsync();
                         newProducts.Clear();
                     }
                 }
 
                 if (newProducts.Any())
                 {
-                    await _context.Products.AddRangeAsync(newProducts);
+                    await _context.Products.AddRangeAsync(newProducts.Select(p => p.Product));
+                    await _context.SaveChangesAsync();
+
+                    foreach(var p in newProducts)
+                    {
+                        if (p.InitialQuantity > 0)
+                        {
+                            _context.StockLevels.Add(new StockLevel
+                            {
+                                ProductId = p.Product.Id,
+                                LocationId = dto.TargetLocationId,
+                                Quantity = p.InitialQuantity
+                            });
+
+                            _context.StockMovements.Add(new StockMovement
+                            {
+                                ProductId = p.Product.Id,
+                                UserId = userId,
+                                MovementType = "IN",
+                                Quantity = p.InitialQuantity,
+                                Description = "İçe Aktarma Sihirbazı ile Başlangıç Stoğu"
+                            });
+                        }
+                    }
                     await _context.SaveChangesAsync();
                 }
+
+                var history = new ImportHistory
+                {
+                    UserId = userId,
+                    FileName = string.IsNullOrEmpty(session.FileName) ? "Bilinmiyor" : session.FileName,
+                    TotalRows = rowNum - 2,
+                    SuccessCount = (rowNum - 2) - errors.Count,
+                    ErrorCount = errors.Count,
+                    ErrorDetails = errors.Count > 0 ? JsonSerializer.Serialize(errors.Take(50)) : null
+                };
+                _context.ImportHistories.Add(history);
+                await _context.SaveChangesAsync();
 
                 await transaction.CommitAsync();
             }

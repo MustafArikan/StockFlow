@@ -30,6 +30,7 @@ public class AppDbContext : DbContext
     public DbSet<AttributeAllowedValue> AttributeAllowedValues { get; set; } = null!;
     public DbSet<Supplier> Suppliers { get; set; } = null!;
     public DbSet<ProductSupplier> ProductSuppliers { get; set; } = null!;
+    public DbSet<ImportHistory> ImportHistories { get; set; } = null!;
 
     // RBAC Entities
     public DbSet<AppRole> AppRoles { get; set; } = null!;
@@ -63,6 +64,7 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<AppRolePermission>().HasQueryFilter(e => !e.IsDeleted);
         modelBuilder.Entity<AppAuthorizationPolicy>().HasQueryFilter(e => !e.IsDeleted);
         modelBuilder.Entity<AppPolicyPermission>().HasQueryFilter(e => !e.IsDeleted);
+        modelBuilder.Entity<ImportHistory>().HasQueryFilter(e => !e.IsDeleted);
 
 
 

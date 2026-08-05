@@ -12,6 +12,7 @@ namespace stok_takip.Services
         public List<string> ExcelHeaders { get; set; } = new();
         public List<Dictionary<string, string>> PreviewRows { get; set; } = new(); // ilk ~20 satır, önizleme için
         public int TotalRowCount { get; set; }
+        public string FileName { get; set; } = "";
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     }
 

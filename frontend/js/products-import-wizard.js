@@ -311,7 +311,7 @@
                         <li class="list-group-item list-group-item-danger d-flex justify-content-between align-items-start mb-1 rounded-2">
                             <div class="ms-2 me-auto">
                                 <div class="fw-bold text-dark">Satır ${err.rowNumber}</div>
-                                ${err.errors.join('<br>')}
+                                ${err.errors.map(e => window.escapeHtml(e)).join('<br>')}
                             </div>
                         </li>`;
                 });
