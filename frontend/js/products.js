@@ -316,58 +316,7 @@ function exportProductsToCSV() {
     document.body.removeChild(link);
 }
 
-// =========================================================================
-// TOPLU İÇE AKTARMA (EXCEL IMPORT) (Mustafa'nın Eklediği Kısım)
-// =========================================================================
-async function handleExcelImport() {
-    const fileInput = document.getElementById('excelImportFile');
-    const alertContainer = document.getElementById('importReportAlert');
 
-    if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
-        if (alertContainer) alertContainer.innerHTML = `<div class="alert alert-warning rounded-3">Lütfen yüklenecek bir Excel (.xlsx) dosyası seçin.</div>`;
-        return;
-    }
-
-    const file = fileInput.files[0];
-    const formData = new FormData();
-    formData.append("file", file);
-
-    if (alertContainer) alertContainer.innerHTML = `<div class="alert alert-info rounded-3">Dosya satır satır denetleniyor, lütfen bekleyin...</div>`;
-
-    try {
-        const report = await apiRequest('/products/import', 'POST', formData);
-
-        if (alertContainer) {
-            let reportHtml = `
-                <div class="alert ${report.errorCount > 0 ? 'alert-warning' : 'alert-success'} rounded-3 p-4 border shadow-sm">
-                    <h5 class="fw-bold mb-3"><i class="bi bi-clipboard-data-fill"></i> İçe Aktarma Sonuç Raporu</h5>
-                    <p class="mb-1"><strong>Toplam İşlenen Satır:</strong> ${report.totalRows}</p>
-                    <p class="mb-1 text-success"><strong>Sisteme Eklenen Ürün:</strong> ${report.successCount}</p>
-                    <p class="mb-3 text-danger"><strong>Hatalı/Engellenen Satır:</strong> ${report.errorCount}</p>
-            `;
-
-            if (report.errors && report.errors.length > 0) {
-                reportHtml += `<h6 class="fw-bold text-muted mt-3 mb-2">Hata Detayları:</h6><ul class="list-group small mb-0">`;
-                report.errors.forEach(err => {
-                    reportHtml += `
-                        <li class="list-group-item list-group-item-danger d-flex justify-content-between align-items-start mb-1 rounded-2">
-                            <div class="ms-2 me-auto">
-                                <div class="fw-bold text-dark">Satır ${err.rowNumber}</div>
-                                ${err.errors.join('<br>')}
-                            </div>
-                        </li>`;
-                });
-                reportHtml += `</ul>`;
-            }
-            reportHtml += `</div>`;
-            alertContainer.innerHTML = reportHtml;
-        }
-
-        urunleriYukle(currentPage);
-    } catch (error) {
-        if (alertContainer) alertContainer.innerHTML = `<div class="alert alert-danger rounded-3"><strong>Sistem Hatası:</strong> ${error.message}</div>`;
-    }
-}
 
 // =========================================================================
 // SIRALAMA, ARAMA VE CRUD FONKSİYONLARI
@@ -1468,17 +1417,9 @@ if (btnSkuUretEl) {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-    document.getElementById('btnExcelImport')?.addEventListener('click', handleExcelImport);
     document.getElementById('btnExportExcel')?.addEventListener('click', exportProductsToExcel);
     document.getElementById('btnExportPdf')?.addEventListener('click', exportProductsToPDF);
     document.getElementById('btnExportCsv')?.addEventListener('click', exportProductsToCSV);
-    
-    // Özel dosya seçici UI'ı için dosya adını güncelleme
-    document.getElementById('excelImportFile')?.addEventListener('change', function(e) {
-        const fileName = e.target.files[0] ? e.target.files[0].name : "Dosya yok";
-        const nameSpan = document.getElementById('excelFileName');
-        if (nameSpan) nameSpan.textContent = fileName;
-    });
 });
 
 // =========================================================================

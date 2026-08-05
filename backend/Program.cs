@@ -220,6 +220,7 @@ builder.Services.AddAuthentication(options =>
 });
 
 builder.Services.AddMemoryCache();
+builder.Services.AddSingleton<stok_takip.Services.ImportSessionStore>();
 builder.Services.AddSingleton<IAuthorizationPolicyProvider, PermissionPolicyProvider>();
 builder.Services.AddScoped<IAuthorizationHandler, PermissionAuthorizationHandler>();
 
