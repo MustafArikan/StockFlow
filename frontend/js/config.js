@@ -221,6 +221,12 @@ function renderProfessionalLayout() {
     const mainWrapper = document.createElement('div');
     mainWrapper.id = 'main-wrapper';
 
+    // Sidebar'ın son durumunu LocalStorage'dan al ve uygula
+    if (localStorage.getItem('sidebarState') === 'collapsed') {
+        sidebar.classList.add('collapsed');
+        mainWrapper.classList.add('expanded');
+    }
+
     const topbar = document.createElement('header');
     topbar.className = 'topbar shadow-sm';
     topbar.innerHTML = buildTopbarHtml();
@@ -261,8 +267,12 @@ function renderProfessionalLayout() {
 
     // Sidebar'ı açıp kapatan butonun ayarları
     document.getElementById('btnToggleSidebar').addEventListener('click', () => {
-        document.getElementById('sidebar').classList.toggle('collapsed');
+        const isCollapsed = document.getElementById('sidebar').classList.toggle('collapsed');
         document.getElementById('main-wrapper').classList.toggle('expanded');
+        
+        // Durumu localStorage'a kaydet
+        localStorage.setItem('sidebarState', isCollapsed ? 'collapsed' : 'expanded');
+
         if (window.innerWidth < 992) {
             document.getElementById('sidebar').classList.toggle('show-mobile');
         }
