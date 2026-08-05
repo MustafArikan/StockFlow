@@ -78,7 +78,16 @@ const rafView = createDataView({
     renderRow: (raf) => {
         return `
             <tr data-rafid="${raf.id}">
-                <td class="fw-bold text-primary">${escapeHtml(raf.code)}</td>
+                <td>
+                    <button class="btn btn-sm btn-outline-secondary rounded-pill btn-print-barcode d-inline-flex align-items-center shadow-sm" 
+                            data-barcode="${escapeHtml(raf.code)}" 
+                            data-name="Raf: ${escapeHtml(raf.code)}" 
+                            data-id="${raf.id}"
+                            title="Barkod Çıktısı Al">
+                        <i class="bi bi-upc-scan me-2"></i>
+                        <span class="fw-bold text-primary">${escapeHtml(raf.code)}</span>
+                    </button>
+                </td>
                 <td class="text-end pe-4">
                     <button class="btn btn-sm btn-outline-danger rounded-circle me-2 btn-raf-sil" title="Rafı Sil" data-id="${raf.id}" data-code="${escapeHtml(raf.code)}" >🗑️</button>
                     <button data-id="${raf.id}" data-code="${escapeHtml(raf.code)}" class="btn btn-sm btn-dark rounded-pill px-3 shadow-sm fw-bold btn-raftaki-urunler">Raftaki Ürünleri Görüntüle ➔</button>
@@ -673,6 +682,15 @@ document.addEventListener("DOMContentLoaded", () => {
     kullaniciBilgisiniDoldur();
     depolariYukle();
 
+    // URL'de raf kodu varsa otomatik okutulmuş gibi davran
+    const urlParams = new URLSearchParams(window.location.search);
+    const viewShelfCode = urlParams.get('viewShelfCode');
+    if (viewShelfCode) {
+        setTimeout(() => {
+            islemYapScanner(viewShelfCode);
+        }, 800); // Tabloların yüklenmesi için kısa bir süre bekliyoruz
+    }
+
     // Yetki kontrolü ile butonları gizle
     if (typeof hasPermission === "function") {
         if (!hasPermission("Warehouse.Add")) {
@@ -720,6 +738,12 @@ document.addEventListener("DOMContentLoaded", () => {
     const rafTablosuGovdesi = document.getElementById("rafTablosuGovdesi");
     if (rafTablosuGovdesi) {
         rafTablosuGovdesi.addEventListener("click", (e) => {
+            const btnPrint = e.target.closest(".btn-print-barcode");
+            if (btnPrint) {
+                openBarcodePrintModal(btnPrint.getAttribute("data-barcode"), btnPrint.getAttribute("data-name"), btnPrint.getAttribute("data-id"));
+                return;
+            }
+
             const btnSil = e.target.closest(".btn-raf-sil");
             if (btnSil) {
                 rafSil(btnSil.getAttribute("data-id"), btnSil.getAttribute("data-code"));
@@ -752,5 +776,164 @@ document.addEventListener("DOMContentLoaded", () => {
         if (e.target.id === "btnHizliRafIptal") hizliRafIptal();
     });
 });
+
+// =========================================================================
+// BARKOD ÇİZİM VE YAZDIRMA (PRINT) İŞLEMLERİ (RAF İÇİN)
+// =========================================================================
+function openBarcodePrintModal(barcode, productName, productId) {
+    document.getElementById("barcodeProductName").textContent = productName;
+
+    JsBarcode("#barcodeCanvas", barcode, {
+        format: "CODE128",
+        lineColor: "#000",
+        width: 1.5,
+        height: 60,
+        displayValue: true,
+        fontSize: 14,
+        margin: 10
+    });
+
+    const qrcodeCanvas = document.getElementById("qrcodeCanvas");
+    if (qrcodeCanvas) {
+        new QRious({
+            element: qrcodeCanvas,
+            value: barcode,
+            size: 150,
+            level: 'H'
+        });
+    }
+
+    const btnToggle = document.getElementById("btnToggleCodeType");
+    const barcodeCanvas = document.getElementById('barcodeCanvas');
+    if (barcodeCanvas && qrcodeCanvas && btnToggle) {
+        qrcodeCanvas.classList.add('d-none');
+        qrcodeCanvas.classList.remove('d-flex');
+        barcodeCanvas.classList.remove('d-none');
+        btnToggle.innerHTML = '<i class="bi bi-qr-code me-1"></i> QR Koda Geç';
+        document.querySelector('#barcodePrintModal .modal-title').innerHTML = '<i class="bi bi-printer me-2 text-primary"></i>Barkod Yazdır';
+    }
+
+    const modalInstance = bootstrap.Modal.getOrCreateInstance(document.getElementById('barcodePrintModal'));
+    modalInstance.show();
+}
+
+document.getElementById('btnToggleCodeType')?.addEventListener('click', function() {
+    const barcodeCanvas = document.getElementById('barcodeCanvas');
+    const qrcodeCanvas = document.getElementById('qrcodeCanvas');
+    const isQrVisible = !qrcodeCanvas.classList.contains('d-none');
+
+    if (isQrVisible) {
+        qrcodeCanvas.classList.add('d-none');
+        qrcodeCanvas.classList.remove('d-flex');
+        barcodeCanvas.classList.remove('d-none');
+        this.innerHTML = '<i class="bi bi-qr-code me-1"></i> QR Koda Geç';
+        document.querySelector('#barcodePrintModal .modal-title').innerHTML = '<i class="bi bi-printer me-2 text-primary"></i>Barkod Yazdır';
+    } else {
+        barcodeCanvas.classList.add('d-none');
+        qrcodeCanvas.classList.remove('d-none');
+        qrcodeCanvas.classList.add('d-flex');
+        this.innerHTML = '<i class="bi bi-upc-scan me-1"></i> Barkoda Geç';
+        document.querySelector('#barcodePrintModal .modal-title').innerHTML = '<i class="bi bi-printer me-2 text-primary"></i>QR Kod Yazdır';
+    }
+});
+
+function printBarcode() {
+    const printContent = document.getElementById('printArea').innerHTML;
+    const productName = document.getElementById("barcodeProductName").textContent;
+
+    const bugun = new Date().toLocaleString('tr-TR', {
+        day: '2-digit', month: '2-digit', year: 'numeric',
+        hour: '2-digit', minute: '2-digit'
+    });
+
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write(`
+        <html>
+            <head>
+                <title>${productName} - Barkod Çıktısı</title>
+                <style>
+                    body { text-align: center; font-family: sans-serif; padding: 20px; }
+                    .print-area { display: inline-block; padding: 20px; border: 1px solid #ccc; border-radius: 8px; }
+                    img, canvas { max-width: 100%; height: auto; }
+                    .details { margin-top: 15px; font-size: 14px; color: #555; }
+                </style>
+            </head>
+            <body>
+                <div class="print-area">
+                    ${printContent}
+                    <div class="details">
+                        <strong>${productName}</strong><br/>
+                        ${bugun}
+                    </div>
+                </div>
+            </body>
+        </html>
+    `);
+    printWindow.document.close();
+    printWindow.focus();
+    setTimeout(() => {
+        printWindow.print();
+        printWindow.close();
+    }, 500);
+}
+
+document.getElementById("btnPrintBarcodeAction")?.addEventListener("click", printBarcode);
+
+// =========================================================================
+// BARKOD OKUYUCU DİNLEYİCİ (SCANNER LISTENER)
+// =========================================================================
+let scannerBuffer = "";
+let scannerTimer = null;
+
+document.addEventListener("keydown", (e) => {
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) {
+        return;
+    }
+
+    if (e.key === "Enter") {
+        if (scannerBuffer.length > 2) {
+            e.preventDefault(); // Varsayılan Enter davranışını (linke tıklama, form submit) engelle
+            islemYapScanner(scannerBuffer);
+        }
+        scannerBuffer = "";
+        clearTimeout(scannerTimer);
+        return;
+    }
+
+    if (e.key.length === 1) { 
+        scannerBuffer += e.key;
+        clearTimeout(scannerTimer);
+        scannerTimer = setTimeout(() => {
+            scannerBuffer = ""; 
+        }, 100);
+    }
+});
+
+async function islemYapScanner(barcode) {
+    const btn = document.querySelector(`.btn-raftaki-urunler[data-code="${barcode}"]`);
+    if (btn) {
+        btn.click();
+        basariToast(`"${barcode}" rafı okundu.`);
+        return;
+    }
+
+    try {
+        const sonuc = await apiRequest(`/locations?pageSize=10000`, 'GET');
+        const raflar = sonuc.items || sonuc;
+        const hedefRaf = raflar.find(r => r.code === barcode);
+
+        if (hedefRaf) {
+            document.getElementById("depoListesiGorunumu").classList.add("d-none");
+            document.getElementById("rafListesiGorunumu").classList.add("d-none");
+            aktifDepoId = hedefRaf.warehouseId;
+            raftakiUrunleriGoruntule(hedefRaf.id, hedefRaf.code);
+            basariToast(`"${barcode}" rafı okundu.`);
+        } else {
+            hataGoster(`"${barcode}" kodlu raf sistemde bulunamadı.`);
+        }
+    } catch (e) {
+        console.error("Barkod sorgulanırken hata:", e);
+    }
+}
 
 

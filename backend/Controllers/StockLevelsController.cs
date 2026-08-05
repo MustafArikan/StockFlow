@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using stok_takip.Data;
 using stok_takip.Constants;
+using stok_takip.Attributes;
 
 namespace stok_takip.Controllers;
 
@@ -20,7 +21,7 @@ public class StockLevelsController : ControllerBase
 
     // Ürün ID'sine göre stoku 0'dan büyük olan rafları ve depoları getirir
     [HttpGet("by-product/{productId}")]
-    [Authorize(Policy = Policies.RequireProductRead)]
+    [RequirePermission(Policies.RequireProductRead)]
     public async Task<IActionResult> GetStockByProduct(int productId)
     {
         var stockLevels = await _context.StockLevels
