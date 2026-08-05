@@ -28,6 +28,7 @@ public class CategoriesController : ControllerBase
     }
 
     // GET /api/categories : tüm kategorileri listele
+    [RequirePermission(Policies.RequireCategoryRead)]
     [HttpGet]
     [NormalizePagination]
     public async Task<IActionResult> GetAll([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
@@ -90,6 +91,7 @@ public class CategoriesController : ControllerBase
         return Ok(new CategoryResponseDto(category.Id, category.Name, category.ParentId));
     }
 
+    [RequirePermission(Policies.RequireCategoryRead)]
     [HttpGet("{id}/check-dependencies")]
     public async Task<IActionResult> CheckDependencies(int id)
     {
@@ -201,3 +203,4 @@ public class CategoriesController : ControllerBase
 
 
 }
+

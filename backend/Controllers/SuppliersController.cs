@@ -23,6 +23,7 @@ public class SuppliersController : ControllerBase
     }
 
     // Tedarikçileri Listele
+    [RequirePermission(Policies.RequireSupplierRead)]
     [HttpGet]
     public async Task<IActionResult> GetAll()
     {
@@ -109,3 +110,4 @@ public class SuppliersController : ControllerBase
     }
     
 }
+

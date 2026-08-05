@@ -9,6 +9,7 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
     <link href="css/style.css?v=mobile-v1" rel="stylesheet">
+    <link href="css/import-wizard.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/nouislider@15.7.1/dist/nouislider.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/nouislider@15.7.1/dist/nouislider.min.js"></script>
     <script src="js/theme.js"></script>
@@ -29,16 +30,9 @@
             </div>
             <div class="d-flex gap-2">
                 <!-- 🎯 TOPLU VERİ İÇE AKTARMA (EXCEL IMPORT) ALANI -->
-                <div class="d-flex align-items-center gap-2 bg-white rounded-pill shadow-sm px-2 py-1 border">
-                    <input type="file" id="excelImportFile" class="d-none" accept=".xlsx">
-                    <label for="excelImportFile" class="btn btn-sm btn-light rounded-pill mb-0 border cursor-pointer">
-                        <i class="bi bi-paperclip"></i> Seç
-                    </label>
-                    <span id="excelFileName" class="text-muted small text-truncate file-name-truncate">Dosya yok</span>
-                    <button class="btn btn-sm btn-success rounded-pill px-3 ms-1" type="button" id="btnExcelImport">
-                        <i class="bi bi-upload"></i> Yükle
-                    </button>
-                </div>
+                <button class="btn btn-success rounded-pill px-3 shadow-sm text-nowrap" data-bs-toggle="modal" data-bs-target="#importWizardModal">
+                    <i class="bi bi-upload"></i> Toplu Excel Aktar
+                </button>
                 <button class="btn btn-primary rounded-pill px-4 shadow-sm text-nowrap" data-bs-toggle="modal"
                     data-bs-target="#urunModal">+ Yeni Ürün Ekle</button>
             </div>
@@ -51,7 +45,7 @@
             <div class="card-body p-4">
                 <!-- Arama ve Filtreleme Alanı -->
                 <div class="row g-3 mb-4 align-items-center">
-                    <div class="col-md-4">
+                    <div class="col-12 col-lg-4 col-xl-4">
                         <div class="position-relative d-flex align-items-center">
                             <span class="position-absolute ms-3 text-muted"><i class="bi bi-search"></i></span>
                             <input type="text" id="aramaKutusu" class="form-control rounded-pill ps-5 pe-5"
@@ -63,16 +57,16 @@
                             </button>
                         </div>
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-12 col-sm-6 col-lg-3 col-xl-3">
                         <div id="filtreKategoriContainer" class="d-flex flex-column gap-2"></div>
                         <input type="hidden" id="filtreKategoriId" value="">
                     </div>
-                    <div class="col-md-2">
+                    <div class="col-12 col-sm-6 col-lg-2 col-xl-2">
                         <button type="button" id="btnFiltreleriTemizle"
                             class="btn btn-outline-secondary rounded-pill w-100">Temizle</button>
                     </div>
                     <!-- 🎯 ÇEŞİTLİ FORMATLARDA DIŞA AKTARMA (EXPORT) BUTONLARI -->
-                    <div class="col-md-3 d-flex justify-content-end gap-1">
+                    <div class="col-12 col-lg-3 col-xl-3 d-flex justify-content-lg-end flex-wrap gap-2 mt-3 mt-lg-0">
                         <button id="btnExportExcel"
                             class="btn btn-success btn-sm rounded-pill px-3 shadow-sm text-nowrap"
                             title="Excel Olarak İndir">
@@ -272,6 +266,68 @@
         </div>
     </div>
 
+    <!-- Excel İçe Aktarma Sihirbazı Modalı -->
+    <div class="modal fade" id="importWizardModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+      <div class="modal-dialog modal-xl modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+          <div class="modal-header bg-light border-bottom-0 rounded-top-4 py-3">
+            <h5 class="modal-title fw-bold text-dark">
+                <i class="bi bi-file-earmark-excel me-2 text-success"></i> EXCEL'DEN TOPLU ÜRÜN AKTAR
+            </h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" id="btnCloseImportWizard"></button>
+          </div>
+          <div class="modal-body p-4">
+            <!-- Adım göstergesi -->
+            <div id="importStepIndicator" class="import-step-indicator mb-4 d-flex justify-content-center gap-3"></div>
+    
+            <!-- Adım içerikleri: her biri JS ile show/hide edilir (d-none class toggle) -->
+            <div id="importStep1" class="import-step">
+                <div class="text-center py-5 bg-white border rounded-3 border-dashed">
+                    <i class="bi bi-cloud-arrow-up display-1 text-muted mb-3"></i>
+                    <h5>Dosya Yükle</h5>
+                    <p class="text-muted small">Aktarmak istediğiniz .xlsx formatındaki dosyayı seçin (Maks 10MB)</p>
+                    <input type="file" id="excelImportFile" class="d-none" accept=".xlsx">
+                    <label for="excelImportFile" class="btn btn-primary rounded-pill px-4 mt-2">
+                        <i class="bi bi-folder2-open me-2"></i> Dosya Seç
+                    </label>
+                    <div id="importStep1Loading" class="d-none mt-3">
+                        <div class="spinner-border text-primary spinner-border-sm me-2"></div> Dosya analiz ediliyor...
+                    </div>
+                </div>
+            </div>
+            <div id="importStep2" class="import-step d-none bg-white p-4 rounded-3 border">
+                <h6 class="fw-bold mb-3 text-primary"><i class="bi bi-arrow-left-right me-2"></i> Sütun Eşleştirme</h6>
+                <p class="small text-muted mb-4">Lütfen Excel dosyanızdaki sütunların sistemdeki hangi alana denk geldiğini seçin. Otomatik eşleşenleri kontrol edin.</p>
+                <div id="importStep2Content" class="row g-4"></div>
+            </div>
+            <div id="importStep3" class="import-step d-none bg-white p-4 rounded-3 border">
+                <h6 class="fw-bold mb-3 text-primary"><i class="bi bi-diagram-3 me-2"></i> Değer Eşleştirme</h6>
+                <p class="small text-muted mb-4">Sistemde önceden tanımlı olması gereken bazı alanlar (örn. Kategori) için Excel'deki eşsiz değerleri sistemdeki değerlerle eşleştirin.</p>
+                
+                <div class="mb-4">
+                    <label class="form-label text-muted small fw-bold">Yerleştirilecek Depo (Tüm Ürünler İçin) <span class="text-danger">*</span></label>
+                    <select class="form-select" id="importWarehouseId">
+                        <option value="">Depo Seçin...</option>
+                    </select>
+                </div>
+                <div class="mb-4">
+                    <label class="form-label text-muted small fw-bold">Yerleştirilecek Raf (Tüm Ürünler İçin) <span class="text-danger">*</span></label>
+                    <select class="form-select" id="importLocationId" disabled>
+                        <option value="">Önce depo seçin...</option>
+                    </select>
+                </div>
+
+                <div id="importStep3Content"></div>
+            </div>
+          </div>
+          <div class="modal-footer bg-light border-top-0 rounded-bottom-4">
+            <button type="button" class="btn btn-outline-secondary rounded-pill px-4 fw-bold d-none" id="btnImportBack">Geri</button>
+            <button type="button" class="btn btn-success rounded-pill px-5 fw-bold shadow-sm d-none" id="btnImportNext">İleri</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Kamera Tarayıcı Modalı -->
     <div class="modal fade bottom-sheet-modal" id="scannerModalUrunler" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
@@ -307,6 +363,7 @@
     <script src="js/dynamic-ui.js?v=4"></script>
     <script src="js/product-detail.js"></script>
     <script src="js/products.js?v=4"></script>
+    <script src="js/products-import-wizard.js" defer></script>
     <script src="js/auth.js?v=4"></script>
 </body>
 

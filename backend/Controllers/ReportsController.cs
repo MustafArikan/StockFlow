@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using stok_takip.Constants;
+using stok_takip.Attributes;
 using Microsoft.EntityFrameworkCore;
 using stok_takip.Data;
 
@@ -18,6 +20,7 @@ namespace stok_takip.Controllers
         }
 
         // DASHBOARD KARTLARI İÇİN ÖZET BİLGİLER 
+        [RequirePermission(Policies.RequireDashboardRead)]
         [HttpGet("dashboard-summary")]
         public async Task<IActionResult> GetDashboardSummary()
         {
@@ -73,6 +76,7 @@ namespace stok_takip.Controllers
         }
 
         // SON 30 GÜNÜN HAREKET TRENDİ
+        [RequirePermission(Policies.RequireReportRead)]
         [HttpGet("trend")]
         public async Task<IActionResult> GetTrend([FromQuery] int? productId)
         {
@@ -113,6 +117,7 @@ namespace stok_takip.Controllers
         }
 
         // KATEGORİLERE GÖRE STOK DAĞILIMI
+        [RequirePermission(Policies.RequireReportRead)]
         [HttpGet("by-category")]
         public async Task<IActionResult> GetByCategory()
         {
@@ -145,6 +150,7 @@ namespace stok_takip.Controllers
         }
 
         // EN ÇOK HAREKET GÖREN ÜRÜNLER 
+        [RequirePermission(Policies.RequireReportRead)]
         [HttpGet("top-products")]
         public async Task<IActionResult> GetTopProducts()
         {
@@ -177,6 +183,7 @@ namespace stok_takip.Controllers
         }
 
         // HAREKET ÖZETİ (Giriş/Çıkış/Transfer Toplamları)
+        [RequirePermission(Policies.RequireReportRead)]
         [HttpGet("movement-summary")]
         public async Task<IActionResult> GetMovementSummary()
         {

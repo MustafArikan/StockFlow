@@ -24,6 +24,7 @@ public class WarehousesController : ControllerBase
     {
         _context = context;
     }
+    [RequirePermission(Policies.RequireWarehouseRead)]
     [HttpGet("{id}/stocks")]
     public async Task<IActionResult> GetWarehouseStocks(int id)
     {
@@ -45,6 +46,7 @@ public class WarehousesController : ControllerBase
         return Ok(stocks);
     }
     // GET /api/warehouses tüm depoları listeleme
+    [RequirePermission(Policies.RequireWarehouseRead)]
     [HttpGet]
     [NormalizePagination]
     public async Task<IActionResult> GetAll([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
@@ -68,6 +70,7 @@ public class WarehousesController : ControllerBase
     }
 
     // GET /api/warehouses/5 tek bir depoyu getir
+    [RequirePermission(Policies.RequireWarehouseRead)]
     [HttpGet("{id}")]
     public async Task<IActionResult> GetById(int id)
     {
@@ -151,3 +154,4 @@ public class WarehousesController : ControllerBase
 
 
 }
+

@@ -5,12 +5,15 @@ using stok_takip.Data;
 using stok_takip.Models;
 using System.Security.Claims;
 
+using stok_takip.Constants;
+
+using stok_takip.Attributes;
+
 namespace stok_takip.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-
-    [Authorize]
+    [RequirePermission(Policies.RequireNotificationRead)]
     public class NotificationsController : ControllerBase
     {
         private readonly AppDbContext _context;
