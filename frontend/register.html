@@ -43,10 +43,14 @@
                 <div class="mb-4">
                     <label for="regPassword" class="form-label fw-bold small text-muted">Şifre</label>
                     <div class="input-group">
-                        <input type="password" class="form-control" id="regPassword" required placeholder="En az 6 karakter, harf ve rakam">
+                        <input type="password" class="form-control" id="regPassword" required minlength="8"
+                            placeholder="En az 8 karakter: büyük/küçük harf, rakam, özel karakter">
                         <button class="btn btn-outline-secondary toggle-password" type="button" data-target="regPassword">
                             <i class="bi bi-eye-slash"></i>
                         </button>
+                    </div>
+                    <div id="regPasswordHint" class="form-text small">
+                        Şifreniz en az 8 karakter olmalı; en az bir büyük harf, bir küçük harf, bir rakam ve bir özel karakter (örn. <code>!@#$%</code>) içermelidir.
                     </div>
                 </div>
                 <div class="mb-4">

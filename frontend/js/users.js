@@ -260,6 +260,16 @@ async function kullaniciKaydet(e) {
     }
 
     const pwd = document.getElementById("password").value;
+
+    if (!isUpdate && !pwd) {
+        return Swal.fire('Hata', 'Yeni kullanıcı için şifre zorunludur.', 'error');
+    }
+
+    // Backend (CreateUserDto/UpdateUserDto) ile AYNI kural: en az 8 karakter, büyük/küçük harf, rakam, özel karakter.
+    if (pwd && !/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^\da-zA-Z]).{8,}$/.test(pwd)) {
+        return Swal.fire('Hata', 'Şifre en az 8 karakter olmalı; en az bir büyük harf, bir küçük harf, bir rakam ve bir özel karakter içermelidir.', 'error');
+    }
+
     if (pwd) dto.password = pwd;
 
     const url = isUpdate ? `${CONFIG.API_BASE_URL}/users/${id}` : `${CONFIG.API_BASE_URL}/users`;
