@@ -57,8 +57,8 @@ public async Task<IActionResult> Register([FromBody] RegisterDto dto)
             return BadRequest(new {message = "The email you have provided is already associated with an account. Sign in or reset your password."});
         }
 
-        var viewerRole = await _context.AppRoles.FirstOrDefaultAsync(r => r.Name == "viewer");
-        if (viewerRole == null) return BadRequest(new { message = "Varsayılan rol bulunamadı." });
+        var defaultRole = await _context.AppRoles.FirstOrDefaultAsync(r => r.Name == "Default");
+        if (defaultRole == null) return BadRequest(new { message = "Varsayılan rol bulunamadı." });
 
         var verificationCode = System.Security.Cryptography.RandomNumberGenerator.GetInt32(100000, 1000000).ToString();  // 6 haneli doğrulama kodu
 
@@ -67,7 +67,7 @@ public async Task<IActionResult> Register([FromBody] RegisterDto dto)
             FirstName = dto.FirstName,
             LastName = dto.LastName,
             Email = dto.Email,
-            RoleId = viewerRole.Id,  // Varsayılan rol
+            RoleId = defaultRole.Id,  // Varsayılan rol
             IsEmailConfirmed = false,
             EmailConfirmationCode = _passwordHasher.HashPassword(null, verificationCode),
             ConfirmationCodeExpiry = DateTime.UtcNow.AddMinutes(10)  // Kodun geçerlilik süresi 10 dakika
