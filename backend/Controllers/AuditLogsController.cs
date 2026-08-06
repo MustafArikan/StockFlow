@@ -64,7 +64,7 @@ namespace stok_takip.Controllers
         [RequirePermission(Policies.RequireAuditLogRead)]
         [EnableRateLimiting(Policies.RequireAuditLogRead)]
         [NormalizePagination]
-        public async Task<IActionResult> GetByUserId(int userId, [FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 50)
+        public async Task<IActionResult> GetByUserId([System.ComponentModel.DataAnnotations.Range(1, int.MaxValue)] int userId, [FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 50)
         {
             var query = _context.SecurityAuditLogs.AsNoTracking().Where(l => l.UserId == userId);
 

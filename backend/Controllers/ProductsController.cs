@@ -37,6 +37,7 @@ public class ProductsController : ControllerBase
             .AsNoTracking()
             .Where(p => !p.IsDeleted)
             .Include(p => p.Category)
+            .Include(p => p.ProductSuppliers).ThenInclude(ps => ps.Supplier)
             .Skip((pageNumber - 1) * pageSize)
             .Take(pageSize)
             .Select(p => new 
@@ -49,6 +50,10 @@ public class ProductsController : ControllerBase
                 CategoryName = p.Category.Name,
                 StockQuantity = p.StockLevels.Sum(sl => sl.Quantity),
                 AttributesStr = p.Attributes,
+                Price = p.Price,
+                ProductSuppliers = p.ProductSuppliers.Select(ps => new ProductSupplierResponseDto(
+                    ps.Id, ps.SupplierId, ps.Supplier.Name, ps.PurchasePrice, ps.SupplierProductCode, ps.LeadTimeDays, ps.IsPreferred
+                )).ToList(),
                 CreatedAt = p.CreatedAt
             })
             .ToListAsync();
@@ -62,6 +67,8 @@ public class ProductsController : ControllerBase
             CategoryId = p.CategoryId,
             CategoryName = p.CategoryName,
             StockQuantity = p.StockQuantity,
+            Price = p.Price,
+            ProductSuppliers = p.ProductSuppliers,
             CreatedAt = p.CreatedAt,
             Attributes = string.IsNullOrEmpty(p.AttributesStr) ? new List<ProductAttributeDto>() : System.Text.Json.JsonSerializer.Deserialize<List<ProductAttributeDto>>(p.AttributesStr)
         }).ToList();
@@ -323,6 +330,7 @@ public class ProductsController : ControllerBase
     // SKU (BARKOD) OTOMATİK ÜRETİM (Generate SKU)
     // =========================================================================
     [HttpPost("generate-sku")]
+    [RequirePermission(Policies.RequireProductWrite)]
     [Authorize]
     public async Task<IActionResult> GenerateSku([FromBody] GenerateSkuDto dto)
     {

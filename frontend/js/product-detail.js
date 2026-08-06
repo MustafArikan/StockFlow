@@ -29,6 +29,19 @@ async function urunDetayAc(productId, secenekler = {}) {
         console.warn("Stok detayları alınamadı:", e);
     }
 
+    // Ürün stok hareketlerini çek
+    let stokHareketleri = [];
+    try {
+        const hareketlerCevap = await fetch(`${CONFIG.API_BASE_URL}/stock/movements/product/${productId}`, {
+            headers: { "Authorization": `Bearer ${token}` }
+        });
+        if (hareketlerCevap.ok) {
+            stokHareketleri = await hareketlerCevap.json();
+        }
+    } catch (e) {
+        console.warn("Stok hareketleri alınamadı:", e);
+    }
+
     aktifDetayUrunId = productId;
     
     // Model Bilgisini Çıkarma
@@ -95,21 +108,36 @@ async function urunDetayAc(productId, secenekler = {}) {
         stokFooter.classList.add("d-none");
     }
 
-    // 3. Sekme: Tedarikçi Yönetimi Alanlarını Göster/Gizle
-    const tedarikciYonetimiAlani = document.getElementById("detayTedarikciYonetimAlani");
-    const tedarikciIslemBasligi = document.getElementById("detayTedarikciIslemSutunuBasligi");
-    
-    if (secenekler.tedarikciYonetimi) {
-        tedarikciYonetimiAlani.classList.remove("d-none");
-        tedarikciIslemBasligi.classList.remove("d-none");
-        tedarikciSecenekleriniYukle();
+    // 5. Sekme: Stok Hareketleri
+    const hareketlerListesi = document.getElementById("detayStokHareketleriListesi");
+    if (stokHareketleri && stokHareketleri.length > 0) {
+        hareketlerListesi.innerHTML = stokHareketleri.map(h => {
+            let badgeClass = h.movementType === 'IN' ? 'bg-success' : (h.movementType === 'OUT' ? 'bg-danger' : 'bg-info');
+            let typeText = h.movementType === 'IN' ? 'Giriş' : (h.movementType === 'OUT' ? 'Çıkış' : 'Transfer');
+            let miktarPrefix = h.movementType === 'OUT' ? '-' : '+';
+            if (h.movementType === 'TRANSFER') miktarPrefix = '';
+
+            return `
+            <tr>
+                <td class="text-muted small fw-semibold">${tarihFormatla(h.date)}</td>
+                <td><span class="badge ${badgeClass} rounded-pill px-3">${typeText}</span></td>    
+                <td class="fw-bold">${miktarPrefix}${h.quantity}</td>    
+                <td class="small text-secondary fw-semibold">${escapeHtml(h.personel)}</td>    
+                <td class="small text-muted text-break" title="${escapeHtml(h.description || '')}">${escapeHtml(h.description || '-')}</td>    
+            </tr>`;
+        }).join('');
     } else {
-        tedarikciYonetimiAlani.classList.add("d-none");
-        tedarikciIslemBasligi.classList.add("d-none");
+        hareketlerListesi.innerHTML = `<tr><td colspan="5" class="text-muted fst-italic text-center py-4">Bu ürün için henüz stok hareketi bulunmuyor.</td></tr>`;
     }
 
-    // Tedarikçi listesini çek ve tabloyu güncelle
-    detayTedarkciYukle(productId, secenekler.tedarikciYonetimi);                        
+    // 3. Sekme: Tedarikçi Yönetimi Alanlarını Göster/Gizle (Sadece Görüntüleme)
+    const tedarikciIslemBasligi = document.getElementById("detayTedarikciIslemSutunuBasligi");
+    if (tedarikciIslemBasligi) {
+        tedarikciIslemBasligi.classList.add("d-none"); // Her zaman gizli
+    }
+
+    // Tedarikçi listesini çek ve tabloyu güncelle (Sadece Görüntüleme)
+    detayTedarkciYukle(productId, false);                        
     
     // Modalı her açılışta 1. sekmeye (Temel Bilgiler) sıfırla
     const carousel = document.getElementById('urunDetayCarousel');
@@ -151,90 +179,4 @@ async function detayTedarkciYukle(productId, yonetim = false) {
         tablo.innerHTML = `<tr><td colspan="3" class="text-center text-danger py-4">${escapeHtml(hata.message)}</td></tr>`;
     }
 }
-
-
-async function tedarikciSecenekleriniYukle () {
-    try {
-        const cevap = await fetch(`${CONFIG.API_BASE_URL}/suppliers?pageSize=1000`, {
-            method: "GET",
-            headers: { "Authorization": `Bearer ${token}` }
-        });
-
-        if (!cevap.ok) throw new Error("Tedarikçiler alınamadı.");
-
-        const data = await cevap.json();
-        const tedarikciler = data.items || data;
-        const select = document.getElementById("detayTedarikciSelect");
-
-        if (select) {
-            select.innerHTML = '<option value="">Tedarikçi seçin...</option>';
-            tedarikciler.forEach(tedarikci => {
-                const option = document.createElement("option");
-                option.value = tedarikci.id;
-                option.textContent = tedarikci.name;
-                select.appendChild(option);
-            });
-        }
-    } catch (hata) {
-        console.error("Tedarikçi dropdown yükleme hatası:", hata);
-        const select = document.getElementById("detayTedarikciSelect");
-        if(select) select.innerHTML = '<option value="" disabled>Yüklenemedi!</option>';
-    }
-}
-
-document.addEventListener("click", async (e) => {
-    if (e.target.closest("#btnDetayTedarikciEkle")) {
-            const supplierId = document.getElementById("detayTedarikciSelect").value;
-            const fiyat = document.getElementById("detayTedarikciFiyat").value;
-            
-            if (!supplierId) {
-                uyariGoster("Lütfen tedarikçi seçin."); 
-                return;
-            }
-            const veri ={
-                supplierId: parseInt(supplierId),
-                purchasePrice: fiyat ? parseFloat(fiyat): null,
-                supplierProductCode: null,
-                leadTimeDays: null,
-                isPreferred: false
-            };
-            try{
-            const cevap = await fetch(`${CONFIG.API_BASE_URL}/products/${aktifDetayUrunId}/suppliers`, {
-                method:"POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "Authorization": `Bearer ${token}`
-                },
-                body: JSON.stringify(veri)
-            });
-
-            if(!cevap.ok) throw new Error(await cevap.text() || "Bağlama başarısız.");
-
-            detayTedarkciYukle(aktifDetayUrunId, true);
-            document.getElementById("detayTedarikciSelect").value = "";
-            document.getElementById("detayTedarikciFiyat").value  = "";
-
-            }catch(hata){
-                hataGoster("Hata: " + hata.message);
-            }
-        };
-    const kaldirBtn = e.target.closest(".btn-tedarikci-kaldir");
-    if (kaldirBtn) {
-            if (!(await onayla("Bu tedarikçi bağını kaldırmak istiyor musunuz?", "Evet, kaldır"))) return;
-            const sid = kaldirBtn.getAttribute("data-sid");
-            try{
-                const cevap = await fetch(`${CONFIG.API_BASE_URL}/products/${aktifDetayUrunId}/suppliers/${sid}`, {
-                    method: "DELETE",
-                    headers: { "Authorization": `Bearer ${token}` }
-                });
-
-                if (!cevap.ok) throw new Error("Silme başarısız.");
-                detayTedarkciYukle(aktifDetayUrunId, true);
-            } catch (hata) {
-                hataGoster("Tedarikçi silinemedi: " + hata.message);
-            }
-
-        }
-
-    
-});
+

@@ -798,7 +798,11 @@ function openBarcodePrintModal(barcode, productName, productId) {
         new QRious({
             element: qrcodeCanvas,
             value: barcode,
-            size: 150,
+            size: 120,
+            background: 'white',
+            backgroundAlpha: 1,
+            foreground: 'black',
+            foregroundAlpha: 1,
             level: 'H'
         });
     }
@@ -846,34 +850,71 @@ function printBarcode() {
         hour: '2-digit', minute: '2-digit'
     });
 
-    const printWindow = window.open('', '_blank');
-    printWindow.document.write(`
-        <html>
-            <head>
-                <title>${productName} - Barkod Çıktısı</title>
-                <style>
-                    body { text-align: center; font-family: sans-serif; padding: 20px; }
-                    .print-area { display: inline-block; padding: 20px; border: 1px solid #ccc; border-radius: 8px; }
-                    img, canvas { max-width: 100%; height: auto; }
-                    .details { margin-top: 15px; font-size: 14px; color: #555; }
-                </style>
-            </head>
-            <body>
-                <div class="print-area">
-                    ${printContent}
-                    <div class="details">
-                        <strong>${productName}</strong><br/>
-                        ${bugun}
-                    </div>
-                </div>
-            </body>
+    let oldFrame = document.getElementById('print-iframe');
+    if (oldFrame) oldFrame.remove();
+
+    const iframe = document.createElement('iframe');
+    iframe.id = 'print-iframe';
+
+    // CSP Uyumlu: Inline style yerine HTML attribute ve Bootstrap class'ları kullanıyoruz
+    iframe.className = 'position-fixed bottom-0 end-0 border-0 opacity-0';
+    iframe.setAttribute('width', '0');
+    iframe.setAttribute('height', '0');
+    // opacity-0 kullandık çünkü bazı tarayıcılar display:none olan iframe'leri yazdırmaz
+
+    document.body.appendChild(iframe);
+
+    const iframeDoc = iframe.contentWindow.document;
+    iframeDoc.open();
+
+    // Canvas elementini img etiketine çevirerek inline style hatalarının önüne geçiyoruz (CSP'ye takılmaz)
+    let safePrintContent = printContent.replace(/<canvas[^>]*id=["']qrcodeCanvas["'][^>]*><\/canvas>/gi, () => {
+        const qrCanvas = document.getElementById('qrcodeCanvas');
+        if (qrCanvas) {
+            const dataUrl = qrCanvas.toDataURL("image/png");
+            // Sadece qrcode açıldıysa img olarak renderla, gizliyse d-none koy
+            const isHidden = qrCanvas.classList.contains('d-none');
+            const classStr = isHidden ? "mx-auto d-none justify-content-center" : "mx-auto mt-2 d-flex justify-content-center";
+            return `<img id="qrcodeCanvasImg" src="${dataUrl}" class="${classStr}" alt="QR Kod">`;
+        }
+        return '';
+    });
+
+    // JsBarcode'un ürettiği olası style etiketlerini temizle
+    safePrintContent = safePrintContent.replace(/style\s*=\s*['"]display:\s*none;?['"]/gi, 'class="d-none"');
+    safePrintContent = safePrintContent.replace(/ style\s*=\s*['"][^'"]*['"]/gi, '');
+
+    iframeDoc.write(`
+        <!DOCTYPE html>
+        <html lang="tr">
+        <head>
+            <title>Etiket</title>
+            <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+            <link href="css/style.css" rel="stylesheet">
+        </head>
+        <body class="d-flex flex-column justify-content-center align-items-center bg-white vh-100 m-0 p-0 overflow-hidden text-center">
+            
+            <!-- Üst Kısım: Tarih -->
+            <div class="text-muted fw-bold mb-2 fs-07rem ls-1px">
+                ${bugun}
+            </div>
+            
+            <!-- Orta Kısım: Barkod Görseli -->
+            ${safePrintContent}
+            
+            <!-- Alt Kısım: Ürün Adı -->
+            <div class="mt-2 fw-bold text-dark fs-6">
+                ${escapeHtml(productName)}
+            </div>
+
+        </body>
         </html>
     `);
-    printWindow.document.close();
-    printWindow.focus();
+    iframeDoc.close();
+
     setTimeout(() => {
-        printWindow.print();
-        printWindow.close();
+        iframe.contentWindow.focus();
+        iframe.contentWindow.print();
     }, 500);
 }
 

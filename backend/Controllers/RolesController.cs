@@ -81,6 +81,7 @@ public class RolesController : ControllerBase
                 Name = r.Name,
                 Description = r.Description,
                 IsSystemRole = r.IsSystemRole,
+                Level = r.Level,
                 UserCount = r.Users.Count(u => !u.IsDeleted),
                 PermissionIds = r.RolePermissions.Select(rp => rp.PermissionId).ToList()
             })
@@ -122,6 +123,7 @@ public class RolesController : ControllerBase
             Name = role.Name,
             Description = role.Description,
             IsSystemRole = role.IsSystemRole,
+            Level = role.Level,
             UserCount = role.Users.Count(u => !u.IsDeleted),
             PermissionIds = role.RolePermissions.Select(rp => rp.PermissionId).ToList()
         };
@@ -142,6 +144,7 @@ public class RolesController : ControllerBase
         {
             Name = dto.Name,
             Description = dto.Description,
+            Level = dto.Level,
             IsSystemRole = false
         };
 
@@ -186,10 +189,11 @@ public class RolesController : ControllerBase
             return BadRequest("Role with the same name already exists.");
         }
         
-        var oldValues = new { role.Name, role.Description, PermissionIds = role.RolePermissions.Select(rp => rp.PermissionId).ToList() };
+        var oldValues = new { role.Name, role.Description, role.Level, PermissionIds = role.RolePermissions.Select(rp => rp.PermissionId).ToList() };
 
         role.Name = dto.Name;
         role.Description = dto.Description;
+        role.Level = dto.Level;
 
         if (dto.PermissionIds != null)
         {

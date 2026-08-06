@@ -145,6 +145,11 @@ public class CategoriesController : ControllerBase
         if (category== null)
         return NotFound();
 
+        var hasChildren = await _context.Categories.AnyAsync(c => c.ParentId == id && !c.IsDeleted);
+        var hasProducts = await _context.Products.AnyAsync(p => p.CategoryId == id && !p.IsDeleted);
+        if (hasChildren || hasProducts)
+            return BadRequest(new { message = "Bu kategoriye bağlı ürün veya alt kategori var, silinemez." });
+
         category.IsDeleted = true; // Soft delete
         await _context.SaveChangesAsync();
         return NoContent();

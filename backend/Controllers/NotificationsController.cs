@@ -55,15 +55,16 @@ namespace stok_takip.Controllers
                     return BadRequest(new { message = "Only administrators can dismiss DANGER or EMPTY_STOCK alerts. Please contact your manager." });
                 }
 
-                // Log into the message itself to keep a permanent record
-                var userEmail = User.FindFirst(ClaimTypes.Email)?.Value 
-                    ?? User.FindFirst("http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress")?.Value 
-                    ?? "Admin";
-                
-                if (!notification.Message.Contains("[ONAYLAYAN:")) 
+                _context.SecurityAuditLogs.Add(new SecurityAuditLog
                 {
-                    notification.Message = $"[ONAYLAYAN: {userEmail} - {DateTime.Now:dd.MM.yyyy HH:mm}] {notification.Message}";
-                }
+                    UserId = int.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var uid) ? uid : null,
+                    ActionType = "DismissAlert",
+                    EntityName = "Notification",
+                    EntityId = notification.Id,
+                    IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "127.0.0.1",
+                    OldValues = null,
+                    NewValues = System.Text.Json.JsonSerializer.Serialize(new { severity = notification.Severity })
+                });
             }
 
             notification.IsRead = true;
@@ -76,14 +77,13 @@ namespace stok_takip.Controllers
         [HttpPost("read-all")]
         public async Task<IActionResult> MarkAllAsRead()
         {
-            var userRole = User.FindFirst(ClaimTypes.Role)?.Value;
-            
             IQueryable<Notification> query = _context.Notifications.Where(n => !n.IsRead);
             
             // EMPTY_STOCK kesinlikle tek tek "sonucunu anlıyorum" denerek onaylanmalı, toplu okundu yapılamaz!
             query = query.Where(n => n.Severity != "EMPTY_STOCK");
 
-            if (userRole != "admin")
+            bool isAdminOrAbove = User.IsInRole("admin") || User.IsInRole("superadmin");
+            if (!isAdminOrAbove)
             {
                 query = query.Where(n => n.Severity != "DANGER");
             }
