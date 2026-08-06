@@ -323,6 +323,7 @@ public class ProductsController : ControllerBase
     // SKU (BARKOD) OTOMATİK ÜRETİM (Generate SKU)
     // =========================================================================
     [HttpPost("generate-sku")]
+    [RequirePermission(Policies.RequireProductWrite)]
     [Authorize]
     public async Task<IActionResult> GenerateSku([FromBody] GenerateSkuDto dto)
     {

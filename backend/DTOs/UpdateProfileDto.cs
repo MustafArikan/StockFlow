@@ -6,10 +6,12 @@ public class UpdateProfileDto
 {
     [Required(ErrorMessage = "Ad boş bırakılamaz.")]
     [StringLength(50, MinimumLength = 2)]
+    [RegularExpression(@"^[a-zA-ZğüşıöçĞÜŞİÖÇ\s'-]+$", ErrorMessage = "İsim sadece harf içerebilir.")]
     public string FirstName { get; set; } = string.Empty;
 
     [Required(ErrorMessage = "Soyad boş bırakılamaz.")]
     [StringLength(50, MinimumLength = 2)]
+    [RegularExpression(@"^[a-zA-ZğüşıöçĞÜŞİÖÇ\s'-]+$", ErrorMessage = "İsim sadece harf içerebilir.")]
     public string LastName { get; set; } = string.Empty;
 
     [Required(ErrorMessage = "E-posta boş bırakılamaz.")]

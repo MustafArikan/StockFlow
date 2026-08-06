@@ -9,6 +9,8 @@ namespace stok_takip.DTOs
         [Required] public Guid SessionId { get; set; }
         [Required] public Dictionary<string, string> ColumnMapping { get; set; } = new();
         public Dictionary<string, Dictionary<string, string>> ValueMappings { get; set; } = new();
-        [Required] public int TargetLocationId { get; set; }
+        [Required]
+        [Range(1, int.MaxValue, ErrorMessage = "Geçerli bir hedef raf seçilmelidir.")]
+        public int TargetLocationId { get; set; }
     }
 }

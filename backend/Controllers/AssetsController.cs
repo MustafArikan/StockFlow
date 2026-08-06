@@ -17,10 +17,12 @@ namespace stok_takip.Controllers;
 public class AssetsController : ControllerBase
 {
     private readonly AppDbContext _context;
+    private readonly ILogger<AssetsController> _logger;
 
-    public AssetsController(AppDbContext context)
+    public AssetsController(AppDbContext context, ILogger<AssetsController> logger)
     {
         _context = context;
+        _logger = logger;
     }
 
     // --- 1. YENİ EKİPMAN KAYIT İŞLEMİ ---
@@ -112,10 +114,17 @@ public class AssetsController : ControllerBase
 
             return Ok(new { message = "Ekipman başarıyla oluşturuldu ve stoktan düşüldü.", assetId = newAsset.Id });
         }
+        catch (DbUpdateConcurrencyException ex)
+        {
+            await transaction.RollbackAsync();
+            _logger.LogError(ex, "Ekipman kaydedilirken eşzamanlılık hatası oluştu");
+            return Conflict(new { message = "Stok bilgisi başka bir işlem tarafından değiştirildi. Lütfen tekrar deneyin." });
+        }
         catch (Exception ex)
         {
             await transaction.RollbackAsync(); // Hata çıkarsa stok düşüşünü geri al
-            return StatusCode(500, new { message = "Ekipman kaydedilirken hata oluştu: " + ex.Message });
+            _logger.LogError(ex, "Ekipman kaydedilirken hata oluştu");
+            return StatusCode(500, new { message = "Ekipman kaydedilirken hata oluştu." });
         }
     }
 
@@ -291,7 +300,8 @@ public class AssetsController : ControllerBase
         catch (Exception ex)
         {
             await transaction.RollbackAsync();
-            return StatusCode(500, new { message = "Ekipman teslim alınırken hata oluştu: " + ex.Message });
+            _logger.LogError(ex, "Ekipman teslim alınırken hata oluştu");
+            return StatusCode(500, new { message = "Ekipman teslim alınırken hata oluştu." });
         }
     }
 
@@ -453,7 +463,8 @@ public class AssetsController : ControllerBase
         catch (Exception ex)
         {
             await transaction.RollbackAsync();
-            return StatusCode(500, new { message = "Ekipman pasife alınırken bir hata oluştu: " + ex.Message });
+            _logger.LogError(ex, "Ekipman pasife alınırken bir hata oluştu");
+            return StatusCode(500, new { message = "Ekipman pasife alınırken bir hata oluştu." });
         }
     }
 

@@ -75,6 +75,9 @@ public class AttributeRulesController : ControllerBase
     [RequirePermission(Policies.RequireCategoryWrite)]
     public async Task<IActionResult> Create([FromBody] stok_takip.DTOs.CreateAttributeRuleDto dto)
     {
+        if (dto.MinValue.HasValue && dto.MaxValue.HasValue && dto.MinValue > dto.MaxValue)
+            return BadRequest(new { message = "Minimum değer maksimum değerden büyük olamaz." });
+
         if (dto.CategoryId.HasValue)
         {
             var categoryExists = await _context.Categories.AnyAsync(c => c.Id == dto.CategoryId.Value);
@@ -149,6 +152,9 @@ public class AttributeRulesController : ControllerBase
     [RequirePermission(Policies.RequireCategoryWrite)]
     public async Task<IActionResult> Update(int id, [FromBody] stok_takip.DTOs.CreateAttributeRuleDto dto)
     {
+        if (dto.MinValue.HasValue && dto.MaxValue.HasValue && dto.MinValue > dto.MaxValue)
+            return BadRequest(new { message = "Minimum değer maksimum değerden büyük olamaz." });
+
         var rule = await _context.AttributeRules
             .Include(r => r.AttributeAllowedValues)
             .FirstOrDefaultAsync(r => r.Id == id);
@@ -269,6 +275,11 @@ public class AttributeRulesController : ControllerBase
 
         var ruleIds = dtos.Select(d => d.Id).ToList();
         var rules = await _context.AttributeRules.Where(r => ruleIds.Contains(r.Id)).ToListAsync();
+
+        if (rules.Select(r => r.CategoryId).Distinct().Count() > 1)
+        {
+            return BadRequest(new { message = "Farklı kategorilere ait kurallar aynı anda sıralanamaz." });
+        }
 
         foreach (var rule in rules)
         {

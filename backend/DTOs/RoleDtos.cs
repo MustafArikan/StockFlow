@@ -8,8 +8,9 @@ public class CreateAppRoleDto
     [StringLength(50, MinimumLength = 2)]
     public string Name { get; set; } = string.Empty;
 
-    [StringLength(250)]
     public string? Description { get; set; }
+    [Range(0, 1000)]
+    public int Level { get; set; } = 100;
     public List<int> PermissionIds { get; set; } = new();
 }
 
@@ -19,8 +20,9 @@ public class UpdateAppRoleDto
     [StringLength(50, MinimumLength = 2)]
     public string Name { get; set; } = string.Empty;
 
-    [StringLength(250)]
     public string? Description { get; set; }
+    [Range(0, 1000)]
+    public int Level { get; set; } = 100;
     public List<int> PermissionIds { get; set; } = new();
 }
 
@@ -30,6 +32,7 @@ public class AppRoleResponseDto
     public string Name { get; set; } = string.Empty;
     public string? Description { get; set; }
     public bool IsSystemRole { get; set; }
+    public int Level { get; set; }
     public int UserCount { get; set; }
     public List<int> PermissionIds { get; set; } = new();
 }

@@ -13,10 +13,12 @@ namespace stok_takip.Controllers
     public class ReportsController : ControllerBase
     {
         private readonly AppDbContext _context;
+        private readonly ILogger<ReportsController> _logger;
 
-        public ReportsController(AppDbContext context)
+        public ReportsController(AppDbContext context, ILogger<ReportsController> logger)
         {
             _context = context;
+            _logger = logger;
         }
 
         // DASHBOARD KARTLARI İÇİN ÖZET BİLGİLER 
@@ -71,7 +73,8 @@ namespace stok_takip.Controllers
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new { message = "Dashboard özet verileri alınamadı.", error = ex.Message });
+                _logger.LogError(ex, "Dashboard özet verileri alınamadı");
+                return StatusCode(500, new { message = "Dashboard özet verileri alınamadı." });
             }
         }
 
@@ -112,7 +115,8 @@ namespace stok_takip.Controllers
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new { message = "Trend verisi alınamadı.", error = ex.Message });
+                _logger.LogError(ex, "Trend verisi alınamadı");
+                return StatusCode(500, new { message = "Trend verisi alınamadı." });
             }
         }
 
@@ -145,7 +149,8 @@ namespace stok_takip.Controllers
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new { message = "Kategori verileri alınırken bir hata oluştu.", error = ex.Message });
+                _logger.LogError(ex, "Kategori verileri alınırken bir hata oluştu");
+                return StatusCode(500, new { message = "Kategori verileri alınırken bir hata oluştu." });
             }
         }
 
@@ -178,7 +183,8 @@ namespace stok_takip.Controllers
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new { message = "En çok hareket gören ürünler alınamadı.", error = ex.Message });
+                _logger.LogError(ex, "En çok hareket gören ürünler alınamadı");
+                return StatusCode(500, new { message = "En çok hareket gören ürünler alınamadı." });
             }
         }
 
@@ -210,7 +216,8 @@ namespace stok_takip.Controllers
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new { message = "Hareket özeti hesaplanamadı.", error = ex.Message });
+                _logger.LogError(ex, "Hareket özeti hesaplanamadı");
+                return StatusCode(500, new { message = "Hareket özeti hesaplanamadı." });
             }
         }
     }

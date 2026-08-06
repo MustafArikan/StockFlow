@@ -15,6 +15,7 @@ public class AppPolicyResponseDto
 
 public class UpdateAppPolicyDto
 {
+    [Required(ErrorMessage = "Açıklama alanı zorunludur.")]
     [StringLength(250)]
     public string Description { get; set; } = string.Empty;
 

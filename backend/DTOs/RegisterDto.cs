@@ -6,10 +6,12 @@ namespace stok_takip.DTOs
     {
         [Required(ErrorMessage = "First name is required.")]
         [StringLength(50, ErrorMessage = "First name cannot exceed 50 characters.")]
+        [RegularExpression(@"^[a-zA-ZğüşıöçĞÜŞİÖÇ\s'-]+$", ErrorMessage = "İsim sadece harf içerebilir.")]
         public string FirstName { get; set; } = string.Empty;
 
         [Required(ErrorMessage = "Last name is required.")]
         [StringLength(50, ErrorMessage = "Last name cannot exceed 50 characters.")]
+        [RegularExpression(@"^[a-zA-ZğüşıöçĞÜŞİÖÇ\s'-]+$", ErrorMessage = "İsim sadece harf içerebilir.")]
         public string LastName { get; set; } = string.Empty;
         
         [Required(ErrorMessage = "Email address is required.")]
