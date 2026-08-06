@@ -25,6 +25,23 @@ function getAltKategoriIdleri(parentId) {
     return ids;
 }
 
+function hesaplaGecerliFiyat(urun) {
+    let fiyat = parseFloat(urun.price) || 0;
+    if (fiyat === 0 && urun.productSuppliers && urun.productSuppliers.length > 0) {
+        const pref = urun.productSuppliers.find(ps => ps.isPreferred);
+        if (pref && pref.purchasePrice) fiyat = parseFloat(pref.purchasePrice);
+        else fiyat = Math.max(...urun.productSuppliers.map(ps => parseFloat(ps.purchasePrice) || 0));
+    }
+    if (fiyat === 0 && urun.attributes) {
+        const fAttr = urun.attributes.find(a => a.key && a.key.toLowerCase().includes('fiyat'));
+        if (fAttr) {
+            let parsed = parseFloat(fAttr.value);
+            if (!isNaN(parsed)) fiyat = parsed;
+        }
+    }
+    return isFinite(fiyat) ? Math.max(0, fiyat) : 0;
+}
+
 // =========================================================================
 // VERİ GÜNCELLEME, FİLTRELEME VE ÖZET MOTORU
 // =========================================================================
@@ -88,10 +105,10 @@ const productView = createDataView({
 
             const minFiyat = parseFloat(document.getElementById('filtreMinFiyat')?.value);
             const maxFiyat = parseFloat(document.getElementById('filtreMaxFiyat')?.value);
-            // urun.price backend'den sayı olarak geliyor, eğer gelmiyorsa sıfır varsayılır
-            const fiyat = urun.price || 0;
+            
+            const fiyat = hesaplaGecerliFiyat(urun);
             if (!isNaN(minFiyat) && fiyat < minFiyat) return false;
-            if (!isNaN(maxFiyat) && fiyat > maxFiyat) return false;
+            if (!isNaN(maxFiyat) && maxFiyat > 0 && fiyat > maxFiyat) return false;
 
             const seciliTedarikciId = document.getElementById('filtreTedarikci')?.value;
             if (seciliTedarikciId) {
@@ -973,6 +990,15 @@ function urunDuzenle(id) {
     document.getElementById("baslangicStokAlani").classList.add("d-none");
     document.getElementById("btnUrunKaydet").innerText = "Güncelle";
 
+    const tedAlani = document.getElementById("duzenleTedarikciAlani");
+    if (hasPermission("Supplier.Edit") && tedAlani) {
+        tedAlani.classList.remove("d-none");
+        duzenleTedarikciYukle(urun.id);
+        duzenleTedarikciSecenekleriniYukle();
+    } else if (tedAlani) {
+        tedAlani.classList.add("d-none");
+    }
+
     const event = new Event('change');
     document.getElementById("urunKategoriId").dispatchEvent(event);
 
@@ -1086,6 +1112,9 @@ if (btnYeniUrunModal) {
         document.getElementById("skuGenerationArea")?.classList.add('d-none');
         const dynamicContainer = document.getElementById("dynamicAttributesContainer");
         if (dynamicContainer) dynamicContainer.innerHTML = "";
+
+        const tedAlani = document.getElementById("duzenleTedarikciAlani");
+        if (tedAlani) tedAlani.classList.add("d-none");
 
         document.getElementById("btnUrunKaydet").innerText = "Ekle ve Kaydet";
     });
@@ -1369,11 +1398,14 @@ function updatePriceSliderMax() {
 
     let maxPrice = 0;
     if (typeof tumUrunler !== 'undefined' && tumUrunler && tumUrunler.length > 0) {
-        maxPrice = Math.max(...tumUrunler.map(u => parseFloat(u.price) || 0));
+        maxPrice = Math.max(...tumUrunler.map(u => hesaplaGecerliFiyat(u)));
     }
 
     if (maxPrice <= 0 || !isFinite(maxPrice)) {
-        maxPrice = 999999;
+        maxPrice = 100000;
+    } else {
+        // En yakın onluğa/yüzlüğe yuvarla biraz pay bırak
+        maxPrice = Math.ceil(maxPrice * 1.2 / 100) * 100;
     }
 
     pSlider.dataset.dynamicMax = maxPrice;
@@ -1536,7 +1568,9 @@ function openBarcodePrintModal(barcode, productName, productId) {
             value: barcode, // Akıllı yönlendirme linki
             size: 120,
             background: 'white',
+            backgroundAlpha: 1,
             foreground: 'black',
+            foregroundAlpha: 1,
             level: 'H'
         });
     }
@@ -1836,6 +1870,137 @@ document.addEventListener("DOMContentLoaded", async () => {
         if (p) {
             urunDetayAc(p.id, { tedarikciYonetimi: hasPermission("Supplier.Edit") });
             window.history.replaceState({}, document.title, window.location.pathname);
+        }
+    }
+});
+
+// =========================================================================
+// TEDARİKÇİ YÖNETİMİ (Düzenle Modalı İçin)
+// =========================================================================
+async function duzenleTedarikciYukle(productId) {
+    const tablo = document.getElementById("duzenleTedarikciListesi");
+    if(!tablo) return;
+    try{
+        const cevap = await fetch(`${CONFIG.API_BASE_URL}/products/${productId}/suppliers`, {
+            method: "GET",
+            headers: { "Authorization": `Bearer ${token}` }
+        });
+        if (!cevap.ok) throw new Error("Tedarikçiler alınamadı.");
+        
+        const liste = await cevap.json();
+        tablo.innerHTML = "";
+
+        if (liste.length === 0) { 
+            tablo.innerHTML = `<tr><td colspan="3" class="text-center text-muted fst-italic py-4">Bu ürüne bağlı tedarikçi bulunmamaktadır.</td></tr>`; return; 
+        }
+
+        liste.forEach(ps => {
+            tablo.innerHTML += `<tr>
+                <td class="fw-semibold">${escapeHtml(ps.supplierName)}</td>
+                <td class="text-muted fw-bold">${ps.purchasePrice != null ? escapeHtml(ps.purchasePrice.toString()) + ' ₺' : '-'}</td>
+                <td class="text-end">
+                    <button type="button" class="btn btn-sm btn-outline-danger rounded-pill btn-duzenle-tedarikci-kaldir shadow-sm px-3" data-sid="${escapeHtml(ps.supplierId.toString())}">
+                        <i class="bi bi-trash3 me-1"></i> Kaldır
+                    </button>
+                </td>
+            </tr>`;
+        });
+    } catch(hata) {
+        tablo.innerHTML = `<tr><td colspan="3" class="text-center text-danger py-4">${escapeHtml(hata.message)}</td></tr>`;
+    }
+}
+
+async function duzenleTedarikciSecenekleriniYukle() {
+    try {
+        const cevap = await fetch(`${CONFIG.API_BASE_URL}/suppliers?pageSize=1000`, {
+            method: "GET",
+            headers: { "Authorization": `Bearer ${token}` }
+        });
+
+        if (!cevap.ok) throw new Error("Tedarikçiler alınamadı.");
+
+        const data = await cevap.json();
+        const tedarikciler = data.items || data;
+        const select = document.getElementById("duzenleTedarikciSelect");
+
+        if (select) {
+            select.innerHTML = '<option value="">Tedarikçi seçin...</option>';
+            tedarikciler.forEach(tedarikci => {
+                const option = document.createElement("option");
+                option.value = tedarikci.id;
+                option.textContent = tedarikci.name;
+                select.appendChild(option);
+            });
+        }
+    } catch (hata) {
+        console.error("Tedarikçi dropdown yükleme hatası:", hata);
+        const select = document.getElementById("duzenleTedarikciSelect");
+        if(select) select.innerHTML = '<option value="" disabled>Yüklenemedi!</option>';
+    }
+}
+
+document.addEventListener("click", async (e) => {
+    if (e.target.closest("#btnDuzenleTedarikciEkle")) {
+        const urunId = document.getElementById("urunId").value;
+        if (!urunId) return;
+
+        const supplierId = document.getElementById("duzenleTedarikciSelect").value;
+        const fiyat = document.getElementById("duzenleTedarikciFiyat").value;
+        
+        if (!supplierId) {
+            uyariGoster("Lütfen tedarikçi seçin."); 
+            return;
+        }
+        const veri ={
+            supplierId: parseInt(supplierId),
+            purchasePrice: fiyat ? parseFloat(fiyat): null,
+            supplierProductCode: null,
+            leadTimeDays: null,
+            isPreferred: false
+        };
+        try{
+            const cevap = await fetch(`${CONFIG.API_BASE_URL}/products/${urunId}/suppliers`, {
+                method:"POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${token}`
+                },
+                body: JSON.stringify(veri)
+            });
+
+            if(!cevap.ok) throw new Error(await cevap.text() || "Bağlama başarısız.");
+
+            duzenleTedarikciYukle(urunId);
+            document.getElementById("duzenleTedarikciSelect").value = "";
+            document.getElementById("duzenleTedarikciFiyat").value  = "";
+
+            // Ayrıca listeyi arka planda güncelle
+            urunleriYukle(currentPage);
+        }catch(hata){
+            hataGoster("Hata: " + hata.message);
+        }
+    }
+
+    const kaldirBtn = e.target.closest(".btn-duzenle-tedarikci-kaldir");
+    if (kaldirBtn) {
+        const urunId = document.getElementById("urunId").value;
+        if (!urunId) return;
+
+        if (!(await onayla("Bu tedarikçi bağını kaldırmak istiyor musunuz?", "Evet, kaldır"))) return;
+        const sid = kaldirBtn.getAttribute("data-sid");
+        try{
+            const cevap = await fetch(`${CONFIG.API_BASE_URL}/products/${urunId}/suppliers/${sid}`, {
+                method: "DELETE",
+                headers: { "Authorization": `Bearer ${token}` }
+            });
+
+            if (!cevap.ok) throw new Error("Silme başarısız.");
+            duzenleTedarikciYukle(urunId);
+
+            // Listeyi arka planda güncelle
+            urunleriYukle(currentPage);
+        } catch (hata) {
+            hataGoster("Tedarikçi silinemedi: " + hata.message);
         }
     }
 });

@@ -66,6 +66,8 @@ namespace stok_takip.Controllers
                 var worksheet = workbook.Worksheet(1);
                 var usedRange = worksheet.RangeUsed();
                 if (usedRange == null) return BadRequest(new { message = "Excel dosyası boş." });
+                if (usedRange.RowCount() > 50000 || usedRange.ColumnCount() > 100)
+                    return BadRequest(new { message = "Dosya çok büyük (50.000 satır veya 100 sütun sınırı)." });
 
                 var headerRow = usedRange.FirstRow();
                 headers = headerRow.Cells().Select(c => c.GetString().Trim()).Where(h => !string.IsNullOrEmpty(h)).ToList();
@@ -243,8 +245,12 @@ namespace stok_takip.Controllers
                     var initialQuantityStr = GetMapped("InitialQuantity");
 
                     if (string.IsNullOrEmpty(name)) rowErrors.Add("Ürün adı boş.");
+                    else if (name.Length > 100 || name.Length < 2) rowErrors.Add("Ürün adı 2-100 karakter olmalıdır.");
+
                     if (string.IsNullOrEmpty(barcode)) rowErrors.Add("Barkod boş.");
-                    if (existingBarcodes.Contains(barcode) || newProducts.Any(p => p.Product.Barcode.Equals(barcode, StringComparison.OrdinalIgnoreCase)))
+                    else if (!System.Text.RegularExpressions.Regex.IsMatch(barcode, @"^[a-zA-Z0-9-]+$"))
+                        rowErrors.Add("Barkod sadece harf, rakam ve tire içerebilir.");
+                    else if (existingBarcodes.Contains(barcode) || newProducts.Any(p => p.Product.Barcode.Equals(barcode, StringComparison.OrdinalIgnoreCase)))
                         rowErrors.Add($"'{barcode}' barkodu mükerrer.");
 
                     int minStockLevel = 0;

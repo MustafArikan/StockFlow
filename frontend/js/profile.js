@@ -1,5 +1,8 @@
 // XSS koruması eklenmiş hali
 
+// Backend (ChangePasswordDto) ile AYNI kural: en az 8 karakter, en az 1 büyük harf, 1 küçük harf, 1 rakam, 1 özel karakter.
+const PASSWORD_POLICY_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^\da-zA-Z]).{8,}$/;
+const PASSWORD_POLICY_MESSAGE = "Şifre en az 8 karakter olmalı; en az bir büyük harf, bir küçük harf, bir rakam ve bir özel karakter içermelidir.";
 
 // Profil sayfası yüklendiğinde mevcut bilgileri getir
 document.addEventListener("DOMContentLoaded", async () => {
@@ -106,6 +109,16 @@ document.addEventListener("DOMContentLoaded", async () => {
         e.preventDefault();
 
         // Frontend Güvenlik Kontrolleri
+        if (!PASSWORD_POLICY_REGEX.test(inputNewPassword.value)) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Şifre Yeterince Güçlü Değil',
+                text: PASSWORD_POLICY_MESSAGE,
+                confirmButtonColor: '#ffc107'
+            });
+            return;
+        }
+
         if (inputNewPassword.value !== inputConfirmPassword.value) {
             Swal.fire({
                 icon: 'warning',

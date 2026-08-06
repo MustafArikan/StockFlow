@@ -129,6 +129,11 @@ public class AppDbContext : DbContext
             .HasForeignKey(c => c.ParentId)
             .OnDelete(DeleteBehavior.Restrict); 
 
+        modelBuilder.Entity<Category>()
+            .HasIndex(c => c.Name)
+            .IsUnique()
+            .HasFilter("[is_deleted] = 0"); 
+
         modelBuilder.Entity<Product>()
             .HasIndex(p => p.Barcode)
             .IsUnique()
@@ -141,8 +146,9 @@ public class AppDbContext : DbContext
             .OnDelete(DeleteBehavior.Restrict);
 
         modelBuilder.Entity<Location>()
-            .HasIndex(l => l.Code)
-            .IsUnique();
+            .HasIndex(l => new { l.WarehouseId, l.Code })
+            .IsUnique()
+            .HasFilter("[is_deleted] = 0");
 
         modelBuilder.Entity<StockLevel>()
             .HasIndex(sl => new { sl.ProductId, sl.LocationId })
@@ -154,6 +160,16 @@ public class AppDbContext : DbContext
 
         modelBuilder.Entity<Asset>()
             .HasIndex(a => a.SerialNumber)
+            .IsUnique()
+            .HasFilter("[is_deleted] = 0");
+
+        modelBuilder.Entity<Supplier>()
+            .HasIndex(s => s.Name)
+            .IsUnique()
+            .HasFilter("[is_deleted] = 0");
+
+        modelBuilder.Entity<Warehouse>()
+            .HasIndex(w => new { w.Name, w.Address })
             .IsUnique()
             .HasFilter("[is_deleted] = 0");
 

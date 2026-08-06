@@ -1,3 +1,7 @@
+// Backend (ResetPasswordDto) ile AYNI kural: en az 8 karakter, en az 1 büyük harf, 1 küçük harf, 1 rakam, 1 özel karakter.
+const PASSWORD_POLICY_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^\da-zA-Z]).{8,}$/;
+const PASSWORD_POLICY_MESSAGE = "Şifre en az 8 karakter olmalı; en az bir büyük harf, bir küçük harf, bir rakam ve bir özel karakter içermelidir.";
+
 document.addEventListener("DOMContentLoaded", () => {
     let resetEmailAddress = "";
     let validResetCode = "";
@@ -107,7 +111,11 @@ document.addEventListener("DOMContentLoaded", () => {
             e.preventDefault();
             const newPassword = document.getElementById("newPassword").value;
             const newPasswordConfirm = document.getElementById("newPasswordConfirm").value;
-            
+
+            if (!PASSWORD_POLICY_REGEX.test(newPassword)) {
+                hataGoster(PASSWORD_POLICY_MESSAGE);
+                return;
+            }
 
             if (newPassword !== newPasswordConfirm) {
                 hataGoster("Şifreler eşleşmiyor. Lütfen kontrol edin.");
