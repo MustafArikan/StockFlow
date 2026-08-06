@@ -77,10 +77,12 @@ const hareketView = createDataView({
             </div>`;
         }
 
+        let pCodeHtml = (pCode && pCode !== '-') ? `<a href="products.html?viewProductBarcode=${encodeURIComponent(pCode)}" class="text-decoration-none text-dark fw-bold" title="Ürün detaylarını görüntüle">${escapeHtml(pCode)}</a>` : escapeHtml(pCode);
+
         return `
             <tr>
                 <td class="text-muted small align-middle fw-bold text-center">${escapeHtml(formatliTarih)}</td>
-                <td class="fw-bold align-middle d-none d-md-table-cell text-center">${escapeHtml(pCode)}</td>
+                <td class="align-middle text-center">${pCodeHtml}</td>
                 <td class="align-middle">${escapeHtml(pName)}</td>
                 <td class="text-center align-middle">${tipEtiketi}</td>
                 <td class="fw-bold text-center align-middle ${adetRengi}">${adetIsareti}${hareket.quantity}</td>
@@ -164,11 +166,55 @@ document.getElementById("btnFiltreleriTemizle")?.addEventListener("click", () =>
     // btnTumu.click() will automatically update url, active button, and trigger hareketView.load(1)
 });
 
-document.getElementById("aramaKutusu")?.addEventListener("keyup", (event) => {
-    if (event.key === "Enter") {
+let aramaTimeout = null;
+document.getElementById("aramaKutusu")?.addEventListener("input", (event) => {
+    clearTimeout(aramaTimeout);
+    aramaTimeout = setTimeout(() => {
         hareketView.load(1);
-    }
+    }, 300);
 });
+
+// Arama için kamera başlatıcı
+const btnKameraAcArama = document.getElementById("btnKameraAcArama");
+const scannerModalHareketlerEl = document.getElementById("scannerModalHareketler");
+
+if (btnKameraAcArama && scannerModalHareketlerEl) {
+    let modalInstance = null;
+
+    btnKameraAcArama.addEventListener("click", async () => {
+        try {
+            if (typeof checkCameraPermission === 'function') {
+                await checkCameraPermission();
+            }
+            if (!modalInstance) {
+                modalInstance = new bootstrap.Modal(scannerModalHareketlerEl);
+            }
+            modalInstance.show();
+            
+            document.getElementById("kameraDurumHareketler").classList.remove("d-none");
+            
+            await startScanner("readerHareketler", (scannedText) => {
+                const aramaKutusu = document.getElementById("aramaKutusu");
+                if (aramaKutusu) {
+                    aramaKutusu.value = scannedText;
+                    hareketView.load(1);
+                }
+                modalInstance.hide();
+            }, () => { });
+        } catch (error) {
+            const hataMetni = error?.message ? error.message : "Kamera başlatılamadı.";
+            if (typeof uyariGoster === "function") {
+                uyariGoster(hataMetni);
+            } else {
+                alert(hataMetni);
+            }
+        }
+    });
+
+    scannerModalHareketlerEl.addEventListener('hidden.bs.modal', () => {
+        if (typeof stopScanner === 'function') stopScanner();
+    });
+}
 
 async function dropdownUrunleriYukle() {
     const urunSelect = document.getElementById("urunSecimi");
