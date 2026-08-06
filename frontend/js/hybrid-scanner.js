@@ -8,9 +8,10 @@ const SCAN_REDIRECT_DELAY_MS = 800;
 // 1. Kamerayı Başlatma Fonksiyonu
 async function initScanner() {
     const btnStart = document.getElementById("btnStartScanner");
+    const btnStop = document.getElementById("btnStopScanner");
     const resultBox = document.getElementById('result-box');
 
-    // Çoklu tıklamaları engellemek için butonu kilitleriz
+    // Çoklu tıklamaları engellemek için başlat butonunu kilitleriz
     if (btnStart) btnStart.disabled = true;
     if (resultBox) resultBox.classList.add('d-none');
 
@@ -23,8 +24,12 @@ async function initScanner() {
         // Motoru asenkron olarak bekler ve başlatır
         await startScanner('reader', onScanSuccess, onScanError);
 
+        // Kamera başarıyla açıldıysa: Başlat butonunu gizle, Durdur butonunu göster
+        if (btnStart) btnStart.classList.add('d-none');
+        if (btnStop) btnStop.classList.remove('d-none');
+
     } catch (error) {
-        // Hata durumunda butonu tekrar aktif eder ve hatayı basar
+        // Hata durumunda başlat butonunu tekrar aktif ederiz
         if (btnStart) btnStart.disabled = false;
 
         const hataMetni = error?.message ? error.message : "Kameraya erişilemedi veya izin reddedildi.";
@@ -42,6 +47,7 @@ function onScanSuccess(decodedText, decodedResult) {
     const resultText = document.getElementById('result-text');
     const resultFormat = document.getElementById('result-format');
     const btnStart = document.getElementById("btnStartScanner");
+    const btnStop = document.getElementById("btnStopScanner");
 
     if (resultBox) resultBox.classList.remove('d-none');
 
@@ -54,15 +60,19 @@ function onScanSuccess(decodedText, decodedResult) {
         stopScanner(); // Kamerayı durdur
     }
 
+    // Kamera kapandığı için butonları eski haline getir (Durdur'u gizle, Başlat'ı göster)
+    if (btnStop) btnStop.classList.add('d-none');
+    if (btnStart) {
+        btnStart.classList.remove('d-none');
+        btnStart.disabled = true;
+        btnStart.innerHTML = `<span class="spinner-border spinner-border-sm"></span> İşleniyor...`;
+    }
+
     // UI Geri Bildirimi: Kullanıcıya "Aranıyor..." göstergesi
     if (resultText) {
         resultText.innerHTML = `<span class="spinner-border spinner-border-sm text-primary" role="status"></span> Aranıyor...`;
         resultText.classList.remove('text-success');
         resultText.classList.add('text-primary');
-    }
-    if (btnStart) {
-        btnStart.disabled = true;
-        btnStart.innerHTML = `<span class="spinner-border spinner-border-sm"></span> İşleniyor...`;
     }
 
     // Backend Optimizasyonlu Akıllı Arama
@@ -156,8 +166,13 @@ document.addEventListener("DOMContentLoaded", () => {
         if (typeof stopScanner === 'function') {
             await stopScanner();
 
-            // Kamera durduğu için Başlat butonunu tekrar tıklanabilir yap
-            if (btnStart) btnStart.disabled = false;
+            // Kamera durduğu için Durdur butonunu gizle, Başlat butonunu tekrar göster ve aktif et
+            if (btnStop) btnStop.classList.add('d-none');
+            if (btnStart) {
+                btnStart.classList.remove('d-none');
+                btnStart.disabled = false;
+                btnStart.innerHTML = `Kamerayı Başlat`;
+            }
 
             if (typeof basariToast === 'function') {
                 basariToast("Kamera durduruldu.");
