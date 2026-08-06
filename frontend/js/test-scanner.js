@@ -57,7 +57,7 @@ function onScanSuccess(decodedText, decodedResult) {
     if (btnStart) btnStart.disabled = false;
 
     // Yönlendirme yapılır
-    setTimeout(() => {
+    setTimeout(async () => {
         // Eğer okunan kod bir URL (QR Kod) ise direkt o URL'ye (ürün kartına) git
         if (decodedText.startsWith('http://') || decodedText.startsWith('https://')) {
             window.location.href = decodedText;
