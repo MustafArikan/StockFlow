@@ -77,7 +77,7 @@ Bu proje, geleneksel kişi bazlı rol atamaları yerine tamamen **görev (task) 
 
 ### 🔄 Modül 4: Stok Hareketleri & Okuyucu Entegrasyonu
 - [x] **Arayüz:** Stok Hareketleri Sayfası (`movements.html` - Giriş/Çıkış işlem geçmişi listesi ve yeni hareket formu)
-- [x] **Arayüz Yardımcısı:** Hibrit Kamera Tarayıcı Modülü (`scanner.js` ve `test-scanner.html` - html5-qrcode entegrasyonu)
+- [x] **Arayüz Yardımcısı:** Hibrit Kamera Tarayıcı Modülü (`scanner.js` ve `hybrid-scanner.html` - html5-qrcode entegrasyonu)
 - [x] **Arayüz Entegrasyonu:** Barkod/QR tarayıcı modülünün Stok Hareket formuna entegre edilmesi (Kamera ile ürün okutma)
 - [x] **API:** `GET /api/stock/movements` (Tüm stok hareket geçmişini filtreli listeleme endpoint'i)
 - [x] **API:** `POST /api/stock/movements/in` (Stok Giriş işlemi endpoint'i - Stok seviyesini artırır)

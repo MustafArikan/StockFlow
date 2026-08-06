@@ -29,7 +29,7 @@ function buildSidebarHtml(currentPath) {
             <a href="roles.html" id="navRolesItem" class="sidebar-link d-none ${path === 'roles.html' ? 'active' : ''}"><i class="bi bi-shield-lock"></i> <span>Rol ve Yetki Yönetimi</span></a>
             <a href="policies.html" id="navPoliciesItem" class="sidebar-link d-none ${path === 'policies.html' ? 'active' : ''}"><i class="bi bi-speedometer2"></i> <span>Yetki Politikaları</span></a>
             <a href="audit-logs.html" id="navAuditLogsItem" class="sidebar-link d-none ${path === 'audit-logs.html' ? 'active' : ''}"><i class="bi bi-journal-text"></i> <span>Sistem Logları</span></a>
-            <a href="test-scanner.html" id="navTestScannerItem" class="sidebar-link d-none ${path === 'test-scanner.html' ? 'active' : ''}"><i class="bi bi-upc-scan"></i> <span>Barkod Okuyucu</span></a>
+            <a href="hybrid-scanner.html" id="navTestScannerItem" class="sidebar-link d-none ${path === 'hybrid-scanner.html' ? 'active' : ''}"><i class="bi bi-upc-scan"></i> <span>Barkod Okuyucu</span></a>
         </div>
     `;
 }
