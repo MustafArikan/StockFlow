@@ -1002,6 +1002,10 @@ button:disabled,
 }
 
 /* ==================== Genel Utility Sınıfları (style="" temizliği) ==================== */
+.font-xs {
+    font-size: 0.75rem;
+}
+
 .sortable-th {
     cursor: pointer;
 }
