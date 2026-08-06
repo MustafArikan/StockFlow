@@ -9,7 +9,6 @@ let currentGridPageSize = 8; // Izgara tasarımı için varsayılan 8
 const userRole = typeof getUserRole === "function" ? getUserRole() : "User";
 const token = localStorage.getItem('token');
 if (!token) window.location.href = 'login.html';
-const barcodeBeepSound = new Audio('audio/beep-07.wav');
 
 // ==========================================
 // ORTAK YARDIMCI FONKSİYONLAR
@@ -27,6 +26,31 @@ function getAssetStatusUI(status) {
         default:
             return { text: "Bilinmiyor", shortText: "Bilinmiyor", badgeClass: "bg-secondary", iconColor: "text-primary", bgClass: "bg-primary bg-opacity-10" };
     }
+}
+
+/**
+ * Okunan ham barkod metnini analiz eder ve ayırıcılara göre Ürün Kodu ile Seri Numarasını ayırır.
+ * Bu sayede iş mantığı arayüzden ayrılır ve her yerden tekrar kullanılabilir hale gelir.
+ * @param {string} rawText - Okunan ham barkod metni
+ * @returns {object} { productBarcode, serialNumber } formatında ayrıştırılmış veriyi döndürür.
+ */
+function parseAssetBarcode(rawText) {
+    let result = { productBarcode: rawText.trim(), serialNumber: rawText.trim() };
+    const delimiters = ['|', ';', ',', '_'];
+
+    // Metnin içinde belirlenen ayırıcılardan biri var mı diye kontrol eder.
+    for (let d of delimiters) {
+        if (rawText.includes(d)) {
+            const parts = rawText.split(d);
+            if (parts.length >= 2) {
+                // Ayırıcıdan önceki kısmı ürün barkodu, sonraki kısmı seri numarası olarak belirler.
+                result.productBarcode = parts[0].trim();
+                result.serialNumber = parts.slice(1).join(d).trim();
+                break;
+            }
+        }
+    }
+    return result;
 }
 
 // ==========================================
@@ -75,7 +99,17 @@ function applyPermissions() {
 }
 
 // MERKEZİ OLAY DİNLEYİCİLERİ
+// Ana başlatıcı fonksiyon, işleri alt yöneticilere böler ve sayfa yüklendiğinde çağrılır.
 function initEventListeners() {
+    initSearchAndActionListeners();
+    initWMSDropdownListeners();
+    initModalResetListeners();
+    initSearchCamera();
+    initAddAssetCamera();
+}
+
+// Arama çubuğu ve modal içindeki işlem butonlarının tıklanma olaylarını yönetir.
+function initSearchAndActionListeners() {
     document.getElementById('btnSearchAsset')?.addEventListener('click', searchAsset);
     document.getElementById('serialSearchInput')?.addEventListener('keyup', e => { if (e.key === 'Enter') searchAsset(); });
     document.getElementById('btnGeriDonGrid')?.addEventListener('click', goBackToGrid);
@@ -95,15 +129,14 @@ function initEventListeners() {
     document.getElementById('btnSubmitBreakdown')?.addEventListener('click', submitBreakdown);
     document.getElementById('btnSubmitResolve')?.addEventListener('click', submitResolve);
     document.getElementById('btnSubmitMaintenance')?.addEventListener('click', submitMaintenance);
-
-    // Kullanımdan kaldırma butonu dinleyicisi eklendi
     document.getElementById('btnSubmitDeleteAsset')?.addEventListener('click', submitDeleteAsset);
+}
 
-    // Akıllı Cascading Dropdown Dinleyicileri (WMS Entegrasyonu)    
+// Depo, Raf ve Kategori seçimi gibi dinamik değişen elemanların olaylarını dinler ve yönetir.
+function initWMSDropdownListeners() {
     document.getElementById('newAssetProduct')?.addEventListener('change', async function () {
         const selectedProductId = this.value;
 
-        // Eğer ürün seçimi kaldırıldıysa/boşaltıldıysa, depoları ve rafları sıfırla
         if (!selectedProductId) {
             if (typeof StockUtils !== 'undefined' && typeof StockUtils._resetDropdown === 'function') {
                 StockUtils._resetDropdown('newAssetSourceWarehouse', 'Önce ürün seçiniz...', true);
@@ -112,11 +145,11 @@ function initEventListeners() {
             return;
         }
 
-        // Bütün işi Ortak WMS Motoru (StockUtils) yapar
         if (typeof StockUtils !== 'undefined') {
             await StockUtils.loadSmartWarehousesForProduct(selectedProductId, 'newAssetSourceWarehouse', 'newAssetSourceLocation');
         }
 
+        // ... (Ürün değiştiğinde kuralları getiren PIM kodlarının devamı) ...
         const selectedOption = this.options[this.selectedIndex];
         const categoryId = selectedOption?.dataset?.categoryId;
         const attrContainer = document.getElementById('newAssetAttributesContainer');
@@ -142,7 +175,7 @@ function initEventListeners() {
                             const label = document.createElement('label');
                             label.className = 'form-label small fw-bold text-muted';
                             label.innerHTML = `${key} ${isReq ? '<span class="text-danger">*</span>' : ''}`;
-                            
+
                             let input;
                             if (uiComp === 'select' && allowedVals && allowedVals.length > 0) {
                                 input = document.createElement('select');
@@ -161,7 +194,7 @@ function initEventListeners() {
                             input.dataset.key = key;
                             input.dataset.type = type;
                             if (isReq) input.required = true;
-                            
+
                             col.appendChild(label);
                             col.appendChild(input);
                             row.appendChild(col);
@@ -181,7 +214,6 @@ function initEventListeners() {
 
         if (this.value && currentAssetProductId) {
             try {
-                // Seçilen ürünün, seçilen raftaki stok durumunu getiriyoruz
                 const stockData = await apiRequest(`/stock-levels/by-product/${currentAssetProductId}`, 'GET');
                 const rafStogu = stockData.find(s => s.locationId === parseInt(this.value, 10));
 
@@ -207,23 +239,22 @@ function initEventListeners() {
         }
     });
 
-    // STOKA GERİ AL SWITCH DİNAMİK METİN DİNLEYİCİSİ ---
     document.getElementById('returnToStockSwitch')?.addEventListener('change', function () {
         const label = document.getElementById('returnToStockLabel');
         const targetGroup = document.getElementById('returnTargetLocationGroup');
 
         if (this.checked) {
-            // Switch AÇIK iken:
             label.innerHTML = 'Stoka Geri Al <span class="text-success small">(Stok miktarını artırır)</span>';
-            if (targetGroup) targetGroup.classList.remove('d-none'); // Depo/Raf seçimini gösterir
+            if (targetGroup) targetGroup.classList.remove('d-none');
         } else {
-            // Switch KAPALI iken:
             label.innerHTML = 'Stoka Geri Alma <span class="text-danger small">(Stok miktarını artırmaz)</span>';
-            if (targetGroup) targetGroup.classList.add('d-none'); // Depo/Raf seçimini gizler
+            if (targetGroup) targetGroup.classList.add('d-none');
         }
     });
+}
 
-    // YENİ EKİPMAN MODALINI KAPANDIĞINDA SIFIRLAMA     
+// Modallar kapandığında içlerindeki verileri, formları ve uyarıları sıfırlama işlemlerini yönetir. 
+function initModalResetListeners() {
     document.getElementById('createAssetModal')?.addEventListener('hidden.bs.modal', () => {
         const productSelect = document.getElementById('newAssetProduct');
         const serialInput = document.getElementById('newAssetSerial');
@@ -233,13 +264,11 @@ function initEventListeners() {
         if (serialInput) serialInput.value = '';
         if (notesInput) notesInput.value = '';
 
-        // WMS Dropdown'larını Kilitle ve Boşalt
         if (typeof StockUtils !== 'undefined') {
             StockUtils._resetDropdown('newAssetSourceWarehouse', 'Önce ürün seçiniz...', true);
             StockUtils._resetDropdown('newAssetSourceLocation', 'Önce depo seçiniz...', true);
         }
 
-        // Butonu eski haline getir
         const btnEkle = document.getElementById('btnSubmitCreateAsset');
         if (btnEkle) {
             btnEkle.disabled = false;
@@ -247,37 +276,31 @@ function initEventListeners() {
         }
     });
 
-    // KULLANIMDAN KALDIRMA MODALI KAPANDIĞINDA SIFIRLAMA
     document.getElementById('deleteAssetModal')?.addEventListener('hidden.bs.modal', () => {
         const stockSwitch = document.getElementById('returnToStockSwitch');
         if (stockSwitch) {
             stockSwitch.checked = true;
-            stockSwitch.dispatchEvent(new Event('change')); // Etiketi günceller
+            stockSwitch.dispatchEvent(new Event('change'));
         }
 
-        document.getElementById('deleteAssetTargetWarehouse').value = '';
-        document.getElementById('targetLocationStockInfo').classList.add('d-none');
+        const targetWarehouse = document.getElementById('deleteAssetTargetWarehouse');
+        if (targetWarehouse) targetWarehouse.value = '';
+
+        const stockInfo = document.getElementById('targetLocationStockInfo');
+        if (stockInfo) stockInfo.classList.add('d-none');
 
         if (typeof StockUtils !== 'undefined') {
             StockUtils._resetDropdown('deleteAssetTargetLocation', 'Önce depo seçin...', true);
         }
     });
 
-    // TÜM AKSİYON MODALLARI KAPANDIĞINDA İÇİNDEKİLERİ SİL
     const actionModals = ['assignAssetModal', 'returnAssetModal', 'breakdownModal', 'resolveModal', 'maintenanceModal'];
     actionModals.forEach(modalId => {
         document.getElementById(modalId)?.addEventListener('hidden.bs.modal', function () {
             this.querySelectorAll('textarea, input[type="date"], select').forEach(el => el.value = '');
         });
     });
-
-    // KAMERA 1: ARAMA EKRANI İÇİN
-    initSearchCamera();
-
-    // KAMERA 2: YENİ EKİPMAN EKLEME EKRANI İÇİN
-    initAddAssetCamera();
 }
-
 
 function initSearchCamera() {
     const btnKameraAcAsset = document.getElementById("btnKameraAcAsset");
@@ -286,8 +309,16 @@ function initSearchCamera() {
     btnKameraAcAsset?.addEventListener("click", async () => {
         const durumEl = document.getElementById('kameraDurumAsset');
 
+        // Kullanıcının butona art arda tıklayıp sistemi bozmasını engellemek için butonu kilitler.
+        if (btnKameraAcAsset) btnKameraAcAsset.disabled = true;
+        const scannerModalInstance = bootstrap.Modal.getOrCreateInstance(scannerModalEl);
+
         try {
-            const scannerModalInstance = bootstrap.Modal.getOrCreateInstance(scannerModalEl);
+            if (typeof checkCameraPermission === 'function') {
+                await checkCameraPermission();
+            }
+
+            // İzin doğrulandıktan sonra kamera modalını güvenle ekranda gösterir.
             scannerModalInstance.show();
 
             if (durumEl) {
@@ -295,44 +326,51 @@ function initSearchCamera() {
                 durumEl.className = "text-center text-muted small mt-3 fw-bold";
             }
 
-            let isProcessingQR = false;
+            if (typeof startScanner === 'function') {
+                let isProcessingQR = false;
 
-            startScanner("readerAsset", async (scannedText) => {
-                if (isProcessingQR) return;
-                isProcessingQR = true;
+                await startScanner("readerAsset", async (scannedText) => {
+                    if (isProcessingQR) return;
+                    isProcessingQR = true;
 
-                try {
-                    barcodeBeepSound.currentTime = 0;
-                    barcodeBeepSound.play().catch(() => { });
+                    try {
+                        if (durumEl) {
+                            durumEl.textContent = "Barkod Okundu! Yönlendiriliyor...";
+                            durumEl.className = "text-center text-success small mt-3 fw-bold";
+                        }
 
-                    if (durumEl) {
-                        durumEl.textContent = "Barkod Okundu! Yönlendiriliyor...";
-                        durumEl.className = "text-center text-success small mt-3 fw-bold";
+                        stopScanner();
+                        scannerModalInstance.hide();
+
+                        setTimeout(async () => {
+                            await searchAsset(scannedText);
+                        }, 100);
+
+                    } finally {
+                        isProcessingQR = false;
                     }
-
-                    stopScanner();
-
-                    scannerModalInstance.hide();
-
-                    setTimeout(async () => {
-                        await searchAsset(scannedText); // DOĞRUSU: Parametreyi ilet
-                    }, 100);
-
-                } finally {
-                    isProcessingQR = false;
-                }
-            }, () => {
-                if (durumEl && durumEl.className.includes("text-muted") && !isProcessingQR) {
-                    durumEl.textContent = "Karekod veya Barkod aranıyor, kameraya gösterin...";
-                }
-            });
+                }, () => {
+                    if (durumEl && durumEl.className.includes("text-muted") && !isProcessingQR) {
+                        durumEl.textContent = "Karekod veya Barkod aranıyor, kameraya gösterin...";
+                    }
+                });
+            }
         } catch (error) {
             if (btnKameraAcAsset) btnKameraAcAsset.disabled = false;
-            uyariGoster("Kameraya erişilemedi! Lütfen tarayıcı izinlerini kontrol edin.");
+
+            try { scannerModalInstance.hide(); } catch (e) { }
+
+            // Motorun (scanner.js) gönderdiği Türkçe hatayı alır ve kullanıcıya gösterir.
+            const hataMetni = error?.message ? error.message : "Kameraya erişilemedi veya izin reddedildi.";
+            uyariGoster(hataMetni);
         }
     });
 
-    scannerModalEl?.addEventListener('hidden.bs.modal', stopScanner);
+    // Kullanıcı modalı kapattığında motoru durdurur ve butonu tekrar aktif eder.
+    scannerModalEl?.addEventListener('hidden.bs.modal', () => {
+        if (typeof stopScanner === 'function') stopScanner();
+        if (btnKameraAcAsset) btnKameraAcAsset.disabled = false;
+    });
 }
 
 function initAddAssetCamera() {
@@ -343,42 +381,39 @@ function initAddAssetCamera() {
 
     btnKameraAcEkle?.addEventListener("click", async () => {
         if (btnKameraAcEkle.disabled) return;
+
+        // Kullanıcının butona art arda tıklayıp sistemi bozmasını engellemek için butonu kilitler.
         btnKameraAcEkle.disabled = true;
 
         try {
+            if (typeof checkCameraPermission === 'function') {
+                await checkCameraPermission();
+            }
+
+            // İzin doğrulandıktan sonra kamera alanını görünür hale getirir.
             kameraAlaniEkle.classList.remove("d-none");
             let isProcessingQR = false;
 
-            startScanner("readerEkle", (scannedText) => {
+            // Motorun kamerayı açmasını bekler ve okuma işlemi başarılı olduğunda içindeki fonksiyonu çalıştırır.
+            await startScanner("readerEkle", (scannedText) => {
                 if (isProcessingQR) return;
                 isProcessingQR = true;
 
                 try {
-                    barcodeBeepSound.currentTime = 0;
-                    barcodeBeepSound.play().catch(() => { });
+                    // Dışarıya aldığımız iş mantığını çağırarak metni güvenle parçalar.
+                    const parsedData = parseAssetBarcode(scannedText);
 
-                    let serial = scannedText;
-                    let productBarcode = scannedText;
-                    
-                    const delimiters = ['|', ';', ',', '_'];
-                    for (let d of delimiters) {
-                        if (scannedText.includes(d)) {
-                            const parts = scannedText.split(d);
-                            if (parts.length >= 2) {
-                                productBarcode = parts[0].trim();
-                                serial = parts.slice(1).join(d).trim();
-                                break;
-                            }
-                        }
-                    }
+                    // Ayrıştırılan seri numarasını ilgili forma yazar.
+                    inputNewAssetSerial.value = parsedData.serialNumber;
 
-                    inputNewAssetSerial.value = serial;
-
+                    // Ayrıştırılan ürün barkodunu sistemdeki ürünler listesinde arar ve bulursa otomatik seçer.
                     const productSelect = document.getElementById('newAssetProduct');
                     let productFound = false;
+
                     if (productSelect) {
                         const options = Array.from(productSelect.options);
-                        const matchedOption = options.find(opt => opt.dataset.barcode === productBarcode || opt.dataset.barcode === scannedText);
+                        const matchedOption = options.find(opt => opt.dataset.barcode === parsedData.productBarcode || opt.dataset.barcode === scannedText);
+
                         if (matchedOption) {
                             productSelect.value = matchedOption.value;
                             productSelect.dispatchEvent(new Event('change'));
@@ -386,30 +421,37 @@ function initAddAssetCamera() {
                         }
                     }
 
+                    // Kullanıcıya işlemin durumu hakkında bilgi verir.
                     if (productFound) {
                         basariToast("Ürün ve Seri No eşleştirildi!");
                     } else {
                         basariToast("Barkod okundu (Ürün bulunamadı)");
                     }
 
+                    // İşlem bittiği için kamerayı güvenle kapatır.
                     closeScannerEkle();
                 } finally {
                     isProcessingQR = false;
                 }
             }, () => { });
         } catch (error) {
-            uyariGoster("Kameraya erişilemedi!");
-            btnKameraAcEkle.disabled = false;
+            if (btnKameraAcEkle) btnKameraAcEkle.disabled = false;
+
+            // Motorun (scanner.js) gönderdiği Türkçe hatayı alır ve kullanıcıya gösterir.
+            const hataMetni = error?.message ? error.message : "Kameraya erişilemedi veya izin reddedildi.";
+            uyariGoster(hataMetni);
         }
     });
 
+    // Kullanıcı kamerayı kapattığında veya modal kapandığında motoru temizler.
     btnKameraKapatEkle?.addEventListener("click", closeScannerEkle);
     document.getElementById('createAssetModal')?.addEventListener('hidden.bs.modal', closeScannerEkle);
 
+    // Kamera alanını gizler, butonu tekrar aktif eder ve tarayıcıyı tamamen durdurur.    
     function closeScannerEkle() {
         kameraAlaniEkle?.classList.add("d-none");
         if (btnKameraAcEkle) btnKameraAcEkle.disabled = false;
-        stopScanner();
+        if (typeof stopScanner === 'function') stopScanner();
     }
 }
 
@@ -452,7 +494,7 @@ async function loadProductsForDropdown() {
                 const id = product.id ?? product.Id;
                 const catId = product.categoryId ?? product.CategoryId;
                 const barcode = product.barcode ?? product.Barcode;
-                
+
                 const option = new Option(`${name} (Stok: ${stokText})`, id);
                 if (catId) option.dataset.categoryId = catId;
                 if (barcode) option.dataset.barcode = barcode;
