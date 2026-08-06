@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using stok_takip.Data;
 
@@ -11,9 +12,11 @@ using stok_takip.Data;
 namespace backend.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260805070936_AddImportHistory")]
+    partial class AddImportHistory
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -483,7 +486,7 @@ namespace backend.Migrations
 
                     b.Property<string>("Name")
                         .IsRequired()
-                        .HasColumnType("nvarchar(450)")
+                        .HasColumnType("nvarchar(max)")
                         .HasColumnName("name");
 
                     b.Property<int?>("ParentId")
@@ -492,11 +495,6 @@ namespace backend.Migrations
 
                     b.HasKey("Id")
                         .HasName("pk_categories");
-
-                    b.HasIndex("Name")
-                        .IsUnique()
-                        .HasDatabaseName("ix_categories_name")
-                        .HasFilter("[is_deleted] = 0");
 
                     b.HasIndex("ParentId")
                         .HasDatabaseName("ix_categories_parent_id");
@@ -584,10 +582,12 @@ namespace backend.Migrations
                     b.HasKey("Id")
                         .HasName("pk_locations");
 
-                    b.HasIndex("WarehouseId", "Code")
+                    b.HasIndex("Code")
                         .IsUnique()
-                        .HasDatabaseName("ix_locations_warehouse_id_code")
-                        .HasFilter("[is_deleted] = 0");
+                        .HasDatabaseName("ix_locations_code");
+
+                    b.HasIndex("WarehouseId")
+                        .HasDatabaseName("ix_locations_warehouse_id");
 
                     b.ToTable("locations");
                 });
@@ -1000,11 +1000,6 @@ namespace backend.Migrations
                     b.HasKey("Id")
                         .HasName("pk_suppliers");
 
-                    b.HasIndex("Name")
-                        .IsUnique()
-                        .HasDatabaseName("ix_suppliers_name")
-                        .HasFilter("[is_deleted] = 0");
-
                     b.ToTable("suppliers");
                 });
 
@@ -1209,7 +1204,7 @@ namespace backend.Migrations
 
                     b.Property<string>("Address")
                         .IsRequired()
-                        .HasColumnType("nvarchar(450)")
+                        .HasColumnType("nvarchar(max)")
                         .HasColumnName("address");
 
                     b.Property<DateTime>("CreatedAt")
@@ -1222,16 +1217,11 @@ namespace backend.Migrations
 
                     b.Property<string>("Name")
                         .IsRequired()
-                        .HasColumnType("nvarchar(450)")
+                        .HasColumnType("nvarchar(max)")
                         .HasColumnName("name");
 
                     b.HasKey("Id")
                         .HasName("pk_warehouses");
-
-                    b.HasIndex("Name", "Address")
-                        .IsUnique()
-                        .HasDatabaseName("ix_warehouses_name_address")
-                        .HasFilter("[is_deleted] = 0");
 
                     b.ToTable("warehouses");
                 });

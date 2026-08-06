@@ -1,3 +1,8 @@
+// Backend (RegisterDto) ile AYNI kural: en az 8 karakter, en az 1 büyük harf, 1 küçük harf, 1 rakam, 1 özel karakter.
+// Kural değişirse bu regex de backend'deki RegularExpression ile birlikte güncellenmelidir.
+const PASSWORD_POLICY_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^\da-zA-Z]).{8,}$/;
+const PASSWORD_POLICY_MESSAGE = "Şifre en az 8 karakter olmalı; en az bir büyük harf, bir küçük harf, bir rakam ve bir özel karakter içermelidir.";
+
 document.addEventListener("DOMContentLoaded", () => {
     
     let registeredEmail = ""; // Kayıt olunan e-postayı tutacağız ki verify ederken tekrar yazmasın
@@ -19,6 +24,11 @@ document.addEventListener("DOMContentLoaded", () => {
         const confirmPassword = document.getElementById("regPasswordConfirm").value;
         
 
+
+        if (!PASSWORD_POLICY_REGEX.test(password)) {
+            hataGoster(PASSWORD_POLICY_MESSAGE);
+            return;
+        }
 
         if (password !== confirmPassword) {
             hataGoster("Şifreler eşleşmiyor. Lütfen kontrol edin.");

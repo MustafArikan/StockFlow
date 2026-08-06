@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using stok_takip.Constants;
+using stok_takip.Attributes;
 using Microsoft.EntityFrameworkCore;
 using stok_takip.Data;
 
@@ -11,13 +13,16 @@ namespace stok_takip.Controllers
     public class ReportsController : ControllerBase
     {
         private readonly AppDbContext _context;
+        private readonly ILogger<ReportsController> _logger;
 
-        public ReportsController(AppDbContext context)
+        public ReportsController(AppDbContext context, ILogger<ReportsController> logger)
         {
             _context = context;
+            _logger = logger;
         }
 
         // DASHBOARD KARTLARI İÇİN ÖZET BİLGİLER 
+        [RequirePermission(Policies.RequireDashboardRead)]
         [HttpGet("dashboard-summary")]
         public async Task<IActionResult> GetDashboardSummary()
         {
@@ -68,11 +73,13 @@ namespace stok_takip.Controllers
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new { message = "Dashboard özet verileri alınamadı.", error = ex.Message });
+                _logger.LogError(ex, "Dashboard özet verileri alınamadı");
+                return StatusCode(500, new { message = "Dashboard özet verileri alınamadı." });
             }
         }
 
         // SON 30 GÜNÜN HAREKET TRENDİ
+        [RequirePermission(Policies.RequireReportRead)]
         [HttpGet("trend")]
         public async Task<IActionResult> GetTrend([FromQuery] int? productId)
         {
@@ -108,11 +115,13 @@ namespace stok_takip.Controllers
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new { message = "Trend verisi alınamadı.", error = ex.Message });
+                _logger.LogError(ex, "Trend verisi alınamadı");
+                return StatusCode(500, new { message = "Trend verisi alınamadı." });
             }
         }
 
         // KATEGORİLERE GÖRE STOK DAĞILIMI
+        [RequirePermission(Policies.RequireReportRead)]
         [HttpGet("by-category")]
         public async Task<IActionResult> GetByCategory()
         {
@@ -140,11 +149,13 @@ namespace stok_takip.Controllers
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new { message = "Kategori verileri alınırken bir hata oluştu.", error = ex.Message });
+                _logger.LogError(ex, "Kategori verileri alınırken bir hata oluştu");
+                return StatusCode(500, new { message = "Kategori verileri alınırken bir hata oluştu." });
             }
         }
 
         // EN ÇOK HAREKET GÖREN ÜRÜNLER 
+        [RequirePermission(Policies.RequireReportRead)]
         [HttpGet("top-products")]
         public async Task<IActionResult> GetTopProducts()
         {
@@ -172,11 +183,13 @@ namespace stok_takip.Controllers
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new { message = "En çok hareket gören ürünler alınamadı.", error = ex.Message });
+                _logger.LogError(ex, "En çok hareket gören ürünler alınamadı");
+                return StatusCode(500, new { message = "En çok hareket gören ürünler alınamadı." });
             }
         }
 
         // HAREKET ÖZETİ (Giriş/Çıkış/Transfer Toplamları)
+        [RequirePermission(Policies.RequireReportRead)]
         [HttpGet("movement-summary")]
         public async Task<IActionResult> GetMovementSummary()
         {
@@ -203,7 +216,8 @@ namespace stok_takip.Controllers
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new { message = "Hareket özeti hesaplanamadı.", error = ex.Message });
+                _logger.LogError(ex, "Hareket özeti hesaplanamadı");
+                return StatusCode(500, new { message = "Hareket özeti hesaplanamadı." });
             }
         }
     }

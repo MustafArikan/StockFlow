@@ -111,8 +111,17 @@ public async Task<IActionResult> VerifyEmail([FromBody] VerifyEmailDto dto)
         {
             return BadRequest(new { message = "Email is already verified." });
         }
+        if (user.LastFailedLoginAttempt.HasValue && user.FailedLoginAttempts >= 5)
+        {
+            var lockoutEndTime = user.LastFailedLoginAttempt.Value.AddMinutes(15);
+            if (lockoutEndTime > DateTime.UtcNow) return BadRequest(new { message = "Çok fazla hatalı deneme. Hesabınız geçici olarak kilitlendi." });
+        }
+
         if (_passwordHasher.VerifyHashedPassword(user, user.EmailConfirmationCode, dto.VerificationCode) == PasswordVerificationResult.Failed)
         {
+            user.FailedLoginAttempts++;
+            user.LastFailedLoginAttempt = DateTime.UtcNow;
+            await _context.SaveChangesAsync();
             return BadRequest(new { message = "Invalid verification code." });
         }
         if(user.ConfirmationCodeExpiry < DateTime.UtcNow)
@@ -123,6 +132,8 @@ public async Task<IActionResult> VerifyEmail([FromBody] VerifyEmailDto dto)
         user.IsEmailConfirmed = true;
         user.EmailConfirmationCode = null;      
         user.ConfirmationCodeExpiry = null; 
+        user.FailedLoginAttempts = 0;
+        user.LastFailedLoginAttempt = null;
 
         await _context.SaveChangesAsync();
 
@@ -147,13 +158,14 @@ public async Task<IActionResult> Login([FromBody] LoginDto dto)
         if (user == null)
         {
             _metrics.LoginAttemptsTotal.WithLabels("failed").Inc();
-            return Unauthorized(new { message = "Invalid email or password." });
+            return Unauthorized(new { message = "Invalid email or password, or email is not verified." });
         }
 
         // E-Mail doğrulamasını kontrol et
         if (!user.IsEmailConfirmed)
         {
-            return Unauthorized(new { message = "Email is not verified. Please verify your email before logging in. Verification code sent to your email." });
+            _metrics.LoginAttemptsTotal.WithLabels("failed").Inc();
+            return Unauthorized(new { message = "Invalid email or password, or email is not verified." });
         }
 
         if (user.LastFailedLoginAttempt.HasValue && user.FailedLoginAttempts >= 5 )
@@ -177,11 +189,11 @@ public async Task<IActionResult> Login([FromBody] LoginDto dto)
             _metrics.LoginAttemptsTotal.WithLabels("failed").Inc();
             if (remainingAttempts > 0)
             {
-                return Unauthorized(new { message = $"Invalid email or password. Kalan deneme hakkınız: {remainingAttempts}" });
+                return Unauthorized(new { message = "Invalid email or password, or email is not verified." });
             }
             else
             {
-                return Unauthorized(new { message = "Çok fazla hatalı giriş yaptınız. Hesabınız geçici olarak kilitlendi. Lütfen 15 dakika sonra tekrar deneyin." });
+                return Unauthorized(new { message = "Giriş başarısız. Çok fazla hatalı deneme yapıldığı için hesap kilitlenmiş olabilir." });
             }
         }
 
@@ -277,6 +289,21 @@ public async Task<IActionResult> GetMe()
                 return BadRequest(new { message = "Bu e-posta adresi başka bir kullanıcı tarafından kullanılıyor." });
             }
             user.Email = dto.Email;
+            user.IsEmailConfirmed = false;
+            
+            var verificationCode = System.Security.Cryptography.RandomNumberGenerator.GetInt32(100000, 1000000).ToString();
+            user.EmailConfirmationCode = _passwordHasher.HashPassword(user, verificationCode);
+            user.ConfirmationCodeExpiry = DateTime.UtcNow.AddMinutes(10);
+            
+            var emailSubject = "StockFlow E-posta Doğrulama Kodu";
+            string emailBody = $@"
+                <div style='font-family: Arial; padding: 20px; background: #f4f4f4; text-align: center;'>
+                    <h2>E-posta Adresiniz Değişti!</h2>
+                    <p>Yeni adresinizi doğrulamak için aşağıdaki kodu kullanın:</p>
+                    <h1 style='color: #2563eb; letter-spacing: 5px;'>{verificationCode}</h1>
+                    <p>Bu kod 10 dakika boyunca geçerlidir.</p>
+                </div>";
+            await _emailService.SendEmailAsync(user.Email, emailSubject, emailBody);
         }
 
         user.FirstName = dto.FirstName;
@@ -417,6 +444,12 @@ public async Task<IActionResult> Logout()
     {
         var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == dto.Email);
 
+    if (user.LastFailedLoginAttempt.HasValue && user.FailedLoginAttempts >= 5)
+    {
+        var lockoutEndTime = user.LastFailedLoginAttempt.Value.AddMinutes(15);
+        if (lockoutEndTime > DateTime.UtcNow) return BadRequest(new { message = "Çok fazla hatalı deneme. Hesabınız kilitlendi." });
+    }
+
     if (user == null || user.PasswordResetCodeExpiry < DateTime.UtcNow)
     {
         return BadRequest(new {message = "Geçersiz veya süresi dolmuş şifre sıfırlama kodu."});
@@ -426,6 +459,9 @@ public async Task<IActionResult> Logout()
     if (_passwordHasher.VerifyHashedPassword(user, user.PasswordResetCode, dto.ResetCode) ==
   PasswordVerificationResult.Failed)
     {
+        user.FailedLoginAttempts++;
+        user.LastFailedLoginAttempt = DateTime.UtcNow;
+        await _context.SaveChangesAsync();
         return BadRequest(new {message = "Geçersiz veya süresi dolmuş şifre sıfırlama kodu."});
     }
 
@@ -439,6 +475,12 @@ public async Task<IActionResult> Logout()
     {
         var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == dto.Email);
 
+    if (user.LastFailedLoginAttempt.HasValue && user.FailedLoginAttempts >= 5)
+    {
+        var lockoutEndTime = user.LastFailedLoginAttempt.Value.AddMinutes(15);
+        if (lockoutEndTime > DateTime.UtcNow) return BadRequest(new { message = "Çok fazla hatalı deneme. Hesabınız kilitlendi." });
+    }
+
     if (user == null || user.PasswordResetCodeExpiry < DateTime.UtcNow)
     {
         return BadRequest(new {message = "Geçersiz veya süresi dolmuş şifre sıfırlama kodu."});
@@ -448,6 +490,9 @@ public async Task<IActionResult> Logout()
     if (_passwordHasher.VerifyHashedPassword(user, user.PasswordResetCode, dto.ResetCode) ==
   PasswordVerificationResult.Failed)
     {
+        user.FailedLoginAttempts++;
+        user.LastFailedLoginAttempt = DateTime.UtcNow;
+        await _context.SaveChangesAsync();
         return BadRequest(new {message = "Geçersiz veya süresi dolmuş şifre sıfırlama kodu."});
     }
 
@@ -460,6 +505,8 @@ public async Task<IActionResult> Logout()
         user.PasswordHash = _passwordHasher.HashPassword(user, dto.NewPassword);
         user.PasswordResetCode = null;
         user.PasswordResetCodeExpiry = null;
+        user.FailedLoginAttempts = 0;
+        user.LastFailedLoginAttempt = null;
 
         var activeSessions = await _context.UserSessions.Where(s => s.UserId == user.Id && s.IsActive).ToListAsync();
         foreach (var session in activeSessions)

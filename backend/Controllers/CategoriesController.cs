@@ -28,6 +28,7 @@ public class CategoriesController : ControllerBase
     }
 
     // GET /api/categories : tüm kategorileri listele
+    [RequirePermission(Policies.RequireCategoryRead)]
     [HttpGet]
     [NormalizePagination]
     public async Task<IActionResult> GetAll([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
@@ -90,6 +91,7 @@ public class CategoriesController : ControllerBase
         return Ok(new CategoryResponseDto(category.Id, category.Name, category.ParentId));
     }
 
+    [RequirePermission(Policies.RequireCategoryRead)]
     [HttpGet("{id}/check-dependencies")]
     public async Task<IActionResult> CheckDependencies(int id)
     {
@@ -142,6 +144,11 @@ public class CategoriesController : ControllerBase
         var category = await _context.Categories.FindAsync(id);
         if (category== null)
         return NotFound();
+
+        var hasChildren = await _context.Categories.AnyAsync(c => c.ParentId == id && !c.IsDeleted);
+        var hasProducts = await _context.Products.AnyAsync(p => p.CategoryId == id && !p.IsDeleted);
+        if (hasChildren || hasProducts)
+            return BadRequest(new { message = "Bu kategoriye bağlı ürün veya alt kategori var, silinemez." });
 
         category.IsDeleted = true; // Soft delete
         await _context.SaveChangesAsync();
@@ -201,3 +208,4 @@ public class CategoriesController : ControllerBase
 
 
 }
+

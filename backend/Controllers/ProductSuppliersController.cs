@@ -48,6 +48,7 @@ public class ProductSuppliersController : ControllerBase
         return Ok(new {message = "Tedarikçi ürüne bağlandı.", id=link.Id});
     }
 
+    [RequirePermission(Policies.RequireSupplierRead)]
     [HttpGet("products/{productId}/suppliers")]
     public async Task<IActionResult> GetSuppliersOfProduct(int productId)
     {
@@ -59,6 +60,7 @@ public class ProductSuppliersController : ControllerBase
         return Ok(list);
     }
 
+    [RequirePermission(Policies.RequireSupplierRead)]
     [HttpGet("suppliers/{supplierId}/products")]
     public async Task<IActionResult> GetProductsOfSupplier(int supplierId)
     {

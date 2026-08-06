@@ -1,0 +1,44 @@
+.border-dashed {
+    border-style: dashed !important;
+    border-width: 2px !important;
+    border-color: #dee2e6 !important;
+}
+
+.import-step-indicator {
+    display: flex;
+    justify-content: center;
+    gap: 1.5rem;
+}
+
+.import-step-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background-color: #e9ecef;
+    color: #6c757d;
+    font-size: 0.85rem;
+    font-weight: bold;
+    margin-right: 8px;
+}
+
+.import-step-badge.active {
+    background-color: #0d6efd;
+    color: white;
+}
+
+.import-step-badge.completed {
+    background-color: #198754;
+    color: white;
+}
+
+.import-mapping-row, .import-value-mapping-row {
+    margin-bottom: 15px;
+}
+
+.import-error-list {
+    max-height: 200px;
+    overflow-y: auto;
+}

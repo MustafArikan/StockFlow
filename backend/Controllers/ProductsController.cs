@@ -26,6 +26,7 @@ public class ProductsController : ControllerBase
     }
     
     // GET /api/products : tüm ürünleri listele
+    [RequirePermission(Policies.RequireProductRead)]
     [HttpGet]
     [NormalizePagination]
     public async Task<IActionResult> GetAll([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
@@ -36,6 +37,7 @@ public class ProductsController : ControllerBase
             .AsNoTracking()
             .Where(p => !p.IsDeleted)
             .Include(p => p.Category)
+            .Include(p => p.ProductSuppliers).ThenInclude(ps => ps.Supplier)
             .Skip((pageNumber - 1) * pageSize)
             .Take(pageSize)
             .Select(p => new 
@@ -48,6 +50,10 @@ public class ProductsController : ControllerBase
                 CategoryName = p.Category.Name,
                 StockQuantity = p.StockLevels.Sum(sl => sl.Quantity),
                 AttributesStr = p.Attributes,
+                Price = p.Price,
+                ProductSuppliers = p.ProductSuppliers.Select(ps => new ProductSupplierResponseDto(
+                    ps.Id, ps.SupplierId, ps.Supplier.Name, ps.PurchasePrice, ps.SupplierProductCode, ps.LeadTimeDays, ps.IsPreferred
+                )).ToList(),
                 CreatedAt = p.CreatedAt
             })
             .ToListAsync();
@@ -61,6 +67,8 @@ public class ProductsController : ControllerBase
             CategoryId = p.CategoryId,
             CategoryName = p.CategoryName,
             StockQuantity = p.StockQuantity,
+            Price = p.Price,
+            ProductSuppliers = p.ProductSuppliers,
             CreatedAt = p.CreatedAt,
             Attributes = string.IsNullOrEmpty(p.AttributesStr) ? new List<ProductAttributeDto>() : System.Text.Json.JsonSerializer.Deserialize<List<ProductAttributeDto>>(p.AttributesStr)
         }).ToList();
@@ -75,6 +83,7 @@ public class ProductsController : ControllerBase
     }
 
     //GET / api/products/5 : tek bir ürünü getir
+    [RequirePermission(Policies.RequireProductRead)]
     [HttpGet("{id}")]
     public async Task<IActionResult> GetById(int id)
     {
@@ -184,114 +193,7 @@ public class ProductsController : ControllerBase
         return Ok(new ProductResponseDto(product.Id, product.Name, product.Barcode, product.MinStockLevel, product.CategoryId, product.Attributes));
     }
 
-    // =========================================================================
-    // 🎯 YENİ EKLENEN TOPLU İÇE AKTARMA (EXCEL) - YENİ DTO DOSYASI GEREKTİRMEZ
-    // =========================================================================
-    [HttpPost("import")]
-    [RequirePermission(Policies.RequireProductWrite)] 
-    public async Task<IActionResult> ImportExcel(IFormFile file)
-    {
-        const long MaxFileSizeBytes = 10 * 1024 * 1024; // 10 MB
 
-        if (file == null || file.Length == 0)
-            return BadRequest(new { message = "Geçerli bir dosya yükleyin." });
-
-        if (file.Length > MaxFileSizeBytes)
-            return BadRequest(new { message = "Dosya boyutu 10 MB'ı geçemez." });
-
-        if (!file.FileName.EndsWith(".xlsx", StringComparison.OrdinalIgnoreCase))
-            return BadRequest(new { message = "Sadece .xlsx formatında dosyalar desteklenmektedir." });
-
-        // Yeni DTO dosyası açmamak için değişkenleri burada tutuyoruz
-        int totalRows = 0;
-        int successCount = 0;
-        int errorCount = 0;
-        var errorsList = new List<object>();
-        
-        var existingBarcodes = new HashSet<string>(await _context.Products.Where(p => !p.IsDeleted).Select(p => p.Barcode).ToListAsync());
-        var validCategories = await _context.Categories.ToDictionaryAsync(c => c.Name.ToLower(), c => c.Id);
-        
-        var newProducts = new List<Product>();
-        
-        using (var stream = new MemoryStream())
-        {
-            await file.CopyToAsync(stream);
-            try
-            {
-                using (var workbook = new XLWorkbook(stream))
-                {
-                    var worksheet = workbook.Worksheet(1); 
-                    var usedRange = worksheet.RangeUsed(); 
-                    
-                    if (usedRange == null) return BadRequest(new { message = "Yüklenen Excel dosyası tamamen boş veya formatı hatalı." });
-
-                    var rows = usedRange.RowsUsed().Skip(1); // Başlık satırını atla
-                    
-                    int rowIndex = 2; 
-                    foreach (var row in rows)
-                    {
-                        totalRows++;
-                        var name = row.Cell(1).GetString().Trim();
-                        var barcode = row.Cell(2).GetString().Trim();
-                        var minStockStr = row.Cell(3).GetString().Trim();
-                        var categoryName = row.Cell(4).GetString().Trim();
-
-                        var rowErrors = new List<string>();
-
-                        if (string.IsNullOrEmpty(name)) rowErrors.Add("Ürün adı boş olamaz.");
-                        if (string.IsNullOrEmpty(barcode)) rowErrors.Add("Barkod boş olamaz.");
-                        
-                        if (existingBarcodes.Contains(barcode) || newProducts.Any(p => p.Barcode == barcode))
-                            rowErrors.Add($"'{barcode}' barkodu sistemde veya excel içinde mükerrer.");
-
-                        int categoryId = 0;
-                        if (!validCategories.TryGetValue(categoryName.ToLower(), out categoryId))
-                            rowErrors.Add($"'{categoryName}' adlı kategori sistemde tanımsız.");
-
-                        if (!int.TryParse(minStockStr, out int minStock))
-                            rowErrors.Add("Kritik stok seviyesi tam sayı olmalıdır.");
-
-                        if (rowErrors.Any())
-                        {
-                            errorCount++;
-                            errorsList.Add(new { RowNumber = rowIndex, Errors = rowErrors });
-                        }
-                        else
-                        {
-                            newProducts.Add(new Product 
-                            { 
-                                Name = name, 
-                                Barcode = barcode, 
-                                MinStockLevel = minStock, 
-                                CategoryId = categoryId,
-                                Attributes = "[]" 
-                            });
-                            successCount++;
-                        }
-                        rowIndex++;
-                    }
-                }
-            }
-            catch
-            {
-                return BadRequest(new { message = "Dosya okunamadı, formatını kontrol edin." });
-            }
-        }
-
-        if (newProducts.Any())
-        {
-            await _context.Products.AddRangeAsync(newProducts);
-            await _context.SaveChangesAsync();
-        }
-
-        // Frontend'in okuyabileceği formatta DTO olmadan dinamik nesne dönüyoruz
-        return Ok(new {
-            TotalRows = totalRows,
-            SuccessCount = successCount,
-            ErrorCount = errorCount,
-            Errors = errorsList
-        });
-    }
 
     // PUT /api/products/5 : mecvut ürünü güncelle 
     [HttpPut("{id}")]
@@ -395,6 +297,7 @@ public class ProductsController : ControllerBase
         return NoContent();
     }
 
+    [RequirePermission(Policies.RequireProductRead)]
     [HttpGet("search")]
     public async Task<IActionResult> SearchProducts([FromQuery] string q)
     {
@@ -427,6 +330,7 @@ public class ProductsController : ControllerBase
     // SKU (BARKOD) OTOMATİK ÜRETİM (Generate SKU)
     // =========================================================================
     [HttpPost("generate-sku")]
+    [RequirePermission(Policies.RequireProductWrite)]
     [Authorize]
     public async Task<IActionResult> GenerateSku([FromBody] GenerateSkuDto dto)
     {

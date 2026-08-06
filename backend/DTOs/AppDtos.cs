@@ -23,7 +23,34 @@ public class CreateSupplierDto
     public string? Address { get; set; }
 
     [RegularExpression(@"^\d{10,11}$", ErrorMessage = "Vergi/TC kimlik numarası 10-11 haneli rakamlardan oluşmalıdır.")]
+    [TcKimlikVergiNoValidation]
     public string? TaxNumber { get; set; }
+}
+
+public class TcKimlikVergiNoValidationAttribute : ValidationAttribute
+{
+    protected override ValidationResult? IsValid(object? value, ValidationContext validationContext)
+    {
+        if (value == null || string.IsNullOrWhiteSpace(value.ToString()))
+            return ValidationResult.Success;
+
+        var str = value.ToString()!.Trim();
+        if (str.Length == 11)
+        {
+            if (!str.All(char.IsDigit) || str[0] == '0') return new ValidationResult("Geçersiz TC Kimlik No.");
+            var digits = str.Select(c => int.Parse(c.ToString())).ToArray();
+            int sumOdd = digits[0] + digits[2] + digits[4] + digits[6] + digits[8];
+            int sumEven = digits[1] + digits[3] + digits[5] + digits[7];
+            int tenth = ((sumOdd * 7) - sumEven) % 10;
+            if (tenth < 0) tenth += 10;
+            int eleventh = (sumOdd + sumEven + digits[9]) % 10;
+            
+            if (digits[9] != tenth || digits[10] != eleventh)
+                return new ValidationResult("Geçersiz TC Kimlik No (Checksum hatası).");
+        }
+        
+        return ValidationResult.Success;
+    }
 }
 
 public record AttributeAllowedValueDto(

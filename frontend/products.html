@@ -9,6 +9,7 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
     <link href="css/style.css?v=mobile-v1" rel="stylesheet">
+    <link href="css/import-wizard.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/nouislider@15.7.1/dist/nouislider.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/nouislider@15.7.1/dist/nouislider.min.js"></script>
     <script src="js/theme.js"></script>
@@ -21,24 +22,17 @@
 </head>
 
 <body>
-    <div class="container my-5">
-        <div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="container-fluid px-0 px-md-1 my-2">
+        <div class="d-flex justify-content-between align-items-center mb-4 px-3">
             <div>
                 <h1 class="fw-bold">Ürünler</h1>
                 <p class="text-muted mb-0">Ürün kataloğu ve stok bilgileri</p>
             </div>
             <div class="d-flex gap-2">
                 <!-- 🎯 TOPLU VERİ İÇE AKTARMA (EXCEL IMPORT) ALANI -->
-                <div class="d-flex align-items-center gap-2 bg-white rounded-pill shadow-sm px-2 py-1 border">
-                    <input type="file" id="excelImportFile" class="d-none" accept=".xlsx">
-                    <label for="excelImportFile" class="btn btn-sm btn-light rounded-pill mb-0 border cursor-pointer">
-                        <i class="bi bi-paperclip"></i> Seç
-                    </label>
-                    <span id="excelFileName" class="text-muted small text-truncate file-name-truncate">Dosya yok</span>
-                    <button class="btn btn-sm btn-success rounded-pill px-3 ms-1" type="button" id="btnExcelImport">
-                        <i class="bi bi-upload"></i> Yükle
-                    </button>
-                </div>
+                <button class="btn btn-success rounded-pill px-3 shadow-sm text-nowrap" data-bs-toggle="modal" data-bs-target="#importWizardModal">
+                    <i class="bi bi-upload"></i> Toplu Excel Aktar
+                </button>
                 <button class="btn btn-primary rounded-pill px-4 shadow-sm text-nowrap" data-bs-toggle="modal"
                     data-bs-target="#urunModal">+ Yeni Ürün Ekle</button>
             </div>
@@ -47,81 +41,132 @@
         <!-- 🎯 İÇE AKTARMA HATALARI VE RAPORLARI İÇ Weber ALANI -->
         <div id="importReportAlert" class="mt-3"></div>
 
-        <div class="card border-0 shadow-sm rounded-3">
-            <div class="card-body p-4">
-                <!-- Arama ve Filtreleme Alanı -->
-                <div class="row g-3 mb-4 align-items-center">
-                    <div class="col-md-4">
-                        <div class="position-relative d-flex align-items-center">
-                            <span class="position-absolute ms-3 text-muted"><i class="bi bi-search"></i></span>
-                            <input type="text" id="aramaKutusu" class="form-control rounded-pill ps-5 pe-5"
-                                placeholder="Ürün Adı veya Barkod ile Ara...">
-                            <button type="button"
-                                class="btn btn-link position-absolute end-0 text-primary text-decoration-none me-2"
-                                id="btnKameraAcUrunler" title="Kamera ile Okut">
-                                <i class="bi bi-qr-code-scan fs-5"></i>
-                            </button>
+        <div class="row g-1">
+            <!-- SOL FİLTRE PANELİ -->
+            <div class="col-12 col-lg-3">
+                <div class="card border-0 shadow-sm rounded-3 h-100">
+                    <div class="card-header bg-white border-bottom-0 pt-3 pb-0 d-flex justify-content-between align-items-center">
+                        <h6 class="fw-bold mb-0"><i class="bi bi-funnel-fill text-primary me-2"></i>Filtreler</h6>
+                        <button type="button" id="btnFiltreleriTemizle" class="btn btn-sm btn-link text-decoration-none text-muted p-0">Temizle</button>
+                    </div>
+                    <div class="card-body p-3 pt-2">
+                        
+                        <!-- Arama Kutusu -->
+                        <div class="mb-4">
+                            <label class="form-label small fw-bold text-muted text-uppercase mb-2">Ürün Ara</label>
+                            <div class="position-relative d-flex align-items-center">
+                                <span class="position-absolute ms-3 text-muted"><i class="bi bi-search"></i></span>
+                                <input type="text" id="aramaKutusu" class="form-control form-control-sm rounded-pill ps-5 pe-5 py-2 bg-light border-0" placeholder="Ad veya Barkod...">
+                                <button type="button" class="btn btn-link position-absolute end-0 text-primary text-decoration-none me-3 p-0" id="btnKameraAcUrunler" title="Kamera ile Okut">
+                                    <i class="bi bi-qr-code-scan fs-5"></i>
+                                </button>
+                            </div>
                         </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div id="filtreKategoriContainer" class="d-flex flex-column gap-2"></div>
-                        <input type="hidden" id="filtreKategoriId" value="">
-                    </div>
-                    <div class="col-md-2">
-                        <button type="button" id="btnFiltreleriTemizle"
-                            class="btn btn-outline-secondary rounded-pill w-100">Temizle</button>
-                    </div>
-                    <!-- 🎯 ÇEŞİTLİ FORMATLARDA DIŞA AKTARMA (EXPORT) BUTONLARI -->
-                    <div class="col-md-3 d-flex justify-content-end gap-1">
-                        <button id="btnExportExcel"
-                            class="btn btn-success btn-sm rounded-pill px-3 shadow-sm text-nowrap"
-                            title="Excel Olarak İndir">
-                            <i class="bi bi-file-earmark-excel"></i> Excel
-                        </button>
-                        <button id="btnExportPdf" class="btn btn-danger btn-sm rounded-pill px-3 shadow-sm text-nowrap"
-                            title="PDF Olarak İndir">
-                            <i class="bi bi-file-earmark-pdf"></i> PDF
-                        </button>
-                        <button id="btnExportCsv"
-                            class="btn btn-secondary btn-sm rounded-pill px-3 shadow-sm text-nowrap"
-                            title="CSV Olarak İndir">
-                            <i class="bi bi-file-earmark-spreadsheet"></i> CSV
-                        </button>
-                    </div>
-                </div>
 
-                <!-- Dinamik Özellik Filtreleme Alanı -->
-                <div class="row g-3 mb-4 d-none bg-light p-3 rounded-3 mx-0 border" id="dynamicFilterArea">
-                    <div class="col-12 mb-2 border-bottom pb-2">
-                        <h6 class="small fw-bold text-muted mb-0"><i class="bi bi-funnel-fill me-1"></i> Kategori
-                            Özelliklerine Göre Filtrele</h6>
-                    </div>
-                    <div class="row m-0 p-0" id="dynamicFilterContainer">
-                        <!-- JS ile kural filter inputları buraya gelecek -->
-                    </div>
-                </div>
+                        <!-- Kategori Seçimi -->
+                        <div class="mb-4">
+                            <label class="form-label small fw-bold text-muted text-uppercase mb-2">Kategori</label>
+                            <div id="filtreKategoriContainer" class="d-flex flex-column gap-2"></div>
+                            <input type="hidden" id="filtreKategoriId" value="">
+                        </div>
 
-                <div class="table-responsive">
-                    <table class="table table-hover align-middle mb-0">
-                        <thead>
-                            <tr class="text-muted small text-uppercase">
-                                <th id="thId" class="user-select-none sortable-th">Tarih ↕</th>
-                                <th id="thAd" class="user-select-none sortable-th">Ürün Adı ↕</th>
-                                <th id="thBarkod" class="user-select-none sortable-th">Barkod ↕</th>
-                                <th id="thMinStok" class="user-select-none sortable-th">Min. Stok ↕</th>
-                                <th id="thKategori" class="user-select-none sortable-th">Kategori ↕</th>
-                                <th id="thMevcutStok" class="user-select-none sortable-th">Mevcut Stok ↕</th>
-                                <th class="text-end" id="islemSutunuBasligi">İşlemler</th>
-                            </tr>
-                        </thead>
-                        <tbody id="urunTablosuGovdesi">
-                            <tr>
-                                <td colspan="7" class="text-center text-muted py-4">Yükleniyor...</td>
-                            </tr>
-                        </tbody>
-                    </table>
+                        <!-- Temel Filtreler (Tüm Kategoriler İçin Ortak) -->
+                        <div class="mb-4">
+                            <label class="form-label small fw-bold text-muted text-uppercase mb-2">Tedarikçi</label>
+                            <select id="filtreTedarikci" class="form-select form-select-sm bg-light border-0 rounded-pill px-3 mb-3">
+                                <option value="">Tümü</option>
+                                <!-- JS ile doldurulacak -->
+                            </select>
+
+                            <label class="form-label small fw-bold text-muted text-uppercase mb-2">Eklenme Tarihi</label>
+                            <div class="d-flex align-items-center gap-2 mb-3">
+                                <div class="position-relative w-50 d-flex align-items-center">
+                                    <input type="date" id="filtreBaslangicTarihi" class="form-control form-control-sm bg-light border-0 rounded-pill px-3 w-100 native-date" required>
+                                    <span class="position-absolute text-muted placeholder-span date-placeholder-span">gg.aa.yyyy</span>
+                                </div>
+                                <span class="text-muted">-</span>
+                                <div class="position-relative w-50 d-flex align-items-center">
+                                    <input type="date" id="filtreBitisTarihi" class="form-control form-control-sm bg-light border-0 rounded-pill px-3 w-100 native-date" required>
+                                    <span class="position-absolute text-muted placeholder-span date-placeholder-span">gg.aa.yyyy</span>
+                                </div>
+                            </div>
+
+                            <label class="form-label small fw-bold text-muted text-uppercase mb-2">Stok Durumu</label>
+                            <select id="filtreStokDurumu" class="form-select form-select-sm bg-light border-0 rounded-pill px-3 mb-3">
+                                <option value="">Tümü</option>
+                                <option value="stokta_var">Stokta Var (>0)</option>
+                                <option value="kritik">Kritik Seviye (≤ Min Stok)</option>
+                                <option value="tukendi">Tükendi (=0)</option>
+                            </select>
+
+                            <label class="form-label small fw-bold text-muted text-uppercase mb-2">Fiyat Aralığı (₺)</label>
+                            <div class="d-flex align-items-center gap-2 mb-4">
+                                <input type="number" id="filtreMinFiyat" class="form-control form-control-sm bg-light border-0 rounded-pill text-center px-2" placeholder="Min">
+                                <span class="text-muted">-</span>
+                                <input type="number" id="filtreMaxFiyat" class="form-control form-control-sm bg-light border-0 rounded-pill text-center px-2" placeholder="Max">
+                            </div>
+                            <div class="px-2 mb-2 mt-1">
+                                <div id="slider_baseFiyat"></div>
+                            </div>
+                        </div>
+
+                        <!-- Dinamik Kategori Özellikleri -->
+                        <div id="dynamicFilterArea" class="d-none">
+                            <hr class="text-muted opacity-25 my-4">
+                            <label class="form-label small fw-bold text-muted text-uppercase mb-3">Kategori Özellikleri</label>
+                            <div class="row g-0" id="dynamicFilterContainer">
+                                <!-- JS ile kural filter inputları buraya dikey olarak gelecek -->
+                            </div>
+                        </div>
+
+                    </div>
                 </div>
-                <div id="paginationContainer" class="mt-3"></div>
+            </div>
+
+            <!-- SAĞ ÜRÜN LİSTESİ -->
+            <div class="col-12 col-lg-9">
+                <div class="card border-0 shadow-sm rounded-3 h-100">
+                    <div class="card-body p-3">
+                        
+                        <!-- Üst Araç Çubuğu (Dışa Aktarma) -->
+                        <div class="d-flex justify-content-between align-items-center mb-4">
+                            <h6 class="fw-bold mb-0 text-muted">Ürün Listesi</h6>
+                            <div class="dropdown">
+                                <button class="btn btn-outline-primary btn-sm rounded-pill px-3 shadow-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                    <i class="bi bi-download"></i> <span class="ms-1">Dışa Aktar</span>
+                                </button>
+                                <ul class="dropdown-menu dropdown-menu-end shadow border-0 rounded-3">
+                                    <li><button class="dropdown-item text-success py-2" id="btnExportExcel"><i class="bi bi-file-earmark-excel me-2"></i>Excel'e Aktar</button></li>
+                                    <li><button class="dropdown-item text-danger py-2" id="btnExportPdf"><i class="bi bi-file-earmark-pdf me-2"></i>PDF'e Aktar</button></li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li><button class="dropdown-item text-secondary py-2" id="btnExportCsv"><i class="bi bi-file-earmark-spreadsheet me-2"></i>CSV'ye Aktar</button></li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0">
+                                <thead>
+                                    <tr class="text-muted small text-uppercase border-bottom">
+                                        <th id="thId" class="user-select-none sortable-th">Tarih ↕</th>
+                                        <th id="thAd" class="user-select-none sortable-th">Ürün Adı ↕</th>
+                                        <th id="thBarkod" class="user-select-none sortable-th">Barkod ↕</th>
+                                        <th id="thMinStok" class="user-select-none sortable-th">Min. Stok ↕</th>
+                                        <th id="thKategori" class="user-select-none sortable-th">Kategori ↕</th>
+                                        <th id="thMevcutStok" class="user-select-none sortable-th">Mevcut Stok ↕</th>
+                                        <th class="text-end" id="islemSutunuBasligi">İşlemler</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="urunTablosuGovdesi">
+                                    <tr>
+                                        <td colspan="7" class="text-center text-muted py-4">Yükleniyor...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div id="paginationContainer" class="mt-4"></div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -227,6 +272,50 @@
                             </div>
                         </div>
 
+                        <!-- Tedarikçi Yönetimi (Sadece Düzenlemede) -->
+                        <div class="bg-white p-4 rounded-3 shadow-sm border mb-4 d-none" id="duzenleTedarikciAlani">
+                            <h6 class="fw-bold text-info mb-4 border-bottom pb-2">
+                                <i class="bi bi-truck me-1"></i> Tedarikçi Yönetimi
+                            </h6>
+                            
+                            <div class="table-responsive mb-3">
+                                <table class="table table-sm table-hover align-middle mb-0">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Tedarikçi Adı</th>
+                                            <th>Alış Fiyatı</th>
+                                            <th class="text-end">İşlem</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="duzenleTedarikciListesi">
+                                        <tr><td colspan="3" class="text-center text-muted fst-italic py-3">Yükleniyor...</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            
+                            <div class="bg-light p-3 rounded-3 mt-3 border">
+                                <h6 class="small fw-bold text-secondary mb-3"><i class="bi bi-link-45deg me-1"></i> Yeni Tedarikçi Bağla</h6>
+                                <div class="row g-2 align-items-center">
+                                    <div class="col-12 col-md-5">
+                                        <select class="form-select form-select-sm" id="duzenleTedarikciSelect">
+                                            <option value="">Tedarikçi seçin...</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-12 col-md-4">
+                                        <div class="input-group input-group-sm">
+                                            <input type="number" class="form-control" id="duzenleTedarikciFiyat" placeholder="Alış Fiyatı" min="0" step="0.01">
+                                            <span class="input-group-text fw-bold">₺</span>
+                                        </div>
+                                    </div>
+                                    <div class="col-12 col-md-3 text-end">
+                                        <button type="button" id="btnDuzenleTedarikciEkle" class="btn btn-primary btn-sm w-100 rounded-pill fw-bold shadow-sm">
+                                            <i class="bi bi-plus-lg me-1"></i> Bağla
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
                         <div class="d-flex justify-content-end align-items-center pt-2">
                             <button type="button" class="btn btn-outline-secondary rounded-pill px-4 me-3 fw-bold"
                                 data-bs-dismiss="modal">İptal</button>
@@ -243,7 +332,7 @@
 
     <!-- Barkod Yazdırma (Print) Modalı -->
     <div class="modal fade" id="barcodePrintModal" tabindex="-1">
-        <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content border-0 shadow-lg rounded-4">
                 <div class="modal-header bg-light border-0 rounded-top-4">
                     <h5 class="modal-title fw-bold text-dark"><i class="bi bi-printer me-2 text-primary"></i>Barkod
@@ -256,7 +345,7 @@
                             <i class="bi bi-qr-code me-1"></i> QR Koda Geç
                         </button>
                     </div>
-                    <div id="printArea" class="bg-white p-3 rounded border d-inline-block text-center">
+                    <div id="printArea" class="bg-white p-3 rounded border text-center w-100">
                         <img id="barcodeCanvas" class="img-fluid" alt="Barkod" />
                         <canvas id="qrcodeCanvas" class="mx-auto d-none justify-content-center"></canvas>
                     </div>
@@ -270,6 +359,68 @@
                 </div>
             </div>
         </div>
+    </div>
+
+    <!-- Excel İçe Aktarma Sihirbazı Modalı -->
+    <div class="modal fade" id="importWizardModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+      <div class="modal-dialog modal-xl modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+          <div class="modal-header bg-light border-bottom-0 rounded-top-4 py-3">
+            <h5 class="modal-title fw-bold text-dark">
+                <i class="bi bi-file-earmark-excel me-2 text-success"></i> EXCEL'DEN TOPLU ÜRÜN AKTAR
+            </h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" id="btnCloseImportWizard"></button>
+          </div>
+          <div class="modal-body p-4">
+            <!-- Adım göstergesi -->
+            <div id="importStepIndicator" class="import-step-indicator mb-4 d-flex justify-content-center gap-3"></div>
+    
+            <!-- Adım içerikleri: her biri JS ile show/hide edilir (d-none class toggle) -->
+            <div id="importStep1" class="import-step">
+                <div class="text-center py-5 bg-white border rounded-3 border-dashed">
+                    <i class="bi bi-cloud-arrow-up display-1 text-muted mb-3"></i>
+                    <h5>Dosya Yükle</h5>
+                    <p class="text-muted small">Aktarmak istediğiniz .xlsx formatındaki dosyayı seçin (Maks 10MB)</p>
+                    <input type="file" id="excelImportFile" class="d-none" accept=".xlsx">
+                    <label for="excelImportFile" class="btn btn-primary rounded-pill px-4 mt-2">
+                        <i class="bi bi-folder2-open me-2"></i> Dosya Seç
+                    </label>
+                    <div id="importStep1Loading" class="d-none mt-3">
+                        <div class="spinner-border text-primary spinner-border-sm me-2"></div> Dosya analiz ediliyor...
+                    </div>
+                </div>
+            </div>
+            <div id="importStep2" class="import-step d-none bg-white p-4 rounded-3 border">
+                <h6 class="fw-bold mb-3 text-primary"><i class="bi bi-arrow-left-right me-2"></i> Sütun Eşleştirme</h6>
+                <p class="small text-muted mb-4">Lütfen Excel dosyanızdaki sütunların sistemdeki hangi alana denk geldiğini seçin. Otomatik eşleşenleri kontrol edin.</p>
+                <div id="importStep2Content" class="row g-4"></div>
+            </div>
+            <div id="importStep3" class="import-step d-none bg-white p-4 rounded-3 border">
+                <h6 class="fw-bold mb-3 text-primary"><i class="bi bi-diagram-3 me-2"></i> Değer Eşleştirme</h6>
+                <p class="small text-muted mb-4">Sistemde önceden tanımlı olması gereken bazı alanlar (örn. Kategori) için Excel'deki eşsiz değerleri sistemdeki değerlerle eşleştirin.</p>
+                
+                <div class="mb-4">
+                    <label class="form-label text-muted small fw-bold">Yerleştirilecek Depo (Tüm Ürünler İçin) <span class="text-danger">*</span></label>
+                    <select class="form-select" id="importWarehouseId">
+                        <option value="">Depo Seçin...</option>
+                    </select>
+                </div>
+                <div class="mb-4">
+                    <label class="form-label text-muted small fw-bold">Yerleştirilecek Raf (Tüm Ürünler İçin) <span class="text-danger">*</span></label>
+                    <select class="form-select" id="importLocationId" disabled>
+                        <option value="">Önce depo seçin...</option>
+                    </select>
+                </div>
+
+                <div id="importStep3Content"></div>
+            </div>
+          </div>
+          <div class="modal-footer bg-light border-top-0 rounded-bottom-4">
+            <button type="button" class="btn btn-outline-secondary rounded-pill px-4 fw-bold d-none" id="btnImportBack">Geri</button>
+            <button type="button" class="btn btn-success rounded-pill px-5 fw-bold shadow-sm d-none" id="btnImportNext">İleri</button>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- Kamera Tarayıcı Modalı -->
@@ -291,6 +442,197 @@
         </div>
     </div>
 
+    <!-- Ürün Detay Modalı (Dinamik olarak JS ile doldurulur) -->
+    <div class="modal fade" id="urunDetayModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg mt-5">
+            <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+                <div class="modal-header bg-white border-bottom-0 pb-3 pt-4 position-relative">
+                    <div class="position-absolute top-0 end-0 p-3">
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Kapat"></button>
+                    </div>
+                    <div class="d-flex align-items-center w-100 mt-2">
+                        <div class="bg-primary bg-opacity-10 text-primary rounded-circle d-flex align-items-center justify-content-center shadow-sm p-3 product-detail-icon">
+                            <i class="bi bi-box-seam fs-4"></i>
+                        </div>
+                        <div class="ms-3">
+                            <h4 class="modal-title fw-bold mb-0 text-dark" id="detayUrunAdi">Yükleniyor...</h4>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-body p-0 bg-light">
+                    
+                    <div id="urunDetayCarousel" class="carousel slide" data-bs-ride="false" data-bs-wrap="false" data-bs-touch="true">
+                        
+                        <div class="bg-white border-bottom py-3 px-4 d-flex justify-content-between align-items-center shadow-sm z-3 position-relative">
+                            <button class="btn btn-sm btn-outline-secondary rounded-pill px-3 fw-bold" type="button" data-bs-target="#urunDetayCarousel" data-bs-slide="prev">
+                                <i class="bi bi-chevron-left me-1"></i> Geri
+                            </button>
+                            
+                            <div class="carousel-indicators position-static m-0 d-flex gap-2">
+                                <button type="button" data-bs-target="#urunDetayCarousel" data-bs-slide-to="0" class="active bg-primary" aria-current="true" aria-label="Temel Bilgiler"></button>
+                                <button type="button" data-bs-target="#urunDetayCarousel" data-bs-slide-to="1" class="bg-primary" aria-label="Özellikler"></button>
+                                <button type="button" data-bs-target="#urunDetayCarousel" data-bs-slide-to="2" class="bg-primary" aria-label="Tedarikçiler"></button>
+                                <button type="button" data-bs-target="#urunDetayCarousel" data-bs-slide-to="3" class="bg-primary" aria-label="Stok Dağılımı"></button>
+                                <button type="button" data-bs-target="#urunDetayCarousel" data-bs-slide-to="4" class="bg-primary" aria-label="Stok Hareketleri"></button>
+                            </div>
+                            
+                            <button class="btn btn-sm btn-outline-primary rounded-pill px-3 fw-bold" type="button" data-bs-target="#urunDetayCarousel" data-bs-slide="next">
+                                İleri <i class="bi bi-chevron-right ms-1"></i>
+                            </button>
+                        </div>
+
+                        <div class="carousel-inner p-4">
+                            
+                            <div class="carousel-item active">
+                                
+                                <div class="row mb-4 g-3">
+                                    <div class="col-12 col-md-6">
+                                        <div class="bg-primary bg-opacity-10 text-primary p-4 rounded-4 h-100 border border-primary border-opacity-25 d-flex flex-column justify-content-center">
+                                            <small class="text-uppercase fw-bold opacity-75 mb-1"><i class="bi bi-tags me-1"></i> Kategori</small>
+                                            <div class="fs-4 fw-bold" id="detayKategoriAdi">-</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-12 col-md-6">
+                                        <div class="bg-secondary bg-opacity-10 text-secondary p-4 rounded-4 h-100 border border-secondary border-opacity-25 d-flex flex-column justify-content-center">
+                                            <small class="text-uppercase fw-bold opacity-75 mb-1"><i class="bi bi-box me-1"></i> Ürün Modeli</small>
+                                            <div class="fs-4 fw-bold" id="detayUrunModeli">-</div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <h6 class="fw-bold text-primary text-uppercase small mb-4 border-bottom pb-2">
+                                    <span class="bg-primary text-white rounded-circle d-inline-flex align-items-center justify-content-center me-2 p-1"><i class="bi bi-info-circle"></i></span> Diğer Temel Bilgiler
+                                </h6>
+                                <div class="row g-4">
+                                    <div class="col-sm-6">
+                                        <div class="bg-white p-4 rounded-4 shadow-sm border border-light h-100 d-flex flex-column justify-content-center align-items-center text-center">
+                                            <i class="bi bi-upc-scan fs-3 text-secondary mb-2"></i>
+                                            <small class="text-muted text-uppercase fw-bold">Barkod (SKU)</small>
+                                            <div class="fw-bold fs-5 mt-1 text-dark" id="detayBarkod">-</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-sm-6">
+                                        <div class="bg-white p-4 rounded-4 shadow-sm border border-light h-100 d-flex flex-column justify-content-center align-items-center text-center">
+                                            <i class="bi bi-calendar3 fs-3 text-secondary mb-2"></i>
+                                            <small class="text-muted text-uppercase fw-bold">Sisteme Eklenme</small>
+                                            <div class="fw-bold fs-6 mt-1 text-dark" id="detayTarih">-</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-sm-6">
+                                        <div class="bg-white p-4 rounded-4 shadow-sm border border-light h-100 d-flex flex-column justify-content-center align-items-center text-center">
+                                            <i id="detayMevcutStokIcon" class="bi bi-boxes fs-3 mb-2"></i>
+                                            <small class="text-muted text-uppercase fw-bold">Mevcut Toplam Stok</small>
+                                            <div class="fw-bold fs-3 mt-1" id="detayMevcutStok">0</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-sm-6">
+                                        <div class="bg-white p-4 rounded-4 shadow-sm border border-light h-100 d-flex flex-column justify-content-center align-items-center text-center">
+                                            <i class="bi bi-exclamation-triangle fs-3 text-warning mb-2"></i>
+                                            <small class="text-muted text-uppercase fw-bold">Minimum Stok Sınırı</small>
+                                            <div class="fw-bold fs-5 mt-1 text-dark" id="detayMinStok">0</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="carousel-item">
+                                <h6 class="fw-bold text-primary text-uppercase small mb-4 border-bottom pb-2">
+                                    <span class="bg-primary text-white rounded-circle d-inline-flex align-items-center justify-content-center me-2 p-1"><i class="bi bi-list-check"></i></span> Ürün Özellikleri ve Kurallar
+                                </h6>
+                                <div class="bg-white p-4 rounded-4 shadow-sm border border-light">
+                                    <div class="table-responsive">
+                                        <table class="table table-hover mb-0 align-middle">
+                                            <tbody id="detayOzelliklerListesi">
+                                                <!-- Dinamik -->
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="carousel-item">
+                                <h6 class="fw-bold text-primary text-uppercase small mb-4 border-bottom pb-2">
+                                    <span class="bg-primary text-white rounded-circle d-inline-flex align-items-center justify-content-center me-2 p-1"><i class="bi bi-truck"></i></span> Tedarikçi Bilgileri
+                                </h6>
+                                <div class="bg-white p-4 rounded-4 shadow-sm border border-light">
+                                    <div class="table-responsive mb-3">
+                                        <table class="table table-hover align-middle mb-0">
+                                            <thead class="table-light">
+                                                <tr>
+                                                    <th>Tedarikçi Adı</th>
+                                                    <th>Alış Fiyatı</th>
+                                                    <th class="text-end" id="detayTedarikciIslemSutunuBasligi">İşlem</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="detayTedarikciListesi">
+                                                <tr><td colspan="3" class="text-center text-muted fst-italic py-4">Tedarikçi bilgileri yükleniyor...</td></tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                    
+                                </div>
+                            </div>
+
+                            <div class="carousel-item">
+                                <h6 class="fw-bold text-primary text-uppercase small mb-4 border-bottom pb-2">
+                                    <span class="bg-primary text-white rounded-circle d-inline-flex align-items-center justify-content-center me-2 p-1"><i class="bi bi-building"></i></span> Depo ve Raf Stok Dağılımı
+                                </h6>
+                                <div class="bg-white p-4 rounded-4 shadow-sm border border-light">
+                                    <div class="table-responsive">
+                                        <table class="table table-hover align-middle mb-0">
+                                            <thead class="table-light">
+                                                <tr>
+                                                    <th><i class="bi bi-building me-1"></i> Depo Adı</th>
+                                                    <th><i class="bi bi-layers me-1"></i> Raf (Konum)</th>
+                                                    <th class="text-end"><i class="bi bi-box me-1"></i> Adet</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="detayStokDagitimListesi">
+                                                <!-- Dinamik -->
+                                            </tbody>
+                                            <tfoot class="table-light" id="detayStokDagitimFooter">
+                                                <tr>
+                                                    <td colspan="2" class="text-end fw-bold text-dark">Genel Toplam Stok:</td>
+                                                    <td class="text-end fw-bold fs-5 text-success" id="detayGenelToplamStok">-</td>
+                                                </tr>
+                                            </tfoot>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="carousel-item">
+                                <h6 class="fw-bold text-primary text-uppercase small mb-4 border-bottom pb-2">
+                                    <span class="bg-primary text-white rounded-circle d-inline-flex align-items-center justify-content-center me-2 p-1"><i class="bi bi-clock-history"></i></span> Stok Hareket Geçmişi
+                                </h6>
+                                <div class="bg-white p-4 rounded-4 shadow-sm border border-light">
+                                    <div class="table-responsive">
+                                        <table class="table table-hover align-middle mb-0">
+                                            <thead class="table-light">
+                                                <tr>
+                                                    <th>Tarih</th>
+                                                    <th>İşlem Tipi</th>
+                                                    <th>Miktar</th>
+                                                    <th>Personel</th>
+                                                    <th>Açıklama</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="detayStokHareketleriListesi">
+                                                <!-- Dinamik -->
+                                                <tr><td colspan="5" class="text-center text-muted fst-italic py-4">Hareketler yükleniyor...</td></tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
     <script src="js/scanner.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
@@ -307,6 +649,7 @@
     <script src="js/dynamic-ui.js?v=4"></script>
     <script src="js/product-detail.js"></script>
     <script src="js/products.js?v=4"></script>
+    <script src="js/products-import-wizard.js" defer></script>
     <script src="js/auth.js?v=4"></script>
 </body>
 

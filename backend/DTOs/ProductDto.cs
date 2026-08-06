@@ -15,5 +15,6 @@ public class ProductDto
     public decimal Price { get; set; } = 0; // Çıkış fiyatı
 
     public List<ProductAttributeDto>? Attributes { get; set; } // JSON formatında ürün özellikleri (Strongly Typed EAV)
+    public List<ProductSupplierResponseDto> ProductSuppliers { get; set; } = new();
     public DateTime CreatedAt { get; set; }
 }

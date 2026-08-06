@@ -8,7 +8,7 @@ namespace stok_takip.Data;
 
 public static class DbInitializer
 {
-    public static void Initialize(AppDbContext context)
+    public static void Initialize(AppDbContext context, bool isDevelopment, string adminPassword)
     {
         context.Database.Migrate();
 
@@ -135,25 +135,39 @@ public static class DbInitializer
             context.SaveChanges();
         }
 
-        if (!context.AppAuthorizationPolicies.Any())
+        var policyDefs = new List<(string Key, string Description, int Limit, int Window, string[] Perms)>
         {
-            var policyDefs = new List<(string Key, string Description, int Limit, int Window, string[] Perms)>
-            {
-                ("RequireAssetWrite", "Demirbaş Ekleme ve Düzenleme Yetkisi", 30, 60, new[] { "Asset.Add", "Asset.Edit" }),
-                ("RequireAuditLogRead", "Sistem Loglarını Okuma Yetkisi", 20, 60, new[] { "System.AuditLogs" }),
-                ("RequireCategoryWrite", "Kategori Ekleme ve Düzenleme Yetkisi", 30, 60, new[] { "Category.Add", "Category.Edit" }),
-                ("RequireLocationWrite", "Konum/Raf Ekleme Yetkisi", 30, 60, new[] { "Location.Add" }),
-                ("RequireProductWrite", "Ürün Ekleme ve Düzenleme Yetkisi", 30, 60, new[] { "Product.Add", "Product.Edit" }),
-                ("RequireProductSupplierWrite", "Ürün Tedarikçi Ekleme ve Düzenleme Yetkisi", 30, 60, new[] { "Supplier.Edit" }),
-                ("RequireStockMovementWrite", "Stok Hareketi (Giriş, Çıkış, Transfer) Yetkisi", 20, 60, new[] { "Movement.Inbound", "Movement.Outbound", "Movement.Transfer" }),
-                ("RequireSupplierWrite", "Tedarikçi Ekleme ve Düzenleme Yetkisi", 30, 60, new[] { "Supplier.Add", "Supplier.Edit" }),
-                ("RequireWarehouseWrite", "Depo Ekleme ve Düzenleme Yetkisi", 30, 60, new[] { "Warehouse.Add", "Warehouse.Edit" }),
-                ("RequireUserManage", "Kullanıcı Yönetim (Listele, Ekle, Düzenle, Sil) Yetkisi", 15, 60, new[] { "User.View", "User.Add", "User.Edit", "User.Delete" })
-            };
+            ("RequireAssetWrite", "Demirbaş Ekleme ve Düzenleme Yetkisi", 30, 60, new[] { "Asset.Add", "Asset.Edit" }),
+            ("RequireAuditLogRead", "Sistem Loglarını Okuma Yetkisi", 20, 60, new[] { "System.AuditLogs" }),
+            ("RequireCategoryWrite", "Kategori Ekleme ve Düzenleme Yetkisi", 30, 60, new[] { "Category.Add", "Category.Edit" }),
+            ("RequireLocationWrite", "Konum/Raf Ekleme Yetkisi", 30, 60, new[] { "Location.Add" }),
+            ("RequireProductWrite", "Ürün Ekleme ve Düzenleme Yetkisi", 30, 60, new[] { "Product.Add", "Product.Edit" }),
+            ("RequireProductSupplierWrite", "Ürün Tedarikçi Ekleme ve Düzenleme Yetkisi", 30, 60, new[] { "Supplier.Edit" }),
+            ("RequireStockMovementWrite", "Stok Hareketi (Giriş, Çıkış, Transfer) Yetkisi", 20, 60, new[] { "Movement.Inbound", "Movement.Outbound", "Movement.Transfer" }),
+            ("RequireSupplierWrite", "Tedarikçi Ekleme ve Düzenleme Yetkisi", 30, 60, new[] { "Supplier.Add", "Supplier.Edit" }),
+            ("RequireWarehouseWrite", "Depo Ekleme ve Düzenleme Yetkisi", 30, 60, new[] { "Warehouse.Add", "Warehouse.Edit" }),
+            ("RequireUserManage", "Kullanıcı Yönetim (Listele, Ekle, Düzenle, Sil) Yetkisi", 15, 60, new[] { "User.View", "User.Add", "User.Edit", "User.Delete" }),
+            ("RequireAssetRead", "Demirbaş Görüntüleme Yetkisi", 50, 60, new[] { "Asset.View" }),
+            ("RequireCategoryRead", "Kategori Görüntüleme Yetkisi", 50, 60, new[] { "Category.View" }),
+            ("RequireLocationRead", "Konum/Raf Görüntüleme Yetkisi", 50, 60, new[] { "Location.View" }),
+            ("RequireProductRead", "Ürün Görüntüleme Yetkisi", 50, 60, new[] { "Product.View" }),
+            ("RequireStockMovementRead", "Stok Hareketi Görüntüleme Yetkisi", 50, 60, new[] { "Movement.View" }),
+            ("RequireSupplierRead", "Tedarikçi Görüntüleme Yetkisi", 50, 60, new[] { "Supplier.View" }),
+            ("RequireWarehouseRead", "Depo Görüntüleme Yetkisi", 50, 60, new[] { "Warehouse.View" }),
+            ("RequireReportRead", "Rapor Görüntüleme Yetkisi", 20, 60, new[] { "Report.View" }),
+            ("RequireDashboardRead", "Ana Sayfa Görüntüleme Yetkisi", 50, 60, new[] { "Dashboard.View" }),
+            ("RequireNotificationRead", "Bildirim Görüntüleme Yetkisi", 50, 60, new[] { "Notification.View" }),
+            ("RequireSettingsRead", "Ayarlar Görüntüleme Yetkisi", 50, 60, new[] { "Settings.View" })
+        };
 
+        var existingPolicies = context.AppAuthorizationPolicies.Select(p => p.Key).ToList();
+        var policiesToInsert = policyDefs.Where(pd => !existingPolicies.Contains(pd.Key)).ToList();
+
+        if (policiesToInsert.Any())
+        {
             var dbPermissions = context.AppPermissions.ToList();
 
-            foreach (var pDef in policyDefs)
+            foreach (var pDef in policiesToInsert)
             {
                 var policy = new AppAuthorizationPolicy
                 {
@@ -187,30 +201,51 @@ public static class DbInitializer
             var viewerRoleId = context.AppRoles.First(r => r.Name == "viewer").Id;
 
             var hasher = new Microsoft.AspNetCore.Identity.PasswordHasher<User>();
-            var adminUser = new User
+            var defaultUsers = new List<User>();
+
+            if (isDevelopment)
             {
-                FirstName = "Sistem",
-                LastName = "Yöneticisi",
-                Email = "admin@godeva.com.tr",
-                RoleId = adminRoleId,
-                IsEmailConfirmed = true
-            };
-            adminUser.PasswordHash = hasher.HashPassword(adminUser, "adminpassword23!");
+                var adminUser = new User
+                {
+                    FirstName = "Sistem",
+                    LastName = "Yöneticisi",
+                    Email = "admin@godeva.com.tr",
+                    RoleId = adminRoleId,
+                    IsEmailConfirmed = true
+                };
+                adminUser.PasswordHash = hasher.HashPassword(adminUser, "adminpassword23!");
+                defaultUsers.Add(adminUser);
 
-            var testUser = new User
+                var testUser = new User
+                {
+                    FirstName = "Test",
+                    LastName = "Kullanıcı",
+                    Email = "test@godeva.com.tr",
+                    RoleId = viewerRoleId,
+                    IsEmailConfirmed = true
+                };
+                testUser.PasswordHash = hasher.HashPassword(testUser, "testpassword23!");
+                defaultUsers.Add(testUser);
+            }
+            else if (!string.IsNullOrEmpty(adminPassword))
             {
-                FirstName = "Test",
-                LastName = "Kullanıcı",
-                Email = "test@godeva.com.tr",
-                RoleId = viewerRoleId,
-                IsEmailConfirmed = true
-            };
-            testUser.PasswordHash = hasher.HashPassword(testUser, "testpassword23!");
+                var adminUser = new User
+                {
+                    FirstName = "Sistem",
+                    LastName = "Yöneticisi",
+                    Email = "admin@godeva.com.tr",
+                    RoleId = adminRoleId,
+                    IsEmailConfirmed = true
+                };
+                adminUser.PasswordHash = hasher.HashPassword(adminUser, adminPassword);
+                defaultUsers.Add(adminUser);
+            }
 
-            var defaultUsers = new List<User> { adminUser, testUser };
-
-            context.Users.AddRange(defaultUsers);
-            context.SaveChanges();
+            if (defaultUsers.Any())
+            {
+                context.Users.AddRange(defaultUsers);
+                context.SaveChanges();
+            }
         }
 
         if (!context.Categories.Any())
