@@ -159,7 +159,14 @@ public class ProductsController : ControllerBase
             Attributes = dto.Attributes != null ? System.Text.Json.JsonSerializer.Serialize(dto.Attributes) : "[]"
         };
         _context.Products.Add(product);
-        await _context.SaveChangesAsync(); // Önce ürünü kaydet ki ID oluşsun
+        try
+        {
+            await _context.SaveChangesAsync(); // Önce ürünü kaydet ki ID oluşsun
+        }
+        catch (DbUpdateException)
+        {
+            return Conflict(new { message = "Bu barkoda sahip bir ürün zaten kaydedilmiş olabilir." });
+        }
 
         // 🎯 İlk Stoğu Oluştur (StockLevel tablosuna)
         var initialStock = new StockLevel

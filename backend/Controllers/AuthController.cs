@@ -111,16 +111,16 @@ public async Task<IActionResult> VerifyEmail([FromBody] VerifyEmailDto dto)
         {
             return BadRequest(new { message = "Email is already verified." });
         }
-        if (user.LastFailedLoginAttempt.HasValue && user.FailedLoginAttempts >= 5)
+        if (user.LastFailedVerificationAttempt.HasValue && user.FailedVerificationAttempts >= 5)
         {
-            var lockoutEndTime = user.LastFailedLoginAttempt.Value.AddMinutes(15);
+            var lockoutEndTime = user.LastFailedVerificationAttempt.Value.AddMinutes(15);
             if (lockoutEndTime > DateTime.UtcNow) return BadRequest(new { message = "Çok fazla hatalı deneme. Hesabınız geçici olarak kilitlendi." });
         }
 
         if (_passwordHasher.VerifyHashedPassword(user, user.EmailConfirmationCode, dto.VerificationCode) == PasswordVerificationResult.Failed)
         {
-            user.FailedLoginAttempts++;
-            user.LastFailedLoginAttempt = DateTime.UtcNow;
+            user.FailedVerificationAttempts++;
+            user.LastFailedVerificationAttempt = DateTime.UtcNow;
             await _context.SaveChangesAsync();
             return BadRequest(new { message = "Invalid verification code." });
         }
@@ -132,8 +132,8 @@ public async Task<IActionResult> VerifyEmail([FromBody] VerifyEmailDto dto)
         user.IsEmailConfirmed = true;
         user.EmailConfirmationCode = null;      
         user.ConfirmationCodeExpiry = null; 
-        user.FailedLoginAttempts = 0;
-        user.LastFailedLoginAttempt = null;
+        user.FailedVerificationAttempts = 0;
+        user.LastFailedVerificationAttempt = null;
 
         await _context.SaveChangesAsync();
 
@@ -206,6 +206,15 @@ public async Task<IActionResult> Login([FromBody] LoginDto dto)
 
         var sessionToken = Guid.NewGuid().ToString(); // Yeni bir oturum token'ı oluştur
         var token = GenerateJwtToken(user, sessionToken);
+
+        var cookieOptions = new CookieOptions
+        {
+            HttpOnly = true,
+            Secure = true,
+            SameSite = SameSiteMode.Strict,
+            Expires = DateTime.UtcNow.AddHours(1)
+        };
+        Response.Cookies.Append("jwt", token, cookieOptions);
 
         var userAgent = Request.Headers["User-Agent"].ToString();
         var (os, browser) = ParseUserAgent(userAgent);
@@ -337,6 +346,7 @@ public async Task<IActionResult> Logout()
                 await _context.SaveChangesAsync();
             }
         }
+        Response.Cookies.Delete("jwt");
         return Ok(new { message = "Logout successful. Session deactivated." });
     }
 
@@ -444,23 +454,23 @@ public async Task<IActionResult> Logout()
     {
         var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == dto.Email);
 
-    if (user.LastFailedLoginAttempt.HasValue && user.FailedLoginAttempts >= 5)
-    {
-        var lockoutEndTime = user.LastFailedLoginAttempt.Value.AddMinutes(15);
-        if (lockoutEndTime > DateTime.UtcNow) return BadRequest(new { message = "Çok fazla hatalı deneme. Hesabınız kilitlendi." });
-    }
-
     if (user == null || user.PasswordResetCodeExpiry < DateTime.UtcNow)
     {
         return BadRequest(new {message = "Geçersiz veya süresi dolmuş şifre sıfırlama kodu."});
+    }
+
+    if (user.LastFailedPasswordResetAttempt.HasValue && user.FailedPasswordResetAttempts >= 5)
+    {
+        var lockoutEndTime = user.LastFailedPasswordResetAttempt.Value.AddMinutes(15);
+        if (lockoutEndTime > DateTime.UtcNow) return BadRequest(new { message = "Çok fazla hatalı deneme. Hesabınız kilitlendi." });
     }
 
     // Yeni Hash kontrolü
     if (_passwordHasher.VerifyHashedPassword(user, user.PasswordResetCode, dto.ResetCode) ==
   PasswordVerificationResult.Failed)
     {
-        user.FailedLoginAttempts++;
-        user.LastFailedLoginAttempt = DateTime.UtcNow;
+        user.FailedPasswordResetAttempts++;
+        user.LastFailedPasswordResetAttempt = DateTime.UtcNow;
         await _context.SaveChangesAsync();
         return BadRequest(new {message = "Geçersiz veya süresi dolmuş şifre sıfırlama kodu."});
     }
@@ -475,23 +485,23 @@ public async Task<IActionResult> Logout()
     {
         var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == dto.Email);
 
-    if (user.LastFailedLoginAttempt.HasValue && user.FailedLoginAttempts >= 5)
-    {
-        var lockoutEndTime = user.LastFailedLoginAttempt.Value.AddMinutes(15);
-        if (lockoutEndTime > DateTime.UtcNow) return BadRequest(new { message = "Çok fazla hatalı deneme. Hesabınız kilitlendi." });
-    }
-
     if (user == null || user.PasswordResetCodeExpiry < DateTime.UtcNow)
     {
         return BadRequest(new {message = "Geçersiz veya süresi dolmuş şifre sıfırlama kodu."});
+    }
+
+    if (user.LastFailedPasswordResetAttempt.HasValue && user.FailedPasswordResetAttempts >= 5)
+    {
+        var lockoutEndTime = user.LastFailedPasswordResetAttempt.Value.AddMinutes(15);
+        if (lockoutEndTime > DateTime.UtcNow) return BadRequest(new { message = "Çok fazla hatalı deneme. Hesabınız kilitlendi." });
     }
 
     // Yeni Hash kontrolü
     if (_passwordHasher.VerifyHashedPassword(user, user.PasswordResetCode, dto.ResetCode) ==
   PasswordVerificationResult.Failed)
     {
-        user.FailedLoginAttempts++;
-        user.LastFailedLoginAttempt = DateTime.UtcNow;
+        user.FailedPasswordResetAttempts++;
+        user.LastFailedPasswordResetAttempt = DateTime.UtcNow;
         await _context.SaveChangesAsync();
         return BadRequest(new {message = "Geçersiz veya süresi dolmuş şifre sıfırlama kodu."});
     }
@@ -505,8 +515,8 @@ public async Task<IActionResult> Logout()
         user.PasswordHash = _passwordHasher.HashPassword(user, dto.NewPassword);
         user.PasswordResetCode = null;
         user.PasswordResetCodeExpiry = null;
-        user.FailedLoginAttempts = 0;
-        user.LastFailedLoginAttempt = null;
+        user.FailedPasswordResetAttempts = 0;
+        user.LastFailedPasswordResetAttempt = null;
 
         var activeSessions = await _context.UserSessions.Where(s => s.UserId == user.Id && s.IsActive).ToListAsync();
         foreach (var session in activeSessions)

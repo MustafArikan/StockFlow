@@ -19,6 +19,12 @@ public class User : BaseEntity
     public DateTime? PasswordResetCodeExpiry { get; set; }
     public int FailedLoginAttempts { get; set; } = 0;
     public DateTime? LastFailedLoginAttempt { get; set; } // null ise not locked
+
+    public int FailedVerificationAttempts { get; set; } = 0;
+    public DateTime? LastFailedVerificationAttempt { get; set; }
+
+    public int FailedPasswordResetAttempts { get; set; } = 0;
+    public DateTime? LastFailedPasswordResetAttempt { get; set; }
     public ICollection<UserWarehouse> UserWarehouses { get; set; } = new List<UserWarehouse>();
     public ICollection<AssetHistory> AssetHistories { get; set; } = new List<AssetHistory>();
     public ICollection<SecurityAuditLog> SecurityAuditLogs { get; set; } = new List<SecurityAuditLog>();

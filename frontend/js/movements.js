@@ -32,7 +32,7 @@ const hareketView = createDataView({
         if (ed) url += `&endDate=${ed}`;
 
         if (aktifFiltre !== 'TUMU') {
-            url += `&movementType=${aktifFiltre === 'GIRIS' ? 'IN' : aktifFiltre === 'CIKIS' ? 'OUT' : 'TRANSFER'}`;
+            url += `&type=${aktifFiltre === 'GIRIS' ? 'IN' : aktifFiltre === 'CIKIS' ? 'OUT' : 'TRANSFER'}`;
         }
 
         const arama = document.getElementById("aramaKutusu")?.value || "";
@@ -107,16 +107,20 @@ function aktifButonuGuncelle(aktifId) {
     butonlar.forEach(id => {
         const btn = document.getElementById(id);
         if (!btn) return;
+        
+        btn.classList.remove("btn-secondary", "btn-success", "btn-danger", "btn-info", "text-white");
+        btn.classList.remove("btn-outline-secondary", "btn-outline-success", "btn-outline-danger", "btn-outline-info");
+        
         if (id === aktifId) {
-            if (id === "btnTumu") btn.className = "btn btn-secondary btn-sm rounded-pill px-3 shadow-sm text-white filtre-elemani";
-            else if (id === "btnGirisler") btn.className = "btn btn-success btn-sm rounded-pill px-3 shadow-sm text-white filtre-elemani";
-            else if (id === "btnCikislar") btn.className = "btn btn-danger btn-sm rounded-pill px-3 shadow-sm text-white filtre-elemani";
-            else if (id === "btnTransferler") btn.className = "btn btn-info btn-sm rounded-pill px-3 shadow-sm text-white filtre-elemani";
+            if (id === "btnTumu") btn.classList.add("btn-secondary", "text-white");
+            else if (id === "btnGirisler") btn.classList.add("btn-success", "text-white");
+            else if (id === "btnCikislar") btn.classList.add("btn-danger", "text-white");
+            else if (id === "btnTransferler") btn.classList.add("btn-info", "text-white");
         } else {
-            if (id === "btnTumu") btn.className = "btn btn-outline-secondary btn-sm rounded-pill px-3 shadow-sm filtre-elemani";
-            else if (id === "btnGirisler") btn.className = "btn btn-outline-success btn-sm rounded-pill px-3 shadow-sm filtre-elemani";
-            else if (id === "btnCikislar") btn.className = "btn btn-outline-danger btn-sm rounded-pill px-3 shadow-sm filtre-elemani";
-            else if (id === "btnTransferler") btn.className = "btn btn-outline-info btn-sm rounded-pill px-3 shadow-sm filtre-elemani";
+            if (id === "btnTumu") btn.classList.add("btn-outline-secondary");
+            else if (id === "btnGirisler") btn.classList.add("btn-outline-success");
+            else if (id === "btnCikislar") btn.classList.add("btn-outline-danger");
+            else if (id === "btnTransferler") btn.classList.add("btn-outline-info");
         }
     });
 }
@@ -149,8 +153,15 @@ document.getElementById("btnTransferler")?.addEventListener("click", () => {
     hareketView.load(1);
 });
 
-document.getElementById("filtreUygula")?.addEventListener("click", () => {
-    hareketView.load(1);
+document.getElementById("startDate")?.addEventListener("change", () => hareketView.load(1));
+document.getElementById("endDate")?.addEventListener("change", () => hareketView.load(1));
+
+document.getElementById("btnFiltreleriTemizle")?.addEventListener("click", () => {
+    document.getElementById("aramaKutusu").value = "";
+    document.getElementById("startDate").value = "";
+    document.getElementById("endDate").value = "";
+    document.getElementById("btnTumu").click(); 
+    // btnTumu.click() will automatically update url, active button, and trigger hareketView.load(1)
 });
 
 document.getElementById("aramaKutusu")?.addEventListener("keyup", (event) => {
