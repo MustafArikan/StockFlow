@@ -1,21 +1,21 @@
-// API adresi ve yetkilendirme token bilgisini ayarlar
+// =========================================================================
+// API VE TEMEL DEĞİŞKENLER
+// =========================================================================
 const API_URL = `${CONFIG.API_BASE_URL}/stock/movements`;
 const token = localStorage.getItem('token');
 
 if (!token) window.location.href = 'login.html';
 
 const MAX_ISLEM_ADEDI = 100000;
-
-// XSS koruması
-
-
 const urlParams = new URLSearchParams(window.location.search);
 const urlFilter = urlParams.get('filter');
 
 let tumUrunler = [];
-
 let aktifFiltre = urlFilter ? urlFilter : 'TUMU';
 
+// =========================================================================
+// TABLO (DATAVIEW) MOTORU VE RENDER İŞLEMLERİ
+// =========================================================================
 const hareketView = createDataView({
     containerId: "stokHareketleriGovdesi",
     paginationContainerId: "hareketSayfalamaContainer",
@@ -77,7 +77,14 @@ const hareketView = createDataView({
             </div>`;
         }
 
-        let pCodeHtml = (pCode && pCode !== '-') ? `<a href="products.html?viewProductBarcode=${encodeURIComponent(pCode)}" class="text-decoration-none text-dark fw-bold" title="Ürün detaylarını görüntüle">${escapeHtml(pCode)}</a>` : escapeHtml(pCode);
+        // Tıklanabilir Ürün Detay Linki
+        let pCodeHtml = (pCode && pCode !== '-')
+            ? `<a href="products.html?viewProductBarcode=${encodeURIComponent(pCode)}" 
+                  class="btn btn-sm btn-outline-secondary rounded-pill d-inline-flex align-items-center shadow-sm text-decoration-none cursor-pointer" 
+                  title="Tıklayarak ürün detayına git">                 
+                  <span class="fw-bold">${escapeHtml(pCode)}</span>
+               </a>`
+            : `<span class="text-muted">-</span>`;
 
         return `
             <tr>
@@ -91,8 +98,8 @@ const hareketView = createDataView({
     }
 });
 
+// Profil Görüntüleme Olay Dinleyicisi
 const tabloGovdesi = document.getElementById("stokHareketleriGovdesi");
-
 tabloGovdesi?.addEventListener('click', (e) => {
     const profileLink = e.target.closest('[data-action="view-profile"]');
     if (profileLink) {
@@ -104,15 +111,18 @@ tabloGovdesi?.addEventListener('click', (e) => {
     }
 });
 
+// =========================================================================
+// FİLTRELEME VE ARAMA KONTROLLERİ
+// =========================================================================
 function aktifButonuGuncelle(aktifId) {
     const butonlar = ["btnTumu", "btnGirisler", "btnCikislar", "btnTransferler"];
     butonlar.forEach(id => {
         const btn = document.getElementById(id);
         if (!btn) return;
-        
+
         btn.classList.remove("btn-secondary", "btn-success", "btn-danger", "btn-info", "text-white");
         btn.classList.remove("btn-outline-secondary", "btn-outline-success", "btn-outline-danger", "btn-outline-info");
-        
+
         if (id === aktifId) {
             if (id === "btnTumu") btn.classList.add("btn-secondary", "text-white");
             else if (id === "btnGirisler") btn.classList.add("btn-success", "text-white");
@@ -162,8 +172,7 @@ document.getElementById("btnFiltreleriTemizle")?.addEventListener("click", () =>
     document.getElementById("aramaKutusu").value = "";
     document.getElementById("startDate").value = "";
     document.getElementById("endDate").value = "";
-    document.getElementById("btnTumu").click(); 
-    // btnTumu.click() will automatically update url, active button, and trigger hareketView.load(1)
+    document.getElementById("btnTumu").click();
 });
 
 let aramaTimeout = null;
@@ -174,54 +183,141 @@ document.getElementById("aramaKutusu")?.addEventListener("input", (event) => {
     }, 300);
 });
 
-// Arama için kamera başlatıcı
-const btnKameraAcArama = document.getElementById("btnKameraAcArama");
-const scannerModalHareketlerEl = document.getElementById("scannerModalHareketler");
+// =========================================================================
+// FİZİKSEL BARKOD OKUYUCU - ARAMA İÇİN
+// =========================================================================
+function initPhysicalScannerListener() {
 
-if (btnKameraAcArama && scannerModalHareketlerEl) {
-    let modalInstance = null;
+    let scannerBuffer = "";
+    let scannerTimer = null;
+    const SCANNER_TIMEOUT_MS = 100; // Barkod okuyucunun tuş vuruş hızı
+    const MIN_BARCODE_LENGTH = 1;   // Minimum geçerli barkod uzunluğu
 
-    btnKameraAcArama.addEventListener("click", async () => {
-        try {
-            if (typeof checkCameraPermission === 'function') {
-                await checkCameraPermission();
+    document.addEventListener("keydown", (e) => {
+        // Kullanıcı bir input alanındaysa müdahale etme
+        const isInputFocused = ['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName) || e.target.isContentEditable;
+        if (isInputFocused) return;
+
+        // Barkod okuyucu işlemi bitirince cihaz tarafından "Enter" tuşu gönderilir
+        if (e.key === "Enter") {
+            if (scannerBuffer.length > MIN_BARCODE_LENGTH) {
+                e.preventDefault();
+                _uygulaFizikselArama(scannerBuffer); // İşlemi ayrı bir fonksiyona devret
             }
-            if (!modalInstance) {
-                modalInstance = new bootstrap.Modal(scannerModalHareketlerEl);
-            }
-            modalInstance.show();
-            
-            document.getElementById("kameraDurumHareketler").classList.remove("d-none");
-            
-            await startScanner("readerHareketler", (scannedText) => {
-                const aramaKutusu = document.getElementById("aramaKutusu");
-                if (aramaKutusu) {
-                    aramaKutusu.value = scannedText;
-                    hareketView.load(1);
-                }
-                modalInstance.hide();
-            }, () => { });
-        } catch (error) {
-            const hataMetni = error?.message ? error.message : "Kamera başlatılamadı.";
-            if (typeof uyariGoster === "function") {
-                uyariGoster(hataMetni);
-            } else {
-                alert(hataMetni);
-            }
+            scannerBuffer = "";
+            clearTimeout(scannerTimer);
+            return;
+        }
+
+        if (e.key.length === 1) {
+            scannerBuffer += e.key;
+
+            clearTimeout(scannerTimer);
+            scannerTimer = setTimeout(() => {
+                scannerBuffer = "";
+            }, SCANNER_TIMEOUT_MS);
         }
     });
 
-    scannerModalHareketlerEl.addEventListener('hidden.bs.modal', () => {
-        if (typeof stopScanner === 'function') stopScanner();
-    });
+    // Sadece UI işlemlerini yapan özel fonksiyon
+    function _uygulaFizikselArama(scannedText) {
+        const aramaKutusu = document.getElementById("aramaKutusu");
+        if (aramaKutusu) {
+            aramaKutusu.value = scannedText;
+
+            // "Tümü" filtresine geçir ve tabloyu yenile
+            aktifFiltre = 'TUMU';
+            if (typeof aktifButonuGuncelle === 'function') aktifButonuGuncelle("btnTumu");
+
+            window.history.pushState({}, document.title, window.location.pathname);
+
+            if (typeof hareketView !== 'undefined') hareketView.load(1);
+            if (typeof basariToast === 'function') basariToast(`Barkod okundu: ${scannedText}`);
+        }
+    }
 }
 
+
+// =========================================================================
+// KAMERA İLE ARAMA ENTEGRASYONU
+// =========================================================================
+function initMovementSearchCamera() {
+    const btnKameraAcArama = document.getElementById("btnKameraAcArama");
+    const scannerModalHareketlerEl = document.getElementById("scannerModalHareketler");
+
+    if (btnKameraAcArama && scannerModalHareketlerEl) {
+        let modalInstance = null;
+
+        btnKameraAcArama.addEventListener("click", async () => {
+            try {
+                // Kamera izinlerini denetler
+                if (typeof checkCameraPermission === 'function') {
+                    await checkCameraPermission();
+                }
+
+                // Modalı oluştur ve göster
+                if (!modalInstance) {
+                    modalInstance = new bootstrap.Modal(scannerModalHareketlerEl);
+                }
+                modalInstance.show();
+
+                document.getElementById("kameraDurumHareketler").classList.remove("d-none");
+
+
+                let isProcessingQR = false; // Kilidi tanımlıyoruz
+
+                // Kamerayı başlat ve barkod okunduğunda tetiklenecek fonksiyonu yazar
+                await startScanner("readerHareketler", (scannedText) => {
+                    // Eğer kilit kapalıysa diğer gelenleri yoksay
+                    if (isProcessingQR) return;
+                    isProcessingQR = true; // Kapıyı kilitle
+
+                    // Modalın kapanma animasyonunu BEKLEMEDEN kamerayı durdur
+                    if (typeof stopScanner === 'function') stopScanner();
+
+                    const aramaKutusu = document.getElementById("aramaKutusu");
+                    if (aramaKutusu) {
+                        aramaKutusu.value = scannedText;
+
+                        aktifFiltre = 'TUMU';
+                        if (typeof aktifButonuGuncelle === 'function') aktifButonuGuncelle("btnTumu");
+                        window.history.pushState({}, document.title, window.location.pathname);
+
+                        if (typeof hareketView !== 'undefined') hareketView.load(1);
+                        if (typeof basariToast === 'function') basariToast(`Barkod okundu: ${scannedText}`);
+                    }
+
+                    modalInstance.hide();
+
+                    //  İşlem tamamen bittikten sonra kilidi geri aç
+                    setTimeout(() => {
+                        isProcessingQR = false;
+                    }, 1000);
+
+                }, () => { });
+            } catch (error) {
+                const hataMetni = error?.message ? error.message : "Kamera başlatılamadı.";
+                if (typeof uyariGoster === "function") {
+                    uyariGoster(hataMetni);
+                } else {
+                    alert(hataMetni);
+                }
+            }
+        });
+
+        // Modal kapandığında kamerayı serbest bırakır
+        scannerModalHareketlerEl.addEventListener('hidden.bs.modal', () => {
+            if (typeof stopScanner === 'function') stopScanner();
+        });
+    }
+}
+
+// =========================================================================
+// YENİ İŞLEM (FORM) İŞLEMLERİ VE KAMERASI
+// =========================================================================
 async function dropdownUrunleriYukle() {
     const urunSelect = document.getElementById("urunSecimi");
-
-    if (tumUrunler.length > 0 && urunSelect && urunSelect.options.length > 1) {
-        return;
-    }
+    if (tumUrunler.length > 0 && urunSelect && urunSelect.options.length > 1) return;
 
     try {
         const data = await apiRequest('/products?pageSize=10000', 'GET');
@@ -288,7 +384,6 @@ if (urunSecimiEl) {
     urunSecimiEl.addEventListener("change", async function () {
         // Ürün değiştiğinde eski raf stok bilgisini ekrandan gizler
         document.getElementById("targetLocationStockInfo")?.classList.add("d-none");
-
         await dropdownIslemDepolariYukle();
         formuDenetle();
     });
@@ -343,7 +438,6 @@ if (tWarehouseDropdown) {
     tWarehouseDropdown.addEventListener("change", function () {
         // Depo değiştirildiğinde eski raf stok bilgisini gizler
         document.getElementById("targetLocationStockInfo")?.classList.add("d-none");
-
         if (typeof StockUtils !== 'undefined') {
             StockUtils.loadAllLocations(this.value, 'targetLocationId');
         }
@@ -455,7 +549,6 @@ if (stokIslemFormu) {
         const targetLocVal = targetLocElement ? targetLocElement.value : null;
 
         const kaydetButonu = document.getElementById("btnKaydet");
-
         const bFiyatElement = document.getElementById("birimFiyat");
         const fNoElement = document.getElementById("faturaNo");
         const tIdElement = document.getElementById("tedarikciSecimi");
@@ -538,9 +631,7 @@ function initMovementCamera() {
 
         try {
             // Kamera donanımını ve tarayıcı izinlerini denetler.
-            if (typeof checkCameraPermission === 'function') {
-                await checkCameraPermission();
-            }
+            if (typeof checkCameraPermission === 'function') await checkCameraPermission();
 
             // İzin varsa alanı görünür yapar
             if (cameraArea) cameraArea.classList.remove("d-none");
@@ -555,13 +646,10 @@ function initMovementCamera() {
                     let isProductFound = false;
                     if (productSelect && tumUrunler.length > 0) {
                         const bulunanUrun = tumUrunler.find(u => (u.barcode ?? u.Barcode) === scannedText);
-
                         if (bulunanUrun) {
                             const hedefId = bulunanUrun.id ?? bulunanUrun.Id;
                             productSelect.value = hedefId;
-
                             productSelect.dispatchEvent(new Event('change'));
-
                             isProductFound = true;
                         }
                     }
@@ -639,9 +727,13 @@ async function kullaniciProfiliGoster(userId) {
     }
 }
 
-// UYGULAMA BAŞLATICI 
+// =========================================================================
+// UYGULAMA BAŞLATICI
+// =========================================================================
 document.addEventListener("DOMContentLoaded", async () => {
     initMovementCamera();
+    initMovementSearchCamera();
+    initPhysicalScannerListener();
 
     // Yetkiye göre buton/kolon gizleme. Kullanıcının yetkilerini kontrol et, yetkisi yoksa "Yeni İşlem" butonunu gizle
     if (typeof hasPermission === "function" && !hasPermission("Movement.Inbound") && !hasPermission("Movement.Outbound") && !hasPermission("Movement.Transfer")) {

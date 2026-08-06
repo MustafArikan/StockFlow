@@ -16,7 +16,6 @@
 
 <body>
     <!-- Ana içerik alanını oluşturur -->
-    <!-- Ana içerik alanını oluşturur -->
     <div class="container-fluid px-0 px-md-1 my-2">
 
         <!-- Sayfa başlığı ve yeni işlem butonunu hizalar -->
@@ -25,8 +24,8 @@
                 <h1 class="fw-bold">Stok Hareketleri</h1>
                 <p class="text-muted mb-0">Ürün giriş ve çıkış kayıtları</p>
             </div>
-            <button id="btnYeniIslem" class="btn btn-primary rounded-pill px-4 shadow-sm text-nowrap" data-bs-toggle="modal"
-                data-bs-target="#stokIslemModal">
+            <button id="btnYeniIslem" class="btn btn-primary rounded-pill px-4 shadow-sm text-nowrap"
+                data-bs-toggle="modal" data-bs-target="#stokIslemModal">
                 + Yeni İşlem Ekle
             </button>
         </div>
@@ -35,18 +34,24 @@
             <!-- SOL FİLTRE PANELİ -->
             <div class="col-12 col-md-5 col-lg-4 col-xl-3">
                 <div class="card border-0 shadow-sm rounded-3 h-100">
-                    <div class="card-header bg-white border-bottom-0 pt-3 pb-0 d-flex justify-content-between align-items-center">
+                    <div
+                        class="card-header bg-white border-bottom-0 pt-3 pb-0 d-flex justify-content-between align-items-center">
                         <h6 class="fw-bold mb-0"><i class="bi bi-funnel-fill text-primary me-2"></i>Filtreler</h6>
-                        <button type="button" id="btnFiltreleriTemizle" class="btn btn-sm btn-link text-decoration-none text-muted p-0">Temizle</button>
+                        <button type="button" id="btnFiltreleriTemizle"
+                            class="btn btn-sm btn-link text-decoration-none text-muted p-0">Temizle</button>
                     </div>
                     <div class="card-body p-3 pt-2">
-                        
+
                         <div class="mb-4">
                             <label class="form-label small fw-bold text-muted text-uppercase mb-2">Arama</label>
                             <div class="position-relative d-flex align-items-center">
                                 <span class="position-absolute ms-3 text-muted"><i class="bi bi-search"></i></span>
-                                <input type="text" id="aramaKutusu" class="form-control form-control-sm rounded-pill ps-5 pe-5 py-2 bg-light border-0" placeholder="Ürün, Kodu veya Personel...">
-                                <button type="button" class="btn btn-link position-absolute end-0 text-primary text-decoration-none me-3 p-0" id="btnKameraAcArama" title="Kamera ile Okut">
+                                <input type="text" id="aramaKutusu"
+                                    class="form-control form-control-sm rounded-pill ps-5 pe-5 py-2 bg-light border-0"
+                                    placeholder="Ürün, Kodu veya Personel...">
+                                <button type="button"
+                                    class="btn btn-link position-absolute end-0 text-primary text-decoration-none me-3 p-0"
+                                    id="btnKameraAcArama" title="Kamera ile Okut">
                                     <i class="bi bi-qr-code-scan fs-5"></i>
                                 </button>
                             </div>
@@ -58,15 +63,21 @@
                                 <div class="w-100">
                                     <label class="form-label text-muted mb-1 font-xs">Başlangıç</label>
                                     <div class="position-relative d-flex align-items-center">
-                                        <input type="date" id="startDate" class="form-control form-control-sm bg-light border-0 rounded-pill px-3 w-100 native-date" title="Başlangıç" required>
-                                        <span class="position-absolute text-muted placeholder-span date-placeholder-span">gg.aa.yyyy</span>
+                                        <input type="date" id="startDate"
+                                            class="form-control form-control-sm bg-light border-0 rounded-pill px-3 w-100 native-date"
+                                            title="Başlangıç" required>
+                                        <span
+                                            class="position-absolute text-muted placeholder-span date-placeholder-span">gg.aa.yyyy</span>
                                     </div>
                                 </div>
                                 <div class="w-100">
                                     <label class="form-label text-muted mb-1 font-xs">Bitiş</label>
                                     <div class="position-relative d-flex align-items-center">
-                                        <input type="date" id="endDate" class="form-control form-control-sm bg-light border-0 rounded-pill px-3 w-100 native-date" title="Bitiş" required>
-                                        <span class="position-absolute text-muted placeholder-span date-placeholder-span">gg.aa.yyyy</span>
+                                        <input type="date" id="endDate"
+                                            class="form-control form-control-sm bg-light border-0 rounded-pill px-3 w-100 native-date"
+                                            title="Bitiş" required>
+                                        <span
+                                            class="position-absolute text-muted placeholder-span date-placeholder-span">gg.aa.yyyy</span>
                                     </div>
                                 </div>
                             </div>
@@ -75,16 +86,20 @@
                         <div class="mb-4">
                             <label class="form-label small fw-bold text-muted text-uppercase mb-2">İşlem Tipi</label>
                             <div class="d-flex flex-column gap-2 type-filters">
-                                <button id="btnTumu" class="btn btn-secondary rounded-pill px-3 py-2 shadow-sm fw-medium text-start filtre-elemani text-truncate">
+                                <button id="btnTumu"
+                                    class="btn btn-secondary rounded-pill px-3 py-2 shadow-sm fw-medium text-start filtre-elemani text-truncate">
                                     <i class="bi bi-collection me-1"></i> Tümü
                                 </button>
-                                <button id="btnGirisler" class="btn btn-outline-success rounded-pill px-3 py-2 shadow-sm fw-medium text-start filtre-elemani text-truncate">
+                                <button id="btnGirisler"
+                                    class="btn btn-outline-success rounded-pill px-3 py-2 shadow-sm fw-medium text-start filtre-elemani text-truncate">
                                     <i class="bi bi-box-arrow-in-down me-1"></i> Stok Girişleri
                                 </button>
-                                <button id="btnCikislar" class="btn btn-outline-danger rounded-pill px-3 py-2 shadow-sm fw-medium text-start filtre-elemani text-truncate">
+                                <button id="btnCikislar"
+                                    class="btn btn-outline-danger rounded-pill px-3 py-2 shadow-sm fw-medium text-start filtre-elemani text-truncate">
                                     <i class="bi bi-box-arrow-up me-1"></i> Stok Çıkışları
                                 </button>
-                                <button id="btnTransferler" class="btn btn-outline-info rounded-pill px-3 py-2 shadow-sm fw-medium text-start filtre-elemani text-truncate">
+                                <button id="btnTransferler"
+                                    class="btn btn-outline-info rounded-pill px-3 py-2 shadow-sm fw-medium text-start filtre-elemani text-truncate">
                                     <i class="bi bi-arrow-left-right me-1"></i> Stok Transferleri
                                 </button>
                             </div>
@@ -106,14 +121,18 @@
                             <table class="table table-hover align-middle mb-0 min-w-700">
                                 <thead>
                                     <tr class="text-muted small text-uppercase border-bottom">
-                                        <th id="tarihBaslik" class="text-center user-select-none sortable-th">Tarih ↕</th>
-                                        <th id="thUrunKodu" class="text-center user-select-none sortable-th">Ürün Kodu ↕</th>
+                                        <th id="tarihBaslik" class="text-center user-select-none sortable-th">Tarih ↕
+                                        </th>
+                                        <th id="thUrunKodu" class="text-center user-select-none sortable-th">Ürün Kodu ↕
+                                        </th>
                                         <th id="thUrunAdi" class="user-select-none sortable-th">Ürün Adı ↕
                                         </th>
-                                        <th id="thIslemTipi" class="text-center user-select-none sortable-th">İşlem Tipi ↕</th>
+                                        <th id="thIslemTipi" class="text-center user-select-none sortable-th">İşlem Tipi
+                                            ↕</th>
                                         <th id="thAdet" class="text-center user-select-none sortable-th">
                                             Adet ↕</th>
-                                        <th id="thPersonel" class="text-center user-select-none sortable-th">Personel ↕</th>
+                                        <th id="thPersonel" class="text-center user-select-none sortable-th">Personel ↕
+                                        </th>
                                     </tr>
                                 </thead>
                                 <tbody id="stokHareketleriGovdesi"></tbody>
@@ -256,12 +275,15 @@
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content border-0 shadow-lg rounded-4">
                 <div class="modal-header border-0 bg-light rounded-top-4">
-                    <h5 class="modal-title fw-bold text-dark"><i class="bi bi-qr-code-scan me-2 text-primary"></i>Kamera ile Ara</h5>
+                    <h5 class="modal-title fw-bold text-dark"><i class="bi bi-qr-code-scan me-2 text-primary"></i>Kamera
+                        ile Ara</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Kapat"></button>
                 </div>
                 <div class="modal-body p-4 text-center">
-                    <div id="readerHareketler" class="mx-auto overflow-hidden rounded-3 border shadow-sm w-100 scanner-viewport"></div>
-                    <div id="kameraDurumHareketler" class="text-muted small mt-3 fw-bold">Kamera başlatılıyor, lütfen bekleyin...</div>
+                    <div id="readerHareketler"
+                        class="mx-auto overflow-hidden rounded-3 border shadow-sm w-100 scanner-viewport"></div>
+                    <div id="kameraDurumHareketler" class="text-muted small mt-3 fw-bold">Kamera başlatılıyor, lütfen
+                        bekleyin...</div>
                 </div>
             </div>
         </div>
