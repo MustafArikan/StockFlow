@@ -1529,12 +1529,11 @@ function openBarcodePrintModal(barcode, productName, productId) {
     // QR Kod oluşturma (CSP Uyumlu QRious kütüphanesi)
     const qrCanvas = document.getElementById("qrcodeCanvas");
     if (qrCanvas) {
-        // QR Kodu, direkt uygulamanın ürün inceleme sayfasına yönlendirir        
-        const qrUrl = `${window.location.origin}${window.location.pathname}?viewProductBarcode=${encodeURIComponent(barcode)}`;
+        // QR Kodu, direkt uygulamanın ürün inceleme sayfasına yönlendirir 
 
         new QRious({
             element: qrCanvas,
-            value: qrUrl, // Akıllı yönlendirme linki
+            value: barcode, // Akıllı yönlendirme linki
             size: 120,
             background: 'white',
             foreground: 'black',
