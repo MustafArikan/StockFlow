@@ -1,6 +1,9 @@
 // ==========================================
-// HİBRİT TARAYICI TEST PANELİ SCRİPTİ
+// HİBRİT TARAYICI PANELİ SCRİPTİ
 // ==========================================
+
+// Magic Number'ları engellemek için sabit değerler
+const SCAN_REDIRECT_DELAY_MS = 800;
 
 // 1. Kamerayı Başlatma Fonksiyonu
 async function initScanner() {
@@ -38,54 +41,86 @@ function onScanSuccess(decodedText, decodedResult) {
     const resultBox = document.getElementById('result-box');
     const resultText = document.getElementById('result-text');
     const resultFormat = document.getElementById('result-format');
+    const btnStart = document.getElementById("btnStartScanner");
 
     if (resultBox) resultBox.classList.remove('d-none');
-    if (resultText) resultText.textContent = decodedText;
 
     if (resultFormat) {
         const formatName = decodedResult?.result?.format?.formatName || "Belirlenemedi";
         resultFormat.textContent = formatName;
     }
 
-    // Barkod okunduğu an kamerayı durdur
     if (typeof stopScanner === 'function') {
-        stopScanner(); // Beklemeden durdurma sinyalini gönder
+        stopScanner(); // Kamerayı durdur
     }
 
-    // İşlem bittiği için Başlat butonunu tekrar aktif et
-    const btnStart = document.getElementById("btnStartScanner");
-    if (btnStart) btnStart.disabled = false;
+    // UI Geri Bildirimi: Kullanıcıya "Aranıyor..." göstergesi
+    if (resultText) {
+        resultText.innerHTML = `<span class="spinner-border spinner-border-sm text-primary" role="status"></span> Aranıyor...`;
+        resultText.classList.remove('text-success');
+        resultText.classList.add('text-primary');
+    }
+    if (btnStart) {
+        btnStart.disabled = true;
+        btnStart.innerHTML = `<span class="spinner-border spinner-border-sm"></span> İşleniyor...`;
+    }
 
-    // Yönlendirme yapılır
+    // Backend Optimizasyonlu Akıllı Arama
     setTimeout(async () => {
-        // Eğer okunan kod bir URL (QR Kod) ise direkt o URL'ye (ürün kartına) git
-        if (decodedText.startsWith('http://') || decodedText.startsWith('https://')) {
-            window.location.href = decodedText;
+        const okunanMetin = decodedText.trim();
+
+        if (okunanMetin.startsWith('http://') || okunanMetin.startsWith('https://')) {
+            window.location.href = okunanMetin;
         } else {
             try {
-                // Barkod numarası / kodu bir raf mı diye veritabanından kontrol et
-                const rafSonuc = await apiRequest(`/locations?pageSize=10000`, 'GET');
-                const raflar = rafSonuc.items || rafSonuc;
-                const hedefRaf = raflar.find(r => (r.code || "").toLowerCase() === decodedText.toLowerCase());
-
-                if (hedefRaf) {
-                    // Eğer raf ise warehouses sayfasına gönderip rafın içini açtırıyoruz
-                    window.location.href = `warehouses.html?viewShelfCode=${encodeURIComponent(decodedText)}`;
+                // ÖNCE RAF (LOCATION) OLARAK KONTROL ET
+                try {
+                    await apiRequest(`/locations/by-code/${encodeURIComponent(okunanMetin)}`, 'GET');
+                    // Hata fırlatmadıysa raf bulunmuştur!
+                    window.location.href = `warehouses.html?viewShelfCode=${encodeURIComponent(okunanMetin)}`;
                     return;
+                } catch (rafHatasi) {
+                    // 404 döndüyse raf değildir, ürün aramaya geç
                 }
-            } catch (e) {
-                console.error("Raf sorgulama hatası:", e);
-            }
 
-            // Raf değilse (varsayılan) ürün sayfasına gönder
-            window.location.href = `products.html?viewProductBarcode=${encodeURIComponent(decodedText)}`;
+                // EĞER RAF DEĞİLSE, ÜRÜN (PRODUCT) OLARAK KONTROL ET
+                try {
+                    await apiRequest(`/products/by-barcode/${encodeURIComponent(okunanMetin)}`, 'GET');
+                    // Hata fırlatmadıysa ürün bulunmuştur!
+                    window.location.href = `products.html?viewProductBarcode=${encodeURIComponent(okunanMetin)}`;
+                    return;
+                } catch (urunHatasi) {
+                    // 404 döndüyse ürün de değildir.
+                }
+
+                // NE RAF NE DE ÜRÜN BULUNAMADI! (UI HATA DURUMU)
+                if (resultText) {
+                    resultText.textContent = okunanMetin;
+                    resultText.classList.remove('text-primary');
+                    resultText.classList.add('text-danger');
+                }
+                if (btnStart) {
+                    btnStart.disabled = false;
+                    btnStart.innerHTML = `Kamerayı Başlat`;
+                }
+
+                if (typeof uyariGoster === 'function') {
+                    uyariGoster(`Sistemde "${okunanMetin}" koduna sahip bir raf veya ürün bulunamadı!`);
+                } else {
+                    alert(`Bulunamadı: ${okunanMetin}`);
+                }
+
+            } catch (e) {
+                console.error("Genel sorgulama hatası:", e);
+                window.location.href = `products.html?viewProductBarcode=${encodeURIComponent(okunanMetin)}`;
+            }
         }
-    }, 800); // Kullanıcının ekranda yeşil başarılı yazısını görmesi için kısa bir bekleme
+    }, SCAN_REDIRECT_DELAY_MS);
 }
 
-// 3. Anlık Tarama Hataları (Sessiz Dinleme - Konsol Kirliliğini Önler)
+// 3. Anlık Tarama Hataları
 function onScanError(errorMessage) {
-    // Tarama esnasındaki kare yakalama denemesi hataları bilinçli olarak sessize alınmıştır.
+    // Tarama karesi yakalama hataları sessize alınmıştır.
 }
 
 // 4. Okunan Kodu Panoya Kopyalama
@@ -122,7 +157,6 @@ document.addEventListener("DOMContentLoaded", () => {
             await stopScanner();
 
             // Kamera durduğu için Başlat butonunu tekrar tıklanabilir yap
-            const btnStart = document.getElementById("btnStartScanner");
             if (btnStart) btnStart.disabled = false;
 
             if (typeof basariToast === 'function') {

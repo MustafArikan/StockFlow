@@ -37,7 +37,7 @@ public class LocationsController : ControllerBase
             .Take(pageSize)
             .ToListAsync();
 
-        return Ok(new 
+        return Ok(new
         {
             items = locations,
             totalRecords = totalRecords,
@@ -64,7 +64,7 @@ public class LocationsController : ControllerBase
             .Take(pageSize)
             .ToListAsync();
 
-        return Ok(new 
+        return Ok(new
         {
             items = locations,
             totalRecords = totalRecords,
@@ -76,7 +76,7 @@ public class LocationsController : ControllerBase
     // POST /api/locations  yeni raf ekle
     [HttpPost]
     [RequirePermission(Policies.RequireLocationWrite)]
-    [EnableRateLimiting(Policies.RequireLocationWrite)] 
+    [EnableRateLimiting(Policies.RequireLocationWrite)]
     public async Task<IActionResult> Create(CreateLocationDto dto)
     {
         var warehouseExists = await _context.Warehouses.AnyAsync(w => w.Id == dto.WarehouseId);
@@ -101,14 +101,14 @@ public class LocationsController : ControllerBase
     // DELETE /api/locations/5  rafı sil
     [HttpDelete("{id}")]
     [RequirePermission(Policies.RequireLocationWrite)]
-    [EnableRateLimiting(Policies.RequireLocationWrite)] 
+    [EnableRateLimiting(Policies.RequireLocationWrite)]
     public async Task<IActionResult> Delete(int id)
     {
         var location = await _context.Locations.FindAsync(id);
         if (location == null)
             return NotFound();
 
-var stokVarMi = await _context.StockLevels.AnyAsync(sl => sl.LocationId == id);
+        var stokVarMi = await _context.StockLevels.AnyAsync(sl => sl.LocationId == id);
         if (stokVarMi)
         {
             return BadRequest("Bu rafta ürün (stok) var. Önce stokları boşaltmalısınız.");
@@ -117,6 +117,24 @@ var stokVarMi = await _context.StockLevels.AnyAsync(sl => sl.LocationId == id);
         location.IsDeleted = true; // Soft delete
         await _context.SaveChangesAsync();
         return NoContent();
+    }
+
+    // Belirtilen kod değerine sahip aktif raf/lokasyon kaydını veritabanında arar ve bulursa geriye döndürür.
+    [RequirePermission(Policies.RequireLocationRead)] // Güvenlik için okuma izni şartını ekledik
+    [HttpGet("by-code/{code}")]
+    public async Task<IActionResult> GetLocationByCode(string code)
+    {
+        // Boşlukları temizle ve küçük harfe çevirerek tam eşleşme ara
+        var cleanCode = code.Trim().ToLower();
+
+        // Sadece aktif (silinmemiş) ve kodu eşleşen rafı getir
+        var location = await _context.Locations
+            .FirstOrDefaultAsync(l => l.Code.ToLower() == cleanCode && !l.IsDeleted);
+
+        if (location == null)
+            return NotFound(new { Message = "Raf bulunamadı." });
+
+        return Ok(location);
     }
 }
 

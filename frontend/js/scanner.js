@@ -95,6 +95,12 @@ function initializeAndStart(elementId, onScanSuccess, onScanFailure) {
                 scannerBeepSound.currentTime = 0;
                 scannerBeepSound.play().catch(() => { });
 
+                // Dokunsal Geri Bildirim (Titreşim)
+                // Cihaz destekliyorsa 100 milisaniye titretir
+                if (navigator.vibrate) {
+                    navigator.vibrate(100);
+                }
+
                 // Sesi çaldıktan sonra orjinal arayüz fonksiyonunu çalıştır ve veriyi yolla.
                 if (typeof onScanSuccess === 'function') {
                     onScanSuccess(decodedText, decodedResult);
