@@ -24,7 +24,7 @@ public class ProductsController : ControllerBase
     {
         _context = context;
     }
-    
+
     // GET /api/products : tüm ürünleri listele
     [RequirePermission(Policies.RequireProductRead)]
     [HttpGet]
@@ -39,7 +39,7 @@ public class ProductsController : ControllerBase
             .Include(p => p.Category)
             .Skip((pageNumber - 1) * pageSize)
             .Take(pageSize)
-            .Select(p => new 
+            .Select(p => new
             {
                 Id = p.Id,
                 Name = p.Name,
@@ -66,7 +66,7 @@ public class ProductsController : ControllerBase
             Attributes = string.IsNullOrEmpty(p.AttributesStr) ? new List<ProductAttributeDto>() : System.Text.Json.JsonSerializer.Deserialize<List<ProductAttributeDto>>(p.AttributesStr)
         }).ToList();
 
-        return Ok(new 
+        return Ok(new
         {
             items = products,
             totalRecords = totalRecords,
@@ -83,7 +83,8 @@ public class ProductsController : ControllerBase
         var product = await _context.Products
             .AsNoTracking()
             .Where(p => p.Id == id && !p.IsDeleted)
-            .Select(p => new        {
+            .Select(p => new
+            {
                 Id = p.Id,
                 Name = p.Name,
                 Barcode = p.Barcode,
@@ -94,7 +95,7 @@ public class ProductsController : ControllerBase
                 AttributesStr = p.Attributes,
                 CreatedAt = p.CreatedAt
             }).FirstOrDefaultAsync();
-            
+
         if (product == null)
             return NotFound();
 
@@ -110,16 +111,16 @@ public class ProductsController : ControllerBase
             CreatedAt = product.CreatedAt,
             Attributes = string.IsNullOrEmpty(product.AttributesStr)
                 ? new List<ProductAttributeDto>()
-                : System.Text.Json.JsonSerializer.Deserialize<List<ProductAttributeDto>>(product.AttributesStr) 
+                : System.Text.Json.JsonSerializer.Deserialize<List<ProductAttributeDto>>(product.AttributesStr)
         };
 
         return Ok(dto);
-        
+
     }
 
     [HttpPost]
     [RequirePermission(Policies.RequireProductWrite)]
-    [EnableRateLimiting(Policies.RequireProductWrite)] 
+    [EnableRateLimiting(Policies.RequireProductWrite)]
     public async Task<IActionResult> Create(CreateProductDto dto)
     {
         var mevcutUrun = await _context.Products.FirstOrDefaultAsync(p => p.Barcode == dto.Barcode);
@@ -129,11 +130,11 @@ public class ProductsController : ControllerBase
         }
 
         var categoryExists = await _context.Categories.AnyAsync(c => c.Id == dto.CategoryId);
-        if (!categoryExists) 
+        if (!categoryExists)
             return BadRequest(new { message = "Belirtilen kategori bulunamadı." });
 
         var locationExists = await _context.Locations.AnyAsync(l => l.Id == dto.TargetLocationId);
-        if (!locationExists) 
+        if (!locationExists)
             return BadRequest(new { message = "Belirtilen raf/lokasyon bulunamadı." });
 
         if (dto.Attributes != null && dto.Attributes.Any())
@@ -142,7 +143,8 @@ public class ProductsController : ControllerBase
             if (validationError != null) return BadRequest(new { message = validationError });
         }
 
-        var product = new Product {
+        var product = new Product
+        {
             Name = dto.Name,
             Barcode = dto.Barcode,
             MinStockLevel = dto.MinStockLevel,
@@ -153,13 +155,14 @@ public class ProductsController : ControllerBase
         await _context.SaveChangesAsync(); // Önce ürünü kaydet ki ID oluşsun
 
         // 🎯 İlk Stoğu Oluştur (StockLevel tablosuna)
-        var initialStock = new StockLevel {
+        var initialStock = new StockLevel
+        {
             ProductId = product.Id,
             LocationId = dto.TargetLocationId,
             Quantity = dto.InitialQuantity
         };
         _context.StockLevels.Add(initialStock);
-        
+
         // 🎯 İlk Stok Girişi Hareketi (StockMovement) Oluştur
         if (dto.InitialQuantity > 0)
         {
@@ -191,7 +194,7 @@ public class ProductsController : ControllerBase
     // PUT /api/products/5 : mecvut ürünü güncelle 
     [HttpPut("{id}")]
     [RequirePermission(Policies.RequireProductWrite)]
-    [EnableRateLimiting(Policies.RequireProductWrite)] 
+    [EnableRateLimiting(Policies.RequireProductWrite)]
     public async Task<IActionResult> Update(int id, UpdateProductDto dto)
     {
         var product = await _context.Products.FindAsync(id);
@@ -256,7 +259,7 @@ public class ProductsController : ControllerBase
             // Aynı ürün ve aynı zorluk seviyesi için okunmamış bir bildirim zaten varsa spamlama yapma
             var existingUnread = await _context.Notifications
                 .AnyAsync(n => n.Type == "CRITICAL_STOCK" && !n.IsRead && n.Message.Contains(product.Barcode) && n.Severity == severity && !n.IsDeleted);
-            
+
             if (!existingUnread)
             {
                 var notification = new Notification
@@ -272,12 +275,12 @@ public class ProductsController : ControllerBase
         }
 
         return Ok(new ProductResponseDto(product.Id, product.Name, product.Barcode, product.MinStockLevel, product.CategoryId, product.Attributes));
-    } 
+    }
 
     // DELETE /api/products/5 : ürünü sil
     [HttpDelete("{id}")]
     [RequirePermission(Policies.RequireProductWrite)]
-    [EnableRateLimiting(Policies.RequireProductWrite)] 
+    [EnableRateLimiting(Policies.RequireProductWrite)]
     public async Task<IActionResult> Delete(int id)
     {
         var product = await _context.Products.FindAsync(id);
@@ -303,20 +306,20 @@ public class ProductsController : ControllerBase
 
         var products = await _context.Products
             .AsNoTracking()
-            .Where(p => !p.IsDeleted && 
-                        (p.Name.ToLower().Contains(searchTerm) || 
+            .Where(p => !p.IsDeleted &&
+                        (p.Name.ToLower().Contains(searchTerm) ||
                         p.Barcode.ToLower().Contains(searchTerm) ||
                         (p.Attributes != null && p.Attributes.ToLower().Contains(searchTerm))))
             .Take(5)
-            .Select(p => new 
+            .Select(p => new
             {
                 id = p.Id,
                 name = p.Name,
                 barcode = p.Barcode
             })
-            .ToListAsync();    
+            .ToListAsync();
 
-        return Ok(products);    
+        return Ok(products);
     }
 
     // =========================================================================
@@ -349,17 +352,17 @@ public class ProductsController : ControllerBase
 
         // SKU'da yer alması mantıklı olan temel nitelikleri frontend'den gelen veriden direkt filtrele
         var primaryKeywords = new[] { "marka", "model", "koleksiyon", "renk", "beden", "numara", "sezon" };
-        
+
         var selectedAttrs = dto.Attributes
             .Where(a => primaryKeywords.Any(k => a.Key.ToLower(new System.Globalization.CultureInfo("tr-TR")).Contains(k) && !a.Key.ToLower(new System.Globalization.CultureInfo("tr-TR")).Contains("ekran")))
             .ToList();
-        
+
         // Eğer hiçbir temel nitelik eşleşmediyse veya sayıca çok azsa (Örn: Sadece Marka varsa), en baştaki özellikleri ekleyerek tamamla
         if (selectedAttrs.Count < 2 && dto.Attributes.Any())
         {
             var additional = dto.Attributes.Where(a => !selectedAttrs.Contains(a)).Take(3 - selectedAttrs.Count);
             selectedAttrs.AddRange(additional);
-            
+
             // Eğer display order'ı bozduysak tekrar orijinal sıraya göre diz
             selectedAttrs = dto.Attributes.Where(a => selectedAttrs.Contains(a)).ToList();
         }
@@ -407,25 +410,25 @@ public class ProductsController : ControllerBase
         val = val.Trim().ToUpper(new System.Globalization.CultureInfo("tr-TR"))
                  .Replace("İ", "I").Replace("Ş", "S").Replace("Ğ", "G")
                  .Replace("Ç", "C").Replace("Ö", "O").Replace("Ü", "U");
-        
+
         if (val.Length <= maxLength) return val;
 
         string[] words = val.Split(new[] { ' ', '-' }, StringSplitOptions.RemoveEmptyEntries);
         var stopWords = new[] { "VE", "VEYA", "ILE", "ICIN", "&", "YADA" };
         var filteredWords = words.Where(w => !stopWords.Contains(w)).ToArray();
-        
+
         // Eğer (ve, ile gibi kelimeler atıldıktan sonra) birden fazla kelime varsa, baş harfleri al
         if (filteredWords.Length > 1)
         {
             string initials = "";
             foreach (var w in filteredWords)
             {
-                if (char.IsDigit(w[0])) 
+                if (char.IsDigit(w[0]))
                 {
                     string digits = new string(w.TakeWhile(char.IsDigit).ToArray());
                     initials += digits;
                 }
-                else 
+                else
                 {
                     initials += w[0];
                 }
@@ -436,7 +439,7 @@ public class ProductsController : ControllerBase
 
         // Tek kelimeyse ilk harfi koru, sonrasındaki sesli harfleri at
         string singleWord = filteredWords.Length == 1 ? filteredWords[0] : words[0];
-        
+
         char firstChar = singleWord[0];
         string rest = singleWord.Substring(1);
         string restNoVowels = new string(rest.Replace(" ", "").Where(c => !"AEIOU".Contains(c)).ToArray());
@@ -446,7 +449,7 @@ public class ProductsController : ControllerBase
         {
             return combined.Length > maxLength ? combined.Substring(0, maxLength) : combined;
         }
-        
+
         return singleWord.Substring(0, Math.Min(maxLength, singleWord.Length));
     }
 
@@ -502,11 +505,11 @@ public class ProductsController : ControllerBase
             else if (rule.DataType == "decimal" || uiType == "range_slider" || uiType == "range_slider_decimal" || uiType == "slider")
             {
                 var numStr = CoerceNumericString(attr.Value);
-                if (!decimal.TryParse(numStr, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out decimal d)) 
+                if (!decimal.TryParse(numStr, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out decimal d))
                     return $"'{rule.AttributeKey}' geçerli bir ondalıklı sayı olmalıdır.";
                 if (rule.MinValue.HasValue && d < (decimal)rule.MinValue.Value) return $"'{rule.AttributeKey}' minimum {rule.MinValue} olabilir.";
                 if (rule.MaxValue.HasValue && d > (decimal)rule.MaxValue.Value) return $"'{rule.AttributeKey}' maksimum {rule.MaxValue} olabilir.";
-                
+
                 attr.Value = d.ToString(System.Globalization.CultureInfo.InvariantCulture);
             }
         }
@@ -525,7 +528,7 @@ public class ProductsController : ControllerBase
 
     private static string NormalizeForCompare(string str)
     {
-        if(string.IsNullOrWhiteSpace(str)) return "";
+        if (string.IsNullOrWhiteSpace(str)) return "";
         return System.Text.RegularExpressions.Regex.Replace(str, @"\s+", " ")
               .Normalize(System.Text.NormalizationForm.FormC)
               .Trim()
@@ -534,8 +537,26 @@ public class ProductsController : ControllerBase
 
     private static string CoerceNumericString(string str)
     {
-        if(string.IsNullOrWhiteSpace(str)) return "";
+        if (string.IsNullOrWhiteSpace(str)) return "";
         str = str.Trim().Replace(",", ".");
         return System.Text.RegularExpressions.Regex.Replace(str, @"[^\d.\-]", "");
+    }
+
+    // Belirtilen kod değerine sahip okutulan barkod değerini baz alarak sistemdeki aktif ürünleri tarar
+    [RequirePermission(Policies.RequireProductRead)]
+    [HttpGet("by-barcode/{barcode}")]
+    public async Task<IActionResult> GetProductByBarcode(string barcode)
+    {
+        // Boşlukları temizle ve küçük harfe çevir
+        var cleanBarcode = barcode.Trim().ToLower();
+
+        // Sadece aktif (silinmemiş) ve barkodu eşleşen ürünü getir
+        var product = await _context.Products
+            .FirstOrDefaultAsync(p => p.Barcode.ToLower() == cleanBarcode && !p.IsDeleted);
+
+        if (product == null)
+            return NotFound(new { Message = "Ürün bulunamadı." });
+
+        return Ok(product);
     }
 }

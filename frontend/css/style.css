@@ -897,7 +897,7 @@ button:disabled,
     border-radius: 1rem;
 }
 
-/* ==================== test-scanner.html ==================== */
+/* ==================== hybrid-scanner.html ==================== */
 .scanner-page-body {
     font-family: 'Inter', sans-serif;
     background-color: var(--bg-primary);
