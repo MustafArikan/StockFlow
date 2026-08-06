@@ -30,7 +30,7 @@ namespace stok_takip.Controllers
         [RequirePermission(Policies.RequireStockMovementRead)]
         [HttpGet]
         [NormalizePagination]
-        public async Task<IActionResult> GetAllMovements([FromQuery] string? type, [FromQuery] string? search, [FromQuery] string? sort, [FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
+        public async Task<IActionResult> GetAllMovements([FromQuery] string? type, [FromQuery] string? search, [FromQuery] string? sort, [FromQuery] DateTime? startDate, [FromQuery] DateTime? endDate, [FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
         {
             var query = _context.StockMovements
                 .AsNoTracking()
@@ -41,6 +41,17 @@ namespace stok_takip.Controllers
             if (!string.IsNullOrEmpty(type))
             {
                 query = query.Where(m => m.MovementType == type.ToUpper());
+            }
+
+            if (startDate.HasValue)
+            {
+                query = query.Where(m => m.CreatedAt >= startDate.Value);
+            }
+
+            if (endDate.HasValue)
+            {
+                // Add 1 day to include the entire end date
+                query = query.Where(m => m.CreatedAt < endDate.Value.AddDays(1));
             }
 
             if (!string.IsNullOrEmpty(search))
