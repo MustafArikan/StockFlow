@@ -81,7 +81,7 @@ const hareketView = createDataView({
         let pCodeHtml = (pCode && pCode !== '-')
             ? `<a href="products.html?viewProductBarcode=${encodeURIComponent(pCode)}" 
                   class="btn btn-sm btn-outline-secondary rounded-pill d-inline-flex align-items-center shadow-sm text-decoration-none cursor-pointer" 
-                  title="Tıklayarak ürün detayına git">                 
+                  title="Tıklayarak ürün detayına git">                
                   <span class="fw-bold">${escapeHtml(pCode)}</span>
                </a>`
             : `<span class="text-muted">-</span>`;
@@ -187,7 +187,6 @@ document.getElementById("aramaKutusu")?.addEventListener("input", (event) => {
 // FİZİKSEL BARKOD OKUYUCU - ARAMA İÇİN
 // =========================================================================
 function initPhysicalScannerListener() {
-
     let scannerBuffer = "";
     let scannerTimer = null;
     const SCANNER_TIMEOUT_MS = 100; // Barkod okuyucunun tuş vuruş hızı
@@ -211,7 +210,6 @@ function initPhysicalScannerListener() {
 
         if (e.key.length === 1) {
             scannerBuffer += e.key;
-
             clearTimeout(scannerTimer);
             scannerTimer = setTimeout(() => {
                 scannerBuffer = "";
@@ -221,11 +219,18 @@ function initPhysicalScannerListener() {
 
     // Sadece UI işlemlerini yapan özel fonksiyon
     function _uygulaFizikselArama(scannedText) {
+        const bulunanUrun = tumUrunler.find(u => (u.barcode || "").toLowerCase() === scannedText.toLowerCase());
+        if (!bulunanUrun) {
+            if (typeof uyariGoster === 'function') {
+                uyariGoster(`Taranan barkod (${scannedText}) sistemde bulunamadı!`);
+            }
+            return; // Modal kapatmaya çalışmadan güvenle çık
+        }
+
         const aramaKutusu = document.getElementById("aramaKutusu");
         if (aramaKutusu) {
             aramaKutusu.value = scannedText;
 
-            // "Tümü" filtresine geçir ve tabloyu yenile
             aktifFiltre = 'TUMU';
             if (typeof aktifButonuGuncelle === 'function') aktifButonuGuncelle("btnTumu");
 
@@ -236,7 +241,6 @@ function initPhysicalScannerListener() {
         }
     }
 }
-
 
 // =========================================================================
 // KAMERA İLE ARAMA ENTEGRASYONU
@@ -263,7 +267,6 @@ function initMovementSearchCamera() {
 
                 document.getElementById("kameraDurumHareketler").classList.remove("d-none");
 
-
                 let isProcessingQR = false; // Kilidi tanımlıyoruz
 
                 // Kamerayı başlat ve barkod okunduğunda tetiklenecek fonksiyonu yazar
@@ -274,6 +277,21 @@ function initMovementSearchCamera() {
 
                     // Modalın kapanma animasyonunu BEKLEMEDEN kamerayı durdur
                     if (typeof stopScanner === 'function') stopScanner();
+
+                    // Ürün kataloğunda barkod kontrolü
+                    const bulunanUrun = tumUrunler.find(u => (u.barcode || "").toLowerCase() === scannedText.toLowerCase());
+
+                    if (!bulunanUrun) {
+                        modalInstance.hide();
+                        setTimeout(() => {
+                            if (typeof uyariGoster === 'function') {
+                                uyariGoster(`Taranan barkod (${scannedText}) sistemde bulunamadı!`);
+                            }
+                        }, 100);
+
+                        setTimeout(() => { isProcessingQR = false; }, 1000);
+                        return;
+                    }
 
                     const aramaKutusu = document.getElementById("aramaKutusu");
                     if (aramaKutusu) {
@@ -743,6 +761,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     // Tarayıcı hazır, yetkiler tamam. Artık veritabanından güvenle verileri çekebiliriz
     await dropdownTedarikcileriYukle();
+    await dropdownUrunleriYukle(); // Hareketler sayfasında barkod doğrulaması için ürün kataloğu yüklendi
     hareketView.load(1);
 
     // URL'deki filtreye göre ilgili butonu renkli hale getir
