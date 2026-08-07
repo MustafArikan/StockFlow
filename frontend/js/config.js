@@ -199,43 +199,89 @@ function renderProfessionalLayout() {
     const noNavPages = ['login.html', 'register.html', 'forgot-password.html'];
     if (noNavPages.some(p => window.location.pathname.includes(p))) return;
 
-    // 2. AKTİF SAYFAYI BULMA: URL'ye bakarak şu an hangi sayfada olduğumuzu anlar   
+    // 2. AKTİF SAYFAYI BULMA: URL'ye bakarak şu an hangi sayfada olduğumuzu anlar
     const currentPath = window.location.pathname.split('/').pop() || 'index.html';
 
+    // desktop.html "boş masaüstü" sayfasıdır: pencere açılmaz,
+    // yalnızca duvar kağıdı ve iki yandaki uygulama ikonları görünür.
+    const isDesktopPage = currentPath === 'desktop.html';
+
     // 3. SARMALAMA (WRAPPING) İŞLEMİ:
-    // HTML dosyasında yazdığımız asıl içerikleri (tablolar, grafikler) alıp 'contentContainer' 
+    // HTML dosyasında yazdığımız asıl içerikleri (tablolar, grafikler) alıp 'contentContainer'
     // adında yeni bir div'in içine taşır
     const contentContainer = document.createElement('div');
-    contentContainer.className = 'container-fluid p-4';
+    contentContainer.className = 'container-fluid p-4 dt-window-content';
 
     while (document.body.firstChild) {
         contentContainer.appendChild(document.body.firstChild);
     }
 
-    // 4. YAN MENÜYÜ (SIDEBAR) OLUŞTURMA:
+    // Masaüstü modunu açar (duvar kağıdı, pencere gölgesi vb. bu sınıfa bağlıdır)
+    document.body.classList.add('dt-desktop');
+
+    // Pencere başlığı: sayfa başlığının ilk parçası (ör. "Ürünler - StockFlow" → "Ürünler")
+    const appTitle = (document.title || 'StockFlow').split(/[-–|]/)[0].trim() || 'StockFlow';
+
+    // 4. MASAÜSTÜ İKON RAYLARINI OLUŞTURMA (sol: operasyon, sağ: sistem)
     const sidebar = document.createElement('aside');
     sidebar.id = 'sidebar';
     sidebar.innerHTML = buildSidebarHtml(currentPath);
 
-    // 5. ÜST BARI (TOPBAR) VE ANA İSKELETİ OLUŞTURMA:
+    const sidebarRight = document.createElement('aside');
+    sidebarRight.id = 'sidebar-right';
+    sidebarRight.innerHTML = buildSidebarRightHtml(currentPath);
+
+    // 5. MENÜ ÇUBUĞU: Masaüstü metaforunda en üstte, tam genişlikte durur
+    const topbar = document.createElement('header');
+    topbar.className = 'topbar';
+    topbar.innerHTML = buildTopbarHtml();
+
+    // 6. UYGULAMA PENCERESİ: Başlık çubuğu (title bar) + içerik
     const mainWrapper = document.createElement('div');
     mainWrapper.id = 'main-wrapper';
 
-    // Sidebar'ın son durumunu LocalStorage'dan al ve uygula
-    if (localStorage.getItem('sidebarState') === 'collapsed') {
-        sidebar.classList.add('collapsed');
-        mainWrapper.classList.add('expanded');
-    }
+    const titlebar = document.createElement('div');
+    titlebar.className = 'dt-titlebar';
+    titlebar.innerHTML = `
+        <div class="dt-titlebar-left">
+            <span class="dt-titlebar-icon"><i class="bi bi-hexagon-fill"></i></span>
+            <span class="dt-titlebar-text"></span>
+        </div>
+        <div class="dt-window-controls">
+            <button type="button" class="dt-wc dt-wc-max" id="dtWinMaximize" title="Tam ekran / pencere görünümü" aria-label="Tam ekran"><i class="bi bi-square"></i></button>
+            <button type="button" class="dt-wc dt-wc-close" id="dtWinClose" title="Pencereyi kapat (masaüstünü göster)" aria-label="Pencereyi kapat"><i class="bi bi-x-lg"></i></button>
+        </div>`;
+    // Başlık metni textContent ile yazılır (XSS'e karşı güvenli)
+    titlebar.querySelector('.dt-titlebar-text').textContent = appTitle;
 
-    const topbar = document.createElement('header');
-    topbar.className = 'topbar shadow-sm';
-    topbar.innerHTML = buildTopbarHtml();
-
-    mainWrapper.appendChild(topbar);
+    mainWrapper.appendChild(titlebar);
     mainWrapper.appendChild(contentContainer);
 
+    // İkon raylarının ve pencerenin son durumunu LocalStorage'dan al ve uygula
+    if (localStorage.getItem('sidebarState') === 'collapsed') {
+        sidebar.classList.add('collapsed');
+        sidebarRight.classList.add('collapsed');
+        mainWrapper.classList.add('expanded');
+    }
+    if (localStorage.getItem('windowState') === 'maximized') {
+        mainWrapper.classList.add('maximized');
+        document.body.classList.add('dt-maximized');
+    }
+
+    document.body.appendChild(topbar);
     document.body.appendChild(sidebar);
-    document.body.appendChild(mainWrapper);
+    document.body.appendChild(sidebarRight);
+
+    // Masaüstü sayfasında pencere hiç eklenmez
+    if (isDesktopPage) {
+        document.body.classList.add('dt-desktop-only');
+    } else {
+        document.body.appendChild(mainWrapper);
+    }
+
+    // Menü çubuğundaki aktif uygulama adını yazar
+    const menubarApp = document.getElementById('dtMenubarApp');
+    if (menubarApp) menubarApp.textContent = appTitle;
 
     // Sunucuya istek atarak giriş yapan kullanıcının bilgilerini (Ad, Soyad, Rol vb.) alıyoruz
     apiRequest('/auth/me', 'GET').then(userData => {
@@ -263,24 +309,79 @@ function renderProfessionalLayout() {
         if (userProfileEl) userProfileEl.textContent = 'Hesap';
     });
 
-    // 6. ETKİLEŞİMLER (EVENT LISTENERS)
+    // 8. ETKİLEŞİMLER (EVENT LISTENERS)
 
-    // Sidebar'ı açıp kapatan butonun ayarları
+    // Masaüstü ikon raylarını açıp kapatan butonun ayarları (her iki ray birlikte)
+    const raylar = [sidebar, sidebarRight];
+
     document.getElementById('btnToggleSidebar').addEventListener('click', () => {
-        const isCollapsed = document.getElementById('sidebar').classList.toggle('collapsed');
-        document.getElementById('main-wrapper').classList.toggle('expanded');
-        
+        const isCollapsed = !sidebar.classList.contains('collapsed');
+        raylar.forEach(r => r.classList.toggle('collapsed', isCollapsed));
+        mainWrapper.classList.toggle('expanded', isCollapsed);
+
         // Durumu localStorage'a kaydet
         localStorage.setItem('sidebarState', isCollapsed ? 'collapsed' : 'expanded');
 
         if (window.innerWidth < 992) {
-            document.getElementById('sidebar').classList.toggle('show-mobile');
+            const acik = !sidebar.classList.contains('show-mobile');
+            raylar.forEach(r => r.classList.toggle('show-mobile', acik));
         }
     });
 
-    document.getElementById('btnCloseSidebar').addEventListener('click', () => {
-        document.getElementById('sidebar').classList.remove('show-mobile');
-    });
+    const btnCloseSidebar = document.getElementById('btnCloseSidebar');
+    if (btnCloseSidebar) {
+        btnCloseSidebar.addEventListener('click', () => {
+            raylar.forEach(r => r.classList.remove('show-mobile'));
+        });
+    }
+
+    // --- PENCERE KONTROLLERİ (Tam Ekran / Kapat) ---
+    // Masaüstü sayfasında pencere olmadığı için bu bölüm atlanır.
+    if (!isDesktopPage) {
+        const tamEkranDegistir = () => {
+            const isMax = mainWrapper.classList.toggle('maximized');
+            document.body.classList.toggle('dt-maximized', isMax);
+            localStorage.setItem('windowState', isMax ? 'maximized' : 'windowed');
+        };
+
+        // Kırmızı çarpı: pencereyi kapatır ve boş masaüstü sayfasına götürür
+        document.getElementById('dtWinClose').addEventListener('click', () => {
+            window.location.href = 'desktop.html';
+        });
+
+        document.getElementById('dtWinMaximize').addEventListener('click', tamEkranDegistir);
+
+        // Başlık çubuğuna çift tıklama, işletim sistemlerindeki gibi tam ekrana geçirir
+        titlebar.addEventListener('dblclick', (e) => {
+            if (e.target.closest('.dt-wc')) return;
+            tamEkranDegistir();
+        });
+    } else {
+        // Masaüstü sayfasında ekranın altında yönlendirici bir ipucu gösterilir
+        const masaustuIpucu = document.createElement('div');
+        masaustuIpucu.className = 'dt-desktop-hint';
+        masaustuIpucu.textContent = 'Açmak için bir uygulama seçin';
+        document.body.appendChild(masaustuIpucu);
+
+        // Masaüstüne çift tıklamak ana sayfayı açar
+        document.addEventListener('dblclick', (e) => {
+            if (e.target.closest('#sidebar, #sidebar-right, .topbar')) return;
+            window.location.href = 'index.html';
+        });
+    }
+
+    // --- MENÜ ÇUBUĞU SAATİ ---
+    const clockEl = document.getElementById('dtClock');
+    if (clockEl) {
+        const saatiYaz = () => {
+            const now = new Date();
+            const tarih = now.toLocaleDateString('tr-TR', { weekday: 'short', day: '2-digit', month: 'short' });
+            const saat = now.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
+            clockEl.textContent = `${tarih}  ${saat}`;
+        };
+        saatiYaz();
+        setInterval(saatiYaz, 30000);
+    }
 
     // Tema Değiştirme Sistemi
     const themeBtn = document.getElementById('layoutThemeToggleBtn');

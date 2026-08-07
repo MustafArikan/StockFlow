@@ -70,7 +70,7 @@ public class CategoriesController : ControllerBase
 
         if (mevcut != null)
         {
-            return BadRequest("Bu isimde bir kateori zaten var.");
+            return BadRequest(new { message = "Bu isimde bir kateori zaten var." });
         }
         
         if (dto.ParentId.HasValue)
@@ -169,12 +169,12 @@ public class CategoriesController : ControllerBase
         var mecvut = await _context.Categories.FirstOrDefaultAsync(c => c.Name == dto.Name && c.Id != id);
         if (mecvut != null)
         {
-            return BadRequest("Bu isimde bir kategori zaten var.");
+            return BadRequest(new { message = "Bu isimde bir kategori zaten var." });
         }
 
         if (dto.ParentId.HasValue && dto.ParentId.Value == id)
         {
-            return BadRequest("Bir kategori kendi kendisinin üst kategorisi olamaz.");
+            return BadRequest(new { message = "Bir kategori kendi kendisinin üst kategorisi olamaz." });
         }
 
         if (dto.ParentId.HasValue)
@@ -188,7 +188,7 @@ public class CategoriesController : ControllerBase
             {
                 if (currentParentId.Value == id)
                 {
-                    return BadRequest("Sonsuz döngü tespit edildi. Bir Kategori kendi alt kategorisinin veya torununun altına taşınamaz.");
+                    return BadRequest(new { message = "Sonsuz döngü tespit edildi. Bir Kategori kendi alt kategorisinin veya torununun altına taşınamaz." });
                 }
 
                 var parentCategory = await _context.Categories

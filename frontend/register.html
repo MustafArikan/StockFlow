@@ -13,16 +13,20 @@
 </head>
 <body class="auth-page-body">  
 
-    <div class="card auth-card border-0 shadow-lg bg-white">
-        <div class="card-body p-5">
-            <div class="text-center mb-4">
-                <a class="navbar-brand fw-bold text-primary fs-3 text-decoration-none" href="#">
-                    Stock<span class="">Flow</span>    
-                </a>
-                <p class="text-muted mt-2" id="pageSubtitle">Yeni bir hesap oluşturun</p>
-            </div>
+    <span class="auth-code-note">// hesap oluştur<br>// kurulum 2 dakika sürer</span>
 
+    <div class="auth-shell">
+        <div class="auth-brand">
+            <span class="auth-brand-mark"><i class="bi bi-hexagon-fill"></i></span>
+            <span class="auth-brand-text">Stock<span>Flow</span></span>
+        </div>
 
+        <div class="card auth-card">
+            <div class="card-body">
+                <div class="text-center mb-4">
+                    <h1 class="auth-title">Hadi başlayalım</h1>
+                    <p class="auth-subtitle" id="pageSubtitle">Yeni bir hesap oluşturun</p>
+                </div>
 
             <!-- KAYIT FORMU -->
             <form id="registerForm">
@@ -62,12 +66,9 @@
                         </button>
                     </div>
                 </div>
-                <button type="submit" class="btn btn-primary w-100 py-2 fw-bold" id="btnRegister">
+                <button type="submit" class="btn btn-auth-cta w-100" id="btnRegister">
                     Kayıt Ol
                 </button>
-                <div class="text-center mt-4">
-                    <p class="mb-0 small text-muted">Zaten hesabınız var mı? <a href="login.html" class="text-primary fw-bold text-decoration-none">Giriş Yap</a></p>
-                </div>
             </form>
 
             <!-- DOĞRULAMA (VERIFY) FORMU (Başlangıçta Gizli) -->
@@ -84,7 +85,10 @@
                 </button>
             </form>
 
+            </div>
         </div>
+
+        <p class="auth-foot">Zaten hesabınız var mı? <a href="login.html">Giriş Yap →</a></p>
     </div>
 
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">

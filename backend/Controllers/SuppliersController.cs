@@ -48,7 +48,7 @@ public class SuppliersController : ControllerBase
 
         if (mevcut != null)
         {
-            return BadRequest("Bu isim, adres ve vergi numarasına sahip bir tedarikçi zaten var.");
+            return BadRequest(new { message = "Bu isim, adres ve vergi numarasına sahip bir tedarikçi zaten var." });
         }
 
         var supplier = new Supplier
@@ -80,7 +80,7 @@ public class SuppliersController : ControllerBase
         var mevcut = await _context.Suppliers.FirstOrDefaultAsync(s => s.Name == dto.Name && s.Address == dto.Address && s.TaxNumber == dto.TaxNumber && s.Id != id);
         if (mevcut != null)
         {
-            return BadRequest("Bu isim, adres ve vergi numarasına sahip bir tedarikçi zaten var.");
+            return BadRequest(new { message = "Bu isim, adres ve vergi numarasına sahip bir tedarikçi zaten var." });
         }
 
         supplier.Name = dto.Name;

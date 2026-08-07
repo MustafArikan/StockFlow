@@ -1488,3 +1488,2644 @@ button:disabled,
     pointer-events: none;
     font-size: 0.875rem;
 }
+
+/* =========================================================
+   7. "PLAYFUL PRODUCT" TASARIM KATMANI
+   PostHog'un görsel dilinden esinlenen tema: krem zemin, kalın
+   konturlar, sert (hard) gölgeler, canlı turuncu/mavi vurgular.
+
+   ÖNEMLİ: Bu katman yalnızca GÖRSELDİR. Hiçbir HTML sınıfı veya JS
+   davranışı değişmez; sadece mevcut seçicilerin üzerine yazar.
+   Dosyanın en sonunda olduğu için CSS öncelik sırasında kazanır.
+   ========================================================= */
+
+/* ---------- 7.1 Tasarım Jetonları (Design Tokens) ---------- */
+:root {
+    /* Marka paleti */
+    --ph-orange: #f54e00;
+    --ph-orange-dark: #c33d00;
+    --ph-orange-soft: #ffeadf;
+    --ph-blue: #1d4aff;
+    --ph-blue-dark: #1235c4;
+    --ph-blue-soft: #e4e9ff;
+    --ph-yellow: #f9bd2b;
+    --ph-yellow-dark: #d29a12;
+    --ph-teal: #29b7a6;
+    --ph-teal-dark: #1d8f81;
+    --ph-red: #db3707;
+    --ph-red-dark: #ab2a05;
+    --ph-purple: #b62ad9;
+
+    /* Nötrler */
+    --ph-cream: #eeefe9;
+    --ph-cream-2: #e5e7de;
+    --ph-cream-3: #f7f8f3;
+    --ph-ink: #151515;
+    --ph-ink-2: #2f2f2f;
+    --ph-ink-soft: #5f5f5f;
+    --ph-line: #d3d4cb;
+    --ph-line-strong: #b9bab0;
+
+    /* Kalın kontur + sert gölge dili */
+    --ph-border-w: 1.5px;
+    --ph-radius: 10px;
+    --ph-radius-sm: 7px;
+    --ph-shadow: 0 2px 0 0 rgba(21, 21, 21, .10), 0 4px 14px -6px rgba(21, 21, 21, .16);
+    --ph-shadow-lift: 0 4px 0 0 rgba(21, 21, 21, .12), 0 12px 24px -10px rgba(21, 21, 21, .22);
+
+    /* Mevcut jetonların yeniden eşlenmesi (tüm sayfalar bunları kullanıyor) */
+    --bg-primary: var(--ph-cream);
+    --card-bg: #ffffff;
+    --text-primary: var(--ph-ink);
+    --text-secondary: var(--ph-ink-soft);
+    --border-color: var(--ph-line);
+    --sidebar-bg: #ebece4;
+    --topbar-bg: #f4f5ef;
+    --topbar-height: 68px;
+
+    /* Bootstrap 5.3 jetonlarının markaya çekilmesi */
+    --bs-primary: var(--ph-orange);
+    --bs-primary-rgb: 245, 78, 0;
+    --bs-link-color: var(--ph-blue);
+    --bs-link-color-rgb: 29, 74, 255;
+    --bs-link-hover-color: var(--ph-blue-dark);
+    --bs-border-radius: var(--ph-radius-sm);
+    --bs-border-color: var(--ph-line);
+    --bs-body-color: var(--ph-ink);
+}
+
+[data-theme="dark"],
+[data-bs-theme="dark"] {
+    --ph-cream: #1d1f27;
+    --ph-cream-2: #23252e;
+    --ph-cream-3: #2c2e38;
+    --ph-ink: #f4f4f2;
+    --ph-ink-2: #e6e6e2;
+    --ph-ink-soft: #a4a6ae;
+    --ph-line: #3a3d49;
+    --ph-line-strong: #4c505e;
+    --ph-orange-soft: #3a2216;
+    --ph-blue-soft: #1c2340;
+
+    --bg-primary: #1d1f27;
+    --card-bg: #262932;
+    --text-primary: #f4f4f2;
+    --text-secondary: #a4a6ae;
+    --border-color: #3a3d49;
+    --sidebar-bg: #16181f;
+    --topbar-bg: #23252e;
+
+    --ph-shadow: 0 2px 0 0 rgba(0, 0, 0, .45), 0 4px 14px -6px rgba(0, 0, 0, .6);
+    --ph-shadow-lift: 0 4px 0 0 rgba(0, 0, 0, .5), 0 12px 24px -10px rgba(0, 0, 0, .7);
+}
+
+/* ---------- 7.2 Zemin ve Tipografi ---------- */
+body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background-color: var(--bg-primary);
+    /* Kağıt dokusunu andıran çok hafif nokta ızgarası (CSP uyumlu, salt CSS) */
+    background-image: radial-gradient(rgba(21, 21, 21, .045) 1px, transparent 1px);
+    background-size: 22px 22px;
+    background-attachment: fixed;
+    -webkit-font-smoothing: antialiased;
+}
+
+[data-theme="dark"] body {
+    background-image: radial-gradient(rgba(255, 255, 255, .045) 1px, transparent 1px);
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+.h1,
+.h2,
+.h3,
+.h4,
+.h5,
+.h6 {
+    font-weight: 800;
+    letter-spacing: -.02em;
+    color: var(--text-primary);
+}
+
+.text-muted {
+    color: var(--text-secondary) !important;
+}
+
+a {
+    text-decoration-thickness: 2px;
+    text-underline-offset: 2px;
+}
+
+/* Metin üzerinde "fosforlu kalem" vurgusu — istediğiniz yerde kullanabilirsiniz */
+.ph-highlight {
+    background: linear-gradient(180deg, transparent 55%, var(--ph-yellow) 55%);
+    padding: 0 .12em;
+}
+
+.ph-highlight-blue {
+    background: linear-gradient(180deg, transparent 55%, var(--ph-blue-soft) 55%);
+    padding: 0 .12em;
+}
+
+/* ---------- 7.3 Kartlar ---------- */
+.card,
+.dropdown-menu,
+.modal-content {
+    background-color: var(--card-bg) !important;
+    border: var(--ph-border-w) solid var(--ph-line-strong) !important;
+    border-radius: var(--ph-radius) !important;
+    color: var(--text-primary) !important;
+}
+
+.card {
+    box-shadow: var(--ph-shadow) !important;
+    transition: transform .16s ease, box-shadow .16s ease, border-color .16s ease;
+}
+
+.card-header {
+    background-color: var(--ph-cream-3) !important;
+    border-bottom: var(--ph-border-w) solid var(--ph-line) !important;
+    font-weight: 700;
+    letter-spacing: -.01em;
+}
+
+.card-footer {
+    background-color: var(--ph-cream-3) !important;
+    border-top: var(--ph-border-w) solid var(--ph-line) !important;
+}
+
+/* Tıklanabilir kartlar hafifçe "kalkar" */
+.saas-card:hover,
+.depo-karti:hover,
+.asset-grid-card:hover,
+.permission-module-card:hover,
+.notification-card:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--ph-shadow-lift) !important;
+    border-color: var(--ph-orange) !important;
+}
+
+.dropdown-menu {
+    box-shadow: var(--ph-shadow-lift) !important;
+    padding: .35rem;
+}
+
+.dropdown-item {
+    border-radius: var(--ph-radius-sm);
+    font-weight: 500;
+    padding: .5rem .75rem;
+}
+
+.dropdown-item:hover,
+.dropdown-item:focus {
+    background-color: var(--ph-orange-soft);
+    color: var(--ph-orange-dark);
+}
+
+[data-theme="dark"] .dropdown-item:hover,
+[data-theme="dark"] .dropdown-item:focus {
+    color: #ffd7c4;
+}
+
+/* ---------- 7.4 Butonlar (kalın kontur + sert alt gölge) ---------- */
+.btn {
+    --ph-btn-face: var(--ph-cream-3);
+    --ph-btn-edge: var(--ph-line-strong);
+    --ph-btn-text: var(--ph-ink);
+    font-weight: 700;
+    letter-spacing: -.01em;
+    border-radius: var(--ph-radius-sm);
+    border: var(--ph-border-w) solid var(--ph-btn-edge) !important;
+    background-color: var(--ph-btn-face);
+    color: var(--ph-btn-text);
+    box-shadow: 0 2px 0 0 var(--ph-btn-edge);
+    transition: transform .1s ease, box-shadow .1s ease, filter .15s ease;
+}
+
+.btn:hover {
+    background-color: var(--ph-btn-face);
+    color: var(--ph-btn-text);
+    filter: brightness(1.06);
+    transform: translateY(1px);
+    box-shadow: 0 1px 0 0 var(--ph-btn-edge);
+}
+
+.btn:active,
+.btn.active {
+    transform: translateY(2px) !important;
+    box-shadow: none !important;
+}
+
+.btn:focus-visible {
+    outline: 3px solid rgba(29, 74, 255, .35);
+    outline-offset: 1px;
+}
+
+.btn:disabled,
+.btn.disabled {
+    box-shadow: none;
+    opacity: .55;
+}
+
+.btn-primary {
+    --ph-btn-face: var(--ph-orange);
+    --ph-btn-edge: var(--ph-orange-dark);
+    --ph-btn-text: #fff;
+}
+
+.btn-secondary {
+    --ph-btn-face: var(--ph-ink-2);
+    --ph-btn-edge: #000;
+    --ph-btn-text: #fff;
+}
+
+.btn-success {
+    --ph-btn-face: var(--ph-teal);
+    --ph-btn-edge: var(--ph-teal-dark);
+    --ph-btn-text: #fff;
+}
+
+.btn-danger {
+    --ph-btn-face: var(--ph-red);
+    --ph-btn-edge: var(--ph-red-dark);
+    --ph-btn-text: #fff;
+}
+
+.btn-warning {
+    --ph-btn-face: var(--ph-yellow);
+    --ph-btn-edge: var(--ph-yellow-dark);
+    --ph-btn-text: var(--ph-ink);
+}
+
+.btn-info {
+    --ph-btn-face: var(--ph-blue);
+    --ph-btn-edge: var(--ph-blue-dark);
+    --ph-btn-text: #fff;
+}
+
+.btn-light,
+.btn-outline-secondary,
+.btn-outline-dark {
+    --ph-btn-face: #fff;
+    --ph-btn-edge: var(--ph-line-strong);
+    --ph-btn-text: var(--ph-ink);
+}
+
+.btn-dark {
+    --ph-btn-face: var(--ph-ink);
+    --ph-btn-edge: #000;
+    --ph-btn-text: #fff;
+}
+
+.btn-outline-primary {
+    --ph-btn-face: transparent;
+    --ph-btn-edge: var(--ph-orange);
+    --ph-btn-text: var(--ph-orange-dark);
+}
+
+.btn-outline-primary:hover {
+    --ph-btn-face: var(--ph-orange-soft);
+}
+
+.btn-outline-danger {
+    --ph-btn-face: transparent;
+    --ph-btn-edge: var(--ph-red);
+    --ph-btn-text: var(--ph-red-dark);
+}
+
+.btn-outline-success {
+    --ph-btn-face: transparent;
+    --ph-btn-edge: var(--ph-teal-dark);
+    --ph-btn-text: var(--ph-teal-dark);
+}
+
+.btn-outline-info {
+    --ph-btn-face: transparent;
+    --ph-btn-edge: var(--ph-blue);
+    --ph-btn-text: var(--ph-blue-dark);
+}
+
+.btn-outline-warning {
+    --ph-btn-face: transparent;
+    --ph-btn-edge: var(--ph-yellow-dark);
+    --ph-btn-text: var(--ph-yellow-dark);
+}
+
+[data-theme="dark"] .btn-light,
+[data-theme="dark"] .btn-outline-secondary,
+[data-theme="dark"] .btn-outline-dark {
+    --ph-btn-face: var(--ph-cream-3);
+    --ph-btn-edge: var(--ph-line-strong);
+    --ph-btn-text: var(--text-primary);
+}
+
+/* Topbar/ikon butonları düz kalsın (kutu görünmesin) */
+.topbar .btn,
+.btn-close,
+.theme-toggle-btn,
+.no-caret {
+    box-shadow: none !important;
+    border-color: transparent !important;
+    background-color: transparent;
+}
+
+.topbar .btn:hover {
+    background-color: rgba(21, 21, 21, .06);
+    transform: none;
+}
+
+[data-theme="dark"] .topbar .btn:hover {
+    background-color: rgba(255, 255, 255, .08);
+}
+
+/* ---------- 7.5 Form Elemanları ---------- */
+.form-control,
+.form-select,
+.input-group-text {
+    background-color: #fff;
+    border: var(--ph-border-w) solid var(--ph-line-strong);
+    border-radius: var(--ph-radius-sm);
+    color: var(--text-primary);
+    font-weight: 500;
+    box-shadow: inset 0 1px 2px rgba(21, 21, 21, .06);
+}
+
+.input-group-text {
+    background-color: var(--ph-cream-2);
+    font-weight: 700;
+}
+
+.form-control:focus,
+.form-select:focus {
+    border-color: var(--ph-blue);
+    box-shadow: 0 0 0 3px rgba(29, 74, 255, .22);
+}
+
+.form-control::placeholder {
+    color: var(--ph-ink-soft);
+    opacity: .8;
+}
+
+.form-label {
+    font-weight: 700;
+    font-size: .85rem;
+    letter-spacing: -.01em;
+    margin-bottom: .35rem;
+}
+
+.form-check-input {
+    border: var(--ph-border-w) solid var(--ph-line-strong);
+}
+
+.form-check-input:checked {
+    background-color: var(--ph-orange);
+    border-color: var(--ph-orange-dark);
+}
+
+.form-check-input:focus {
+    border-color: var(--ph-blue);
+    box-shadow: 0 0 0 3px rgba(29, 74, 255, .22);
+}
+
+.form-switch .form-check-input:checked {
+    background-color: var(--ph-teal);
+    border-color: var(--ph-teal-dark);
+}
+
+[data-theme="dark"] .form-control,
+[data-theme="dark"] .form-select,
+[data-theme="dark"] .input-group-text {
+    background-color: var(--ph-cream-3) !important;
+    border-color: var(--ph-line-strong) !important;
+    color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] .form-control:focus,
+[data-theme="dark"] .form-select:focus {
+    background-color: var(--ph-cream-3) !important;
+    border-color: var(--ph-blue) !important;
+    box-shadow: 0 0 0 3px rgba(29, 74, 255, .3) !important;
+}
+
+/* ---------- 7.6 Yan Menü (Sidebar) ---------- */
+#sidebar {
+    background-color: var(--sidebar-bg);
+    border-right: 2px solid var(--ph-line-strong);
+}
+
+.sidebar-header {
+    border-bottom: 2px solid var(--ph-line-strong);
+    background-color: var(--ph-cream-3);
+}
+
+.sidebar-header a {
+    color: var(--ph-ink) !important;
+    letter-spacing: -.03em;
+}
+
+.sidebar-header a i {
+    color: var(--ph-orange) !important;
+}
+
+.sidebar-logo-text {
+    color: var(--ph-orange);
+}
+
+.sidebar-heading {
+    color: var(--ph-ink-soft) !important;
+    font-size: .68rem !important;
+    font-weight: 800 !important;
+    margin-top: .9rem;
+}
+
+.sidebar-link {
+    color: var(--ph-ink-2) !important;
+    font-weight: 600;
+    border: var(--ph-border-w) solid transparent;
+    border-radius: var(--ph-radius-sm);
+    margin: 3px 12px;
+    transition: background-color .15s ease, border-color .15s ease, transform .12s ease;
+}
+
+.sidebar-link i {
+    color: var(--ph-ink-soft);
+}
+
+.sidebar-link:hover {
+    color: var(--ph-ink) !important;
+    background-color: #fff;
+    border-color: var(--ph-line-strong);
+    transform: translateX(2px);
+}
+
+.sidebar-link:hover i {
+    color: var(--ph-orange);
+}
+
+.sidebar-link.active {
+    background-color: #fff !important;
+    color: var(--ph-ink) !important;
+    border-color: var(--ph-ink) !important;
+    font-weight: 800;
+    box-shadow: 0 2px 0 0 var(--ph-ink);
+}
+
+.sidebar-link.active i {
+    color: var(--ph-orange) !important;
+}
+
+[data-theme="dark"] .sidebar-link {
+    color: #c9cbd4 !important;
+}
+
+[data-theme="dark"] .sidebar-link:hover,
+[data-theme="dark"] .sidebar-link.active {
+    background-color: var(--ph-cream-3) !important;
+    color: #fff !important;
+    border-color: var(--ph-line-strong) !important;
+}
+
+[data-theme="dark"] .sidebar-link.active {
+    box-shadow: 0 2px 0 0 var(--ph-orange);
+}
+
+[data-theme="dark"] .sidebar-header {
+    background-color: var(--sidebar-bg);
+    border-bottom-color: var(--ph-line-strong);
+}
+
+[data-theme="dark"] .sidebar-header a {
+    color: #fff !important;
+}
+
+/* ---------- 7.7 Üst Bar (Topbar) ---------- */
+.topbar {
+    background-color: var(--topbar-bg);
+    border-bottom: 2px solid var(--ph-line-strong);
+    box-shadow: none !important;
+}
+
+.topbar .text-muted {
+    color: var(--ph-ink-soft) !important;
+    font-weight: 600;
+}
+
+/* ---------- 7.8 Tablolar ---------- */
+.table {
+    --bs-table-bg: transparent;
+    color: var(--text-primary);
+    border-color: var(--ph-line);
+}
+
+.table> :not(caption)>*>* {
+    background-color: transparent;
+}
+
+.table thead th,
+.table-light th {
+    background-color: var(--ph-cream-2) !important;
+    color: var(--ph-ink) !important;
+    font-size: .72rem !important;
+    font-weight: 800 !important;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    border-bottom: 2px solid var(--ph-ink) !important;
+    white-space: nowrap;
+}
+
+[data-theme="dark"] .table thead th,
+[data-theme="dark"] .table-light th {
+    background-color: var(--ph-cream-3) !important;
+    color: var(--text-primary) !important;
+    border-bottom-color: var(--ph-line-strong) !important;
+}
+
+.table tbody td {
+    border-bottom: 1px solid var(--ph-line) !important;
+    vertical-align: middle;
+}
+
+.table-hover tbody tr:hover>* {
+    background-color: var(--ph-orange-soft) !important;
+    color: var(--ph-ink) !important;
+}
+
+[data-theme="dark"] .table-hover tbody tr:hover>* {
+    background-color: var(--ph-cream-3) !important;
+    color: #fff !important;
+}
+
+.table-responsive {
+    border: var(--ph-border-w) solid var(--ph-line-strong);
+    border-radius: var(--ph-radius);
+    /* DİKKAT: burada "overflow: hidden" KULLANILMAZ — geniş tabloların
+       yatay kaydırmasını (özellikle mobilde) tamamen bloke eder. */
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    background-color: var(--card-bg);
+}
+
+.card .table-responsive {
+    border: none;
+    border-radius: 0;
+}
+
+/* ---------- 7.9 Rozetler (Badge) ---------- */
+.badge {
+    font-weight: 800;
+    letter-spacing: .01em;
+    border-radius: 999px;
+    padding: .38em .7em;
+    border: 1.5px solid transparent;
+}
+
+.badge.bg-primary {
+    background-color: var(--ph-orange-soft) !important;
+    color: var(--ph-orange-dark) !important;
+    border-color: var(--ph-orange);
+}
+
+.badge.bg-success {
+    background-color: #dcf5f0 !important;
+    color: var(--ph-teal-dark) !important;
+    border-color: var(--ph-teal);
+}
+
+.badge.bg-danger {
+    background-color: #ffe2d9 !important;
+    color: var(--ph-red-dark) !important;
+    border-color: var(--ph-red);
+}
+
+.badge.bg-warning {
+    background-color: #fff2d2 !important;
+    color: #8a6200 !important;
+    border-color: var(--ph-yellow);
+}
+
+.badge.bg-info {
+    background-color: var(--ph-blue-soft) !important;
+    color: var(--ph-blue-dark) !important;
+    border-color: var(--ph-blue);
+}
+
+.badge.bg-secondary,
+.badge.bg-light,
+.badge.bg-dark {
+    background-color: var(--ph-cream-2) !important;
+    color: var(--ph-ink) !important;
+    border-color: var(--ph-line-strong);
+}
+
+[data-theme="dark"] .badge {
+    filter: brightness(.85) saturate(1.2);
+}
+
+/* ---------- 7.10 Modal / SweetAlert2 ---------- */
+.modal-content {
+    box-shadow: 0 6px 0 0 rgba(21, 21, 21, .12), 0 30px 60px -20px rgba(21, 21, 21, .4) !important;
+    border-width: 2px !important;
+}
+
+.modal-header {
+    background-color: var(--ph-cream-3);
+    border-bottom: var(--ph-border-w) solid var(--ph-line-strong);
+    border-radius: calc(var(--ph-radius) - 2px) calc(var(--ph-radius) - 2px) 0 0;
+}
+
+.modal-title {
+    font-weight: 800;
+    letter-spacing: -.02em;
+}
+
+.modal-footer {
+    background-color: var(--ph-cream-3);
+    border-top: var(--ph-border-w) solid var(--ph-line-strong);
+}
+
+[data-theme="dark"] .modal-header,
+[data-theme="dark"] .modal-footer {
+    background-color: var(--ph-cream-2);
+}
+
+.swal2-popup {
+    border: 2px solid var(--ph-line-strong) !important;
+    border-radius: var(--ph-radius) !important;
+    box-shadow: 0 6px 0 0 rgba(21, 21, 21, .12), 0 30px 60px -20px rgba(21, 21, 21, .4) !important;
+    background-color: var(--card-bg) !important;
+    color: var(--text-primary) !important;
+}
+
+.swal2-title {
+    font-weight: 800 !important;
+    letter-spacing: -.02em;
+    color: var(--text-primary) !important;
+}
+
+.swal2-styled.swal2-confirm {
+    background-color: var(--ph-orange) !important;
+    border: 1.5px solid var(--ph-orange-dark) !important;
+    box-shadow: 0 2px 0 0 var(--ph-orange-dark) !important;
+    border-radius: var(--ph-radius-sm) !important;
+    font-weight: 700 !important;
+}
+
+.swal2-styled.swal2-cancel {
+    background-color: #fff !important;
+    color: var(--ph-ink) !important;
+    border: 1.5px solid var(--ph-line-strong) !important;
+    box-shadow: 0 2px 0 0 var(--ph-line-strong) !important;
+    border-radius: var(--ph-radius-sm) !important;
+    font-weight: 700 !important;
+}
+
+.swal2-styled:active {
+    transform: translateY(2px);
+    box-shadow: none !important;
+}
+
+/* ---------- 7.11 Sayfalama (Pagination) ---------- */
+.page-link {
+    border: var(--ph-border-w) solid var(--ph-line-strong) !important;
+    border-radius: var(--ph-radius-sm) !important;
+    margin: 0 3px;
+    font-weight: 700;
+    color: var(--ph-ink) !important;
+    background-color: #fff !important;
+}
+
+.page-link:hover {
+    background-color: var(--ph-orange-soft) !important;
+    color: var(--ph-orange-dark) !important;
+}
+
+.page-item.active .page-link {
+    background-color: var(--ph-orange) !important;
+    border-color: var(--ph-orange-dark) !important;
+    color: #fff !important;
+    box-shadow: 0 2px 0 0 var(--ph-orange-dark);
+}
+
+.page-item.disabled .page-link {
+    background-color: var(--ph-cream-2) !important;
+    color: var(--ph-ink-soft) !important;
+    opacity: .7;
+}
+
+[data-theme="dark"] .page-link {
+    background-color: var(--ph-cream-3) !important;
+    color: var(--text-primary) !important;
+}
+
+/* ---------- 7.12 Dashboard İstatistik Kartları ---------- */
+.stat-icon {
+    border-radius: var(--ph-radius-sm);
+    border: var(--ph-border-w) solid var(--ph-line-strong);
+    box-shadow: 0 2px 0 0 rgba(21, 21, 21, .1);
+}
+
+.stat-label {
+    font-weight: 800;
+    text-transform: uppercase;
+    color: var(--ph-ink-soft);
+}
+
+.stat-value,
+.stat-value-primary {
+    font-weight: 800;
+    letter-spacing: -.03em;
+}
+
+.saas-card,
+.depo-karti,
+.asset-grid-card {
+    border: var(--ph-border-w) solid var(--ph-line-strong) !important;
+    border-radius: var(--ph-radius) !important;
+    box-shadow: var(--ph-shadow) !important;
+}
+
+/* ---------- 7.13 Bildirim / Uyarı Kartları ---------- */
+.notification-card {
+    border: var(--ph-border-w) solid var(--ph-line-strong) !important;
+    border-radius: var(--ph-radius) !important;
+    background-color: var(--card-bg) !important;
+}
+
+.alert-border-warning {
+    border-left: 6px solid var(--ph-yellow) !important;
+}
+
+.alert-border-critical {
+    border-left: 6px solid var(--ph-orange) !important;
+}
+
+.alert-border-danger {
+    border-left: 6px solid var(--ph-red) !important;
+}
+
+.alert {
+    border: var(--ph-border-w) solid var(--ph-line-strong);
+    border-radius: var(--ph-radius);
+    font-weight: 500;
+}
+
+/* ---------- 7.14 Zaman Çizelgesi (Timeline) ---------- */
+.timeline::before {
+    width: 3px;
+    background-color: var(--ph-line-strong);
+    border-radius: 2px;
+}
+
+.timeline-item::before {
+    background-color: var(--ph-orange);
+    border: 3px solid var(--card-bg);
+    box-shadow: 0 0 0 2px var(--ph-ink);
+}
+
+.timeline-item.dot-success::before {
+    background-color: var(--ph-teal);
+    box-shadow: 0 0 0 2px var(--ph-ink);
+}
+
+.timeline-item.dot-warning::before {
+    background-color: var(--ph-yellow);
+    box-shadow: 0 0 0 2px var(--ph-ink);
+}
+
+.timeline-item.dot-danger::before {
+    background-color: var(--ph-red);
+    box-shadow: 0 0 0 2px var(--ph-ink);
+}
+
+.timeline-content {
+    border: var(--ph-border-w) solid var(--ph-line-strong);
+    border-radius: var(--ph-radius);
+    box-shadow: var(--ph-shadow);
+}
+
+/* ---------- 7.15 Roller / İzin Kartları ---------- */
+.role-item {
+    border-left: 5px solid transparent;
+    font-weight: 600;
+}
+
+.role-item:hover {
+    background-color: var(--ph-orange-soft);
+}
+
+.role-item.active {
+    background-color: var(--ph-orange-soft);
+    border-left-color: var(--ph-orange);
+    font-weight: 800;
+}
+
+[data-theme="dark"] .role-item:hover,
+[data-theme="dark"] .role-item.active {
+    background-color: var(--ph-cream-3);
+}
+
+.permission-module-card {
+    border: var(--ph-border-w) solid var(--ph-line-strong);
+    border-radius: var(--ph-radius);
+    box-shadow: var(--ph-shadow);
+}
+
+.permission-module-header {
+    background-color: var(--ph-cream-2);
+    border-bottom: var(--ph-border-w) solid var(--ph-line-strong);
+    font-weight: 800;
+}
+
+[data-theme="dark"] .permission-module-header {
+    background-color: var(--ph-cream-3);
+}
+
+.permission-item:hover {
+    background-color: var(--ph-orange-soft);
+}
+
+[data-theme="dark"] .permission-item:hover {
+    background-color: var(--ph-cream-3);
+}
+
+/* ---------- 7.16 Filtre Çipleri ---------- */
+.filtre-elemani {
+    border: var(--ph-border-w) solid var(--ph-line-strong) !important;
+    border-radius: 999px !important;
+    font-weight: 700;
+}
+
+.filtre-elemani:hover {
+    filter: none;
+    background-color: var(--ph-orange-soft);
+    border-color: var(--ph-orange) !important;
+}
+
+/* ---------- 7.17 Sekmeler (Nav Tabs / Pills) ---------- */
+.nav-tabs {
+    border-bottom: 2px solid var(--ph-line-strong);
+}
+
+.nav-tabs .nav-link {
+    border: none;
+    border-bottom: 3px solid transparent;
+    border-radius: 0;
+    font-weight: 700;
+    color: var(--ph-ink-soft);
+}
+
+.nav-tabs .nav-link:hover {
+    color: var(--ph-ink);
+    border-bottom-color: var(--ph-line-strong);
+}
+
+.nav-tabs .nav-link.active {
+    background-color: transparent;
+    color: var(--ph-orange-dark);
+    border-bottom-color: var(--ph-orange);
+}
+
+.nav-pills .nav-link {
+    font-weight: 700;
+    border-radius: var(--ph-radius-sm);
+    color: var(--ph-ink);
+}
+
+.nav-pills .nav-link.active {
+    background-color: var(--ph-orange);
+    box-shadow: 0 2px 0 0 var(--ph-orange-dark);
+}
+
+/* ---------- 7.18 Kaydırıcılar (Slider) ---------- */
+.noUi-target {
+    background: var(--ph-cream-2);
+    border: 1.5px solid var(--ph-line-strong);
+    box-shadow: none;
+    height: 8px;
+}
+
+.noUi-connect {
+    background: var(--ph-orange);
+    box-shadow: none;
+}
+
+.noUi-handle {
+    background: #fff;
+    border: 2px solid var(--ph-ink) !important;
+    box-shadow: 0 2px 0 0 var(--ph-ink) !important;
+    top: -9px !important;
+}
+
+.noUi-handle:hover {
+    background: var(--ph-orange);
+    transform: scale(1.08);
+}
+
+.noUi-tooltip {
+    background: var(--ph-ink);
+    border-radius: var(--ph-radius-sm);
+    font-weight: 800;
+}
+
+.dual-range input[type=range]::-webkit-slider-thumb {
+    background: var(--ph-orange);
+    border: 2px solid var(--ph-ink);
+}
+
+.dual-range input[type=range]::-moz-range-thumb {
+    background: var(--ph-orange);
+    border: 2px solid var(--ph-ink);
+}
+
+/* ---------- 7.19 Giriş / Kayıt / Şifre Sıfırlama Ekranları ---------- */
+.auth-page-body {
+    background-color: var(--ph-cream);
+    /* İnce nokta ızgarası + çok hafif sıcak ışık */
+    background-image:
+        radial-gradient(ellipse 90% 60% at 50% -15%, rgba(245, 78, 0, .07), transparent 62%),
+        radial-gradient(rgba(21, 21, 21, .10) 1px, transparent 1px);
+    background-size: auto, 16px 16px;
+    /* DİKKAT: "height: 100vh" uzun formlarda (kayıt ekranı) kaydırmayı
+       engellediği için min-height'a çevrildi. */
+    height: auto;
+    min-height: 100vh;
+    align-items: flex-start;
+    padding: clamp(2rem, 9vh, 6rem) 1rem 3rem;
+}
+
+[data-theme="dark"] .auth-page-body {
+    background-image:
+        radial-gradient(ellipse 90% 60% at 50% -15%, rgba(245, 78, 0, .10), transparent 62%),
+        radial-gradient(rgba(255, 255, 255, .07) 1px, transparent 1px);
+}
+
+/* Sol üstteki kod yorumu dokunuşu */
+.auth-code-note {
+    position: absolute;
+    top: 18px;
+    left: 20px;
+    font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+    font-size: .74rem;
+    line-height: 1.7;
+    color: var(--ph-ink-soft);
+    opacity: .85;
+    user-select: none;
+    pointer-events: none;
+}
+
+.auth-code-note::after {
+    content: '';
+    display: inline-block;
+    width: 7px;
+    height: 14px;
+    margin-left: 3px;
+    vertical-align: -2px;
+    background-color: var(--ph-yellow);
+    animation: authCaret 1.1s steps(1) infinite;
+}
+
+@keyframes authCaret {
+
+    0%,
+    50% {
+        opacity: 1;
+    }
+
+    51%,
+    100% {
+        opacity: 0;
+    }
+}
+
+.auth-shell {
+    width: 100%;
+    max-width: 420px;
+    margin: 0 auto;
+}
+
+/* Marka kartın üstünde durur */
+.auth-brand {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 11px;
+    margin-bottom: 1.6rem;
+}
+
+.auth-brand-mark {
+    width: 42px;
+    height: 42px;
+    display: grid;
+    place-items: center;
+    border-radius: 13px;
+    font-size: 1.2rem;
+    color: #fff;
+    background: linear-gradient(180deg, #ff8a52 0%, var(--ph-orange) 55%, var(--ph-orange-dark) 100%);
+    border: 1.5px solid rgba(0, 0, 0, .3);
+    box-shadow: 0 3px 0 rgba(0, 0, 0, .18), inset 0 1px 0 rgba(255, 255, 255, .5);
+}
+
+.auth-brand-text {
+    font-size: 1.9rem;
+    font-weight: 800;
+    letter-spacing: -.035em;
+    color: var(--ph-ink);
+}
+
+.auth-brand-text span {
+    color: var(--ph-orange);
+}
+
+.auth-card {
+    max-width: none;
+    width: 100%;
+    border: 1.5px solid var(--ph-line-strong) !important;
+    border-radius: 12px !important;
+    box-shadow: 0 2px 0 0 rgba(21, 21, 21, .07), 0 18px 40px -22px rgba(21, 21, 21, .55) !important;
+}
+
+.auth-card .card-body {
+    padding: 2.25rem 2rem;
+}
+
+.auth-title {
+    font-size: 1.4rem;
+    font-weight: 800;
+    letter-spacing: -.03em;
+    margin-bottom: .3rem;
+}
+
+.auth-subtitle {
+    font-size: .88rem;
+    color: var(--ph-ink-soft);
+    margin-bottom: 0;
+}
+
+.auth-inline-link {
+    font-size: .78rem;
+    font-weight: 700;
+    color: var(--ph-orange-dark);
+    text-decoration: none;
+}
+
+.auth-inline-link:hover {
+    text-decoration: underline;
+    color: var(--ph-orange);
+}
+
+/* Ana çağrı butonu: kehribar dolgu + koyu yazı (referans ekrandaki gibi) */
+.btn-auth-cta {
+    --ph-btn-face: linear-gradient(180deg, #ffc94a, #f5a623);
+    --ph-btn-edge: #cf8608;
+    --ph-btn-text: #2a1c00;
+    background: var(--ph-btn-face);
+    padding: .68rem 1rem;
+    font-size: .98rem;
+    font-weight: 800;
+    letter-spacing: -.01em;
+}
+
+.btn-auth-cta:hover {
+    background: linear-gradient(180deg, #ffd469, #f7b23c);
+    color: var(--ph-btn-text);
+}
+
+.auth-foot {
+    margin: 1.4rem 0 0;
+    text-align: center;
+    font-size: .85rem;
+    color: var(--ph-ink-soft);
+}
+
+.auth-foot a {
+    font-weight: 800;
+    color: var(--ph-orange-dark);
+    text-decoration: none;
+}
+
+.auth-foot a:hover {
+    text-decoration: underline;
+}
+
+.auth-page-body .form-text {
+    color: var(--ph-ink-soft);
+}
+
+[data-theme="dark"] .auth-brand-text {
+    color: #f2f3f7;
+}
+
+[data-theme="dark"] .auth-card {
+    border-color: var(--ph-line-strong) !important;
+    box-shadow: 0 2px 0 0 rgba(0, 0, 0, .5), 0 18px 40px -22px rgba(0, 0, 0, .9) !important;
+}
+
+[data-theme="dark"] .auth-inline-link,
+[data-theme="dark"] .auth-foot a {
+    color: #ff9a68;
+}
+
+@media (max-width: 420px) {
+    .auth-card .card-body {
+        padding: 1.6rem 1.25rem;
+    }
+
+    .auth-code-note {
+        display: none;
+    }
+}
+
+/* ---------- 7.20 Tarayıcı (Scanner) Sayfası ---------- */
+.scanner-page-body {
+    background-color: var(--bg-primary);
+}
+
+.scanner-card {
+    border: 2px solid var(--ph-ink) !important;
+    border-radius: 14px !important;
+    box-shadow: 0 6px 0 0 var(--ph-ink) !important;
+}
+
+[data-theme="dark"] .scanner-card {
+    border-color: var(--ph-line-strong) !important;
+    box-shadow: 0 6px 0 0 var(--ph-line-strong) !important;
+}
+
+#reader,
+#kameraAlani,
+.scanner-wrapper {
+    border: 2px dashed var(--ph-line-strong) !important;
+    border-radius: var(--ph-radius) !important;
+}
+
+.notifications-page-body {
+    background-color: var(--bg-primary);
+}
+
+/* ---------- 7.21 Diğer Küçük Rötuşlar ---------- */
+.progress {
+    border: 1.5px solid var(--ph-line-strong);
+    border-radius: 999px;
+    background-color: var(--ph-cream-2);
+    height: 12px;
+}
+
+.progress-bar {
+    background-color: var(--ph-orange);
+}
+
+.list-group-item {
+    background-color: var(--card-bg);
+    border-color: var(--ph-line);
+    color: var(--text-primary);
+}
+
+.accordion-item {
+    border: var(--ph-border-w) solid var(--ph-line-strong);
+    border-radius: var(--ph-radius);
+    overflow: hidden;
+    background-color: var(--card-bg);
+}
+
+.accordion-button {
+    font-weight: 700;
+    background-color: var(--ph-cream-3);
+    color: var(--text-primary);
+}
+
+.accordion-button:not(.collapsed) {
+    background-color: var(--ph-orange-soft);
+    color: var(--ph-orange-dark);
+    box-shadow: none;
+}
+
+.empty-state-icon {
+    color: var(--ph-line-strong);
+    opacity: 1;
+}
+
+.color-dot,
+.color-swatch-span,
+.color-swatch-span-sm,
+.color-swatch-dot {
+    border: 1.5px solid var(--ph-ink) !important;
+}
+
+.color-radio-item:checked+.color-swatch-span,
+.color-radio-item:checked+.color-swatch-span-sm {
+    outline: 2px solid var(--ph-orange);
+}
+
+.border-b-eee {
+    border-bottom: 1px solid var(--ph-line);
+}
+
+/* İnce ve markaya uygun kaydırma çubuğu */
+* {
+    scrollbar-width: thin;
+    scrollbar-color: var(--ph-line-strong) transparent;
+}
+
+::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+    background-color: var(--ph-line-strong);
+    border-radius: 999px;
+    border: 2px solid transparent;
+    background-clip: content-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background-color: var(--ph-ink-soft);
+}
+
+/* Mobilde de kalın kontur dili korunur (bölüm 6'daki border:none ezilir) */
+@media (max-width: 768px) {
+
+    .card,
+    .saas-card,
+    .depo-karti,
+    .asset-grid-card {
+        border: var(--ph-border-w) solid var(--ph-line-strong) !important;
+        border-radius: var(--ph-radius) !important;
+        box-shadow: var(--ph-shadow) !important;
+    }
+
+    .table th {
+        background-color: var(--ph-cream-2) !important;
+    }
+
+    [data-theme="dark"] .card {
+        background-color: var(--card-bg) !important;
+        border-color: var(--ph-line-strong) !important;
+    }
+}
+
+/* Hareket azaltma tercihi olan kullanıcılar için */
+@media (prefers-reduced-motion: reduce) {
+
+    .card,
+    .btn,
+    .sidebar-link {
+        transition: none !important;
+    }
+
+    .card:hover,
+    .saas-card:hover,
+    .depo-karti:hover {
+        transform: none !important;
+    }
+}
+
+/* =========================================================
+   8. MASAÜSTÜ (DESKTOP OS) KABUĞU
+   Duvar kağıdı + menü çubuğu + masaüstü ikonları + yüzen pencere.
+   İskelet config.js içindeki renderProfessionalLayout() tarafından kurulur.
+   ========================================================= */
+
+/* ---------- 8.1 Ölçüler ---------- */
+:root {
+    --sidebar-width: 116px;
+    --topbar-height: 46px;
+    --dt-gap: 16px;
+    --dt-window-radius: 14px;
+}
+
+/* ---------- 8.2 Duvar Kağıdı (Wallpaper) ---------- */
+/* Duvar kağıdı görseli: frontend/img/backgroundStockFlow.jpeg
+   Görsel bulunamazsa altındaki gradyan katmanı yedek olarak devreye girer,
+   yani dosya eksik olsa bile arayüz bozulmaz. */
+body.dt-desktop {
+    background-color: #1b1d17;
+    /* Perde YOK: görsel olduğu gibi, en net haliyle gösterilir.
+       Okunurluk, ikon etiketlerinin kendi gölgesiyle sağlanır. */
+    background-image:
+        url("../img/backgroundStockFlow.jpeg"),
+        /* --- görsel yoksa yedek gradyan manzara --- */
+        linear-gradient(180deg, #d9ecc0 0%, #b9d996 55%, #a4cc84 100%);
+    background-position: center center;
+    background-repeat: no-repeat;
+    /* cover: en/boy oranını bozmadan ekranı tamamen doldurur */
+    background-size: cover;
+    background-attachment: fixed;
+    overflow-x: hidden;
+    /* Sayfa içeriği kısa olsa bile duvar kağıdı tüm ekranı kaplasın */
+    min-height: 100vh;
+}
+
+[data-theme="dark"] body.dt-desktop {
+    background-color: #101219;
+    /* Koyu temada da görsel karartılmaz; yalnızca çok hafif bir soğuk ton verilir */
+    background-image:
+        linear-gradient(180deg, rgba(12, 16, 28, .14), rgba(12, 16, 28, .22)),
+        url("../img/backgroundStockFlow.jpeg"),
+        linear-gradient(180deg, #171a24 0%, #101219 60%, #0b0d12 100%);
+}
+
+/* ---------- 8.3 Menü Çubuğu (Menu Bar) ---------- */
+.dt-desktop .topbar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: var(--topbar-height);
+    padding: 0 12px;
+    z-index: 1045;
+    background-color: rgba(255, 255, 255, .72);
+    backdrop-filter: saturate(160%) blur(14px);
+    -webkit-backdrop-filter: saturate(160%) blur(14px);
+    border-bottom: 1.5px solid rgba(21, 21, 21, .18);
+    /* Bölüm 7'deki "box-shadow: none !important" kuralını ezmek için gerekli */
+    box-shadow: 0 1px 12px rgba(21, 21, 21, .10) !important;
+}
+
+[data-theme="dark"] .dt-desktop .topbar {
+    background-color: rgba(22, 24, 32, .78);
+    border-bottom-color: rgba(255, 255, 255, .12);
+}
+
+.dt-menubar-brand {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: 800;
+    font-size: .9rem;
+    letter-spacing: -.02em;
+    color: var(--ph-ink);
+}
+
+.dt-menubar-brand i {
+    color: var(--ph-orange);
+}
+
+.dt-menubar-sep {
+    width: 1.5px;
+    height: 18px;
+    background-color: rgba(21, 21, 21, .18);
+}
+
+[data-theme="dark"] .dt-menubar-sep {
+    background-color: rgba(255, 255, 255, .18);
+}
+
+.dt-menubar-app {
+    font-weight: 600;
+    font-size: .84rem;
+    color: var(--ph-ink-soft);
+}
+
+.dt-clock {
+    align-items: center;
+    font-size: .78rem;
+    font-weight: 700;
+    color: var(--ph-ink-soft);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+/* Menü çubuğu ikon düğmeleri */
+.dt-menu-btn {
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 9px;
+    font-size: 1rem;
+    color: var(--ph-ink) !important;
+    background-color: transparent;
+    border: 1.5px solid transparent !important;
+    box-shadow: none !important;
+    transition: background-color .15s ease, transform .12s ease;
+}
+
+.dt-menu-btn:hover {
+    background-color: rgba(21, 21, 21, .09);
+    transform: none;
+}
+
+.dt-menu-btn:active {
+    transform: scale(.92) !important;
+}
+
+[data-theme="dark"] .dt-menu-btn {
+    color: #e9eaef !important;
+}
+
+[data-theme="dark"] .dt-menu-btn:hover {
+    background-color: rgba(255, 255, 255, .12);
+}
+
+/* Kullanıcı çipi */
+.dt-user-chip {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 3px 10px 3px 3px;
+    border-radius: 999px;
+    border: 1.5px solid rgba(21, 21, 21, .16);
+    background-color: rgba(255, 255, 255, .6);
+    color: var(--ph-ink) !important;
+    font-size: .78rem;
+    font-weight: 700;
+    transition: background-color .15s ease, border-color .15s ease;
+}
+
+.dt-user-chip:hover {
+    background-color: #fff;
+    border-color: var(--ph-orange);
+}
+
+[data-theme="dark"] .dt-user-chip {
+    background-color: rgba(255, 255, 255, .07);
+    border-color: rgba(255, 255, 255, .16);
+    color: #eceef4 !important;
+}
+
+[data-theme="dark"] .dt-user-chip:hover {
+    background-color: rgba(255, 255, 255, .13);
+}
+
+.dt-desktop .profile-icon-wrapper {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: linear-gradient(180deg, #ff7a3d, var(--ph-orange));
+    color: #fff;
+    font-size: .8rem;
+    border: 1.5px solid rgba(0, 0, 0, .25);
+}
+
+/* ---------- 8.4 Masaüstü İkonları ---------- */
+.dt-desktop #sidebar {
+    top: var(--topbar-height);
+    height: calc(100vh - var(--topbar-height));
+    width: var(--sidebar-width);
+    background-color: transparent;
+    border-right: none;
+    z-index: 1040;
+    padding-top: 4px;
+}
+
+/* Marka karosu kaldırıldığı için başlık yalnızca mobil kapatma düğmesini tutar.
+   Masaüstünde hiç yer kaplamaz, ray doğrudan "Ana Sayfa" ile başlar. */
+.dt-desktop .sidebar-header.dt-rail-head {
+    height: auto;
+    min-height: 0;
+    padding: 0;
+    background-color: transparent;
+    border-bottom: none;
+    justify-content: flex-end;
+}
+
+@media (min-width: 992px) {
+    .dt-desktop .sidebar-header.dt-rail-head {
+        display: none;
+    }
+
+    .dt-desktop #sidebar {
+        padding-top: 14px;
+    }
+}
+
+.dt-brand {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+}
+
+.dt-brand-tile {
+    width: 42px;
+    height: 42px;
+    display: grid;
+    place-items: center;
+    border-radius: 13px;
+    font-size: 1.2rem;
+    color: #fff;
+    background: linear-gradient(180deg, #ff8a52 0%, var(--ph-orange) 55%, var(--ph-orange-dark) 100%);
+    border: 1.5px solid rgba(0, 0, 0, .35);
+    box-shadow: 0 3px 0 rgba(0, 0, 0, .25), inset 0 1px 0 rgba(255, 255, 255, .5);
+    transition: transform .18s cubic-bezier(.34, 1.56, .64, 1);
+}
+
+.dt-brand:hover .dt-brand-tile {
+    transform: translateY(-2px) rotate(-6deg);
+}
+
+.dt-brand-text {
+    font-size: .74rem;
+    font-weight: 800;
+    letter-spacing: -.02em;
+    color: var(--ph-ink);
+    text-shadow: 0 1px 0 rgba(255, 255, 255, .6);
+}
+
+[data-theme="dark"] .dt-brand-text {
+    color: #f0f1f5;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, .8);
+}
+
+.dt-desktop .sidebar-logo-text {
+    color: var(--ph-orange);
+}
+
+.dt-close-rail {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    color: var(--ph-ink) !important;
+    box-shadow: none !important;
+    background: transparent;
+}
+
+.dt-desktop .sidebar-heading {
+    text-align: center;
+    font-size: .58rem !important;
+    font-weight: 800 !important;
+    letter-spacing: .09em !important;
+    padding: 0 !important;
+    margin: 14px 10px 6px !important;
+    color: rgba(21, 21, 21, .55) !important;
+    text-shadow: 0 1px 0 rgba(255, 255, 255, .55);
+    border-top: 1.5px solid rgba(21, 21, 21, .12);
+    padding-top: 10px !important;
+}
+
+[data-theme="dark"] .dt-desktop .sidebar-heading {
+    color: rgba(255, 255, 255, .5) !important;
+    text-shadow: none;
+    border-top-color: rgba(255, 255, 255, .12);
+}
+
+/* İkonun kendisi */
+.desktop-icon.sidebar-link {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 6px;
+    padding: 9px 4px 7px;
+    margin: 2px 7px;
+    border: 1.5px solid transparent;
+    border-radius: 12px;
+    background-color: transparent;
+    color: var(--ph-ink) !important;
+    transition: background-color .16s ease, border-color .16s ease, transform .16s ease;
+}
+
+.desktop-icon .dt-tile {
+    width: 46px;
+    height: 46px;
+    display: grid;
+    place-items: center;
+    border-radius: 13px;
+    font-size: 1.3rem;
+    color: #fff;
+    border: 1.5px solid rgba(0, 0, 0, .32);
+    box-shadow: 0 3px 0 rgba(0, 0, 0, .22), inset 0 1px 0 rgba(255, 255, 255, .45);
+    transition: transform .2s cubic-bezier(.34, 1.56, .64, 1), box-shadow .2s ease;
+}
+
+/* Sembolün rengi HER ZAMAN karonun kendi rengidir.
+   Bölüm 7'deki ".sidebar-link:hover i" ve ".sidebar-link.active i { color: turuncu !important }"
+   kuralları masaüstü ikonlarında sembolü turuncuya boyuyordu — burada iptal edilir. */
+.desktop-icon .dt-tile i,
+.desktop-icon:hover .dt-tile i,
+.desktop-icon.active .dt-tile i,
+.desktop-icon:focus .dt-tile i,
+.desktop-icon:active .dt-tile i {
+    margin: 0;
+    font-size: inherit;
+    color: inherit !important;
+    transition: none;
+}
+
+/* Mobilde dokunmatik vurgusunun turuncu/gri kutu bırakmasını engeller */
+.desktop-icon.sidebar-link {
+    -webkit-tap-highlight-color: transparent;
+}
+
+/* Tıklama sonrası odak halkası turuncu dolgu gibi görünmesin */
+.desktop-icon.sidebar-link:focus {
+    outline: none;
+    background-color: transparent;
+}
+
+.desktop-icon.sidebar-link:focus-visible {
+    outline: 2px solid var(--ph-blue);
+    outline-offset: 2px;
+}
+
+.desktop-icon .dt-label {
+    font-size: .67rem;
+    font-weight: 700;
+    line-height: 1.2;
+    letter-spacing: -.01em;
+    color: var(--ph-ink);
+    text-shadow: 0 1px 0 rgba(255, 255, 255, .65);
+    padding: 2px 5px;
+    border-radius: 6px;
+    transition: background-color .16s ease, color .16s ease;
+}
+
+[data-theme="dark"] .desktop-icon .dt-label {
+    color: #eaebf0;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, .85);
+}
+
+/* Uygulama karosu renk tonları (masaüstü uygulama ikonu hissi) */
+.dt-tone-orange {
+    background: linear-gradient(180deg, #ff8a52, #f54e00 60%, #c33d00);
+}
+
+.dt-tone-blue {
+    background: linear-gradient(180deg, #5c81ff, #1d4aff 60%, #1235c4);
+}
+
+.dt-tone-purple {
+    background: linear-gradient(180deg, #d873f2, #b62ad9 60%, #8a1fa6);
+}
+
+.dt-tone-teal {
+    background: linear-gradient(180deg, #5fdfcd, #29b7a6 60%, #1d8f81);
+}
+
+.dt-tone-yellow {
+    background: linear-gradient(180deg, #ffdc7a, #f9bd2b 60%, #d29a12);
+    color: #4a3500;
+}
+
+.dt-tone-red {
+    background: linear-gradient(180deg, #ff7a56, #db3707 60%, #ab2a05);
+}
+
+.dt-tone-slate {
+    background: linear-gradient(180deg, #8b93a3, #5b6475 60%, #3f4654);
+}
+
+/* Üzerine gelme: ikon zıplar, etiket okunur bir hap içine girer */
+.desktop-icon.sidebar-link:hover {
+    background-color: rgba(255, 255, 255, .38);
+    border-color: rgba(21, 21, 21, .18);
+    transform: none;
+    color: var(--ph-ink) !important;
+}
+
+.desktop-icon.sidebar-link:hover .dt-tile {
+    transform: translateY(-4px) scale(1.06);
+    box-shadow: 0 7px 0 rgba(0, 0, 0, .2), inset 0 1px 0 rgba(255, 255, 255, .5);
+}
+
+.desktop-icon.sidebar-link:hover .dt-label {
+    background-color: rgba(255, 255, 255, .92);
+    text-shadow: none;
+}
+
+.desktop-icon.sidebar-link:active .dt-tile {
+    transform: translateY(0) scale(.94);
+    box-shadow: 0 1px 0 rgba(0, 0, 0, .25), inset 0 1px 0 rgba(255, 255, 255, .4);
+}
+
+[data-theme="dark"] .desktop-icon.sidebar-link:hover {
+    background-color: rgba(255, 255, 255, .10);
+    border-color: rgba(255, 255, 255, .16);
+}
+
+[data-theme="dark"] .desktop-icon.sidebar-link:hover .dt-label {
+    background-color: rgba(255, 255, 255, .16);
+    color: #fff;
+}
+
+/* Açık olan uygulama: seçili masaüstü ikonu gibi görünür */
+.desktop-icon.sidebar-link.active {
+    background-color: rgba(255, 255, 255, .62) !important;
+    border-color: rgba(21, 21, 21, .35) !important;
+    box-shadow: 0 2px 0 rgba(21, 21, 21, .18);
+    color: var(--ph-ink) !important;
+}
+
+/* Açık uygulamanın etiketi: turuncu dolgu göz yorduğu için nötr bir hap kullanılır */
+.desktop-icon.sidebar-link.active .dt-label {
+    background-color: rgba(255, 255, 255, .95);
+    color: var(--ph-ink);
+    text-shadow: none;
+    font-weight: 800;
+}
+
+.desktop-icon.sidebar-link.active .dt-tile {
+    animation: dtIconPop .45s cubic-bezier(.34, 1.56, .64, 1);
+}
+
+[data-theme="dark"] .desktop-icon.sidebar-link.active {
+    background-color: rgba(255, 255, 255, .14) !important;
+    border-color: rgba(255, 255, 255, .26) !important;
+    box-shadow: none;
+}
+
+[data-theme="dark"] .desktop-icon.sidebar-link.active .dt-label {
+    background-color: rgba(255, 255, 255, .2);
+    color: #fff;
+}
+
+@keyframes dtIconPop {
+    0% {
+        transform: scale(1);
+    }
+
+    45% {
+        transform: scale(1.16) rotate(-5deg);
+    }
+
+    100% {
+        transform: scale(1);
+    }
+}
+
+/* İkonların sırayla belirmesi (masaüstü açılış hissi) */
+.dt-desktop .desktop-icon {
+    animation: dtIconIn .34s ease-out both;
+}
+
+.dt-desktop .desktop-icon:nth-child(2) {
+    animation-delay: .02s;
+}
+
+.dt-desktop .desktop-icon:nth-child(3) {
+    animation-delay: .05s;
+}
+
+.dt-desktop .desktop-icon:nth-child(4) {
+    animation-delay: .08s;
+}
+
+.dt-desktop .desktop-icon:nth-child(5) {
+    animation-delay: .11s;
+}
+
+.dt-desktop .desktop-icon:nth-child(n+6) {
+    animation-delay: .14s;
+}
+
+@keyframes dtIconIn {
+    from {
+        opacity: 0;
+        transform: translateY(-8px) scale(.92);
+    }
+
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+/* ---------- 8.5 Uygulama Penceresi ---------- */
+.dt-desktop #main-wrapper {
+    margin-top: calc(var(--topbar-height) + var(--dt-gap));
+    margin-left: calc(var(--sidebar-width) + var(--dt-gap));
+    margin-right: calc(var(--sidebar-width) + var(--dt-gap));
+    margin-bottom: var(--dt-gap);
+    min-height: calc(100vh - var(--topbar-height) - (var(--dt-gap) * 2));
+    background-color: var(--card-bg);
+    border: 2px solid rgba(21, 21, 21, .8);
+    border-radius: var(--dt-window-radius);
+    box-shadow:
+        0 1px 0 rgba(255, 255, 255, .6) inset,
+        0 18px 44px -12px rgba(21, 21, 21, .45),
+        0 60px 90px -50px rgba(21, 21, 21, .6);
+    /* ============ BURAYA DİKKAT — İKİ AYRI TUZAK VAR ============
+       Bu elemana ASLA şunlar verilmemelidir:
+         transform / filter / backdrop-filter / will-change / perspective
+           → "containing block" oluşturur; içerideki tüm Bootstrap modalları
+             (position: fixed) viewport yerine pencereye göre konumlanır.
+         opacity < 1 / opacity veya transform üzerinde animation
+           → "stacking context" oluşturur; modal bu bağlama hapsolur ve
+             kök bağlamdaki .modal-backdrop (z-index 1050) modalın ÜSTÜNE
+             çizilir. Modal soluk görünür, tüm tıklamalar backdrop tarafından
+             yutulur ve uygulama donmuş gibi olur.
+       Bu yüzden pencerenin kendisinde animasyon YOKTUR; açılış animasyonu
+       modal içermeyen .dt-titlebar üzerinde çalışır. */
+    transition: margin .28s cubic-bezier(.25, .8, .25, 1);
+}
+
+[data-theme="dark"] .dt-desktop #main-wrapper {
+    border-color: rgba(255, 255, 255, .16);
+    box-shadow:
+        0 1px 0 rgba(255, 255, 255, .06) inset,
+        0 18px 44px -12px rgba(0, 0, 0, .75),
+        0 60px 90px -50px rgba(0, 0, 0, .9);
+}
+
+/* Açılış animasyonu yalnızca başlık çubuğunda çalışır.
+   .dt-titlebar modal içermediği için burada stacking context sorunu doğmaz. */
+@keyframes dtWindowOpen {
+    from {
+        opacity: 0;
+        transform: translateY(-6px);
+    }
+
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+/* İkon rayları kapalıyken pencere iki yana yayılır */
+.dt-desktop #main-wrapper.expanded {
+    margin-left: var(--dt-gap);
+    margin-right: var(--dt-gap);
+}
+
+/* Tam ekran: raylar kapanır, kenar boşlukları ve köşeler kaybolur,
+   ekranda yalnızca üst menü çubuğu ile pencere kalır */
+.dt-desktop #main-wrapper.maximized {
+    margin: var(--topbar-height) 0 0 0;
+    border-radius: 0;
+    border-left: none;
+    border-right: none;
+    border-bottom: none;
+    min-height: calc(100vh - var(--topbar-height));
+}
+
+/* Pencere başlık çubuğu */
+.dt-titlebar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    height: 40px;
+    padding: 0 10px 0 14px;
+    background: linear-gradient(180deg, var(--ph-cream-3), var(--ph-cream-2));
+    border-bottom: 1.5px solid var(--ph-line-strong);
+    border-radius: calc(var(--dt-window-radius) - 2px) calc(var(--dt-window-radius) - 2px) 0 0;
+    user-select: none;
+    cursor: default;
+    position: sticky;
+    top: var(--topbar-height);
+    z-index: 1035;
+    animation: dtWindowOpen .3s ease-out both;
+}
+
+#main-wrapper.maximized .dt-titlebar {
+    border-radius: 0;
+}
+
+.dt-titlebar-left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+}
+
+.dt-titlebar-icon {
+    width: 20px;
+    height: 20px;
+    display: grid;
+    place-items: center;
+    border-radius: 6px;
+    font-size: .62rem;
+    color: #fff;
+    background: linear-gradient(180deg, #ff8a52, var(--ph-orange));
+    border: 1px solid rgba(0, 0, 0, .3);
+    flex: 0 0 auto;
+}
+
+.dt-titlebar-text {
+    font-size: .82rem;
+    font-weight: 800;
+    letter-spacing: -.02em;
+    color: var(--ph-ink);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Pencere kontrol düğmeleri (trafik lambaları) */
+.dt-window-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 0 0 auto;
+}
+
+.dt-wc {
+    width: 16px;
+    height: 16px;
+    padding: 0;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    border: 1.5px solid rgba(0, 0, 0, .35);
+    font-size: .48rem;
+    line-height: 1;
+    color: transparent;
+    cursor: pointer;
+    transition: transform .12s ease, filter .15s ease;
+}
+
+.dt-wc i {
+    pointer-events: none;
+}
+
+.dt-wc-max {
+    background: linear-gradient(180deg, #7ee2a8, #2fbd6d);
+}
+
+.dt-wc-close {
+    background: linear-gradient(180deg, #ff9b7d, #f54e00);
+}
+
+.dt-window-controls:hover .dt-wc {
+    color: rgba(0, 0, 0, .62);
+}
+
+.dt-wc:hover {
+    filter: brightness(1.12);
+    transform: scale(1.14);
+}
+
+.dt-wc:active {
+    transform: scale(.9);
+}
+
+.dt-wc:focus-visible {
+    outline: 2px solid var(--ph-blue);
+    outline-offset: 2px;
+    color: rgba(0, 0, 0, .62);
+}
+
+[data-theme="dark"] .dt-titlebar {
+    background: linear-gradient(180deg, #2e313c, #262932);
+    border-bottom-color: var(--ph-line-strong);
+}
+
+[data-theme="dark"] .dt-titlebar-text {
+    color: #f0f1f5;
+}
+
+/* ---------- 8.6 Sağ İkon Rayı ---------- */
+/* Sol raya sığmayan sistem uygulamaları ekranın sağ kenarına alınır,
+   böylece hiçbir ikon ekranın altına taşmaz. */
+#sidebar-right {
+    position: fixed;
+    top: var(--topbar-height);
+    right: 0;
+    width: var(--sidebar-width);
+    height: calc(100vh - var(--topbar-height));
+    z-index: 1040;
+    display: flex;
+    flex-direction: column;
+    padding-top: 14px;
+    background-color: transparent;
+    transition: transform .3s cubic-bezier(.25, .8, .25, 1), opacity .25s ease;
+}
+
+#sidebar-right.collapsed {
+    transform: translateX(100%);
+}
+
+#sidebar-right .sidebar-menu {
+    -webkit-overflow-scrolling: touch;
+}
+
+/* Pencere kapalıyken gösterilen ipucu */
+.dt-desktop-hint {
+    position: fixed;
+    left: 50%;
+    bottom: 22px;
+    transform: translateX(-50%) translateY(14px);
+    padding: 8px 18px;
+    border-radius: 999px;
+    border: 1.5px solid rgba(21, 21, 21, .18);
+    background-color: rgba(255, 255, 255, .82);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    color: var(--ph-ink);
+    font-size: .74rem;
+    font-weight: 700;
+    letter-spacing: -.01em;
+    white-space: nowrap;
+    box-shadow: 0 8px 24px -10px rgba(21, 21, 21, .5);
+    opacity: 0;
+    pointer-events: none;
+    z-index: 1050;
+    transition: opacity .28s ease, transform .28s ease;
+}
+
+[data-theme="dark"] .dt-desktop-hint {
+    background-color: rgba(38, 41, 50, .88);
+    border-color: rgba(255, 255, 255, .18);
+    color: #f0f1f5;
+}
+
+/* ---------- 8.6b Masaüstü Sayfası (desktop.html) ---------- */
+/* Pencere başlığındaki kırmızı çarpı bu sayfaya götürür:
+   ekranda yalnızca duvar kağıdı ve iki yandaki uygulama ikonları kalır. */
+body.dt-desktop-only {
+    overflow: hidden;
+}
+
+body.dt-desktop-only .dt-menubar-sep,
+body.dt-desktop-only .dt-menubar-app {
+    display: none !important;
+}
+
+body.dt-desktop-only .dt-desktop-hint {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+}
+
+/* TAM EKRAN (yeşil): her iki ray da kapanır, yalnızca menü çubuğu kalır */
+body.dt-maximized #sidebar {
+    transform: translateX(-100%);
+    opacity: 0;
+    pointer-events: none;
+}
+
+body.dt-maximized #sidebar-right {
+    transform: translateX(100%);
+    opacity: 0;
+    pointer-events: none;
+}
+
+/* ---------- 8.7 Pencere içi içerik ayarları ---------- */
+.dt-window-content {
+    padding-top: 1.25rem !important;
+}
+
+/* İçerik pencere köşelerinden taşmasın */
+.dt-desktop #main-wrapper>.dt-window-content:last-child {
+    border-radius: 0 0 calc(var(--dt-window-radius) - 2px) calc(var(--dt-window-radius) - 2px);
+}
+
+/* Sayfa içi yapışkan öğeler menü çubuğunun altında kalsın */
+.sticky-offset {
+    top: calc(var(--topbar-height) + 52px);
+}
+
+/* Masaüstü modunda kart gölgeleri pencere içinde daha yumuşak durur */
+.dt-desktop .card {
+    box-shadow: 0 1px 0 0 rgba(21, 21, 21, .07), 0 2px 10px -4px rgba(21, 21, 21, .14) !important;
+}
+
+.dt-desktop .card:hover {
+    box-shadow: var(--ph-shadow-lift) !important;
+}
+
+/* ---------- 8.8 Mobil / Tablet ---------- */
+@media (max-width: 991.98px) {
+
+    /* Mobilde pencere tam genişlik alır; iki ray tek bir çekmece halinde açılır */
+    .dt-desktop #main-wrapper,
+    .dt-desktop #main-wrapper.expanded {
+        margin-left: var(--dt-gap);
+        margin-right: var(--dt-gap);
+    }
+
+    .dt-desktop #sidebar,
+    .dt-desktop #sidebar-right {
+        width: 124px;
+        background-color: rgba(255, 255, 255, .9);
+        backdrop-filter: blur(14px);
+        -webkit-backdrop-filter: blur(14px);
+    }
+
+    .dt-desktop #sidebar {
+        left: 0;
+    }
+
+    /* Sağ ray, çekmecenin ikinci sütunu olarak solun hemen yanına gelir */
+    .dt-desktop #sidebar-right {
+        left: 124px;
+        right: auto;
+        border-left: 1.5px solid rgba(21, 21, 21, .12);
+        border-right: 2px solid rgba(21, 21, 21, .25);
+    }
+
+    .dt-desktop #sidebar-right,
+    .dt-desktop #sidebar-right.collapsed {
+        transform: translateX(-100%);
+    }
+
+    .dt-desktop #sidebar.show-mobile,
+    .dt-desktop #sidebar-right.show-mobile {
+        transform: translateX(0);
+    }
+
+    .dt-desktop #sidebar-right.show-mobile {
+        box-shadow: 12px 0 40px rgba(0, 0, 0, .35);
+    }
+
+    [data-theme="dark"] .dt-desktop #sidebar,
+    [data-theme="dark"] .dt-desktop #sidebar-right {
+        background-color: rgba(22, 24, 32, .94);
+    }
+
+    [data-theme="dark"] .dt-desktop #sidebar-right {
+        border-left-color: rgba(255, 255, 255, .1);
+        border-right-color: rgba(255, 255, 255, .14);
+    }
+
+    /* Mobilde sabit duvar kağıdı (background-attachment: fixed) kaydırmayı
+       bozduğu ve tarayıcıyı zorladığı için normal akışa alınır. */
+    body.dt-desktop {
+        background-attachment: scroll;
+    }
+
+    /* Dokunmatik kaydırmanın akıcı çalışması için */
+    .dt-desktop .sidebar-menu,
+    .table-responsive,
+    .scrollable-list,
+    .scrollable-card,
+    .scrollable-dropdown,
+    .notification-dropdown-menu {
+        -webkit-overflow-scrolling: touch;
+    }
+}
+
+@media (max-width: 575.98px) {
+    :root {
+        --dt-gap: 8px;
+    }
+
+    .dt-desktop #main-wrapper {
+        border-radius: 12px;
+    }
+
+    .dt-clock {
+        display: none !important;
+    }
+
+    .dt-desktop-hint {
+        font-size: .68rem;
+        padding: 7px 12px;
+        white-space: normal;
+        max-width: 88vw;
+        text-align: center;
+    }
+}
+
+/* ---------- 8.9 Hareket azaltma ---------- */
+@media (prefers-reduced-motion: reduce) {
+
+    .dt-desktop #main-wrapper,
+    .dt-desktop .desktop-icon,
+    .desktop-icon.sidebar-link.active .dt-tile {
+        animation: none !important;
+    }
+
+    .desktop-icon.sidebar-link:hover .dt-tile,
+    .dt-brand:hover .dt-brand-tile {
+        transform: none !important;
+    }
+}
+
+/* =========================================================
+   9. KARANLIK TEMA KONTRAST DÜZELTMELERİ
+   Açık temada doğru olan bazı renkler karanlık temada okunmuyordu.
+   ========================================================= */
+
+/* Sarı zemin üstünde metin her zaman koyu olmalı (açık temada --ph-ink koyu,
+   karanlık temada açık olduğu için buton yazısı görünmez hale geliyordu) */
+.btn-warning {
+    --ph-btn-text: #151515;
+}
+
+[data-theme="dark"] .btn-warning {
+    --ph-btn-text: #151515;
+}
+
+/* İptal butonu karanlık temada beyaz zemin + beyaz yazı oluyordu */
+[data-theme="dark"] .swal2-styled.swal2-cancel,
+[data-bs-theme="dark"] .swal2-styled.swal2-cancel {
+    background-color: var(--ph-cream-3) !important;
+    color: #f0f1f5 !important;
+    border-color: var(--ph-line-strong) !important;
+    box-shadow: 0 2px 0 0 var(--ph-line-strong) !important;
+}
+
+/* Kontur (outline) butonlarının koyu vurgu renkleri karanlık zeminde okunmuyordu */
+[data-theme="dark"] .btn-outline-primary {
+    --ph-btn-edge: #ff7a3d;
+    --ph-btn-text: #ff9a68;
+}
+
+[data-theme="dark"] .btn-outline-primary:hover {
+    --ph-btn-face: rgba(245, 78, 0, .18);
+}
+
+[data-theme="dark"] .btn-outline-danger {
+    --ph-btn-edge: #ff7a56;
+    --ph-btn-text: #ff8f70;
+}
+
+[data-theme="dark"] .btn-outline-danger:hover {
+    --ph-btn-face: rgba(219, 55, 7, .2);
+}
+
+[data-theme="dark"] .btn-outline-success {
+    --ph-btn-edge: #4fd6c4;
+    --ph-btn-text: #6fe0d1;
+}
+
+[data-theme="dark"] .btn-outline-success:hover {
+    --ph-btn-face: rgba(41, 183, 166, .18);
+}
+
+[data-theme="dark"] .btn-outline-info {
+    --ph-btn-edge: #6d8dff;
+    --ph-btn-text: #93aaff;
+}
+
+[data-theme="dark"] .btn-outline-info:hover {
+    --ph-btn-face: rgba(29, 74, 255, .22);
+}
+
+[data-theme="dark"] .btn-outline-warning {
+    --ph-btn-edge: #f9bd2b;
+    --ph-btn-text: #ffd571;
+}
+
+[data-theme="dark"] .btn-outline-warning:hover {
+    --ph-btn-face: rgba(249, 189, 43, .18);
+}
+
+/* .btn-dark ve .btn-secondary zeminlerini --ph-ink / --ph-ink-2 jetonlarından
+   alıyordu. Bu jetonlar koyu temada AÇIK renge dönüşüyor, yazı rengi ise sabit
+   beyaz kalıyordu → beyaz zemin üzerine beyaz yazı, buton okunmaz hale geliyordu
+   ("Raftaki Ürünleri Görüntüle" butonları). Koyu temada ters çevrilir. */
+[data-theme="dark"] .btn-dark {
+    --ph-btn-face: #e9eaf0;
+    --ph-btn-edge: #b3b6c2;
+    --ph-btn-text: #151515;
+}
+
+[data-theme="dark"] .btn-secondary {
+    --ph-btn-face: #4a4f5e;
+    --ph-btn-edge: #5e6474;
+    --ph-btn-text: #f4f4f2;
+}
+
+/* Aynı sorun kaydırıcı ipucu balonunda da vardı */
+[data-theme="dark"] .noUi-tooltip {
+    background: #e9eaf0;
+    color: #151515;
+}
+
+/* Rozetler: karanlık temada filtre yerine gerçek koyu zemin + açık metin */
+[data-theme="dark"] .badge {
+    filter: none;
+}
+
+[data-theme="dark"] .badge.bg-primary {
+    background-color: rgba(245, 78, 0, .20) !important;
+    color: #ffa878 !important;
+    border-color: rgba(245, 78, 0, .65);
+}
+
+[data-theme="dark"] .badge.bg-success {
+    background-color: rgba(41, 183, 166, .20) !important;
+    color: #6fe0d1 !important;
+    border-color: rgba(41, 183, 166, .65);
+}
+
+[data-theme="dark"] .badge.bg-danger {
+    background-color: rgba(219, 55, 7, .24) !important;
+    color: #ff9b7d !important;
+    border-color: rgba(219, 55, 7, .7);
+}
+
+[data-theme="dark"] .badge.bg-warning {
+    background-color: rgba(249, 189, 43, .20) !important;
+    color: #ffd571 !important;
+    border-color: rgba(249, 189, 43, .65);
+}
+
+[data-theme="dark"] .badge.bg-info {
+    background-color: rgba(29, 74, 255, .26) !important;
+    color: #a3b7ff !important;
+    border-color: rgba(29, 74, 255, .7);
+}
+
+[data-theme="dark"] .badge.bg-secondary,
+[data-theme="dark"] .badge.bg-light,
+[data-theme="dark"] .badge.bg-dark {
+    background-color: rgba(255, 255, 255, .10) !important;
+    color: #e4e5ea !important;
+    border-color: rgba(255, 255, 255, .22);
+}
+
+/* Akordiyon açık başlığı: koyu turuncu metin koyu zeminde kayboluyordu */
+[data-theme="dark"] .accordion-button:not(.collapsed) {
+    background-color: rgba(245, 78, 0, .16);
+    color: #ffa878;
+}
+
+[data-theme="dark"] .accordion-button {
+    background-color: var(--ph-cream-3);
+    color: var(--text-primary);
+}
+
+/* Sekme ve bağlantı vurguları */
+[data-theme="dark"] .nav-tabs .nav-link.active {
+    color: #ff9a68;
+    border-bottom-color: var(--ph-orange);
+}
+
+[data-theme="dark"] .nav-tabs .nav-link {
+    color: #b6b9c3;
+}
+
+[data-theme="dark"] .nav-tabs .nav-link:hover {
+    color: #f0f1f5;
+}
+
+[data-theme="dark"] .text-primary {
+    color: #ff9a68 !important;
+}
+
+[data-theme="dark"] a:not(.btn):not(.sidebar-link):not(.dropdown-item):not(.nav-link) {
+    color: #93aaff;
+}
+
+/* Sayfalama aktif sayfası */
+[data-theme="dark"] .page-item.active .page-link {
+    background-color: var(--ph-orange) !important;
+    border-color: #ff8a52 !important;
+    color: #fff !important;
+}
+
+[data-theme="dark"] .page-link:hover:not(.active) {
+    background-color: rgba(245, 78, 0, .18) !important;
+    color: #ffa878 !important;
+}
+
+[data-theme="dark"] .page-item.disabled .page-link {
+    background-color: rgba(255, 255, 255, .04) !important;
+    color: #7b7e88 !important;
+}
+
+/* Rol listesi ve izin satırları */
+[data-theme="dark"] .role-item.active {
+    background-color: rgba(245, 78, 0, .14);
+    border-left-color: var(--ph-orange);
+    color: #f4f4f2;
+}
+
+/* Filtre çipleri */
+[data-theme="dark"] .filtre-elemani:hover {
+    background-color: rgba(245, 78, 0, .16);
+    border-color: var(--ph-orange) !important;
+    color: #ffa878;
+}
+
+/* Devre dışı metin ve yer tutucular yeterince okunur olsun */
+[data-theme="dark"] .form-control::placeholder {
+    color: #8d909b;
+    opacity: 1;
+}
+
+[data-theme="dark"] .text-muted {
+    color: #a9acb6 !important;
+}
+
+[data-theme="dark"] .table tbody td {
+    border-bottom-color: rgba(255, 255, 255, .08) !important;
+}
+
+/* Bootstrap'in koyu temada beyaza dönen yardımcı sınıfları */
+[data-theme="dark"] .bg-light,
+[data-theme="dark"] .bg-white,
+[data-theme="dark"] .bg-body {
+    background-color: var(--ph-cream-3) !important;
+    color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] .border {
+    border-color: var(--ph-line) !important;
+}
+
+/* =========================================================
+   10. MODAL İÇİ SİHİRBAZLAR — İÇERİĞE ULAŞILABİLİRLİK
+   Ürün detay (carousel), içe aktarma sihirbazı gibi "sayfa içi sayfalar"
+   uzun olduğunda içerik ekranın altına taşıp ulaşılamaz hale geliyordu:
+   modal büyüyor, ekran dışına çıkıyor ve kaydırılamıyordu.
+   Çözüm Bootstrap'in "modal-dialog-scrollable" davranışının global hali:
+   modal asla ekrandan taşmaz, içerik kendi gövdesinde kayar.
+   ========================================================= */
+.modal-dialog:not(.modal-fullscreen) {
+    /* mt-5 gibi büyük üst boşluklar taşmaya yol açtığı için sabitlenir */
+    margin-top: 1.75rem !important;
+    margin-bottom: 1.75rem !important;
+}
+
+.modal-content {
+    /* dvh, mobil tarayıcılarda adres çubuğunu da hesaba katar */
+    max-height: calc(100vh - 3.5rem);
+    max-height: calc(100dvh - 3.5rem);
+    overflow: hidden;
+}
+
+.modal-body {
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.modal-fullscreen .modal-content {
+    max-height: none;
+}
+
+/* Sihirbaz adımları arasında gezinen çubuk (Geri / göstergeler / İleri)
+   içerik kaydırılırken ekranda kalsın. */
+.modal-body>.carousel>div:first-child:not(.carousel-inner) {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+}
+
+/* Carousel adımlarının yüksekliği içeriğe göre büyüsün, kırpılmasın */
+.modal-body .carousel-inner {
+    overflow-x: hidden;
+    overflow-y: visible;
+}
+
+/* =========================================================
+   11. KARANLIK TEMA — DUVAR KAĞIDI VE YÜZEY OKUNURLUĞU
+   Koyu modda duvar kağıdının üzerindeki perde çok yoğundu ve
+   arayüz "çamurlu" görünüyordu; perde hafifletilip yüzeyler ayrıştırıldı.
+   ========================================================= */
+/* Koyu temada duvar kağıdı artık karartılmıyor (eskiden %72–82 perde vardı,
+   görsel çamura dönüyordu). Yalnızca çok hafif bir soğuk ton bırakıldı. */
+[data-theme="dark"] body.dt-desktop {
+    background-image:
+        linear-gradient(180deg, rgba(12, 16, 28, .14), rgba(12, 16, 28, .22)),
+        url("../img/backgroundStockFlow.jpeg"),
+        linear-gradient(180deg, #171a24 0%, #101219 60%, #0b0d12 100%);
+}
+
+/* Pencere koyu zeminde daha net ayrışsın */
+[data-theme="dark"] .dt-desktop #main-wrapper {
+    border-color: rgba(255, 255, 255, .28);
+}
+
+[data-theme="dark"] .dt-desktop .topbar {
+    background-color: rgba(20, 22, 30, .86);
+    border-bottom-color: rgba(255, 255, 255, .22);
+}
+
+/* Kart ve tablo yüzeyleri birbirinden ayrılsın */
+[data-theme="dark"] .card,
+[data-theme="dark"] .modal-content,
+[data-theme="dark"] .dropdown-menu {
+    background-color: #272a34 !important;
+    border-color: #434857 !important;
+}
+
+[data-theme="dark"] .card-header,
+[data-theme="dark"] .card-footer {
+    background-color: #2e323e !important;
+    border-color: #434857 !important;
+}
+
+[data-theme="dark"] .dt-window-content {
+    background-color: transparent;
+}
+
+/* =========================================================
+   12. MASAÜSTÜ ÜZERİ OKUNURLUK VE KAYAN ÇUBUKLAR
+   Duvar kağıdı bir fotoğraf olduğu için etiketler HER İKİ temada da
+   beyaz + koyu gölge kullanır (gerçek işletim sistemlerindeki gibi).
+   Açık temada koyu yazı fotoğrafın üzerinde okunmuyordu.
+   ========================================================= */
+.desktop-icon .dt-label,
+[data-theme="dark"] .desktop-icon .dt-label {
+    color: #ffffff;
+    font-weight: 800;
+    text-shadow:
+        0 1px 2px rgba(0, 0, 0, .95),
+        0 2px 8px rgba(0, 0, 0, .75),
+        0 0 2px rgba(0, 0, 0, .9);
+    background-color: transparent;
+}
+
+/* Üzerine gelince/seçiliyken okunur bir hap içine girer */
+.desktop-icon.sidebar-link:hover .dt-label,
+.desktop-icon.sidebar-link.active .dt-label,
+[data-theme="dark"] .desktop-icon.sidebar-link:hover .dt-label,
+[data-theme="dark"] .desktop-icon.sidebar-link.active .dt-label {
+    background-color: rgba(12, 14, 20, .78);
+    color: #ffffff;
+    text-shadow: none;
+}
+
+/* Seçili uygulamanın çerçevesi de fotoğraf üzerinde belirgin olsun */
+.desktop-icon.sidebar-link:hover,
+[data-theme="dark"] .desktop-icon.sidebar-link:hover {
+    background-color: rgba(255, 255, 255, .16) !important;
+    border-color: rgba(255, 255, 255, .34) !important;
+}
+
+.desktop-icon.sidebar-link.active,
+[data-theme="dark"] .desktop-icon.sidebar-link.active {
+    background-color: rgba(255, 255, 255, .22) !important;
+    border-color: rgba(255, 255, 255, .48) !important;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, .35);
+}
+
+/* --- KAYAN ÇUBUKLARI GİZLE (kaydırma çalışmaya devam eder) --- */
+.dt-desktop #sidebar,
+.dt-desktop #sidebar-right,
+.dt-desktop .sidebar-menu {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+.dt-desktop #sidebar::-webkit-scrollbar,
+.dt-desktop #sidebar-right::-webkit-scrollbar,
+.dt-desktop .sidebar-menu::-webkit-scrollbar {
+    width: 0;
+    height: 0;
+    display: none;
+}
+
+/* İkonlar ekrana daha rahat sığsın (alttakiler kesilmesin) */
+.desktop-icon.sidebar-link {
+    padding: 7px 4px 5px;
+    margin: 1px 7px;
+    gap: 4px;
+}
+
+.desktop-icon .dt-tile {
+    width: 42px;
+    height: 42px;
+    font-size: 1.18rem;
+}
+
+/* --- ÜST BAR: daha saydam, fotoğraf arkasından görünsün --- */
+.dt-desktop .topbar {
+    background-color: rgba(255, 255, 255, .34);
+    backdrop-filter: saturate(150%) blur(18px);
+    -webkit-backdrop-filter: saturate(150%) blur(18px);
+    border-bottom: 1px solid rgba(255, 255, 255, .28);
+    box-shadow: 0 2px 18px rgba(0, 0, 0, .18) !important;
+}
+
+[data-theme="dark"] .dt-desktop .topbar {
+    background-color: rgba(16, 18, 26, .42);
+    border-bottom-color: rgba(255, 255, 255, .16);
+}
+
+/* Saydam bar üzerindeki yazılar için kontrast.
+   DİKKAT: rengi .topbar'a değil, tek tek elemanlara veriyoruz — aksi halde
+   bardan açılan açılır menülerin (bildirim, kullanıcı) yazıları da beyaza
+   dönüp beyaz zeminde kaybolur. */
+.dt-desktop .dt-menubar-brand,
+.dt-desktop .dt-menubar-app,
+.dt-desktop .dt-clock,
+.dt-desktop .dt-menu-btn {
+    color: #ffffff !important;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, .8);
+}
+
+.dt-desktop .dt-menubar-brand i {
+    color: var(--ph-orange) !important;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, .8);
+}
+
+.dt-desktop .dt-menubar-sep {
+    background-color: rgba(255, 255, 255, .35);
+}
+
+.dt-desktop .dt-menu-btn:hover {
+    background-color: rgba(255, 255, 255, .22);
+}
+
+.dt-desktop .dt-user-chip {
+    background-color: rgba(12, 14, 20, .42);
+    border-color: rgba(255, 255, 255, .3);
+    color: #ffffff !important;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, .8);
+}
+
+.dt-desktop .dt-user-chip:hover {
+    background-color: rgba(12, 14, 20, .62);
+    border-color: rgba(255, 255, 255, .5);
+}
+
+/* Masaüstü ipucu da fotoğraf üzerinde okunur olsun */
+.dt-desktop-hint,
+[data-theme="dark"] .dt-desktop-hint {
+    background-color: rgba(12, 14, 20, .68);
+    border-color: rgba(255, 255, 255, .28);
+    color: #ffffff;
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+}

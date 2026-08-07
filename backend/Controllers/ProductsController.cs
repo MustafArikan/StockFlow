@@ -218,7 +218,7 @@ public class ProductsController : ControllerBase
         var mevcut = await _context.Products.FirstOrDefaultAsync(p => p.Barcode == dto.Barcode && p.Id != id && !p.IsDeleted);
         if (mevcut != null)
         {
-            return BadRequest("Bu barkoda sahip bir ürün zaten var.");
+            return BadRequest(new { message = "Bu barkoda sahip bir ürün zaten var." });
         }
 
         var categoryExists = await _context.Categories.AnyAsync(c => c.Id == dto.CategoryId);

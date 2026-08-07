@@ -1,6 +1,17 @@
 let aktifDetayUrunId = null;
 
 async function urunDetayAc(productId, secenekler = {}) {
+    // Modal markup'ı sayfada yoksa (ör. tedarikçiler ekranı) buraya eklenir.
+    // Eskiden bu kontrol yoktu; modal bulunmayan sayfalarda getElementById(...)
+    // null dönüp "Cannot set properties of null" hatasıyla işlem kırılıyordu.
+    if (typeof ensureProductDetailModal === 'function') {
+        ensureProductDetailModal();
+    }
+    if (!document.getElementById('urunDetayModal')) {
+        hataGoster('Ürün detay penceresi yüklenemedi. Lütfen sayfayı yenileyin.');
+        return;
+    }
+
     const token = localStorage.getItem('token');
 
     // Ürün temel bilgilerini çek
@@ -150,6 +161,13 @@ async function urunDetayAc(productId, secenekler = {}) {
 
 async function detayTedarkciYukle(productId, yonetim = false) {
     const tablo = document.getElementById("detayTedarikciListesi");
+    if (!tablo) return;
+
+    // Token buradan okunur. Eskiden başka bir sayfa scriptinin (products.js,
+    // suppliers.js ...) tanımladığı global `token` değişkenine yaslanıyordu;
+    // o script yüklenmeyen bir sayfada ReferenceError veriyordu.
+    const token = localStorage.getItem('token');
+
     try{
         const cevap = await fetch(`${CONFIG.API_BASE_URL}/products/${productId}/suppliers`, {
             method: "GET",

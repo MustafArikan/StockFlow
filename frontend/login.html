@@ -17,43 +17,46 @@
 </head>
 <body class="auth-page-body">  
 
-    <div class="card auth-card border-0 shadow-lg bg-white">
-        <div class="card-body p-5">
-            <div class="text-center mb-4">
-                <a class="navbar-brand fw-bold text-primary fs-3 text-decoration-none" href="#">
-                    Stock<span class="">Flow</span>    
-                </a>
-                <p class="text-muted mt-2">Hesabınıza giriş yapın</p>
-            </div>
+    <span class="auth-code-note">// oturum aç<br>// stok, depo ve demirbaş yönetimi</span>
 
+    <div class="auth-shell">
+        <div class="auth-brand">
+            <span class="auth-brand-mark"><i class="bi bi-hexagon-fill"></i></span>
+            <span class="auth-brand-text">Stock<span>Flow</span></span>
+        </div>
 
-
-            <form id="loginForm">
-                <div class="mb-3">
-                    <label for="email" class="form-label fw-bold small text-muted">E-posta Adresi</label>
-                    <input type="email" class="form-control" id="email" required placeholder="ornek@sirket.com">
+        <div class="card auth-card">
+            <div class="card-body">
+                <div class="text-center mb-4">
+                    <h1 class="auth-title">Tekrar hoş geldiniz</h1>
+                    <p class="auth-subtitle">Hesabınıza giriş yapın</p>
                 </div>
-                <div class="mb-4">
-                    <div class="d-flex justify-content-between align-items-center mb-1">
-                        <label for="password" class="form-label fw-bold small text-muted mb-0">Şifre</label>
-                        <a href="forgot-password.html" class="small fw-bold text-decoration-none">Şifremi Unuttum</a>
+
+                <form id="loginForm">
+                    <div class="mb-3">
+                        <label for="email" class="form-label">E-posta Adresi</label>
+                        <input type="email" class="form-control" id="email" required placeholder="ornek@sirket.com">
                     </div>
-                    <div class="input-group">
-                        <input type="password" class="form-control" id="password" required placeholder="••••••••">
-                        <button class="btn btn-outline-secondary toggle-password" type="button" data-target="password">
-                            <i class="bi bi-eye-slash"></i>
-                        </button>
+                    <div class="mb-4">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <label for="password" class="form-label mb-0">Şifre</label>
+                            <a href="forgot-password.html" class="auth-inline-link">Şifremi Unuttum</a>
+                        </div>
+                        <div class="input-group">
+                            <input type="password" class="form-control" id="password" required placeholder="••••••••">
+                            <button class="btn btn-outline-secondary toggle-password" type="button" data-target="password">
+                                <i class="bi bi-eye-slash"></i>
+                            </button>
+                        </div>
                     </div>
-                </div>
-                <button type="submit" class="btn btn-primary w-100 py-2 fw-bold" id="btnLogin">
-                    Giriş Yap
-                </button>
-            </form>
-            
-            <div class="text-center mt-4">
-                <p class="mb-0 small text-muted">Hesabınız yok mu? <a href="register.html" class="text-primary fw-bold text-decoration-none">Kayıt Ol</a></p>
+                    <button type="submit" class="btn btn-auth-cta w-100" id="btnLogin">
+                        Giriş Yap
+                    </button>
+                </form>
             </div>
         </div>
+
+        <p class="auth-foot">Hesabınız yok mu? <a href="register.html">Kayıt Ol →</a></p>
     </div>
 
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">

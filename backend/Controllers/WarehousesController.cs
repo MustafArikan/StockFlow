@@ -90,7 +90,7 @@ public class WarehousesController : ControllerBase
 
         if (mevcut != null)
         {
-            return BadRequest("Bu isim ve adrese sahip bir depo zaten var.");
+            return BadRequest(new { message = "Bu isim ve adrese sahip bir depo zaten var." });
         }
 
 
@@ -119,7 +119,7 @@ public class WarehousesController : ControllerBase
         var mevcut = await _context.Warehouses.FirstOrDefaultAsync(w => w.Name == dto.Name && w.Address == dto.Address && w.Id != id);
         if (mevcut != null)
         {
-            return BadRequest("Bu isim ve adrese sahip bir depo zaten var.");
+            return BadRequest(new { message = "Bu isim ve adrese sahip bir depo zaten var." });
         }
 
         warehouse.Name = dto.Name;
@@ -143,7 +143,7 @@ public class WarehousesController : ControllerBase
         var rafVarMi = await _context.Locations.AnyAsync(l => l.WarehouseId == id);
         if (rafVarMi)
         {
-            return BadRequest("Bu depoda raflar var. Önce onları silmelisiniz.");
+            return BadRequest(new { message = "Bu depoda raflar var. Önce onları silmelisiniz." });
         }
 
         warehouse.IsDeleted = true; // Soft delete
