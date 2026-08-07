@@ -77,52 +77,75 @@ function onScanSuccess(decodedText, decodedResult) {
 
     // Backend Optimizasyonlu Akıllı Arama
     setTimeout(async () => {
-        const okunanMetin = decodedText.trim();
+        let okunanMetin = decodedText.trim();
 
+        // URL KONTROLÜ VE GÜVENLİ AYRIŞTIRMA
         if (okunanMetin.startsWith('http://') || okunanMetin.startsWith('https://')) {
-            window.location.href = okunanMetin;
-        } else {
+            // Kendi domain'imiz mi kontrol eder
+            if (okunanMetin.includes(window.location.hostname)) {
+                window.location.href = okunanMetin;
+                return;
+            } else {
+                // Harici URL ise tarayıcının donmasını önlemek için son path parçasını barkod olarak almayı dene
+                try {
+                    const urlObj = new URL(okunanMetin);
+                    const pathSegments = urlObj.pathname.split('/').filter(Boolean);
+                    if (pathSegments.length > 0) {
+                        okunanMetin = pathSegments[pathSegments.length - 1];
+                    }
+                } catch (err) {
+                    // Parçalanamazsa orijinal metinle devam et
+                }
+            }
+        }
+
+        // ARAMA MOTORU (Raf ve Ürün Kontrolü)
+        try {
+            // ÖNCE RAF (LOCATION) OLARAK KONTROL ET
             try {
-                // ÖNCE RAF (LOCATION) OLARAK KONTROL ET
-                try {
-                    await apiRequest(`/locations/by-code/${encodeURIComponent(okunanMetin)}`, 'GET');
-                    // Hata fırlatmadıysa raf bulunmuştur!
-                    window.location.href = `warehouses.html?viewShelfCode=${encodeURIComponent(okunanMetin)}`;
-                    return;
-                } catch (rafHatasi) {
-                    // 404 döndüyse raf değildir, ürün aramaya geç
-                }
+                await apiRequest(`/locations/by-code/${encodeURIComponent(okunanMetin)}`, 'GET');
+                // Hata fırlatmadıysa raf bulunmuştur!
+                window.location.href = `warehouses.html?viewShelfCode=${encodeURIComponent(okunanMetin)}`;
+                return;
+            } catch (rafHatasi) {
+                // 404 döndüyse raf değildir, ürün aramaya geç
+            }
 
-                // EĞER RAF DEĞİLSE, ÜRÜN (PRODUCT) OLARAK KONTROL ET
-                try {
-                    await apiRequest(`/products/by-barcode/${encodeURIComponent(okunanMetin)}`, 'GET');
-                    // Hata fırlatmadıysa ürün bulunmuştur!
-                    window.location.href = `products.html?viewProductBarcode=${encodeURIComponent(okunanMetin)}`;
-                    return;
-                } catch (urunHatasi) {
-                    // 404 döndüyse ürün de değildir.
-                }
-
-                // NE RAF NE DE ÜRÜN BULUNAMADI! (UI HATA DURUMU)
-                if (resultText) {
-                    resultText.textContent = okunanMetin;
-                    resultText.classList.remove('text-primary');
-                    resultText.classList.add('text-danger');
-                }
-                if (btnStart) {
-                    btnStart.disabled = false;
-                    btnStart.innerHTML = `Kamerayı Başlat`;
-                }
-
-                if (typeof uyariGoster === 'function') {
-                    uyariGoster(`Sistemde "${okunanMetin}" koduna sahip bir raf veya ürün bulunamadı!`);
-                } else {
-                    alert(`Bulunamadı: ${okunanMetin}`);
-                }
-
-            } catch (e) {
-                console.error("Genel sorgulama hatası:", e);
+            // EĞER RAF DEĞİLSE, ÜRÜN (PRODUCT) OLARAK KONTROL ET
+            try {
+                await apiRequest(`/products/by-barcode/${encodeURIComponent(okunanMetin)}`, 'GET');
+                // Hata fırlatmadıysa ürün bulunmuştur!
                 window.location.href = `products.html?viewProductBarcode=${encodeURIComponent(okunanMetin)}`;
+                return;
+            } catch (urunHatasi) {
+                // 404 döndüyse ürün de değildir.
+            }
+
+            // NE RAF NE DE ÜRÜN BULUNAMADI! (UI HATA DURUMU)
+            if (resultText) {
+                resultText.textContent = okunanMetin;
+                resultText.classList.remove('text-primary');
+                resultText.classList.add('text-danger');
+            }
+            if (btnStart) {
+                btnStart.disabled = false;
+                btnStart.innerHTML = `Kamerayı Başlat`;
+            }
+
+            if (typeof uyariGoster === 'function') {
+                uyariGoster(`Sistemde "${okunanMetin}" koduna sahip bir raf veya ürün bulunamadı!`);
+            } else {
+                alert(`Bulunamadı: ${okunanMetin}`);
+            }
+
+        } catch (e) {
+            console.error("Genel sorgulama hatası:", e);
+            if (btnStart) {
+                btnStart.disabled = false;
+                btnStart.innerHTML = `Kamerayı Başlat`;
+            }
+            if (typeof uyariGoster === 'function') {
+                uyariGoster(`Sorgulama sırasında bir hata oluştu: ${okunanMetin}`);
             }
         }
     }, SCAN_REDIRECT_DELAY_MS);
