@@ -396,12 +396,59 @@ async function dropdownIslemDepolariYukle() {
     }
 }
 
-// Ürün Seçildiğinde Çalışacak Akıllı WMS Motoru
+// Ürün Seçildiğinde Çalışacak Akıllı WMS Motoru ve Birim Yükleme
 const urunSecimiEl = document.getElementById("urunSecimi");
 if (urunSecimiEl) {
     urunSecimiEl.addEventListener("change", async function () {
         // Ürün değiştiğinde eski raf stok bilgisini ekrandan gizler
         document.getElementById("targetLocationStockInfo")?.classList.add("d-none");
+        
+        // İşlem birimlerini yükle
+        const productId = this.value;
+        const birimSelect = document.getElementById("islemBirimi");
+        if (birimSelect) {
+            birimSelect.innerHTML = '<option value="">Yükleniyor...</option>';
+            birimSelect.disabled = true;
+            try {
+                const product = tumUrunler.find(u => (u.id ?? u.Id).toString() === productId);
+                if (product) {
+                    birimSelect.innerHTML = '';
+                    
+                    const unitId = product.unitId ?? product.UnitId;
+                    const unitShortCode = product.unitShortCode ?? product.UnitShortCode;
+
+                    // Taban birimi ekle
+                    const baseOpt = document.createElement("option");
+                    baseOpt.value = unitId;
+                    baseOpt.textContent = `${unitShortCode || 'Taban Birim'} (Taban)`;
+                    birimSelect.appendChild(baseOpt);
+
+                    const conversions = product.unitConversions || product.UnitConversions;
+
+                    // Alternatif birimleri ekle
+                    if (conversions && conversions.length > 0) {
+                        conversions.forEach(c => {
+                            const altId = c.alternativeUnitId ?? c.AlternativeUnitId;
+                            const altCode = c.alternativeUnitShortCode ?? c.AlternativeUnitShortCode;
+                            const factor = c.conversionFactor ?? c.ConversionFactor;
+                            const isDef = c.isDefault ?? c.IsDefault;
+
+                            const opt = document.createElement("option");
+                            opt.value = altId;
+                            opt.textContent = `${altCode} (1 = ${factor} ${unitShortCode})`;
+                            if (isDef) {
+                                opt.selected = true;
+                            }
+                            birimSelect.appendChild(opt);
+                        });
+                    }
+                    birimSelect.disabled = false;
+                }
+            } catch (e) {
+                birimSelect.innerHTML = '<option value="">Hata</option>';
+            }
+        }
+
         await dropdownIslemDepolariYukle();
         formuDenetle();
     });
@@ -541,7 +588,7 @@ function formuDenetle() {
     }
 }
 
-["urunSecimi", "islemAdedi", "sourceLocationId", "targetLocationId"].forEach(id => {
+["urunSecimi", "islemAdedi", "sourceLocationId", "targetLocationId", "islemBirimi"].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.addEventListener("change", formuDenetle);
 });
@@ -566,22 +613,24 @@ if (stokIslemFormu) {
         const sourceLocVal = sourceLocElement ? sourceLocElement.value : null;
         const targetLocVal = targetLocElement ? targetLocElement.value : null;
 
-        const kaydetButonu = document.getElementById("btnKaydet");
         const bFiyatElement = document.getElementById("birimFiyat");
         const fNoElement = document.getElementById("faturaNo");
         const tIdElement = document.getElementById("tedarikciSecimi");
         const cNoktasiElement = document.getElementById("cikisNoktasi");
+        const iBirimElement = document.getElementById("islemBirimi");
 
         const bFiyat = bFiyatElement ? parseFloat(bFiyatElement.value) || 0 : 0;
         const fNo = fNoElement ? fNoElement.value : null;
         const tId = tIdElement ? tIdElement.value : null;
         const cNoktasi = cNoktasiElement ? cNoktasiElement.value : null;
+        const inputUnitId = iBirimElement && iBirimElement.value ? parseInt(iBirimElement.value) : secilenUrun.unitId;
 
         const payload = {
             productId: parseInt(secilenUrunId, 10),
             productBarcode: secilenBarkod,
             movementType: tip === "GIRIS" ? "IN" : tip === "CIKIS" ? "OUT" : "TRANSFER",
             quantity: qty,
+            inputUnitId: inputUnitId !== secilenUrun.unitId ? inputUnitId : null,
             sourceLocationId: ((tip === "CIKIS" || tip === "TRANSFER") && sourceLocVal && !isNaN(parseInt(sourceLocVal))) ? parseInt(sourceLocVal) : null,
             targetLocationId: ((tip === "GIRIS" || tip === "TRANSFER") && targetLocVal && !isNaN(parseInt(targetLocVal))) ? parseInt(targetLocVal) : null,
             description: tip === "GIRIS" ? "Stok Girişi" : tip === "CIKIS" ? "Stok Çıkışı" : "Raf Arası Transfer",
@@ -590,6 +639,8 @@ if (stokIslemFormu) {
             supplierId: (tip === "GIRIS" && tId && tId !== "" && !isNaN(parseInt(tId))) ? parseInt(tId) : null,
             destination: (tip === "CIKIS" && cNoktasi && cNoktasi.trim() !== "") ? cNoktasi : null
         };
+
+        const kaydetButonu = document.getElementById("btnKaydet");
 
         try {
             const orjinalMetin = kaydetButonu.innerText;

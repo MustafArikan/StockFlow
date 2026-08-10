@@ -254,11 +254,20 @@
                             </div>
                         </div>
 
-                        <!-- 4. ADIM: Miktar girişi alanını barındırır -->
+                        <!-- 4. ADIM: Miktar girişi ve Birim Seçimi alanını barındırır -->
                         <div class="mb-4 p-3 bg-white border rounded-3 shadow-sm">
-                            <label class="form-label text-muted small fw-bold">4. İşlem Adedi (Max: 100.000)</label>
-                            <input type="number" class="form-control" id="islemAdedi" placeholder="Örn: 10" min="1"
-                                max="100000" required>
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label text-muted small fw-bold">4. İşlem Miktarı</label>
+                                    <input type="number" class="form-control" id="islemAdedi" placeholder="Örn: 10" min="0.0001" step="any" required>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label text-muted small fw-bold">İşlem Birimi <span class="text-danger">*</span></label>
+                                    <select class="form-select" id="islemBirimi" required disabled>
+                                        <option value="">Ürün seçin...</option>
+                                    </select>
+                                </div>
+                            </div>
                         </div>
 
                         <button type="submit" id="btnKaydet"

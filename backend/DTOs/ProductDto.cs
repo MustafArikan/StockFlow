@@ -11,8 +11,8 @@ public class ProductDto
     public int UnitId { get; set; }
     public string UnitName { get; set; } = string.Empty;
     public string UnitShortCode { get; set; } = string.Empty;
-    public bool UnitAllowsDecimal { get; set; }
-    public decimal StockQuantity { get; set;}
+    public bool UnitAllowsDecimal { get; set; } = false;
+    public List<ProductUnitConversionDto> UnitConversions { get; set; } = new();   public decimal StockQuantity { get; set;}
     public int LocationId { get; set; }
 
     public decimal Cost { get; set; } = 0; // Maliyet fiyatı

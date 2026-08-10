@@ -265,25 +265,42 @@ public static class DbInitializer
             context.SaveChanges();
         }
 
-        var units = new List<(string Name, string ShortCode, bool AllowsDecimal, bool IsSystemUnit)>
+        var units = new List<(string Name, string ShortCode, bool AllowsDecimal, bool IsSystemUnit, UnitCategory Category)>
         {
-            ("Adet", "ADET", false, true),
-            ("Kilogram", "KG", true, true),
-            ("Gram", "GR", true, false),
-            ("Litre", "LT", true, true),
-            ("Mililitre", "ML", true, false),
-            ("Metre", "M", true, false),
-            ("Metrekare", "M2", true, false),
-            ("Metreküp", "M3", true, false),
-            ("Koli", "KOLI", false, true),
-            ("Paket", "PKT", false, false),
-            ("Top", "TOP", false, false),
-            ("Kasa", "KASA", false, false),
-            ("Palet", "PLT", false, false),
-            ("Çuval", "CUVAL", false, false),
-            ("Rulo", "RULO", false, false),
-            ("Demet", "DEMET", false, false),
-            ("Kutu", "KUTU", false, false),
+            // --- Sayısal (paketleme/sayma) birimleri ---
+            ("Adet",        "ADET",  false, true,  UnitCategory.Sayisal),
+            ("Çift",        "CIFT",  false, false, UnitCategory.Sayisal),
+            ("Takım",       "TKM",   false, false, UnitCategory.Sayisal),
+            ("Koli",        "KOLI",  false, true,  UnitCategory.Sayisal),
+            ("Paket",       "PKT",   false, false, UnitCategory.Sayisal),
+            ("Kutu",        "KUTU",  false, false, UnitCategory.Sayisal),
+            ("Top",         "TOP",   false, false, UnitCategory.Sayisal),
+            ("Rulo",        "RULO",  false, false, UnitCategory.Sayisal),
+            ("Kasa",        "KASA",  false, false, UnitCategory.Sayisal),
+            ("Palet",       "PLT",   false, false, UnitCategory.Sayisal),
+            ("Çuval",       "CUVAL", false, false, UnitCategory.Sayisal),
+            ("Demet",       "DEMET", false, false, UnitCategory.Sayisal),
+            ("Düzine",      "DUZINE",false, false, UnitCategory.Sayisal),
+            ("Bidon",       "BIDON", false, false, UnitCategory.Sayisal),
+            ("Varil",       "VARIL", false, false, UnitCategory.Sayisal),
+            ("Şişe",        "SISE",  false, false, UnitCategory.Sayisal),
+
+            // --- Ağırlık ---
+            ("Kilogram",    "KG",    true,  true,  UnitCategory.Agirlik),
+            ("Gram",        "GR",    true,  false, UnitCategory.Agirlik),
+            ("Ton",         "TON",   true,  false, UnitCategory.Agirlik),
+
+            // --- Hacim ---
+            ("Litre",       "LT",    true,  true,  UnitCategory.Hacim),
+            ("Mililitre",   "ML",    true,  false, UnitCategory.Hacim),
+            ("Metreküp",    "M3",    true,  false, UnitCategory.Hacim),
+
+            // --- Uzunluk ---
+            ("Metre",       "M",     true,  true,  UnitCategory.Uzunluk),
+            ("Santimetre",  "CM",    true,  false, UnitCategory.Uzunluk),
+
+            // --- Alan ---
+            ("Metrekare",   "M2",    true,  false, UnitCategory.Alan),
         };
 
         var existingUnitCodes = context.Units.Select(u => u.ShortCode).ToList();
@@ -295,6 +312,7 @@ public static class DbInitializer
                 ShortCode = u.ShortCode,
                 AllowsDecimal = u.AllowsDecimal,
                 IsSystemUnit = u.IsSystemUnit,
+                Category = u.Category,
                 IsActive = true,
                 CreatedAt = DateTime.UtcNow,
                 IsDeleted = false

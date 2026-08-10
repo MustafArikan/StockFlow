@@ -32,6 +32,7 @@ public class AppDbContext : DbContext
     public DbSet<Supplier> Suppliers { get; set; } = null!;
     public DbSet<ProductSupplier> ProductSuppliers { get; set; } = null!;
     public DbSet<ImportHistory> ImportHistories { get; set; } = null!;
+    public DbSet<ProductUnitConversion> ProductUnitConversions { get; set; } = null!;
 
     // RBAC Entities
     public DbSet<AppRole> AppRoles { get; set; } = null!;
@@ -143,6 +144,28 @@ public class AppDbContext : DbContext
             .HasOne(p => p.Unit)
             .WithMany(u => u.Products)
             .HasForeignKey(p => p.UnitId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<ProductUnitConversion>()
+            .HasIndex(x => new { x.ProductId, x.AlternativeUnitId })
+            .IsUnique();
+
+        modelBuilder.Entity<ProductUnitConversion>()
+            .HasOne(x => x.Product)
+            .WithMany()
+            .HasForeignKey(x => x.ProductId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<ProductUnitConversion>()
+            .HasOne(x => x.AlternativeUnit)
+            .WithMany()
+            .HasForeignKey(x => x.AlternativeUnitId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<StockMovement>()
+            .HasOne(x => x.InputUnit)
+            .WithMany()
+            .HasForeignKey(x => x.InputUnitId)
             .OnDelete(DeleteBehavior.Restrict);
 
         modelBuilder.Entity<Product>()

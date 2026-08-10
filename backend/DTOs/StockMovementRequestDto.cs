@@ -28,6 +28,9 @@ namespace stok_takip.DTOs
         [Range(0, double.MaxValue, ErrorMessage = "Birim fiyat negatif olamaz.")]
         public decimal UnitPrice { get; set; } = 0;
 
+        public int? InputUnitId { get; set; }
+        
+
         public int? SupplierId { get; set; }
 
         [MaxLength(200)]

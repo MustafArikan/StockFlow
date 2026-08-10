@@ -39,6 +39,7 @@ public class CreateProductDto
     public int LocationId { get; set; }
 
     public List<ProductAttributeDto>? Attributes { get; set; } // JSON formatında ürün özellikleri (Strongly Typed EAV)
+    public List<CreateProductUnitConversionDto>? UnitConversions { get; set; }
 }
 
 public class ProductAttributeDto

@@ -135,9 +135,15 @@ namespace stok_takip.Controllers
                 return NotFound(new { message = "Product not found." });
 
             var unit = await _context.Units.AsNoTracking().FirstOrDefaultAsync(u => u.Id == product.UnitId);
-            if (unit != null && !stok_takip.Services.UnitValidationHelper.IsQuantityValidForUnit(dto.Quantity, unit.AllowsDecimal))
-                return BadRequest(new { message = $"{unit.Name} birimi ondalıklı miktar kabul etmez. Lütfen tam sayı girin." });
 
+            var (baseQuantity, conversionError) = await stok_takip.Services.UnitConversionHelper.ConvertToBaseUnitAsync(
+                _context, product.Id, product.UnitId, dto.Quantity, dto.InputUnitId);
+
+            if (conversionError != null)
+                return BadRequest(new { message = conversionError });
+
+            if (unit != null && !stok_takip.Services.UnitValidationHelper.IsQuantityValidForUnit(baseQuantity, unit.AllowsDecimal))
+                return BadRequest(new { message = $"Girilen miktar taban birime ({unit.Name}) çevrildiğinde geçersiz bir değer üretiyor." });
             string upperType = dto.MovementType.ToUpper();
             
             bool isSuperAdmin = User.IsInRole("superadmin");
@@ -170,10 +176,10 @@ namespace stok_takip.Controllers
                     var sourceStock = await _context.StockLevels
                         .FirstOrDefaultAsync(s => s.ProductId == product.Id && s.LocationId == dto.SourceLocationId);
 
-                    if (sourceStock == null || sourceStock.Quantity < dto.Quantity)
+                    if (sourceStock == null || sourceStock.Quantity < baseQuantity)
                         return BadRequest(new { message = "Insufficient stock at source location." });
 
-                    sourceStock.Quantity -= dto.Quantity;
+                    sourceStock.Quantity -= baseQuantity;
 
                     // Add to target location
                     var targetStock = await _context.StockLevels
@@ -185,13 +191,13 @@ namespace stok_takip.Controllers
                         { 
                             ProductId = product.Id, 
                             LocationId = dto.TargetLocationId.Value, 
-                            Quantity = dto.Quantity 
+                            Quantity = baseQuantity 
                         };
                         _context.StockLevels.Add(targetStock);
                     }
                     else
                     {
-                        targetStock.Quantity += dto.Quantity;
+                        targetStock.Quantity += baseQuantity;
                     }
 
                     // Save movement log
@@ -201,8 +207,10 @@ namespace stok_takip.Controllers
                         UserId = currentUserId,
                         MovementType = "TRANSFER",
                         UnitPrice = dto.UnitPrice,
-                        TotalPrice = dto.UnitPrice * dto.Quantity,
-                        Quantity = dto.Quantity,
+                        TotalPrice = dto.UnitPrice * baseQuantity,
+                        Quantity = baseQuantity,
+                        InputUnitId = dto.InputUnitId,
+                        InputQuantity = dto.InputUnitId != null ? dto.Quantity : null,
                         Description = dto.Description ?? $"Transferred from Loc {dto.SourceLocationId} to Loc {dto.TargetLocationId}"
                     };
 
@@ -247,12 +255,12 @@ namespace stok_takip.Controllers
                             { 
                                 ProductId = product.Id, 
                                 LocationId = dto.TargetLocationId.Value, 
-                                Quantity = dto.Quantity 
+                                Quantity = baseQuantity 
                             });
                         }
                         else
                         {
-                            targetStock.Quantity += dto.Quantity;
+                            targetStock.Quantity += baseQuantity;
                         }
 
                         var movement = new StockMovement
@@ -260,9 +268,11 @@ namespace stok_takip.Controllers
                             ProductId = product.Id,
                             UserId = currentUserId,
                             MovementType = "IN",
-                            Quantity = dto.Quantity,
+                            Quantity = baseQuantity,
+                            InputUnitId = dto.InputUnitId,
+                            InputQuantity = dto.InputUnitId != null ? dto.Quantity : null,
                             UnitPrice = dto.UnitPrice,
-                            TotalPrice = dto.UnitPrice * dto.Quantity,
+                            TotalPrice = dto.UnitPrice * baseQuantity,
                             SupplierId = dto.SupplierId,
                             SupplierName = supplier?.Name,
                             SupplierTaxNumber = supplier?.TaxNumber,
@@ -300,19 +310,21 @@ namespace stok_takip.Controllers
                     var sourceStock = await _context.StockLevels
                         .FirstOrDefaultAsync(s => s.ProductId == product.Id && s.LocationId == dto.SourceLocationId);
 
-                    if (sourceStock == null || sourceStock.Quantity < dto.Quantity)
+                    if (sourceStock == null || sourceStock.Quantity < baseQuantity)
                         return BadRequest(new { message = "Insufficient stock at source location." });
 
-                    sourceStock.Quantity -= dto.Quantity;
+                    sourceStock.Quantity -= baseQuantity;
 
                     var movement = new StockMovement
                     {
                         ProductId = product.Id,
                         UserId = currentUserId,
                         MovementType = "OUT",
-                        Quantity = dto.Quantity,
+                        Quantity = baseQuantity,
+                        InputUnitId = dto.InputUnitId,
+                        InputQuantity = dto.InputUnitId != null ? dto.Quantity : null,
                         UnitPrice = dto.UnitPrice,
-                        TotalPrice = dto.UnitPrice * dto.Quantity,
+                        TotalPrice = dto.UnitPrice * baseQuantity,
                         Destination = dto.Destination,
                         DocumentNumber = dto.DocumentNumber,    
                         Description = dto.Description ?? "Stock OUT operation"

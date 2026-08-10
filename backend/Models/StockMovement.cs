@@ -39,5 +39,9 @@ public class StockMovement : BaseEntity
     public int? SourceLocationId { get; set; } // WMS Entegrasyonu İçin Eklenen Alanlar
     public int? TargetLocationId { get; set; } // WMS Entegrasyonu İçin Eklenen Alanlar
 
+    public int? InputUnitId { get; set; }
+    public Unit? InputUnit { get; set; }
 
+    [Column(TypeName = "decimal(18,4)")]
+    public decimal? InputQuantity { get; set; }
 }

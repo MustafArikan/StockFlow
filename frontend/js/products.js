@@ -882,8 +882,21 @@ if (btnUrunKaydetEl) {
             targetLocationId: parseInt(targetLocationId) || 0,
             initialQuantity: parseQuantityInput(initialQuantity),
             cost: 0,
-            price: 0
+            price: 0,
+            unitConversions: []
         };
+
+        if (!id) {
+            const hizliBirimId = document.getElementById("yeniUrunAlternatifBirimId")?.value;
+            const hizliBirimCarpani = document.getElementById("yeniUrunCevrimCarpani")?.value;
+            if (hizliBirimId && hizliBirimCarpani) {
+                urunVerisi.unitConversions.push({
+                    alternativeUnitId: parseInt(hizliBirimId),
+                    conversionFactor: parseFloat(hizliBirimCarpani),
+                    isDefault: true
+                });
+            }
+        }
 
         const dinamikInputlar = document.querySelectorAll('.dynamic-rule-input');
         if (dinamikInputlar.length > 0) {
@@ -1002,6 +1015,15 @@ function urunDuzenle(id) {
         tedAlani.classList.add("d-none");
     }
 
+    const cevrimAlani = document.getElementById("duzenleBirimCevrimAlani");
+    if (cevrimAlani) {
+        cevrimAlani.classList.remove("d-none");
+        duzenleBirimCevrimleriYukle(urun.id);
+        duzenleAlternatifBirimSecenekleriniYukle(urun.unitId);
+    }
+    const hizliCevrim = document.getElementById("yeniUrunHizliCevrimAlani");
+    if (hizliCevrim) hizliCevrim.classList.add("d-none");
+
     const event = new Event('change');
     document.getElementById("urunKategoriId").dispatchEvent(event);
 
@@ -1119,6 +1141,16 @@ if (btnYeniUrunModal) {
         const tedAlani = document.getElementById("duzenleTedarikciAlani");
         if (tedAlani) tedAlani.classList.add("d-none");
 
+        const cevrimAlani = document.getElementById("duzenleBirimCevrimAlani");
+        if (cevrimAlani) cevrimAlani.classList.add("d-none");
+
+        const hizliCevrim = document.getElementById("yeniUrunHizliCevrimAlani");
+        if (hizliCevrim) {
+            hizliCevrim.classList.remove("d-none");
+            document.getElementById("yeniUrunAlternatifBirimId").value = "";
+            document.getElementById("yeniUrunCevrimCarpani").value = "";
+        }
+
         document.getElementById("btnUrunKaydet").innerText = "Ekle ve Kaydet";
     });
 }
@@ -1149,14 +1181,23 @@ async function dropdownBirimleriYukle() {
         const data = await apiRequest('/units', 'GET');
         window.tumBirimler = data;
         const select = document.getElementById("urunBirimId");
+        const hizliSelect = document.getElementById("yeniUrunAlternatifBirimId");
         if (select) {
             select.innerHTML = '<option value="">Seçiniz...</option>';
+            if (hizliSelect) hizliSelect.innerHTML = '<option value="">Seçiniz...</option>';
             data.forEach(birim => {
                 const option = document.createElement("option");
                 option.value = birim.id;
                 option.textContent = escapeHtml(`${birim.name} (${birim.shortCode})`);
                 option.dataset.allowsDecimal = birim.allowsDecimal;
                 select.appendChild(option);
+                
+                if (hizliSelect) {
+                    const optHizli = document.createElement("option");
+                    optHizli.value = birim.id;
+                    optHizli.textContent = escapeHtml(`${birim.name} (${birim.shortCode})`);
+                    hizliSelect.appendChild(optHizli);
+                }
             });
             
             select.addEventListener('change', function() {
@@ -2036,4 +2077,128 @@ document.addEventListener("click", async (e) => {
             hataGoster("Tedarikçi silinemedi: " + hata.message);
         }
     }
+
+    if (e.target.closest("#btnDuzenleCevrimEkle")) {
+        const urunId = document.getElementById("urunId").value;
+        if (!urunId) return;
+
+        const altUnitId = document.getElementById("duzenleAlternatifBirimSelect").value;
+        const factor = document.getElementById("duzenleCevrimCarpani").value;
+        const isDefault = document.getElementById("duzenleCevrimVarsayilan").checked;
+        
+        if (!altUnitId || !factor) {
+            uyariGoster("Lütfen birim seçin ve çevrim çarpanı girin."); 
+            return;
+        }
+        const veri = {
+            productId: parseInt(urunId),
+            alternativeUnitId: parseInt(altUnitId),
+            conversionFactor: parseFloat(factor),
+            isDefault: isDefault
+        };
+        try {
+            const cevap = await fetch(`${CONFIG.API_BASE_URL}/products/${urunId}/unit-conversions`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${token}`
+                },
+                body: JSON.stringify(veri)
+            });
+
+            if (!cevap.ok) throw new Error(await cevap.text() || "Bağlama başarısız.");
+
+            const json = await cevap.json();
+
+            duzenleBirimCevrimleriYukle(urunId);
+            document.getElementById("duzenleAlternatifBirimSelect").value = "";
+            document.getElementById("duzenleCevrimCarpani").value = "";
+            document.getElementById("duzenleCevrimVarsayilan").checked = false;
+
+            urunleriYukle(currentPage);
+            
+            if (json && json.warning) {
+                if (typeof uyariGoster === 'function') uyariGoster(json.warning);
+            } else {
+                if (typeof basariToast === 'function') basariToast("Birim çevrimi başarıyla eklendi.");
+            }
+        } catch (hata) {
+            hataGoster("Hata: " + hata.message);
+        }
+    }
+
+    const kaldirCevrimBtn = e.target.closest(".btn-duzenle-cevrim-kaldir");
+    if (kaldirCevrimBtn) {
+        const urunId = document.getElementById("urunId").value;
+        if (!urunId) return;
+
+        if (!(await onayla("Bu çevrim tanımını kaldırmak istiyor musunuz?", "Evet, kaldır"))) return;
+        const cid = kaldirCevrimBtn.getAttribute("data-cid");
+        try {
+            const cevap = await fetch(`${CONFIG.API_BASE_URL}/products/${urunId}/unit-conversions/${cid}`, {
+                method: "DELETE",
+                headers: { "Authorization": `Bearer ${token}` }
+            });
+
+            if (!cevap.ok) throw new Error("Silme başarısız.");
+            duzenleBirimCevrimleriYukle(urunId);
+
+            urunleriYukle(currentPage);
+        } catch (hata) {
+            hataGoster("Çevrim silinemedi: " + hata.message);
+        }
+    }
 });
+
+// =========================================================================
+// BİRİM ÇEVRİM YÖNETİMİ (Düzenle Modalı İçin)
+// =========================================================================
+async function duzenleBirimCevrimleriYukle(productId) {
+    const tablo = document.getElementById("duzenleBirimCevrimListesi");
+    if(!tablo) return;
+    try {
+        const cevap = await fetch(`${CONFIG.API_BASE_URL}/products/${productId}/unit-conversions`, {
+            method: "GET",
+            headers: { "Authorization": `Bearer ${token}` }
+        });
+        if (!cevap.ok) throw new Error("Çevrimler alınamadı.");
+        
+        const liste = await cevap.json();
+        tablo.innerHTML = "";
+
+        if (liste.length === 0) { 
+            tablo.innerHTML = `<tr><td colspan="4" class="text-center text-muted fst-italic py-4">Bu ürüne bağlı alternatif birim çevrimi bulunmamaktadır.</td></tr>`; return; 
+        }
+
+        liste.forEach(c => {
+            const defaultBadge = c.isDefault ? '<span class="badge bg-success">Evet</span>' : '<span class="text-muted">-</span>';
+            tablo.innerHTML += `<tr>
+                <td class="fw-semibold">${escapeHtml(c.alternativeUnitName)}</td>
+                <td class="text-muted fw-bold">1 ${escapeHtml(c.alternativeUnitShortCode)} = ${c.conversionFactor} Taban Birim</td>
+                <td>${defaultBadge}</td>
+                <td class="text-end">
+                    <button type="button" class="btn btn-sm btn-outline-danger rounded-pill btn-duzenle-cevrim-kaldir shadow-sm px-3" data-cid="${c.id}">
+                        <i class="bi bi-trash3 me-1"></i> Kaldır
+                    </button>
+                </td>
+            </tr>`;
+        });
+    } catch(hata) {
+        tablo.innerHTML = `<tr><td colspan="4" class="text-center text-danger py-4">${escapeHtml(hata.message)}</td></tr>`;
+    }
+}
+
+function duzenleAlternatifBirimSecenekleriniYukle(urunBirimId) {
+    const select = document.getElementById("duzenleAlternatifBirimSelect");
+    if (!select || !window.tumBirimler) return;
+
+    select.innerHTML = '<option value="">Birim seçin...</option>';
+    window.tumBirimler.forEach(birim => {
+        if (birim.id !== urunBirimId) {
+            const option = document.createElement("option");
+            option.value = birim.id;
+            option.textContent = escapeHtml(`${birim.name} (${birim.shortCode})`);
+            select.appendChild(option);
+        }
+    });
+}

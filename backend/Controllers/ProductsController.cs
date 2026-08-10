@@ -59,6 +59,17 @@ public class ProductsController : ControllerBase
                 ProductSuppliers = p.ProductSuppliers.Select(ps => new ProductSupplierResponseDto(
                     ps.Id, ps.SupplierId, ps.Supplier.Name, ps.PurchasePrice, ps.SupplierProductCode, ps.LeadTimeDays, ps.IsPreferred
                 )).ToList(),
+                UnitConversions = _context.ProductUnitConversions
+                    .Where(c => c.ProductId == p.Id && !c.IsDeleted)
+                    .Select(c => new ProductUnitConversionDto
+                    {
+                        Id = c.Id,
+                        AlternativeUnitId = c.AlternativeUnitId,
+                        AlternativeUnitName = c.AlternativeUnit.Name,
+                        AlternativeUnitShortCode = c.AlternativeUnit.ShortCode,
+                        ConversionFactor = c.ConversionFactor,
+                        IsDefault = c.IsDefault
+                    }).ToList(),
                 CreatedAt = p.CreatedAt
             })
             .ToListAsync();
@@ -78,6 +89,7 @@ public class ProductsController : ControllerBase
             StockQuantity = p.StockQuantity,
             Price = p.Price,
             ProductSuppliers = p.ProductSuppliers,
+            UnitConversions = p.UnitConversions,
             CreatedAt = p.CreatedAt,
             Attributes = string.IsNullOrEmpty(p.AttributesStr) ? new List<ProductAttributeDto>() : System.Text.Json.JsonSerializer.Deserialize<List<ProductAttributeDto>>(p.AttributesStr)
         }).ToList();
@@ -113,6 +125,17 @@ public class ProductsController : ControllerBase
                 UnitAllowsDecimal = p.Unit.AllowsDecimal,
                 StockQuantity = p.StockLevels.Sum(sl => sl.Quantity),
                 AttributesStr = p.Attributes,
+                UnitConversions = _context.ProductUnitConversions
+                    .Where(c => c.ProductId == p.Id && !c.IsDeleted)
+                    .Select(c => new ProductUnitConversionDto
+                    {
+                        Id = c.Id,
+                        AlternativeUnitId = c.AlternativeUnitId,
+                        AlternativeUnitName = c.AlternativeUnit.Name,
+                        AlternativeUnitShortCode = c.AlternativeUnit.ShortCode,
+                        ConversionFactor = c.ConversionFactor,
+                        IsDefault = c.IsDefault
+                    }).ToList(),
                 CreatedAt = p.CreatedAt
             }).FirstOrDefaultAsync();
 
@@ -132,6 +155,7 @@ public class ProductsController : ControllerBase
             UnitShortCode = product.UnitShortCode,
             UnitAllowsDecimal = product.UnitAllowsDecimal,
             StockQuantity = product.StockQuantity,
+            UnitConversions = product.UnitConversions,
             CreatedAt = product.CreatedAt,
             Attributes = string.IsNullOrEmpty(product.AttributesStr)
                 ? new List<ProductAttributeDto>()
@@ -191,6 +215,22 @@ public class ProductsController : ControllerBase
         catch (DbUpdateException)
         {
             return Conflict(new { message = "Bu barkoda sahip bir ürün zaten kaydedilmiş olabilir." });
+        }
+
+        // Çevrimleri Ekle (Eğer varsa)
+        if (dto.UnitConversions != null && dto.UnitConversions.Any())
+        {
+            foreach (var conv in dto.UnitConversions)
+            {
+                if (conv.AlternativeUnitId == product.UnitId) continue;
+                _context.ProductUnitConversions.Add(new ProductUnitConversion
+                {
+                    ProductId = product.Id,
+                    AlternativeUnitId = conv.AlternativeUnitId,
+                    ConversionFactor = conv.ConversionFactor,
+                    IsDefault = conv.IsDefault
+                });
+            }
         }
 
         // 🎯 İlk Stoğu Oluştur (StockLevel tablosuna)
