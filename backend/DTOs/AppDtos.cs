@@ -68,15 +68,11 @@ public class CreateAttributeRuleDto
     public string AttributeKey { get; set; } = string.Empty;
 
     [Required]
-    [RegularExpression("^(text|number|integer|decimal|boolean)$",
-        ErrorMessage = "Geçersiz veri tipi. İzin verilen: text, number, integer, decimal, boolean.")]
     public string DataType { get; set; } = string.Empty;
 
     public bool IsRequired { get; set; }
     public string? AllowedValues { get; set; }
 
-    [RegularExpression("^(textbox|dropdown|searchable_dropdown|radio|segmented_button|discrete_slider|range_slider|range_slider_decimal|range_slider_integer|slider)$",
-        ErrorMessage = "Geçersiz arayüz bileşeni.")]
     public string UiComponent { get; set; } = "textbox";
 
     public decimal? MinValue { get; set; }

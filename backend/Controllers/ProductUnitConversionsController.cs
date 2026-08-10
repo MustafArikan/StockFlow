@@ -32,6 +32,8 @@ public class ProductUnitConversionsController : ControllerBase
                 AlternativeUnitId = c.AlternativeUnitId,
                 AlternativeUnitName = c.AlternativeUnit.Name,
                 AlternativeUnitShortCode = c.AlternativeUnit.ShortCode,
+                Barcode = c.Barcode,
+                BarcodeType = c.BarcodeType.ToString(),
                 ConversionFactor = c.ConversionFactor,
                 IsDefault = c.IsDefault
             }).ToListAsync();
@@ -63,6 +65,8 @@ public class ProductUnitConversionsController : ControllerBase
         {
             ProductId = productId,
             AlternativeUnitId = dto.AlternativeUnitId,
+            Barcode = dto.Barcode,
+            BarcodeType = stok_takip.Services.BarcodeTypeDetector.Detect(dto.Barcode),
             ConversionFactor = dto.ConversionFactor,
             IsDefault = dto.IsDefault
         };
@@ -98,5 +102,34 @@ public class ProductUnitConversionsController : ControllerBase
         conversion.IsDeleted = true;
         await _context.SaveChangesAsync();
         return Ok(new { message = "Çevrim tanımı silindi." });
+    }
+
+    [RequirePermission(Policies.RequireProductWrite)]
+    [HttpPost("{id}/generate-barcode")]
+    public async Task<IActionResult> GenerateBarcode(int productId, int id)
+    {
+        var conversion = await _context.ProductUnitConversions
+            .FirstOrDefaultAsync(c => c.Id == id && c.ProductId == productId && !c.IsDeleted);
+        if (conversion == null) return NotFound();
+
+        var product = await _context.Products.FirstOrDefaultAsync(p => p.Id == productId);
+        if (product == null || product.BarcodeType != BarcodeType.Gtin13_Ean13)
+            return BadRequest(new { message = "Otomatik koli/palet barkodu üretmek için ürünün geçerli bir GTIN-13 (EAN-13) barkodu olmalıdır." });
+
+        var usedLevels = await _context.ProductUnitConversions
+            .Where(c => c.ProductId == productId && c.Barcode != null && !c.IsDeleted)
+            .Select(c => c.Barcode!.Substring(0, 1))
+            .ToListAsync();
+
+        int level = Enumerable.Range(1, 8).FirstOrDefault(l => !usedLevels.Contains(l.ToString()));
+        if (level == 0) return BadRequest(new { message = "Kullanılabilecek paketleme seviyesi kalmadı (maksimum 8)." });
+
+        var gtin14 = stok_takip.Services.Gs1CheckDigitCalculator.GenerateGtin14FromGtin13(product.Barcode, level);
+
+        conversion.Barcode = gtin14;
+        conversion.BarcodeType = BarcodeType.Gtin14_Itf14;
+        await _context.SaveChangesAsync();
+
+        return Ok(new { barcode = gtin14 });
     }
 }

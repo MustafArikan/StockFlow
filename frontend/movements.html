@@ -181,6 +181,10 @@
                                 </button>
                             </div>
 
+                            <div class="mb-3">
+                                <input type="text" class="form-control form-control-sm border-primary" id="manuelBarkodInp" placeholder="Veya barkodu (GS1/Koli/Ürün) elle girip Enter'a basın...">
+                            </div>
+
                             <div id="kameraAlani" class="d-none mb-3 rounded-3 overflow-hidden position-relative">
                                 <div id="reader"></div>
                                 <button type="button"
@@ -190,6 +194,14 @@
                             <select class="form-select" id="urunSecimi" required>
                                 <option value="" selected disabled>Yükleniyor...</option>
                             </select>
+
+                            <!-- ÜRÜN SEÇİLİNCE GÖRÜNECEK MEVCUT STOK BİLGİ ALANI -->
+                            <div id="mevcutStoklarAlani" class="d-none mt-3 p-2 bg-light border rounded-3 small">
+                                <h6 class="fw-bold text-secondary mb-2"><i class="bi bi-info-circle me-1"></i>Mevcut Stoklar ve Konumları (Tıklayarak Seçebilirsiniz)</h6>
+                                <div id="mevcutStoklarListesi" class="list-group list-group-flush border rounded-3">
+                                    <!-- Dinamik olarak doldurulacak -->
+                                </div>
+                            </div>
                         </div>
 
                         <!-- 3. ADIM: Kaynak lokasyon alanını gösterir -->
@@ -250,6 +262,24 @@
                                     <label class="form-label text-muted small fw-bold">Fatura/İrsaliye No</label>
                                     <input type="text" class="form-control" id="faturaNo"
                                         placeholder="Örn: FAT-2023-001">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- LOT / SKT TAKİBİ -->
+                        <div class="mb-4 p-3 bg-white border rounded-3 shadow-sm" id="lotSktGroup">
+                            <h6 class="fw-bold text-secondary mb-3"><i class="bi bi-box-seam me-2"></i>Parti (Lot) & SKT Bilgileri (Opsiyonel)</h6>
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label text-muted small fw-bold">Lot / Parti Numarası</label>
+                                    <div class="input-group">
+                                        <input type="text" class="form-control" id="lotNumber" placeholder="Örn: L-2023-01">
+                                        <button class="btn btn-outline-secondary" type="button" id="btnLotUret" title="Otomatik Lot Numarası Üret"><i class="bi bi-magic"></i> Üret</button>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label text-muted small fw-bold">Son Kullanma Tarihi</label>
+                                    <input type="date" class="form-control native-date" id="expiryDate">
                                 </div>
                             </div>
                         </div>

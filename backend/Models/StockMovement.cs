@@ -39,6 +39,9 @@ public class StockMovement : BaseEntity
     public int? SourceLocationId { get; set; } // WMS Entegrasyonu İçin Eklenen Alanlar
     public int? TargetLocationId { get; set; } // WMS Entegrasyonu İçin Eklenen Alanlar
 
+    public int? BatchId { get; set; }
+    public ProductBatch? Batch { get; set; }
+
     public int? InputUnitId { get; set; }
     public Unit? InputUnit { get; set; }
 

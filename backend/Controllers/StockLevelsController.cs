@@ -28,6 +28,7 @@ public class StockLevelsController : ControllerBase
             .AsNoTracking()
             .Include(sl => sl.Location)
                 .ThenInclude(l => l.Warehouse)
+            .Include(sl => sl.Batch) // BATCH BİLGİSİNİ EKLEDİK
             .Where(sl => sl.ProductId == productId && sl.Quantity > 0 && !sl.IsDeleted)
             .Select(sl => new
             {
@@ -35,7 +36,9 @@ public class StockLevelsController : ControllerBase
                 LocationCode = sl.Location.Code,
                 WarehouseId = sl.Location.WarehouseId,
                 WarehouseName = sl.Location.Warehouse.Name,
-                Quantity = sl.Quantity
+                Quantity = sl.Quantity,
+                LotNumber = sl.Batch != null ? sl.Batch.LotNumber : null,
+                ExpiryDate = sl.Batch != null ? sl.Batch.ExpiryDate : null
             })
             .ToListAsync();
 

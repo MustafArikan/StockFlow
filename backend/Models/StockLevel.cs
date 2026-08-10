@@ -7,6 +7,8 @@ public class StockLevel : BaseEntity
 {
     public int ProductId { get; set; }
     public int LocationId { get; set; }
+    public int? BatchId { get; set; }
+    public ProductBatch? Batch { get; set; }
     [Column(TypeName = "decimal(18,3)")]
     public decimal Quantity { get; set; }
     [Timestamp]

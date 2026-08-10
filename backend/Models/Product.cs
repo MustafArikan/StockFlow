@@ -7,6 +7,7 @@ public class Product : BaseEntity
 {
     public string Name { get; set; } = string.Empty;
     public string Barcode { get; set; } = string.Empty; // UQ
+    public BarcodeType BarcodeType { get; set; } = BarcodeType.InternalSku;
     public int MinStockLevel { get; set; }
     public int CategoryId { get; set; }
     public int UnitId { get; set; }

@@ -33,6 +33,9 @@ public class AppDbContext : DbContext
     public DbSet<ProductSupplier> ProductSuppliers { get; set; } = null!;
     public DbSet<ImportHistory> ImportHistories { get; set; } = null!;
     public DbSet<ProductUnitConversion> ProductUnitConversions { get; set; } = null!;
+    public DbSet<ProductBatch> ProductBatches { get; set; } = null!;
+    public DbSet<PalletShipment> PalletShipments { get; set; } = null!;
+    public DbSet<PalletContent> PalletContents { get; set; } = null!;
 
     // RBAC Entities
     public DbSet<AppRole> AppRoles { get; set; } = null!;
@@ -185,8 +188,39 @@ public class AppDbContext : DbContext
             .HasFilter("[is_deleted] = 0");
 
         modelBuilder.Entity<StockLevel>()
-            .HasIndex(sl => new { sl.ProductId, sl.LocationId })
+            .HasIndex(sl => new { sl.ProductId, sl.LocationId, sl.BatchId })
             .IsUnique();
+        
+        modelBuilder.Entity<ProductUnitConversion>()
+            .HasIndex(x => x.Barcode)
+            .IsUnique()
+            .HasFilter("[barcode] IS NOT NULL");
+
+        modelBuilder.Entity<ProductBatch>()
+            .HasIndex(x => new { x.ProductId, x.LotNumber })
+            .IsUnique();
+
+        modelBuilder.Entity<PalletShipment>()
+            .HasIndex(x => x.Sscc)
+            .IsUnique();
+
+        modelBuilder.Entity<StockMovement>()
+            .HasOne(x => x.Batch)
+            .WithMany()
+            .HasForeignKey(x => x.BatchId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<StockLevel>()
+            .HasOne(x => x.Batch)
+            .WithMany()
+            .HasForeignKey(x => x.BatchId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<PalletContent>()
+            .HasOne(x => x.PalletShipment)
+            .WithMany(p => p.Contents)
+            .HasForeignKey(x => x.PalletShipmentId)
+            .OnDelete(DeleteBehavior.Cascade);
         
         modelBuilder.Entity<UserSession>()
             .HasIndex(s => s.SessionToken)

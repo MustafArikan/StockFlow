@@ -144,6 +144,32 @@ namespace stok_takip.Controllers
 
             if (unit != null && !stok_takip.Services.UnitValidationHelper.IsQuantityValidForUnit(baseQuantity, unit.AllowsDecimal))
                 return BadRequest(new { message = $"Girilen miktar taban birime ({unit.Name}) çevrildiğinde geçersiz bir değer üretiyor." });
+            
+            int? batchId = null;
+            if (!string.IsNullOrWhiteSpace(dto.LotNumber))
+            {
+                var batch = await _context.ProductBatches.FirstOrDefaultAsync(
+                    b => b.ProductId == product.Id && b.LotNumber == dto.LotNumber && !b.IsDeleted);
+
+                if (batch == null)
+                {
+                    batch = new ProductBatch
+                    {
+                        ProductId = product.Id,
+                        LotNumber = dto.LotNumber,
+                        ExpiryDate = dto.ExpiryDate,
+                        IsActive = true
+                    };
+                    _context.ProductBatches.Add(batch);
+                    await _context.SaveChangesAsync();
+                }
+                else if (dto.ExpiryDate.HasValue && batch.ExpiryDate != dto.ExpiryDate)
+                {
+                    return BadRequest(new { message = $"'{dto.LotNumber}' lot numarası zaten farklı bir SKT ile kayıtlı ({batch.ExpiryDate}). Lot numaraları benzersiz olmalıdır." });
+                }
+                batchId = batch.Id;
+            }
+
             string upperType = dto.MovementType.ToUpper();
             
             bool isSuperAdmin = User.IsInRole("superadmin");
@@ -172,9 +198,19 @@ namespace stok_takip.Controllers
                 using var transaction = await _context.Database.BeginTransactionAsync();
                 try
                 {
+                    if (batchId == null && baseQuantity > 0)
+                    {
+                        var fefoStock = await _context.StockLevels
+                            .Include(sl => sl.Batch)
+                            .Where(sl => sl.ProductId == product.Id && sl.LocationId == dto.SourceLocationId && sl.Quantity > 0)
+                            .OrderBy(sl => sl.Batch != null ? sl.Batch.ExpiryDate : DateOnly.MaxValue)
+                            .FirstOrDefaultAsync();
+                        if (fefoStock != null) batchId = fefoStock.BatchId;
+                    }
+
                     // Deduct from source location
                     var sourceStock = await _context.StockLevels
-                        .FirstOrDefaultAsync(s => s.ProductId == product.Id && s.LocationId == dto.SourceLocationId);
+                        .FirstOrDefaultAsync(s => s.ProductId == product.Id && s.LocationId == dto.SourceLocationId && s.BatchId == batchId);
 
                     if (sourceStock == null || sourceStock.Quantity < baseQuantity)
                         return BadRequest(new { message = "Insufficient stock at source location." });
@@ -183,7 +219,7 @@ namespace stok_takip.Controllers
 
                     // Add to target location
                     var targetStock = await _context.StockLevels
-                        .FirstOrDefaultAsync(s => s.ProductId == product.Id && s.LocationId == dto.TargetLocationId);
+                        .FirstOrDefaultAsync(s => s.ProductId == product.Id && s.LocationId == dto.TargetLocationId && s.BatchId == batchId);
 
                     if (targetStock == null)
                     {
@@ -191,7 +227,8 @@ namespace stok_takip.Controllers
                         { 
                             ProductId = product.Id, 
                             LocationId = dto.TargetLocationId.Value, 
-                            Quantity = baseQuantity 
+                            Quantity = baseQuantity,
+                            BatchId = batchId
                         };
                         _context.StockLevels.Add(targetStock);
                     }
@@ -209,6 +246,7 @@ namespace stok_takip.Controllers
                         UnitPrice = dto.UnitPrice,
                         TotalPrice = dto.UnitPrice * baseQuantity,
                         Quantity = baseQuantity,
+                        BatchId = batchId,
                         InputUnitId = dto.InputUnitId,
                         InputQuantity = dto.InputUnitId != null ? dto.Quantity : null,
                         Description = dto.Description ?? $"Transferred from Loc {dto.SourceLocationId} to Loc {dto.TargetLocationId}"
@@ -247,7 +285,7 @@ namespace stok_takip.Controllers
                         supplier = await _context.Suppliers.FindAsync(dto.SupplierId.Value);
                     
                     var targetStock = await _context.StockLevels
-                        .FirstOrDefaultAsync(s => s.ProductId == product.Id && s.LocationId == dto.TargetLocationId);
+                        .FirstOrDefaultAsync(s => s.ProductId == product.Id && s.LocationId == dto.TargetLocationId && s.BatchId == batchId);
 
                         if (targetStock == null)
                         {
@@ -255,7 +293,8 @@ namespace stok_takip.Controllers
                             { 
                                 ProductId = product.Id, 
                                 LocationId = dto.TargetLocationId.Value, 
-                                Quantity = baseQuantity 
+                                Quantity = baseQuantity,
+                                BatchId = batchId
                             });
                         }
                         else
@@ -269,6 +308,7 @@ namespace stok_takip.Controllers
                             UserId = currentUserId,
                             MovementType = "IN",
                             Quantity = baseQuantity,
+                            BatchId = batchId,
                             InputUnitId = dto.InputUnitId,
                             InputQuantity = dto.InputUnitId != null ? dto.Quantity : null,
                             UnitPrice = dto.UnitPrice,
@@ -307,8 +347,18 @@ namespace stok_takip.Controllers
                 using var transaction = await _context.Database.BeginTransactionAsync();
                 try
                 {
+                    if (batchId == null && baseQuantity > 0)
+                    {
+                        var fefoStock = await _context.StockLevels
+                            .Include(sl => sl.Batch)
+                            .Where(sl => sl.ProductId == product.Id && sl.LocationId == dto.SourceLocationId && sl.Quantity > 0)
+                            .OrderBy(sl => sl.Batch != null ? sl.Batch.ExpiryDate : DateOnly.MaxValue)
+                            .FirstOrDefaultAsync();
+                        if (fefoStock != null) batchId = fefoStock.BatchId;
+                    }
+
                     var sourceStock = await _context.StockLevels
-                        .FirstOrDefaultAsync(s => s.ProductId == product.Id && s.LocationId == dto.SourceLocationId);
+                        .FirstOrDefaultAsync(s => s.ProductId == product.Id && s.LocationId == dto.SourceLocationId && s.BatchId == batchId);
 
                     if (sourceStock == null || sourceStock.Quantity < baseQuantity)
                         return BadRequest(new { message = "Insufficient stock at source location." });
@@ -321,6 +371,7 @@ namespace stok_takip.Controllers
                         UserId = currentUserId,
                         MovementType = "OUT",
                         Quantity = baseQuantity,
+                        BatchId = batchId,
                         InputUnitId = dto.InputUnitId,
                         InputQuantity = dto.InputUnitId != null ? dto.Quantity : null,
                         UnitPrice = dto.UnitPrice,

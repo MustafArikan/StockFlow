@@ -160,3 +160,87 @@ function stopScanner() {
     }
     return Promise.resolve();
 }
+
+/**
+ * StockFlow GS1 Barkod Ayrıştırıcı (Parser)
+ * @param {string} code - Taranan ham barkod metni
+ */
+window.parseGs1Barcode = function (code) {
+    let result = {
+        gtin: null,
+        lotNumber: null,
+        expiryDate: null,
+        isGs1: false,
+        raw: code
+    };
+
+    if (!code) return result;
+
+    // Özel sembolojileri ve FNC1 (Grup Ayrıştırıcı) karakterini temizle/normalize et
+    code = code.replace(/^\]C1/, ''); // GS1-128 Identifier
+    code = code.replace(/\x1d/g, '{GS}'); // ASCII 29 (Group Separator)
+
+    let i = 0;
+    let limit = 0; // Sonsuz döngüyü önlemek için
+
+    while (i < code.length && limit++ < 50) {
+        // Parantezleri ve GS karakterlerini atla
+        if (code[i] === '(' || code[i] === ')') { i++; continue; }
+        if (code.substr(i, 4) === '{GS}') { i += 4; continue; }
+
+        let ai = code.substr(i, 2);
+        
+        if (ai === '01') { // GTIN
+            i += 2;
+            if (code[i] === ')') i++;
+            result.gtin = code.substr(i, 14);
+            result.isGs1 = true;
+            i += 14;
+        }
+        else if (ai === '17') { // Expiry Date (YYMMDD)
+            i += 2;
+            if (code[i] === ')') i++;
+            let exp = code.substr(i, 6);
+            result.isGs1 = true;
+            if (exp.length === 6) {
+                let yy = parseInt(exp.substr(0, 2), 10);
+                let mm = exp.substr(2, 2);
+                let dd = exp.substr(4, 2);
+                // Yıl tahmini
+                if (yy < 50) yy += 2000; else yy += 1900;
+                if (dd === '00') dd = '01'; // 00 ay sonunu ifade edebilir
+                result.expiryDate = `${yy}-${mm}-${dd}`;
+            }
+            i += 6;
+        }
+        else if (ai === '10') { // Lot Number
+            i += 2;
+            if (code[i] === ')') i++;
+            let endFnc = code.indexOf('{GS}', i);
+            let endParen = code.indexOf('(', i);
+            let end = code.length;
+            if (endFnc !== -1 && endFnc < end) end = endFnc;
+            if (endParen !== -1 && endParen < end) end = endParen;
+            
+            result.lotNumber = code.substring(i, end);
+            result.isGs1 = true;
+            i = end;
+        }
+        else if (ai === '21') { // Serial Number (Atlıyoruz)
+            i += 2;
+            if (code[i] === ')') i++;
+            let endFnc = code.indexOf('{GS}', i);
+            let endParen = code.indexOf('(', i);
+            let end = code.length;
+            if (endFnc !== -1 && endFnc < end) end = endFnc;
+            if (endParen !== -1 && endParen < end) end = endParen;
+            i = end;
+        }
+        else {
+            // Bilinmeyen AI, daha fazla yanlış okuma yapmamak için çık
+            break;
+        }
+    }
+
+    return result;
+};

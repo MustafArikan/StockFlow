@@ -141,6 +141,12 @@ class DynamicUI {
         else if (rule.dataType === 'decimal') {
             inputHtml = `<input type="number" step="0.1" class="form-control dynamic-rule-input" data-rule-id="${rule.id}" data-rule-key="${escapeHtml(rule.attributeKey)}" data-rule-type="decimal" ${requiredAttr}>`;
         }
+        else if (uiType === 'datepicker' || rule.dataType === 'date') {
+            inputHtml = `<input type="date" class="form-control dynamic-rule-input" data-rule-id="${rule.id}" data-rule-key="${escapeHtml(rule.attributeKey)}" data-rule-type="date" ${requiredAttr}>`;
+        }
+        else if (uiType === 'datetimepicker' || rule.dataType === 'datetime') {
+            inputHtml = `<input type="datetime-local" class="form-control dynamic-rule-input" data-rule-id="${rule.id}" data-rule-key="${escapeHtml(rule.attributeKey)}" data-rule-type="datetime" ${requiredAttr}>`;
+        }
         else { 
             inputHtml = `<input type="text" class="form-control dynamic-rule-input" data-rule-id="${rule.id}" data-rule-key="${escapeHtml(rule.attributeKey)}" data-rule-type="text" ${requiredAttr}>`;
         }
@@ -225,6 +231,12 @@ class DynamicUI {
                                 <input type="hidden" class="kural-filtresi" id="filter_hidden_${rule.id}" data-rule-id="${rule.id}" data-rule-key="${escapeHtml(rule.attributeKey)}" data-filter-type="range">
                              </div>`;
             }
+        }
+        else if (uiType === 'datepicker' || rule.dataType === 'date') {
+            inputHtml = `<input type="date" class="form-control form-control-sm kural-filtresi" data-rule-id="${rule.id}" data-rule-key="${escapeHtml(rule.attributeKey)}">`;
+        }
+        else if (uiType === 'datetimepicker' || rule.dataType === 'datetime') {
+            inputHtml = `<input type="datetime-local" class="form-control form-control-sm kural-filtresi" data-rule-id="${rule.id}" data-rule-key="${escapeHtml(rule.attributeKey)}">`;
         }
         else { 
             inputHtml = `<input type="text" class="form-control form-control-sm kural-filtresi" data-rule-id="${rule.id}" data-rule-key="${escapeHtml(rule.attributeKey)}" placeholder="Ara...">`;
@@ -346,6 +358,12 @@ class DynamicUI {
         }
         else if (uiType === 'masked_textbox') {
             inputHtml = `<input type="text" class="form-control form-control-sm" placeholder="Örn: XXXX-XXXX">`;
+        }
+        else if (uiType === 'datepicker' || uiType === 'date') {
+            inputHtml = `<input type="date" class="form-control form-control-sm">`;
+        }
+        else if (uiType === 'datetimepicker' || uiType === 'datetime') {
+            inputHtml = `<input type="datetime-local" class="form-control form-control-sm">`;
         }
         else {
             inputHtml = `<input type="text" class="form-control form-control-sm" placeholder="Serbest metin giriniz...">`;

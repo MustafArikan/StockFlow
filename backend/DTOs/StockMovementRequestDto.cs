@@ -4,8 +4,7 @@ namespace stok_takip.DTOs
 {
     public class StockMovementRequestDto
     {
-        [Required, StringLength(50)]
-        [RegularExpression(@"^[a-zA-Z0-9-]+$")]
+        [Required, StringLength(100)]
         public string ProductBarcode { get; set; } = string.Empty; // Örn: "VGA-4090"
         
         [Required]
@@ -38,5 +37,8 @@ namespace stok_takip.DTOs
 
         [MaxLength(100)]
         public string? DocumentNumber { get; set; } // Fatura veya irsaliye no
+
+        public string? LotNumber { get; set; }
+        public DateOnly? ExpiryDate { get; set; }
     }
 }

@@ -10,6 +10,7 @@ using stok_takip.DTOs;
 using stok_takip.Models;
 using System.Security.Claims;
 using ClosedXML.Excel; // Excel kütüphanesi
+using stok_takip.Services;
 
 namespace stok_takip.Controllers;
 
@@ -46,6 +47,7 @@ public class ProductsController : ControllerBase
                 Id = p.Id,
                 Name = p.Name,
                 Barcode = p.Barcode,
+                BarcodeType = p.BarcodeType.ToString(),
                 MinStockLevel = p.MinStockLevel,
                 CategoryId = p.CategoryId,
                 CategoryName = p.Category.Name,
@@ -79,6 +81,7 @@ public class ProductsController : ControllerBase
             Id = p.Id,
             Name = p.Name,
             Barcode = p.Barcode,
+            BarcodeType = p.BarcodeType,
             MinStockLevel = p.MinStockLevel,
             CategoryId = p.CategoryId,
             CategoryName = p.CategoryName,
@@ -116,6 +119,7 @@ public class ProductsController : ControllerBase
                 Id = p.Id,
                 Name = p.Name,
                 Barcode = p.Barcode,
+                BarcodeType = p.BarcodeType.ToString(),
                 MinStockLevel = p.MinStockLevel,
                 CategoryId = p.CategoryId,
                 CategoryName = p.Category.Name,
@@ -147,6 +151,7 @@ public class ProductsController : ControllerBase
             Id = product.Id,
             Name = product.Name,
             Barcode = product.Barcode,
+            BarcodeType = product.BarcodeType,
             MinStockLevel = product.MinStockLevel,
             CategoryId = product.CategoryId,
             CategoryName = product.CategoryName,
@@ -177,6 +182,13 @@ public class ProductsController : ControllerBase
             return BadRequest(new { message = "Bu barkoda sahip bir ürün zaten var." });
         }
 
+        var detectedType = BarcodeTypeDetector.Detect(dto.Barcode);
+        if (detectedType is BarcodeType.Gtin12_UpcA or BarcodeType.Gtin13_Ean13 or BarcodeType.Gtin14_Itf14)
+        {
+            if (!Gs1CheckDigitCalculator.IsValid(dto.Barcode))
+                return BadRequest(new { message = "Girilen barkodun kontrol hanesi hatalı görünüyor. Barkodu tekrar kontrol edin veya elle taratın." });
+        }
+
         var categoryExists = await _context.Categories.AnyAsync(c => c.Id == dto.CategoryId);
         if (!categoryExists)
             return BadRequest(new { message = "Belirtilen kategori bulunamadı." });
@@ -202,6 +214,7 @@ public class ProductsController : ControllerBase
         {
             Name = dto.Name,
             Barcode = dto.Barcode,
+            BarcodeType = detectedType,
             MinStockLevel = dto.MinStockLevel,
             CategoryId = dto.CategoryId,
             UnitId = dto.UnitId,
@@ -286,6 +299,13 @@ public class ProductsController : ControllerBase
             return BadRequest(new { message = "Bu barkoda sahip bir ürün zaten var." });
         }
 
+        var detectedType = BarcodeTypeDetector.Detect(dto.Barcode);
+        if (detectedType is BarcodeType.Gtin12_UpcA or BarcodeType.Gtin13_Ean13 or BarcodeType.Gtin14_Itf14)
+        {
+            if (!Gs1CheckDigitCalculator.IsValid(dto.Barcode))
+                return BadRequest(new { message = "Girilen barkodun kontrol hanesi hatalı görünüyor. Barkodu tekrar kontrol edin veya elle taratın." });
+        }
+
         var categoryExists = await _context.Categories.AnyAsync(c => c.Id == dto.CategoryId);
         if (!categoryExists) return BadRequest(new { message = "Belirtilen kategori bulunamadı." });
 
@@ -301,6 +321,7 @@ public class ProductsController : ControllerBase
 
         product.Name = dto.Name;
         product.Barcode = dto.Barcode;
+        product.BarcodeType = detectedType;
         product.MinStockLevel = dto.MinStockLevel;
         product.CategoryId = dto.CategoryId;
         product.UnitId = dto.UnitId;

@@ -953,6 +953,8 @@ document.getElementById("btnKuralEkle").addEventListener("click", async () => {
         case "color_picker": dataType = "select"; uiComponent = "color_picker"; break;
         case "toggle_switch": dataType = "boolean"; uiComponent = "toggle_switch"; break;
         case "boolean": dataType = "boolean"; uiComponent = "checkbox"; break;
+        case "date": dataType = "date"; uiComponent = "datepicker"; break;
+        case "datetime": dataType = "datetime"; uiComponent = "datetimepicker"; break;
     }
     
     if (!attributeKey) {
@@ -1051,6 +1053,10 @@ document.getElementById("kurallarTabloGovdesi").addEventListener("click", async 
                     reverseUi = "boolean";
                 } else if (kural.uiComponent === "textbox") {
                     reverseUi = kural.dataType; // "text", "number", "decimal"
+                } else if (kural.uiComponent === "datepicker") {
+                    reverseUi = "date";
+                } else if (kural.uiComponent === "datetimepicker") {
+                    reverseUi = "datetime";
                 } else {
                     reverseUi = kural.uiComponent; // "dropdown", "radio", "masked_textbox", vb.
                 }
