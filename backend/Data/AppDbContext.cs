@@ -16,6 +16,7 @@ public class AppDbContext : DbContext
     }
     public DbSet<User> Users { get; set; } = null!;
     public DbSet<Category> Categories { get; set; } = null!;
+    public DbSet<Unit> Units { get; set; } = null!;
     public DbSet<Product> Products { get; set; } = null!;
     public DbSet<Warehouse> Warehouses { get; set; } = null!;
     public DbSet<Location> Locations { get; set; } = null!;
@@ -133,6 +134,16 @@ public class AppDbContext : DbContext
             .HasIndex(c => c.Name)
             .IsUnique()
             .HasFilter("[is_deleted] = 0"); 
+
+        modelBuilder.Entity<Unit>()
+            .HasIndex(u => u.ShortCode)
+            .IsUnique();
+
+        modelBuilder.Entity<Product>()
+            .HasOne(p => p.Unit)
+            .WithMany(u => u.Products)
+            .HasForeignKey(p => p.UnitId)
+            .OnDelete(DeleteBehavior.Restrict);
 
         modelBuilder.Entity<Product>()
             .HasIndex(p => p.Barcode)

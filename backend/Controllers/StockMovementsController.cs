@@ -34,7 +34,7 @@ namespace stok_takip.Controllers
         {
             var query = _context.StockMovements
                 .AsNoTracking()
-                .Include(m => m.Product)
+                .Include(m => m.Product).ThenInclude(p => p.Unit)
                 .Include(m => m.User)
                 .AsQueryable();
 
@@ -76,6 +76,7 @@ namespace stok_takip.Controllers
                     UrunAdı = m.Product.Name,
                     IslemTipi = m.MovementType,
                     m.Quantity,
+                    UnitShortCode = m.Product.Unit.ShortCode,
                     Personel = m.User != null ? m.User.Email : "Bilinmeyen Personel",
                     UserId = m.UserId,
                     PersonelName = m.User != null ? (m.User.FirstName + " " + m.User.LastName).Trim() : "Bilinmeyen Personel"
@@ -99,6 +100,7 @@ namespace stok_takip.Controllers
             var movements = await _context.StockMovements
                 .AsNoTracking()
                 .Include(m => m.User)
+                .Include(m => m.Product).ThenInclude(p => p.Unit)
                 .Where(m => m.ProductId == productId)
                 .OrderByDescending(m => m.CreatedAt)
                 .Select(m => new
@@ -107,6 +109,7 @@ namespace stok_takip.Controllers
                     Date = m.CreatedAt, 
                     MovementType = m.MovementType,
                     Quantity = m.Quantity,
+                    UnitShortCode = m.Product.Unit.ShortCode,
                     Personel = m.User != null ? m.User.Email : "Sistem",
                     Description = m.Description
                 })
@@ -130,6 +133,10 @@ namespace stok_takip.Controllers
             var product = await _context.Products.FirstOrDefaultAsync(p => p.Barcode == dto.ProductBarcode);
             if (product == null) 
                 return NotFound(new { message = "Product not found." });
+
+            var unit = await _context.Units.AsNoTracking().FirstOrDefaultAsync(u => u.Id == product.UnitId);
+            if (unit != null && !stok_takip.Services.UnitValidationHelper.IsQuantityValidForUnit(dto.Quantity, unit.AllowsDecimal))
+                return BadRequest(new { message = $"{unit.Name} birimi ondalıklı miktar kabul etmez. Lütfen tam sayı girin." });
 
             string upperType = dto.MovementType.ToUpper();
             
@@ -317,7 +324,7 @@ namespace stok_takip.Controllers
                     // 🎯 Kritik Stok Kontrolü (Tüm depoların/rafların toplamını hesapla)
                     var totalStock = await _context.StockLevels
                         .Where(sl => sl.ProductId == product.Id && !sl.IsDeleted)
-                        .SumAsync(sl => (int?)sl.Quantity) ?? 0;
+                        .SumAsync(sl => (decimal?)sl.Quantity) ?? 0m;
 
                     if (totalStock <= product.MinStockLevel)
                     {

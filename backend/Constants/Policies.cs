@@ -25,4 +25,6 @@ public static class Policies
     public const string RequireDashboardRead = "RequireDashboardRead";
     public const string RequireNotificationRead = "RequireNotificationRead";
     public const string RequireSettingsRead = "RequireSettingsRead";
+    public const string RequireUnitWrite = "RequireUnitWrite";
+    public const string RequireUnitRead = "RequireUnitRead";
 }

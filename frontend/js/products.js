@@ -227,7 +227,7 @@ const productView = createDataView({
                 <td>${escapeHtml(urun.categoryName)}</td>
                 <td>
                     <span class="badge ${urun.stockQuantity <= urun.minStockLevel ? 'bg-danger text-danger' : 'bg-success text-success'} bg-opacity-10 border ${urun.stockQuantity <= urun.minStockLevel ? 'border-danger' : 'border-success'} px-2 py-1 rounded-pill">
-                        ${urun.stockQuantity} Adet
+                        ${formatQuantity(urun.stockQuantity)} ${escapeHtml(urun.unitShortCode || 'ADET')}
                     </span>
                 </td>
                 ${aksiyonButonlari}
@@ -868,6 +868,7 @@ if (btnUrunKaydetEl) {
         const barcode = document.getElementById("urunBarkod").value;
         const minStockLevel = document.getElementById("urunMinStok").value;
         const categoryId = document.getElementById("urunKategoriId").value;
+        const unitId = document.getElementById("urunBirimId").value;
         const targetLocationId = document.getElementById("urunRafId")?.value;
         const initialQuantity = document.getElementById("urunBaslangicStok")?.value;
         const btnKaydet = document.getElementById("btnUrunKaydet");
@@ -875,10 +876,11 @@ if (btnUrunKaydetEl) {
         const urunVerisi = {
             name: name,
             barcode: barcode,
-            minStockLevel: parseInt(minStockLevel) || 0,
+            minStockLevel: parseQuantityInput(minStockLevel),
             categoryId: parseInt(categoryId) || null,
+            unitId: parseInt(unitId) || null,
             targetLocationId: parseInt(targetLocationId) || 0,
-            initialQuantity: parseInt(initialQuantity) || 0,
+            initialQuantity: parseQuantityInput(initialQuantity),
             cost: 0,
             price: 0
         };
@@ -980,6 +982,7 @@ function urunDuzenle(id) {
     document.getElementById("urunAdi").value = urun.name;
     document.getElementById("urunBarkod").value = urun.barcode;
     document.getElementById("urunMinStok").value = urun.minStockLevel;
+    if(document.getElementById("urunBirimId")) document.getElementById("urunBirimId").value = urun.unitId;
 
     buildCategoryCascader('urunKategoriContainer', 'urunKategoriId', urun.categoryId || null, false);
 
@@ -1140,6 +1143,36 @@ async function dropdownDepolariYukle() {
 }
 
 dropdownDepolariYukle();
+
+async function dropdownBirimleriYukle() {
+    try {
+        const data = await apiRequest('/units', 'GET');
+        window.tumBirimler = data;
+        const select = document.getElementById("urunBirimId");
+        if (select) {
+            select.innerHTML = '<option value="">Seçiniz...</option>';
+            data.forEach(birim => {
+                const option = document.createElement("option");
+                option.value = birim.id;
+                option.textContent = escapeHtml(`${birim.name} (${birim.shortCode})`);
+                option.dataset.allowsDecimal = birim.allowsDecimal;
+                select.appendChild(option);
+            });
+            
+            select.addEventListener('change', function() {
+                const selectedOpt = this.options[this.selectedIndex];
+                const allowsDec = selectedOpt?.dataset.allowsDecimal === 'true';
+                document.getElementById('urunMinStok').step = allowsDec ? '0.001' : '1';
+                if(document.getElementById('urunBaslangicStok')) {
+                    document.getElementById('urunBaslangicStok').step = allowsDec ? '0.001' : '1';
+                }
+            });
+        }
+    } catch (hata) {
+        console.error("Birim dropdown yükleme hatası:", hata);
+    }
+}
+dropdownBirimleriYukle();
 
 async function dropdownTedarikcileriYukle() {
     try {

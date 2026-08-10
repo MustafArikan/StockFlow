@@ -111,7 +111,11 @@ public static class DbInitializer
             ("Notification.ManageSettings", "Bildirim kurallarını ve ayarlarını yönetme", "Bildirimler"),
             ("Settings.View", "Sistem ayarlarını görüntüleme", "Sistem"),
             ("Settings.Edit", "Sistem ayarlarını değiştirme", "Sistem"),
-            ("System.AuditLogs", "Sistemdeki tüm güvenlik loglarını görüntüleme", "Güvenlik")
+            ("System.AuditLogs", "Sistemdeki tüm güvenlik loglarını görüntüleme", "Güvenlik"),
+            ("Unit.View", "Birim listesini görüntüleme", "Birimler"),
+            ("Unit.Add", "Yeni birim ekleme", "Birimler"),
+            ("Unit.Edit", "Mevcut birimleri düzenleme", "Birimler"),
+            ("Unit.Delete", "Birim pasifleştirme/silme", "Birimler")
         };
 
         var existingNames = context.AppPermissions
@@ -157,7 +161,9 @@ public static class DbInitializer
             ("RequireReportRead", "Rapor Görüntüleme Yetkisi", 20, 60, new[] { "Report.View" }),
             ("RequireDashboardRead", "Ana Sayfa Görüntüleme Yetkisi", 50, 60, new[] { "Dashboard.View" }),
             ("RequireNotificationRead", "Bildirim Görüntüleme Yetkisi", 50, 60, new[] { "Notification.View" }),
-            ("RequireSettingsRead", "Ayarlar Görüntüleme Yetkisi", 50, 60, new[] { "Settings.View" })
+            ("RequireSettingsRead", "Ayarlar Görüntüleme Yetkisi", 50, 60, new[] { "Settings.View" }),
+            ("RequireUnitWrite", "Birim Ekleme ve Düzenleme Yetkisi", 30, 60, new[] { "Unit.Add", "Unit.Edit", "Unit.Delete" }),
+            ("RequireUnitRead", "Birim Görüntüleme Yetkisi", 50, 60, new[] { "Unit.View" })
         };
 
         var existingPolicies = context.AppAuthorizationPolicies.Select(p => p.Key).ToList();
@@ -256,6 +262,47 @@ public static class DbInitializer
                 new Category { Name = "Depolama Birimleri" }
             };
             context.Categories.AddRange(defaultCategories);
+            context.SaveChanges();
+        }
+
+        var units = new List<(string Name, string ShortCode, bool AllowsDecimal, bool IsSystemUnit)>
+        {
+            ("Adet", "ADET", false, true),
+            ("Kilogram", "KG", true, true),
+            ("Gram", "GR", true, false),
+            ("Litre", "LT", true, true),
+            ("Mililitre", "ML", true, false),
+            ("Metre", "M", true, false),
+            ("Metrekare", "M2", true, false),
+            ("Metreküp", "M3", true, false),
+            ("Koli", "KOLI", false, true),
+            ("Paket", "PKT", false, false),
+            ("Top", "TOP", false, false),
+            ("Kasa", "KASA", false, false),
+            ("Palet", "PLT", false, false),
+            ("Çuval", "CUVAL", false, false),
+            ("Rulo", "RULO", false, false),
+            ("Demet", "DEMET", false, false),
+            ("Kutu", "KUTU", false, false),
+        };
+
+        var existingUnitCodes = context.Units.Select(u => u.ShortCode).ToList();
+        var unitsToInsert = units
+            .Where(u => !existingUnitCodes.Contains(u.ShortCode))
+            .Select(u => new Unit
+            {
+                Name = u.Name,
+                ShortCode = u.ShortCode,
+                AllowsDecimal = u.AllowsDecimal,
+                IsSystemUnit = u.IsSystemUnit,
+                IsActive = true,
+                CreatedAt = DateTime.UtcNow,
+                IsDeleted = false
+            }).ToList();
+
+        if (unitsToInsert.Any())
+        {
+            context.Units.AddRange(unitsToInsert);
             context.SaveChanges();
         }
 

@@ -276,6 +276,10 @@ builder.Services.AddCors(options =>
     });
 });
 
+var cultureInfo = new System.Globalization.CultureInfo("en-US");
+System.Globalization.CultureInfo.DefaultThreadCurrentCulture = cultureInfo;
+System.Globalization.CultureInfo.DefaultThreadCurrentUICulture = cultureInfo;
+
 var app = builder.Build();
 
 // --- Prometheus Metrics Middleware ---

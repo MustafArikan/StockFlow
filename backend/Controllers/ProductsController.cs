@@ -37,6 +37,7 @@ public class ProductsController : ControllerBase
             .AsNoTracking()
             .Where(p => !p.IsDeleted)
             .Include(p => p.Category)
+            .Include(p => p.Unit)
             .Include(p => p.ProductSuppliers).ThenInclude(ps => ps.Supplier)
             .Skip((pageNumber - 1) * pageSize)
             .Take(pageSize)
@@ -48,6 +49,10 @@ public class ProductsController : ControllerBase
                 MinStockLevel = p.MinStockLevel,
                 CategoryId = p.CategoryId,
                 CategoryName = p.Category.Name,
+                UnitId = p.UnitId,
+                UnitName = p.Unit.Name,
+                UnitShortCode = p.Unit.ShortCode,
+                UnitAllowsDecimal = p.Unit.AllowsDecimal,
                 StockQuantity = p.StockLevels.Sum(sl => sl.Quantity),
                 AttributesStr = p.Attributes,
                 Price = p.Price,
@@ -66,6 +71,10 @@ public class ProductsController : ControllerBase
             MinStockLevel = p.MinStockLevel,
             CategoryId = p.CategoryId,
             CategoryName = p.CategoryName,
+            UnitId = p.UnitId,
+            UnitName = p.UnitName,
+            UnitShortCode = p.UnitShortCode,
+            UnitAllowsDecimal = p.UnitAllowsDecimal,
             StockQuantity = p.StockQuantity,
             Price = p.Price,
             ProductSuppliers = p.ProductSuppliers,
@@ -98,6 +107,10 @@ public class ProductsController : ControllerBase
                 MinStockLevel = p.MinStockLevel,
                 CategoryId = p.CategoryId,
                 CategoryName = p.Category.Name,
+                UnitId = p.UnitId,
+                UnitName = p.Unit.Name,
+                UnitShortCode = p.Unit.ShortCode,
+                UnitAllowsDecimal = p.Unit.AllowsDecimal,
                 StockQuantity = p.StockLevels.Sum(sl => sl.Quantity),
                 AttributesStr = p.Attributes,
                 CreatedAt = p.CreatedAt
@@ -114,6 +127,10 @@ public class ProductsController : ControllerBase
             MinStockLevel = product.MinStockLevel,
             CategoryId = product.CategoryId,
             CategoryName = product.CategoryName,
+            UnitId = product.UnitId,
+            UnitName = product.UnitName,
+            UnitShortCode = product.UnitShortCode,
+            UnitAllowsDecimal = product.UnitAllowsDecimal,
             StockQuantity = product.StockQuantity,
             CreatedAt = product.CreatedAt,
             Attributes = string.IsNullOrEmpty(product.AttributesStr)
@@ -144,6 +161,13 @@ public class ProductsController : ControllerBase
         if (!locationExists)
             return BadRequest(new { message = "Belirtilen raf/lokasyon bulunamadı." });
 
+        var unit = await _context.Units.FirstOrDefaultAsync(u => u.Id == dto.UnitId && u.IsActive && !u.IsDeleted);
+        if (unit == null)
+            return BadRequest(new { message = "Belirtilen birim bulunamadı veya pasif durumda." });
+
+        if (!stok_takip.Services.UnitValidationHelper.IsQuantityValidForUnit(dto.InitialQuantity, unit.AllowsDecimal))
+            return BadRequest(new { message = $"{unit.Name} birimi ondalıklı miktar kabul etmez. Lütfen tam sayı girin." });
+
         if (dto.Attributes != null && dto.Attributes.Any())
         {
             var validationError = await ValidateAndNormalizeAttributesAsync(dto.Attributes, dto.CategoryId);
@@ -156,6 +180,7 @@ public class ProductsController : ControllerBase
             Barcode = dto.Barcode,
             MinStockLevel = dto.MinStockLevel,
             CategoryId = dto.CategoryId,
+            UnitId = dto.UnitId,
             Attributes = dto.Attributes != null ? System.Text.Json.JsonSerializer.Serialize(dto.Attributes) : "[]"
         };
         _context.Products.Add(product);
@@ -224,6 +249,10 @@ public class ProductsController : ControllerBase
         var categoryExists = await _context.Categories.AnyAsync(c => c.Id == dto.CategoryId);
         if (!categoryExists) return BadRequest(new { message = "Belirtilen kategori bulunamadı." });
 
+        var unit = await _context.Units.FirstOrDefaultAsync(u => u.Id == dto.UnitId && u.IsActive && !u.IsDeleted);
+        if (unit == null)
+            return BadRequest(new { message = "Belirtilen birim bulunamadı veya pasif durumda." });
+
         if (dto.Attributes != null && dto.Attributes.Any())
         {
             var validationError = await ValidateAndNormalizeAttributesAsync(dto.Attributes, dto.CategoryId);
@@ -234,6 +263,7 @@ public class ProductsController : ControllerBase
         product.Barcode = dto.Barcode;
         product.MinStockLevel = dto.MinStockLevel;
         product.CategoryId = dto.CategoryId;
+        product.UnitId = dto.UnitId;
         product.Attributes = dto.Attributes != null ? System.Text.Json.JsonSerializer.Serialize(dto.Attributes) : "[]";
 
         await _context.SaveChangesAsync();
@@ -241,7 +271,7 @@ public class ProductsController : ControllerBase
         //  Kritik Stok Kontrolü (Limit güncellendiğinde geriye dönük tarama yapar)
         var totalStock = await _context.StockLevels
             .Where(sl => sl.ProductId == product.Id && !sl.IsDeleted)
-            .SumAsync(sl => (int?)sl.Quantity) ?? 0;
+            .SumAsync(sl => (decimal?)sl.Quantity) ?? 0m;
 
         if (totalStock <= product.MinStockLevel)
         {

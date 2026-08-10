@@ -30,8 +30,12 @@ public class CreateProductDto
     public int TargetLocationId { get; set; }
 
     // YENİ: Başlangıç stok miktarı (Negatif olamaz, varsayılan 0 olabilir)
-    [Range(0, int.MaxValue, ErrorMessage = "Başlangıç stok adedi negatif olamaz.")]
-    public int InitialQuantity { get; set; }
+    [Range(typeof(decimal), "0", "79228162514264337593543950335", ErrorMessage = "Başlangıç stok adedi negatif olamaz.")]
+    public decimal InitialQuantity { get; set; }
+
+    [Required(ErrorMessage = "Ürünün stok birimi seçilmelidir.")]
+    [Range(1, int.MaxValue, ErrorMessage = "Geçerli bir birim seçilmelidir.")]
+    public int UnitId { get; set; }
     public int LocationId { get; set; }
 
     public List<ProductAttributeDto>? Attributes { get; set; } // JSON formatında ürün özellikleri (Strongly Typed EAV)

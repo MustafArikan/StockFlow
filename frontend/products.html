@@ -204,6 +204,12 @@
                                     <div id="urunKategoriContainer" class="d-flex flex-column gap-2"></div>
                                     <input type="hidden" id="urunKategoriId" value="">
                                 </div>
+                                <div class="col-md-6">
+                                    <label class="form-label text-muted small fw-bold">Birim <span class="text-danger">*</span></label>
+                                    <select class="form-select" id="urunBirimId" required>
+                                        <option value="">Birim Yükleniyor...</option>
+                                    </select>
+                                </div>
                             </div>
                         </div>
 
@@ -254,7 +260,7 @@
                                 </div>
                                 <div class="col-md-6" id="baslangicStokAlani">
                                     <label class="form-label text-muted small fw-bold">Başlangıç Stok Adedi</label>
-                                    <input type="number" class="form-control" id="urunBaslangicStok" placeholder="Örn: 10" min="0" value="0">
+                                    <input type="number" class="form-control" id="urunBaslangicStok" placeholder="Örn: 10" min="0" step="any" value="0">
                                 </div>
                                 <div class="col-md-6" id="depoSecimiAlani">
                                     <label class="form-label text-muted small fw-bold">Yerleştirilecek Depo</label>
@@ -457,6 +463,7 @@
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.js"></script>
     <script src="js/security-utils.js"></script>
     <script src="js/table-utils.js"></script>
+    <script src="js/stock-utils.js"></script>
     <script src="js/alerts.js"></script>
     <script src="js/partials/sidebar.partial.js"></script>
     <script src="js/partials/topbar.partial.js"></script>

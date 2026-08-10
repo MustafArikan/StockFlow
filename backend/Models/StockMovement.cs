@@ -8,7 +8,8 @@ public class StockMovement : BaseEntity
 {
     public int ProductId { get; set; }
     public string MovementType { get; set; } = string.Empty; // IN, OUT, TRANSFER
-    public int Quantity { get; set; }
+    [Column(TypeName = "decimal(18,3)")]
+    public decimal Quantity { get; set; }
     public string? Description { get; set; }
     public int? UserId { get; set; }
     public User? User { get; set; }

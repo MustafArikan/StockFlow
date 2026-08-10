@@ -9,8 +9,8 @@ namespace stok_takip.DTOs
         public string ProductBarcode { get; set; } = string.Empty; // Örn: "VGA-4090"
         
         [Required]
-        [Range(1, 100000)]
-        public int Quantity { get; set; }
+        [Range(typeof(decimal), "0.001", "100000", ErrorMessage = "Miktar 0'dan büyük ve 100.000'den küçük olmalıdır.")]
+        public decimal Quantity { get; set; }
 
         [Required]
         [RegularExpression("^(IN|OUT|TRANSFER)$", ErrorMessage = "Hareket tipi IN, OUT veya TRANSFER olmalıdır.")]
