@@ -207,7 +207,7 @@ const productView = createDataView({
         let btnIncele = `<button class="btn btn-sm btn-outline-info rounded-pill btn-incele me-1" title="Detayları Gör" data-id="${urun.id}"><i class="bi bi-eye"></i> Görüntüle</button>`;
         let btnDuzenle = hasPermission("Product.Edit") ? `<button class="btn btn-sm btn-outline-primary rounded-pill btn-duzenle me-1" data-id="${urun.id}">Düzenle</button>` : "";
         let btnSil = hasPermission("Product.Delete") ? `<button class="btn btn-sm btn-outline-danger rounded-pill btn-sil" data-id="${urun.id}">Sil</button>` : "";
-        let aksiyonButonlari = `<td class="text-end">${btnIncele} ${btnDuzenle} ${btnSil}</td>`;
+        let aksiyonButonlari = `<td class="text-end"><div class="d-flex gap-1 justify-content-end">${btnIncele} ${btnDuzenle} ${btnSil}</div></td>`;
 
         return `
             <tr>
