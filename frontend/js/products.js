@@ -207,13 +207,12 @@ const productView = createDataView({
         let btnIncele = `<button class="btn btn-sm btn-outline-info rounded-pill btn-incele me-1" title="Detayları Gör" data-id="${urun.id}"><i class="bi bi-eye"></i> Görüntüle</button>`;
         let btnDuzenle = hasPermission("Product.Edit") ? `<button class="btn btn-sm btn-outline-primary rounded-pill btn-duzenle me-1" data-id="${urun.id}">Düzenle</button>` : "";
         let btnSil = hasPermission("Product.Delete") ? `<button class="btn btn-sm btn-outline-danger rounded-pill btn-sil" data-id="${urun.id}">Sil</button>` : "";
-        let aksiyonButonlari = `<td class="text-end"><div class="d-flex gap-1 justify-content-end">${btnIncele} ${btnDuzenle} ${btnSil}</div></td>`;
-
+        
         return `
             <tr>
-                <td class="text-muted small">${tarihFormatla(urun.createdAt)}</td>
-                <td class="fw-bold">${escapeHtml(urun.name)}</td>
-                <td>
+                <td class="text-muted small py-2">${tarihFormatla(urun.createdAt)}</td>
+                <td class="fw-bold py-2">${escapeHtml(urun.name)}</td>
+                <td class="py-2">
                     <button class="btn btn-sm btn-outline-secondary rounded-pill btn-print-barcode d-inline-flex align-items-center shadow-sm" 
                             data-barcode="${escapeHtml(urun.barcode)}" 
                             data-name="${escapeHtml(urun.name)}" 
@@ -223,14 +222,14 @@ const productView = createDataView({
                         <span class="fw-bold">${escapeHtml(urun.barcode)}</span>
                     </button>
                 </td>
-                <td>${urun.minStockLevel}</td>
-                <td>${escapeHtml(urun.categoryName)}</td>
-                <td>
+                <td class="text-center py-2">${urun.minStockLevel}</td>
+                <td class="py-2">${escapeHtml(urun.categoryName)}</td>
+                <td class="text-center py-2">
                     <span class="badge ${urun.stockQuantity <= urun.minStockLevel ? 'bg-danger text-danger' : 'bg-success text-success'} bg-opacity-10 border ${urun.stockQuantity <= urun.minStockLevel ? 'border-danger' : 'border-success'} px-2 py-1 rounded-pill">
                         ${formatQuantity(urun.stockQuantity)} ${escapeHtml(urun.unitShortCode || 'ADET')}
                     </span>
                 </td>
-                ${aksiyonButonlari}
+                <td class="text-end py-2"><div class="d-flex gap-1 justify-content-end">${btnIncele} ${btnDuzenle} ${btnSil}</div></td>
             </tr>`;
     }
 });
