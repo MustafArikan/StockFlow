@@ -321,28 +321,51 @@
                             <div class="row g-3">
                                 <div class="col-md-6">
                                     <label class="form-label text-muted small fw-bold">Minimum Stok Seviyesi</label>
-                                    <input type="number" class="form-control" id="urunMinStok" placeholder="Örn: 10" min="0">
-                                </div>
-                                <div class="col-md-6" id="baslangicStokAlani">
-                                    <label class="form-label text-muted small fw-bold">Başlangıç Stok Adedi</label>
-                                    <input type="number" class="form-control" id="urunBaslangicStok" placeholder="Örn: 10" min="0" step="any" value="0">
-                                </div>
-                                <div class="col-md-6" id="depoSecimiAlani">
-                                    <label class="form-label text-muted small fw-bold">Yerleştirilecek Depo</label>
                                     <div class="input-group">
-                                        <span class="input-group-text bg-light"><i class="bi bi-building"></i></span>
-                                        <select class="form-select" id="urunDepoId">
-                                            <option value="">Önce depo seçin...</option>
+                                        <input type="number" class="form-control" id="urunMinStok" placeholder="Örn: 10" min="0">
+                                        <select class="form-select bg-light text-secondary w-auto birim-secici" id="minStokBirimSecici" tabindex="-1">
+                                            <option value="base" data-multiplier="1">Birim</option>
                                         </select>
                                     </div>
                                 </div>
-                                <div class="col-md-6" id="rafSecimiAlani">
-                                    <label class="form-label text-muted small fw-bold">Yerleştirilecek Raf (Zorunlu)</label>
-                                    <div class="input-group">
-                                        <span class="input-group-text bg-light"><i class="bi bi-layers"></i></span>
-                                        <select class="form-select" id="urunRafId" disabled>
-                                            <option value="">Depo bekleniyor...</option>
-                                        </select>
+                                <div class="col-md-12" id="baslangicStokAlani">
+                                    <div id="hedefLokasyonlarAlani" class="mt-2 p-3 bg-light border border-success rounded-3 shadow-sm">
+                                        <div class="d-flex justify-content-between align-items-center mb-3">
+                                            <h6 class="fw-bold text-success mb-0"><i class="bi bi-box-arrow-in-down me-2"></i>Başlangıç Stok ve Yerleşimleri</h6>
+                                            <div class="d-flex align-items-center">
+                                                <span class="text-muted small fw-bold me-2">Toplam Başlangıç Stoğu:</span>
+                                                <input type="number" class="form-control form-control-sm text-center fw-bold text-success bg-white border-success w-25" id="urunBaslangicStok" value="0" readonly>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="alert alert-success bg-success bg-opacity-10 border-success border-opacity-25 small mb-3">
+                                            <i class="bi bi-info-circle-fill me-1"></i> Ürünü başlangıçta birden fazla rafa dağıtabilirsiniz. Aşağıdan raf seçip listeye ekleyin.
+                                        </div>
+
+                                        <div id="hedefLokasyonlarListesi" class="list-group list-group-flush border rounded-3 mb-3 bg-white">
+                                            <div class="p-3 text-center text-muted small fst-italic" id="bosListeUyari">Henüz raf eklemediniz. (Başlangıç stoğu 0 olacak)</div>
+                                        </div>
+                                        
+                                        <div class="p-3 bg-white border border-secondary border-opacity-25 rounded-3">
+                                            <h6 class="fw-bold text-secondary mb-2 small"><i class="bi bi-plus-circle me-1"></i>Raf Seç ve Ekle</h6>
+                                            <div class="row g-2 align-items-end">
+                                                <div class="col-md-5">
+                                                    <label class="form-label text-muted small fw-bold">Depo</label>
+                                                    <select class="form-select form-select-sm" id="urunDepoId">
+                                                        <option value="">Depo Yükleniyor...</option>
+                                                    </select>
+                                                </div>
+                                                <div class="col-md-5">
+                                                    <label class="form-label text-muted small fw-bold">Raf</label>
+                                                    <select class="form-select form-select-sm" id="urunRafId" disabled>
+                                                        <option value="">Önce depo seçin...</option>
+                                                    </select>
+                                                </div>
+                                                <div class="col-md-2">
+                                                    <button type="button" class="btn btn-sm btn-success w-100 fw-bold" id="btnHedefRafEkle" disabled>EKLE</button>
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>

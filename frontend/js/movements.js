@@ -619,7 +619,7 @@ if (urunSecimiEl) {
                             div.innerHTML = `
                                 <div class="d-flex align-items-center mb-3 mb-md-0 w-100">
                                     <div class="form-check form-switch me-3 fs-4">
-                                        <input class="form-check-input mt-0 ${chkClass} cursor-pointer" type="checkbox" style="cursor: pointer;">
+                                        <input class="form-check-input mt-0 ${chkClass} cursor-pointer" type="checkbox">
                                     </div>
                                     <div class="flex-grow-1">
                                         <div class="fw-bold text-dark fs-6"><i class="bi bi-building me-1 text-primary"></i>${escapeHtml(s.warehouseName)}</div>
@@ -627,9 +627,9 @@ if (urunSecimiEl) {
                                         ${lotText}
                                     </div>
                                 </div>
-                                <div class="d-flex align-items-center justify-content-between w-100 mt-2 mt-md-0" style="max-width: 200px;">
+                                <div class="d-flex align-items-center justify-content-between w-100 mt-2 mt-md-0 w-md-25">
                                     <span class="badge ${isTarget ? 'bg-success' : 'bg-primary'} bg-opacity-10 ${isTarget ? 'text-success border-success' : 'text-primary border-primary'} border rounded-pill px-3 py-2 fs-6 me-2 shadow-sm" title="Mevcut Stok">${s.quantity || 0} Adet</span>
-                                    <input type="number" class="form-control form-control-sm ${qtyClass} ${isTarget ? 'border-success' : 'border-primary'} text-center fw-bold shadow-sm" placeholder="Miktar" ${maxAttr} min="0" step="any" disabled style="width: 80px; display: none;">
+                                    <input type="number" class="form-control form-control-sm ${qtyClass} ${isTarget ? 'border-success' : 'border-primary'} text-center fw-bold shadow-sm d-none" placeholder="Miktar" ${maxAttr} min="0" step="any" disabled>
                                 </div>
                             `;
                             
@@ -650,12 +650,12 @@ if (urunSecimiEl) {
 
                             chk.addEventListener('change', (e) => {
                                 if (e.target.checked) {
-                                    qtyInp.style.display = 'block';
+                                    qtyInp.classList.remove('d-none');
                                     qtyInp.disabled = false;
                                     if(!isTarget) div.classList.replace('border-secondary', 'border-success');
                                     div.classList.add('bg-success', 'bg-opacity-10');
                                 } else {
-                                    qtyInp.style.display = 'none';
+                                    qtyInp.classList.add('d-none');
                                     qtyInp.disabled = true;
                                     qtyInp.value = '';
                                     if(!isTarget) div.classList.replace('border-success', 'border-secondary');
@@ -941,12 +941,12 @@ if (tLocDropdown && btnHedefEkle) {
 
         let isBos = locCode.includes("(Boş)");
         let cleanLocCode = isBos ? locCode.replace(" (Boş)", "") : locCode;
-        let emptyBadge = isBos ? `<span class="badge bg-warning text-dark ms-2 border border-warning" style="font-size: 0.7rem;"><i class="bi bi-info-circle me-1"></i>Tamamen Boş</span>` : '';
+        let emptyBadge = isBos ? `<span class="badge bg-warning text-dark ms-2 border border-warning"><i class="bi bi-info-circle me-1"></i>Tamamen Boş</span>` : '';
 
         div.innerHTML = `
             <div class="d-flex align-items-center mb-3 mb-md-0 w-100">
                 <div class="form-check form-switch me-3 fs-4">
-                    <input class="form-check-input mt-0 target-loc-check cursor-pointer" type="checkbox" style="cursor: pointer;">
+                    <input class="form-check-input mt-0 target-loc-check cursor-pointer" type="checkbox">
                 </div>
                 <div class="flex-grow-1">
                     <div class="fw-bold text-dark fs-6"><i class="bi bi-building me-1 text-primary"></i>${escapeHtml(whName)}</div>
@@ -954,9 +954,9 @@ if (tLocDropdown && btnHedefEkle) {
                     <br><small class="text-secondary fst-italic">Yeni Eklendi</small>
                 </div>
             </div>
-            <div class="d-flex align-items-center justify-content-between w-100 mt-2 mt-md-0" style="max-width: 200px;">
+            <div class="d-flex align-items-center justify-content-between w-100 mt-2 mt-md-0 w-md-25">
                 <span class="badge bg-success bg-opacity-10 text-success border border-success rounded-pill px-3 py-2 fs-6 me-2 shadow-sm" title="Mevcut Stok">0 Adet</span>
-                <input type="number" class="form-control form-control-sm target-loc-qty border-success text-center fw-bold shadow-sm" placeholder="Miktar" min="0" step="any" disabled style="width: 80px; display: none;">
+                <input type="number" class="form-control form-control-sm target-loc-qty border-success text-center fw-bold shadow-sm d-none" placeholder="Miktar" min="0" step="any" disabled>
             </div>
         `;
 
@@ -977,11 +977,11 @@ if (tLocDropdown && btnHedefEkle) {
 
         chk.addEventListener('change', (e) => {
             if (e.target.checked) {
-                qtyInp.style.display = 'block';
+                qtyInp.classList.remove('d-none');
                 qtyInp.disabled = false;
                 div.classList.add('bg-success', 'bg-opacity-10');
             } else {
-                qtyInp.style.display = 'none';
+                qtyInp.classList.add('d-none');
                 qtyInp.disabled = true;
                 qtyInp.value = '';
                 div.classList.remove('bg-success', 'bg-opacity-10');
