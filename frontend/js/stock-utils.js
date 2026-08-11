@@ -1,4 +1,4 @@
-﻿// frontend/js/stock-utils.js
+// frontend/js/stock-utils.js
 
 function parseQuantityInput(value) {
     if (value === null || value === undefined || value === '') return 0;
@@ -83,7 +83,8 @@ const StockUtils = {
                 locations.forEach(loc => {
                     const opt = document.createElement("option");
                     opt.value = loc.id || loc.Id;
-                    opt.textContent = loc.name || loc.Name || loc.code || loc.Code;
+                    const baseText = loc.name || loc.Name || loc.code || loc.Code;
+                    opt.textContent = (loc.isEmpty || loc.IsEmpty) ? `${baseText} (Boş)` : baseText;
                     el.appendChild(opt);
                 });
                 el.disabled = false;

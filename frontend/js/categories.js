@@ -929,6 +929,7 @@ document.getElementById("btnKuralEkle").addEventListener("click", async () => {
     const uiSelection = document.getElementById("kuralTip").value;
     const targetLevel = document.getElementById("kuralTargetLevel").value;
     const isRequired = document.getElementById("kuralZorunlu").checked;
+    const isFeatured = document.getElementById("kuralIsFeatured").checked;
     const allowedValues = document.getElementById("kuralSecenekler").value;
     const minVal = document.getElementById("kuralMin").value;
     const maxVal = document.getElementById("kuralMax").value;
@@ -984,6 +985,7 @@ document.getElementById("btnKuralEkle").addEventListener("click", async () => {
         attributeKey: attributeKey,
         dataType: dataType,
         isRequired: isRequired,
+        isFeatured: isFeatured,
         allowedValues: parsedAllowedValues,
         allowedValueList: secenekliTipler.includes(uiComponent) ? allowedValueList : null,
         uiComponent: uiComponent,
@@ -1008,6 +1010,7 @@ document.getElementById("btnKuralEkle").addEventListener("click", async () => {
         document.getElementById("kuralTip").value = "text";
         document.getElementById("kuralTargetLevel").value = "Product";
         document.getElementById("kuralZorunlu").checked = false;
+        document.getElementById("kuralIsFeatured").checked = false;
         document.getElementById("kuralSecenekler").value = "";
         secenekListesiniSifirla(); // Seçenek listesini de temizle
         document.getElementById("kuralMin").value = "";
@@ -1064,6 +1067,7 @@ document.getElementById("kurallarTabloGovdesi").addEventListener("click", async 
             
             document.getElementById("kuralTip").value = reverseUi || "text";
             document.getElementById("kuralZorunlu").checked = kural.isRequired;
+            document.getElementById("kuralIsFeatured").checked = kural.isFeatured || false;
             document.getElementById("kuralMin").value = kural.minValue ?? "";
             document.getElementById("kuralMax").value = kural.maxValue ?? "";
             

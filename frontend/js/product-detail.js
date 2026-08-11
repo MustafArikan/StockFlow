@@ -56,18 +56,30 @@ async function urunDetayAc(productId, secenekler = {}) {
     aktifDetayUrunId = productId;
     
     // Model Bilgisini Çıkarma
-    let urunModeli = "Belirtilmemiş";
-    if (urun.attributes && urun.attributes.length > 0) {
-        const modelAttr = urun.attributes.find(a => a.key.toLowerCase().includes('model'));
-        if (modelAttr) urunModeli = modelAttr.value;
+    let featuredAttrs = [];
+    let tumKurallar = [];
+    try {
+        const kuralCevap = await fetch(`${CONFIG.API_BASE_URL}/attribute-rules/category/${urun.categoryId}`, {
+            headers: { "Authorization": `Bearer ${token}` }
+        });
+        if (kuralCevap.ok) {
+            tumKurallar = await kuralCevap.json();
+            featuredAttrs = tumKurallar
+                .filter(k => k.isFeatured)
+                .sort((a, b) => a.displayOrder - b.displayOrder);
+        }
+    } catch (e) {
+        console.warn("Nitelik kuralları alınamadı:", e);
     }
+
+    renderFeaturedAttributeCards(featuredAttrs, urun.attributes || []);
 
     // --- DOM MANİPÜLASYONLARI (XSS KORUMALI) ---
 
     // 1. Sekme: Temel Bilgiler
     document.getElementById("detayUrunAdi").textContent = urun.name;
-    document.getElementById("detayKategoriAdi").textContent = urun.categoryName;
-    document.getElementById("detayUrunModeli").textContent = urunModeli;
+    if (document.getElementById("detayKategoriAdi")) document.getElementById("detayKategoriAdi").textContent = urun.categoryName;
+    if (document.getElementById("detayUrunModeli")) document.getElementById("detayUrunModeli").textContent = "Belirtilmemiş";
     document.getElementById("detayBarkod").textContent = urun.barcode;
     document.getElementById("detayTarih").textContent = tarihFormatla(urun.createdAt);
     
@@ -87,7 +99,12 @@ async function urunDetayAc(productId, secenekler = {}) {
     // 2. Sekme: Özellikler
     const ozelliklerListesi = document.getElementById("detayOzelliklerListesi");
     if (urun.attributes && urun.attributes.length > 0) {
-        ozelliklerListesi.innerHTML = urun.attributes.map(attr => {
+        const kuralSirasi = new Map(tumKurallar.map(k => [k.attributeKey, k.displayOrder]));
+        const siraliAttrs = [...urun.attributes].sort(
+            (a, b) => (kuralSirasi.get(a.key) ?? 999) - (kuralSirasi.get(b.key) ?? 999)
+        );
+
+        ozelliklerListesi.innerHTML = siraliAttrs.map(attr => {
             let val = attr.value;
             if (val === "true" || val === true) val = "Var";
             if (val === "false" || val === false) val = "Yok";
@@ -139,6 +156,30 @@ async function urunDetayAc(productId, secenekler = {}) {
         }).join('');
     } else {
         hareketlerListesi.innerHTML = `<tr><td colspan="5" class="text-muted fst-italic text-center py-4">Bu ürün için henüz stok hareketi bulunmuyor.</td></tr>`;
+    }
+
+    // 6. Sekme: Paketleme Birimleri
+    const paketlemeListesi = document.getElementById("detayPaketlemeListesi");
+    if (paketlemeListesi) {
+        const birimler = urun.unitConversions || [];
+        if (birimler.length > 0) {
+            paketlemeListesi.innerHTML = birimler.map(b => `
+                <div class="col-12 col-md-6">
+                    <button type="button"
+                            class="btn btn-outline-secondary w-100 h-100 text-start p-3 rounded-4 d-flex align-items-center gap-3 paketleme-birim-btn"
+                            data-conversion-id="${escapeHtml(String(b.id))}">
+                        <i class="bi bi-upc-scan fs-3 text-secondary"></i>
+                        <span class="flex-grow-1">
+                            <span class="d-block fw-bold text-dark">${escapeHtml(b.alternativeUnitName)}</span>
+                            <span class="d-block small text-muted">1 ${escapeHtml(b.alternativeUnitShortCode)} = ${escapeHtml(String(b.conversionFactor))} ${escapeHtml(urun.unitShortCode || '')}</span>
+                            <span class="d-block small text-secondary font-monospace">${b.barcode ? escapeHtml(b.barcode) : 'Barkod atanmamış'}</span>
+                        </span>
+                        <i class="bi bi-chevron-right text-muted"></i>
+                    </button>
+                </div>`).join('');
+        } else {
+            paketlemeListesi.innerHTML = `<div class="col-12 text-center text-muted fst-italic py-4">Bu ürün için tanımlı koli/kutu birimi bulunmuyor.</div>`;
+        }
     }
 
     // 3. Sekme: Tedarikçi Yönetimi Alanlarını Göster/Gizle (Sadece Görüntüleme)
@@ -196,5 +237,90 @@ async function detayTedarkciYukle(productId, yonetim = false) {
     } catch(hata) {
         tablo.innerHTML = `<tr><td colspan="3" class="text-center text-danger py-4">${escapeHtml(hata.message)}</td></tr>`;
     }
+}
+
+function renderFeaturedAttributeCards(featuredAttrs, urunAttrleri) {
+    const kapsayici = document.getElementById("detayOneCikanNitelikler");
+    if (!kapsayici) return;
+
+    if (featuredAttrs.length === 0) {
+        kapsayici.innerHTML = "";
+        kapsayici.classList.add("d-none");
+        return;
+    }
+
+    kapsayici.classList.remove("d-none");
+    kapsayici.innerHTML = featuredAttrs.map(kural => {
+        const bulunan = urunAttrleri.find(a => a.key === kural.attributeKey);
+        const deger = bulunan ? bulunan.value : "Belirtilmemiş";
+        return `
+        <div class="col-12 col-md-6">
+            <div class="bg-secondary bg-opacity-10 text-secondary p-4 rounded-4 h-100 border border-secondary border-opacity-25 d-flex flex-column justify-content-center">
+                <small class="text-uppercase fw-bold opacity-75 mb-1">${escapeHtml(kural.attributeKey)}</small>
+                <div class="fs-4 fw-bold">${escapeHtml(String(deger))}</div>
+            </div>
+        </div>`;
+    }).join('');
+}
+
+document.addEventListener('click', function (e) {
+    const btn = e.target.closest('.paketleme-birim-btn');
+    if (!btn) return;
+    const conversionId = parseInt(btn.getAttribute('data-conversion-id'));
+    if (typeof paketlemeDetayAc === 'function') {
+        paketlemeDetayAc(aktifDetayUrunId, conversionId);
+    }
+});
+
+async function paketlemeDetayAc(productId, conversionId) {
+    if (typeof ensurePackagingDetailModal === 'function') ensurePackagingDetailModal();
+    if (!document.getElementById('paketlemeDetayModal')) return;
+
+    const token = localStorage.getItem('token');
+    let birimler;
+    try {
+        const cevap = await fetch(`${CONFIG.API_BASE_URL}/products/${productId}/unit-conversions`, {
+            headers: { "Authorization": `Bearer ${token}` }
+        });
+        if (!cevap.ok) throw new Error("Paketleme bilgisi alınamadı.");
+        birimler = await cevap.json();
+    } catch (e) {
+        hataGoster(e.message);
+        return;
+    }
+
+    const birim = birimler.find(b => b.id === conversionId);
+    if (!birim) { hataGoster("Paketleme birimi bulunamadı."); return; }
+
+    document.getElementById("paketDetayBaslik").textContent = birim.alternativeUnitName;
+    document.getElementById("paketDetayBarkodMetni").textContent = birim.barcode || "Barkod atanmamış";
+    document.getElementById("paketDetayBarkodTipi").textContent = birim.barcodeType || "Bilinmiyor";
+    document.getElementById("paketDetayBirimAdi").textContent = `${birim.alternativeUnitName} (${birim.alternativeUnitShortCode})`;
+    document.getElementById("paketDetayCevrim").textContent = String(birim.conversionFactor);
+    document.getElementById("paketDetayVarsayilan").textContent = birim.isDefault ? "Evet" : "Hayır";
+
+    const urunAdiEl = document.getElementById("detayUrunAdi");
+    document.getElementById("paketDetayUrunAdi").textContent = urunAdiEl ? urunAdiEl.textContent : "-";
+
+    const gorselKapsayici = document.getElementById("paketDetayBarkodGorseli");
+    gorselKapsayici.innerHTML = "";
+    if (birim.barcode && typeof JsBarcode === 'function') {
+        // SVG yerine Canvas kullanıp base64 image'a çeviriyoruz ki JsBarcode içine inline style atmasın
+        const canvas = document.createElement("canvas");
+        try {
+            JsBarcode(canvas, birim.barcode, { format: "CODE128", displayValue: false, height: 60 });
+            const img = document.createElement("img");
+            img.src = canvas.toDataURL("image/png");
+            gorselKapsayici.appendChild(img);
+        } catch (e) {
+            gorselKapsayici.textContent = "Barkod görseli oluşturulamadı.";
+        }
+    }
+
+    new bootstrap.Modal(document.getElementById("paketlemeDetayModal")).show();
+}
+
+if (typeof window !== 'undefined') {
+    window.paketlemeDetayAc = paketlemeDetayAc;
 }
 

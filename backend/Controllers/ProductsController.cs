@@ -69,6 +69,8 @@ public class ProductsController : ControllerBase
                         AlternativeUnitId = c.AlternativeUnitId,
                         AlternativeUnitName = c.AlternativeUnit.Name,
                         AlternativeUnitShortCode = c.AlternativeUnit.ShortCode,
+                        Barcode = c.Barcode,
+                        BarcodeType = c.BarcodeType.ToString(),
                         ConversionFactor = c.ConversionFactor,
                         IsDefault = c.IsDefault
                     }).ToList(),
@@ -137,6 +139,8 @@ public class ProductsController : ControllerBase
                         AlternativeUnitId = c.AlternativeUnitId,
                         AlternativeUnitName = c.AlternativeUnit.Name,
                         AlternativeUnitShortCode = c.AlternativeUnit.ShortCode,
+                        Barcode = c.Barcode,
+                        BarcodeType = c.BarcodeType.ToString(),
                         ConversionFactor = c.ConversionFactor,
                         IsDefault = c.IsDefault
                     }).ToList(),
@@ -338,7 +342,7 @@ public class ProductsController : ControllerBase
         {
             double percentage = product.MinStockLevel > 0 ? ((double)totalStock / product.MinStockLevel) * 100 : 0;
             string severity = "INFO";
-            string msg = $"Bilgi: {product.Name} (Barkod: {product.Barcode}) kritik stok sınırında. (Mevcut: {totalStock})";
+            string msg = $"Bilgi: {product.Name} (Barkod: {product.Barcode}) kritik stok sınırında. (Mevcut: {totalStock:0.###})";
 
             if (totalStock == 0)
             {
@@ -348,17 +352,17 @@ public class ProductsController : ControllerBase
             else if (percentage < 20)
             {
                 severity = "DANGER";
-                msg = $"Çok Kritik: {product.Name} (Barkod: {product.Barcode}) stok seviyesi %20'nin altına indi! (Mevcut: {totalStock})";
+                msg = $"Çok Kritik: {product.Name} (Barkod: {product.Barcode}) stok seviyesi %20'nin altına indi! (Mevcut: {totalStock:0.###})";
             }
             else if (percentage <= 50)
             {
                 severity = "CRITICAL";
-                msg = $"Kritik: {product.Name} (Barkod: {product.Barcode}) stok seviyesi %50'nin altına indi! (Mevcut: {totalStock})";
+                msg = $"Kritik: {product.Name} (Barkod: {product.Barcode}) stok seviyesi %50'nin altına indi! (Mevcut: {totalStock:0.###})";
             }
             else if (percentage <= 80)
             {
                 severity = "WARNING";
-                msg = $"Ön Uyarı: {product.Name} (Barkod: {product.Barcode}) stok seviyesi %80'in altına indi. (Mevcut: {totalStock})";
+                msg = $"Ön Uyarı: {product.Name} (Barkod: {product.Barcode}) stok seviyesi %80'in altına indi. (Mevcut: {totalStock:0.###})";
             }
 
             // Aynı ürün ve aynı zorluk seviyesi için okunmamış bir bildirim zaten varsa spamlama yapma

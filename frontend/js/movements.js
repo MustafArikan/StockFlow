@@ -566,98 +566,129 @@ if (urunSecimiEl) {
         const islemTipi = document.getElementById("islemTipi")?.value;
         const stoklarAlani = document.getElementById("mevcutStoklarAlani");
         const stoklarListesi = document.getElementById("mevcutStoklarListesi");
+        const hedefAlani = document.getElementById("hedefLokasyonlarAlani");
+        const hedefListesi = document.getElementById("hedefLokasyonlarListesi");
 
-        if (stoklarAlani && stoklarListesi && productId) {
+        if (productId) {
+            // "CIKIS" ve "TRANSFER" için kaynak stokları getir.
+            // "GIRIS" ve "TRANSFER" için hedef stok önerilerini getir.
+            if (stoklarListesi) stoklarListesi.innerHTML = '<div class="p-2 text-center text-muted">Yükleniyor...</div>';
+            if (hedefListesi) hedefListesi.innerHTML = '<div class="p-2 text-center text-muted">Yükleniyor...</div>';
+            
             if (islemTipi === "CIKIS" || islemTipi === "TRANSFER") {
-                stoklarListesi.innerHTML = '<div class="p-2 text-center text-muted">Stok bilgileri yükleniyor...</div>';
-                stoklarAlani.classList.remove("d-none");
+                if (stoklarAlani) stoklarAlani.classList.remove("d-none");
+            }
+            if (islemTipi === "GIRIS" || islemTipi === "TRANSFER") {
+                if (hedefAlani) hedefAlani.classList.remove("d-none");
+            }
 
-                try {
-                    const res = await fetch(`${CONFIG.API_BASE_URL}/stock-levels/by-product/${productId}`, {
-                        headers: { "Authorization": `Bearer ${token}` }
-                    });
+            try {
+                const res = await fetch(`${CONFIG.API_BASE_URL}/stock-levels/by-product/${productId}`, {
+                    headers: { "Authorization": `Bearer ${token}` }
+                });
 
-                    if (res.ok) {
-                        const stoklar = await res.json();
-                        stoklarListesi.innerHTML = '';
-                        
-                        if (stoklar.length === 0) {
+                if (res.ok) {
+                    const stoklar = await res.json();
+                    if (stoklarListesi) stoklarListesi.innerHTML = '';
+                    if (hedefListesi) hedefListesi.innerHTML = '';
+                    
+                    if (stoklar.length === 0) {
+                        if (stoklarListesi && (islemTipi === "CIKIS" || islemTipi === "TRANSFER")) {
                             stoklarListesi.innerHTML = '<div class="p-2 text-center text-danger fw-bold">Bu ürün için depolarda stok bulunmuyor!</div>';
-                        } else {
-                            stoklar.forEach(s => {
-                                const lotText = s.lotNumber ? `<br><small class="text-secondary">Lot: ${s.lotNumber} | SKT: ${s.expiryDate ? s.expiryDate.split('T')[0] : '-'}</small>` : '';
-                                
-                                const btn = document.createElement("button");
-                                btn.type = "button";
-                                btn.className = "list-group-item list-group-item-action d-flex justify-content-between align-items-center p-2";
-                                btn.innerHTML = `
-                                    <div>
-                                        <strong>${s.warehouseName}</strong> > Raf: ${s.locationCode}
+                        }
+                        if (hedefListesi && (islemTipi === "GIRIS" || islemTipi === "TRANSFER")) {
+                            hedefListesi.innerHTML = '<div class="p-2 text-center text-muted small">Mevcut bir raf önerisi yok. Aşağıdan yeni raf ekleyebilirsiniz.</div>';
+                        }
+                    } else {
+                        const createCard = (s, isTarget) => {
+                            const lotText = s.lotNumber ? `<br><small class="text-secondary">Lot: ${escapeHtml(s.lotNumber)} | SKT: ${s.expiryDate ? s.expiryDate.split('T')[0] : '-'}</small>` : '';
+                            
+                            const div = document.createElement("div");
+                            div.className = `list-group-item list-group-item-action d-flex flex-column flex-md-row justify-content-between align-items-md-center p-3 border-start border-4 border-top-0 border-end-0 border-bottom-1 mb-2 shadow-sm rounded ${isTarget ? 'border-success target-location-item' : 'border-secondary stock-location-item'}`;
+                            div.style.cursor = "pointer";
+                            div.setAttribute("data-wh-id", s.warehouseId);
+                            div.setAttribute("data-loc-id", s.locationId);
+                            div.setAttribute("data-qty", s.quantity || 0);
+                            div.setAttribute("data-lot", s.lotNumber || "");
+                            div.setAttribute("data-exp", s.expiryDate || "");
+                            
+                            const chkClass = isTarget ? 'target-loc-check' : 'source-loc-check';
+                            const qtyClass = isTarget ? 'target-loc-qty' : 'source-loc-qty';
+                            const maxAttr = isTarget ? '' : `max="${s.quantity}"`;
+                            
+                            div.innerHTML = `
+                                <div class="d-flex align-items-center mb-3 mb-md-0 w-100">
+                                    <div class="form-check form-switch me-3 fs-4">
+                                        <input class="form-check-input mt-0 ${chkClass} cursor-pointer" type="checkbox" style="cursor: pointer;">
+                                    </div>
+                                    <div class="flex-grow-1">
+                                        <div class="fw-bold text-dark fs-6"><i class="bi bi-building me-1 text-primary"></i>${escapeHtml(s.warehouseName)}</div>
+                                        <div class="text-secondary small"><i class="bi bi-box me-1"></i>Raf: <span class="fw-bold text-dark">${escapeHtml(s.locationCode)}</span></div>
                                         ${lotText}
                                     </div>
-                                    <span class="badge bg-primary rounded-pill">${s.quantity} Adet</span>
-                                `;
-                                btn.onclick = () => {
-                                    // Kaynak depo ve raf seçimi
-                                    const sourceWh = document.getElementById("sourceWarehouseId");
-                                    if (sourceWh) {
-                                        sourceWh.value = s.warehouseId;
-                                        sourceWh.dispatchEvent(new Event('change'));
-                                        
-                                        // Rafın dolması için biraz beklemek gerekiyor çünkü onchange asenkron
-                                        setTimeout(() => {
-                                            const sourceLoc = document.getElementById("sourceLocationId");
-                                            if (sourceLoc) {
-                                                sourceLoc.value = s.locationId;
-                                                sourceLoc.dispatchEvent(new Event('change'));
-                                            }
-                                        }, 300);
-                                    }
-                                    
-                                    // Lot ve SKT Doldur
-                                    if (s.lotNumber) {
-                                        const lotInp = document.getElementById("lotNumber");
-                                        if (lotInp) lotInp.value = s.lotNumber;
-                                    }
-                                    if (s.expiryDate) {
-                                        const expInp = document.getElementById("expiryDate");
-                                        if (expInp) {
-                                            let ds = String(s.expiryDate).split('T')[0].trim();
-                                            const parts = ds.split(/[\.\/]/);
-                                            if (parts.length === 3) {
-                                                if (parts[2].length === 4) ds = `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
-                                                else if (parts[0].length === 4) ds = `${parts[0]}-${parts[1].padStart(2, '0')}-${parts[2].padStart(2, '0')}`;
-                                            }
-                                            expInp.value = ds;
-                                        }
-                                    }
-                                    
-                                    // Tıklananı seçili yap
-                                    Array.from(stoklarListesi.children).forEach(c => c.classList.remove('active', 'bg-primary', 'text-white'));
-                                    btn.classList.add('active');
-                                    if (typeof basariToast === 'function') basariToast("Kaynak raf, depo ve lot bilgileri otomatik seçildi.");
-                                };
-                                stoklarListesi.appendChild(btn);
+                                </div>
+                                <div class="d-flex align-items-center justify-content-between w-100 mt-2 mt-md-0" style="max-width: 200px;">
+                                    <span class="badge ${isTarget ? 'bg-success' : 'bg-primary'} bg-opacity-10 ${isTarget ? 'text-success border-success' : 'text-primary border-primary'} border rounded-pill px-3 py-2 fs-6 me-2 shadow-sm" title="Mevcut Stok">${s.quantity || 0} Adet</span>
+                                    <input type="number" class="form-control form-control-sm ${qtyClass} ${isTarget ? 'border-success' : 'border-primary'} text-center fw-bold shadow-sm" placeholder="Miktar" ${maxAttr} min="0" step="any" disabled style="width: 80px; display: none;">
+                                </div>
+                            `;
+                            
+                            const chk = div.querySelector(`.${chkClass}`);
+                            const qtyInp = div.querySelector(`.${qtyClass}`);
+                            
+                            div.addEventListener('click', (e) => {
+                                if (e.target !== chk && e.target !== qtyInp) {
+                                    chk.checked = !chk.checked;
+                                    chk.dispatchEvent(new Event('change'));
+                                }
+                            });
+
+                            qtyInp.addEventListener('input', () => {
+                                if (typeof updateIslemAdediFromBoxes === 'function') updateIslemAdediFromBoxes();
+                                if (typeof formuDenetle === 'function') formuDenetle();
+                            });
+
+                            chk.addEventListener('change', (e) => {
+                                if (e.target.checked) {
+                                    qtyInp.style.display = 'block';
+                                    qtyInp.disabled = false;
+                                    if(!isTarget) div.classList.replace('border-secondary', 'border-success');
+                                    div.classList.add('bg-success', 'bg-opacity-10');
+                                } else {
+                                    qtyInp.style.display = 'none';
+                                    qtyInp.disabled = true;
+                                    qtyInp.value = '';
+                                    if(!isTarget) div.classList.replace('border-success', 'border-secondary');
+                                    div.classList.remove('bg-success', 'bg-opacity-10');
+                                }
+                                if (typeof updateIslemAdediFromBoxes === 'function') updateIslemAdediFromBoxes();
+                                if (typeof formuDenetle === 'function') formuDenetle();
                             });
                             
-                            // Eğer stok varsa ilkini (FIFO) otomatik seç ki lot ve SKT alanları dolsun.
-                            // NOT: Barkod okutma akışı (kamera / fiziksel okuyucu / manuel) lot ve SKT
-                            // alanlarını zaten kendi başına doldurmuş olabilir; bu durumda burada FIFO
-                            // ilk stoğu otomatik seçip o değerleri EZMEMELİYİZ.
+                            return div;
+                        };
+
+                        if (stoklarListesi && (islemTipi === "CIKIS" || islemTipi === "TRANSFER")) {
+                            stoklar.forEach(s => stoklarListesi.appendChild(createCard(s, false)));
+                            
                             const lotDoluMu = document.getElementById("lotNumber")?.value;
                             const sktDoluMu = document.getElementById("expiryDate")?.value;
                             if (stoklar.length > 0 && stoklarListesi.firstElementChild && !lotDoluMu && !sktDoluMu) {
                                 stoklarListesi.firstElementChild.click();
                             }
                         }
-                    } else {
-                        stoklarAlani.classList.add("d-none");
+                        
+                        if (hedefListesi && (islemTipi === "GIRIS" || islemTipi === "TRANSFER")) {
+                            stoklar.forEach(s => hedefListesi.appendChild(createCard(s, true)));
+                        }
                     }
-                } catch (e) {
-                    stoklarAlani.classList.add("d-none");
+                } else {
+                    if(stoklarAlani) stoklarAlani.classList.add("d-none");
+                    if(hedefAlani) hedefAlani.classList.add("d-none");
                 }
-            } else {
-                stoklarAlani.classList.add("d-none");
+            } catch (e) {
+                if(stoklarAlani) stoklarAlani.classList.add("d-none");
+                if(hedefAlani) hedefAlani.classList.add("d-none");
             }
         }
         // -------------------------------------
@@ -685,12 +716,10 @@ if (islemTipiEl) {
             const sLoc = document.getElementById("sourceLocationId");
             if (sLoc) sLoc.value = "";
         } else if (tip === "CIKIS") {
-            sourceGroup?.classList.remove("d-none");
             cGroup?.classList.remove("d-none");
             const tLoc = document.getElementById("targetLocationId");
             if (tLoc) tLoc.value = "";
         } else if (tip === "TRANSFER") {
-            sourceGroup?.classList.remove("d-none");
             targetGroup?.classList.remove("d-none");
         }
 
@@ -764,6 +793,58 @@ function formGruplariniGizle() {
     document.getElementById("tedarikciGroup")?.classList.add("d-none");
     document.getElementById("cikisNoktasiGroup")?.classList.add("d-none");
     document.getElementById("targetLocationStockInfo")?.classList.add("d-none");
+    
+    const stoklarAlani = document.getElementById("mevcutStoklarAlani");
+    if (stoklarAlani) stoklarAlani.classList.add("d-none");
+    const stoklarListesi = document.getElementById("mevcutStoklarListesi");
+    if (stoklarListesi) stoklarListesi.innerHTML = "";
+    
+    const hedefLokasyonlarAlani = document.getElementById("hedefLokasyonlarAlani");
+    if (hedefLokasyonlarAlani) hedefLokasyonlarAlani.classList.add("d-none");
+    const hedefLokasyonlarListesi = document.getElementById("hedefLokasyonlarListesi");
+    if (hedefLokasyonlarListesi) hedefLokasyonlarListesi.innerHTML = "";
+}
+
+function updateIslemAdediFromBoxes() {
+    const tip = document.getElementById("islemTipi")?.value;
+    const islemAdediInput = document.getElementById("islemAdedi");
+    if (!islemAdediInput || !tip) return;
+    
+    let boxes = [];
+    if (tip === "CIKIS" || tip === "TRANSFER") {
+        boxes = Array.from(document.querySelectorAll('.source-loc-check:checked')).map(c => c.closest('.stock-location-item').querySelector('.source-loc-qty'));
+    }
+    if (tip === "GIRIS" || tip === "TRANSFER") {
+        const targetBoxes = Array.from(document.querySelectorAll('.target-loc-check:checked')).map(c => c.closest('.target-location-item').querySelector('.target-loc-qty'));
+        boxes = boxes.concat(targetBoxes);
+    }
+    
+    let hasSpecificQty = boxes.some(inp => parseFloat(inp.value) > 0);
+    if (hasSpecificQty) {
+        let total = 0;
+        boxes.forEach(inp => {
+            const val = parseFloat(inp.value) || 0;
+            total += val;
+        });
+        
+        // For TRANSFER, if they entered qty in both source and target (which shouldn't happen usually but just in case),
+        // we might sum both. Wait, for TRANSFER, source specific quantities determine the deduction. Target quantity is just the sum of sources (since it's 1 target).
+        // Let's only sum source for TRANSFER if source has specifics, else target.
+        if (tip === "TRANSFER") {
+            const sourceBoxes = Array.from(document.querySelectorAll('.source-loc-check:checked')).map(c => c.closest('.stock-location-item').querySelector('.source-loc-qty'));
+            let sourceHasSpecific = sourceBoxes.some(inp => parseFloat(inp.value) > 0);
+            if (sourceHasSpecific) {
+                total = sourceBoxes.reduce((acc, inp) => acc + (parseFloat(inp.value) || 0), 0);
+            } else {
+                const tBoxes = Array.from(document.querySelectorAll('.target-loc-check:checked')).map(c => c.closest('.target-location-item').querySelector('.target-loc-qty'));
+                total = tBoxes.reduce((acc, inp) => acc + (parseFloat(inp.value) || 0), 0);
+            }
+        }
+        
+        islemAdediInput.value = total;
+        // Trigger input event so formuDenetle evaluates the new value
+        islemAdediInput.dispatchEvent(new Event('input'));
+    }
 }
 
 function formuDenetle() {
@@ -787,8 +868,14 @@ function formuDenetle() {
     let gecerli = (tip !== "" && urun !== "" && miktarGecerli && !ayniRafHatasi);
 
     if (gecerli) {
-        if (tip === "GIRIS" && targetLoc === "") gecerli = false;
-        else if (tip === "CIKIS" && sourceLoc === "") gecerli = false;
+        if (tip === "CIKIS" || tip === "TRANSFER") {
+            const hasSource = document.querySelectorAll('.source-loc-check:checked').length > 0;
+            if (!hasSource) gecerli = false;
+        }
+        if (tip === "GIRIS" || tip === "TRANSFER") {
+            const hasTarget = document.querySelectorAll('.target-loc-check:checked').length > 0;
+            if (!hasTarget) gecerli = false;
+        }
     }
 
     kaydetButonu.disabled = !gecerli;
@@ -813,6 +900,108 @@ function formuDenetle() {
 });
 const islemAdediInput = document.getElementById("islemAdedi");
 if (islemAdediInput) islemAdediInput.addEventListener("input", formuDenetle);
+
+const tLocDropdown = document.getElementById("targetLocationId");
+const btnHedefEkle = document.getElementById("btnHedefRafEkle");
+if (tLocDropdown && btnHedefEkle) {
+    tLocDropdown.addEventListener("change", (e) => {
+        btnHedefEkle.disabled = !e.target.value;
+    });
+
+    btnHedefEkle.addEventListener("click", () => {
+        const whDropdown = document.getElementById("targetWarehouseId");
+        if (!whDropdown.value || !tLocDropdown.value) return;
+
+        const whName = whDropdown.options[whDropdown.selectedIndex].text;
+        const locCode = tLocDropdown.options[tLocDropdown.selectedIndex].text;
+        const whId = whDropdown.value;
+        const locId = tLocDropdown.value;
+
+        const hedefListesi = document.getElementById("hedefLokasyonlarListesi");
+        
+        // Prevent duplicate racks
+        if (hedefListesi.querySelector(`[data-loc-id="${locId}"]`)) {
+            hataGoster("Bu raf zaten listede ekli!");
+            return;
+        }
+        
+        // Remove empty state message if it exists
+        if (hedefListesi.innerHTML.includes("Mevcut bir raf önerisi yok")) {
+            hedefListesi.innerHTML = "";
+        }
+
+        const div = document.createElement("div");
+        div.className = "list-group-item list-group-item-action d-flex flex-column flex-md-row justify-content-between align-items-md-center p-3 border-start border-4 border-success target-location-item border-top-0 border-end-0 border-bottom-1 mb-2 shadow-sm rounded";
+        div.style.cursor = "pointer";
+        div.setAttribute("data-wh-id", whId);
+        div.setAttribute("data-loc-id", locId);
+        div.setAttribute("data-qty", 0);
+        div.setAttribute("data-lot", "");
+        div.setAttribute("data-exp", "");
+
+        let isBos = locCode.includes("(Boş)");
+        let cleanLocCode = isBos ? locCode.replace(" (Boş)", "") : locCode;
+        let emptyBadge = isBos ? `<span class="badge bg-warning text-dark ms-2 border border-warning" style="font-size: 0.7rem;"><i class="bi bi-info-circle me-1"></i>Tamamen Boş</span>` : '';
+
+        div.innerHTML = `
+            <div class="d-flex align-items-center mb-3 mb-md-0 w-100">
+                <div class="form-check form-switch me-3 fs-4">
+                    <input class="form-check-input mt-0 target-loc-check cursor-pointer" type="checkbox" style="cursor: pointer;">
+                </div>
+                <div class="flex-grow-1">
+                    <div class="fw-bold text-dark fs-6"><i class="bi bi-building me-1 text-primary"></i>${escapeHtml(whName)}</div>
+                    <div class="text-secondary small"><i class="bi bi-box me-1"></i>Raf: <span class="fw-bold text-dark">${escapeHtml(cleanLocCode)}</span>${emptyBadge}</div>
+                    <br><small class="text-secondary fst-italic">Yeni Eklendi</small>
+                </div>
+            </div>
+            <div class="d-flex align-items-center justify-content-between w-100 mt-2 mt-md-0" style="max-width: 200px;">
+                <span class="badge bg-success bg-opacity-10 text-success border border-success rounded-pill px-3 py-2 fs-6 me-2 shadow-sm" title="Mevcut Stok">0 Adet</span>
+                <input type="number" class="form-control form-control-sm target-loc-qty border-success text-center fw-bold shadow-sm" placeholder="Miktar" min="0" step="any" disabled style="width: 80px; display: none;">
+            </div>
+        `;
+
+        const chk = div.querySelector('.target-loc-check');
+        const qtyInp = div.querySelector('.target-loc-qty');
+
+        div.addEventListener('click', (e) => {
+            if (e.target !== chk && e.target !== qtyInp) {
+                chk.checked = !chk.checked;
+                chk.dispatchEvent(new Event('change'));
+            }
+        });
+
+        qtyInp.addEventListener('input', () => {
+            if (typeof updateIslemAdediFromBoxes === 'function') updateIslemAdediFromBoxes();
+            if (typeof formuDenetle === 'function') formuDenetle();
+        });
+
+        chk.addEventListener('change', (e) => {
+            if (e.target.checked) {
+                qtyInp.style.display = 'block';
+                qtyInp.disabled = false;
+                div.classList.add('bg-success', 'bg-opacity-10');
+            } else {
+                qtyInp.style.display = 'none';
+                qtyInp.disabled = true;
+                qtyInp.value = '';
+                div.classList.remove('bg-success', 'bg-opacity-10');
+            }
+            if (typeof updateIslemAdediFromBoxes === 'function') updateIslemAdediFromBoxes();
+            if (typeof formuDenetle === 'function') formuDenetle();
+        });
+
+        hedefListesi.appendChild(div);
+        
+        // Auto-check and focus
+        div.click();
+        setTimeout(() => qtyInp.focus(), 50);
+
+        // Reset dropdowns
+        tLocDropdown.value = "";
+        btnHedefEkle.disabled = true;
+        if (typeof formuDenetle === 'function') formuDenetle();
+    });
+}
 
 // TEST KULLANICISININ KAYIT ETMESİNİ ENGELLEYEN HATA GİDERİLDİ
 const stokIslemFormu = document.getElementById("stokIslemFormu");
@@ -848,42 +1037,163 @@ if (stokIslemFormu) {
         const lotNumber = lotNumberElement && lotNumberElement.value.trim() !== "" ? lotNumberElement.value.trim() : null;
         const expiryDate = expiryDateElement && expiryDateElement.value !== "" ? expiryDateElement.value : null;
 
-        const payload = {
+        const payloadBase = {
             productId: parseInt(secilenUrunId, 10),
             productBarcode: secilenBarkod,
             movementType: tip === "GIRIS" ? "IN" : tip === "CIKIS" ? "OUT" : "TRANSFER",
-            quantity: qty,
             inputUnitId: inputUnitId !== secilenUrun.unitId ? inputUnitId : null,
-            sourceLocationId: ((tip === "CIKIS" || tip === "TRANSFER") && sourceLocVal && !isNaN(parseInt(sourceLocVal))) ? parseInt(sourceLocVal) : null,
             targetLocationId: ((tip === "GIRIS" || tip === "TRANSFER") && targetLocVal && !isNaN(parseInt(targetLocVal))) ? parseInt(targetLocVal) : null,
             description: tip === "GIRIS" ? "Stok Girişi" : tip === "CIKIS" ? "Stok Çıkışı" : "Raf Arası Transfer",
             unitPrice: bFiyat,
             documentNumber: fNo && fNo.trim() !== "" ? fNo : null,
             supplierId: (tip === "GIRIS" && tId && tId !== "" && !isNaN(parseInt(tId))) ? parseInt(tId) : null,
-            destination: (tip === "CIKIS" && cNoktasi && cNoktasi.trim() !== "") ? cNoktasi : null,
-            lotNumber: lotNumber,
-            expiryDate: expiryDate
+            destination: (tip === "CIKIS" && cNoktasi && cNoktasi.trim() !== "") ? cNoktasi : null
         };
 
         const kaydetButonu = document.getElementById("btnKaydet");
+        let operations = [];
+
+        // Check if multi-rack selection is active
+        const checkedSources = (tip === "CIKIS" || tip === "TRANSFER") 
+            ? Array.from(document.querySelectorAll('.stock-location-item')).filter(item => item.querySelector('.source-loc-check').checked)
+            : [];
+            
+        const checkedTargets = (tip === "GIRIS" || tip === "TRANSFER") 
+            ? Array.from(document.querySelectorAll('.target-location-item')).filter(item => item.querySelector('.target-loc-check').checked)
+            : [];
+
+        if (tip === "CIKIS") {
+            let totalRequestedQty = qty;
+            let remainingQty = totalRequestedQty;
+            let hasSpecificQty = checkedSources.some(item => parseFloat(item.querySelector('.source-loc-qty').value) > 0);
+
+            if (hasSpecificQty) {
+                for (const item of checkedSources) {
+                    const specificQty = parseFloat(item.querySelector('.source-loc-qty').value) || 0;
+                    if (specificQty > 0) {
+                        operations.push({
+                            ...payloadBase,
+                            quantity: specificQty,
+                            sourceLocationId: parseInt(item.getAttribute('data-loc-id')),
+                            lotNumber: item.getAttribute('data-lot') || null,
+                            expiryDate: item.getAttribute('data-exp') || null
+                        });
+                    }
+                }
+            } else {
+                for (const item of checkedSources) {
+                    if (remainingQty <= 0) break;
+                    const availableQty = parseFloat(item.getAttribute('data-qty')) || 0;
+                    const takeQty = Math.min(availableQty, remainingQty);
+                    operations.push({
+                        ...payloadBase,
+                        quantity: takeQty,
+                        sourceLocationId: parseInt(item.getAttribute('data-loc-id')),
+                        lotNumber: item.getAttribute('data-lot') || null,
+                        expiryDate: item.getAttribute('data-exp') || null
+                    });
+                    remainingQty -= takeQty;
+                }
+                if (remainingQty > 0) {
+                    hataGoster(`Seçilen raflardaki toplam stok, girmek istediğiniz miktarı (${totalRequestedQty}) karşılamıyor.`);
+                    return;
+                }
+            }
+        } else if (tip === "GIRIS") {
+            let hasSpecificQty = checkedTargets.some(item => parseFloat(item.querySelector('.target-loc-qty').value) > 0);
+            
+            if (hasSpecificQty) {
+                for (const item of checkedTargets) {
+                    const specificQty = parseFloat(item.querySelector('.target-loc-qty').value) || 0;
+                    if (specificQty > 0) {
+                        operations.push({
+                            ...payloadBase,
+                            quantity: specificQty,
+                            targetLocationId: parseInt(item.getAttribute('data-loc-id')),
+                            lotNumber: lotNumber,
+                            expiryDate: expiryDate
+                        });
+                    }
+                }
+            } else {
+                if (checkedTargets.length > 1) {
+                    hataGoster("Çoklu rafa giriş yaparken lütfen listedeki kutucuklardan her raf için miktar belirtin.");
+                    return;
+                } else if (checkedTargets.length === 1) {
+                    operations.push({
+                        ...payloadBase,
+                        quantity: qty,
+                        targetLocationId: parseInt(checkedTargets[0].getAttribute('data-loc-id')),
+                        lotNumber: lotNumber,
+                        expiryDate: expiryDate
+                    });
+                }
+            }
+        } else if (tip === "TRANSFER") {
+            if (checkedTargets.length !== 1) {
+                hataGoster("Transfer işlemi için lütfen BİR (1) adet hedef raf seçin.");
+                return;
+            }
+            
+            const targetLocId = parseInt(checkedTargets[0].getAttribute('data-loc-id'));
+            let totalRequestedQty = qty;
+            let remainingQty = totalRequestedQty;
+            let hasSpecificQty = checkedSources.some(item => parseFloat(item.querySelector('.source-loc-qty').value) > 0);
+
+            if (hasSpecificQty) {
+                for (const item of checkedSources) {
+                    const specificQty = parseFloat(item.querySelector('.source-loc-qty').value) || 0;
+                    if (specificQty > 0) {
+                        operations.push({
+                            ...payloadBase,
+                            quantity: specificQty,
+                            sourceLocationId: parseInt(item.getAttribute('data-loc-id')),
+                            targetLocationId: targetLocId,
+                            lotNumber: item.getAttribute('data-lot') || null,
+                            expiryDate: item.getAttribute('data-exp') || null
+                        });
+                    }
+                }
+            } else {
+                for (const item of checkedSources) {
+                    if (remainingQty <= 0) break;
+                    const availableQty = parseFloat(item.getAttribute('data-qty')) || 0;
+                    const takeQty = Math.min(availableQty, remainingQty);
+                    operations.push({
+                        ...payloadBase,
+                        quantity: takeQty,
+                        sourceLocationId: parseInt(item.getAttribute('data-loc-id')),
+                        targetLocationId: targetLocId,
+                        lotNumber: item.getAttribute('data-lot') || null,
+                        expiryDate: item.getAttribute('data-exp') || null
+                    });
+                    remainingQty -= takeQty;
+                }
+                if (remainingQty > 0) {
+                    hataGoster(`Seçilen kaynak raflardaki toplam stok, transfer etmek istediğiniz miktarı (${totalRequestedQty}) karşılamıyor.`);
+                    return;
+                }
+            }
+        }
 
         try {
             const orjinalMetin = kaydetButonu.innerText;
             kaydetButonu.disabled = true;
             kaydetButonu.innerText = "İşleniyor...";
 
-            await apiRequest('/stock/movements', 'POST', payload);
+            // Execute all operations
+            for (const op of operations) {
+                await apiRequest('/stock/movements', 'POST', op);
+            }
+
+            document.getElementById("stokIslemFormu").reset();
+            if (typeof formGruplariniGizle === 'function') {
+                formGruplariniGizle();
+            }
 
             const modalElement = document.getElementById("stokIslemModal");
             const modalInstance = bootstrap.Modal.getInstance(modalElement);
             if (modalInstance) modalInstance.hide();
-
-            document.getElementById("stokIslemFormu").reset();
-
-            const sourceGroup = document.getElementById("sourceLocationGroup");
-            const targetGroup = document.getElementById("targetLocationGroup");
-            if (sourceGroup) sourceGroup.classList.add("d-none");
-            if (targetGroup) targetGroup.classList.add("d-none");
 
             hareketView.refresh();
             basariToast("Stok hareketi kaydedildi");

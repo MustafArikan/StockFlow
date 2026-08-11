@@ -218,21 +218,37 @@
                             </select>
                         </div>
 
-                        <!-- 3. ADIM: Hedef lokasyon alanını gösterir -->
-                        <div class="mb-4 d-none p-3 bg-white border rounded-3 shadow-sm" id="targetLocationGroup">
-                            <h6 class="fw-bold text-success mb-3"><i class="bi bi-box-arrow-in-down me-2"></i>3. Giriş
-                                (Hedef) Konumu</h6>
-                            <label class="form-label text-muted small fw-bold">Depo Seçin</label>
-                            <select class="form-select mb-2" id="targetWarehouseId">
-                                <option value="">Seçiniz...</option>
-                            </select>
-                            <label class="form-label text-muted small fw-bold">Raf Seçin</label>
-                            <select class="form-select" id="targetLocationId" disabled>
-                                <option value="">Önce depo seçin...</option>
-                            </select>
-                            <div id="targetLocationStockInfo" class="d-none mt-2 small text-primary fw-bold">
-                                <i class="bi bi-info-circle"></i> Bu raftaki mevcut stok: <span
-                                    id="targetLocationStockValue">0</span> Adet
+                        <!-- 3. ADIM: Hedef lokasyon alanını gösterir (GİRİŞ ve TRANSFER için çoklu liste) -->
+                        <div id="hedefLokasyonlarAlani" class="d-none mt-4 mb-4 p-3 bg-white border border-success rounded-3 shadow-sm">
+                            <h6 class="fw-bold text-success mb-3"><i class="bi bi-box-arrow-in-down me-2"></i>3. Giriş (Hedef) Konumları</h6>
+                            
+                            <div class="alert alert-success bg-success bg-opacity-10 border-success border-opacity-25 small mb-3">
+                                <i class="bi bi-info-circle-fill me-1"></i> Ürünü birden fazla rafa dağıtabilirsiniz. Önerilen (mevcut) rafları seçebilir veya aşağıdan yeni raf ekleyebilirsiniz.
+                            </div>
+
+                            <div id="hedefLokasyonlarListesi" class="list-group list-group-flush border rounded-3 mb-3">
+                                <!-- Dinamik eklenecek -->
+                            </div>
+                            
+                            <div class="p-3 bg-light border border-secondary border-opacity-25 rounded-3">
+                                <h6 class="fw-bold text-secondary mb-2 small"><i class="bi bi-plus-circle me-1"></i>Farklı Bir Raf Ekle</h6>
+                                <div class="row g-2 align-items-end">
+                                    <div class="col-md-5">
+                                        <label class="form-label text-muted small fw-bold">Depo</label>
+                                        <select class="form-select form-select-sm" id="targetWarehouseId">
+                                            <option value="">Seçiniz...</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-5">
+                                        <label class="form-label text-muted small fw-bold">Raf</label>
+                                        <select class="form-select form-select-sm" id="targetLocationId" disabled>
+                                            <option value="">Önce depo seçin...</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <button type="button" class="btn btn-sm btn-success w-100 fw-bold" id="btnHedefRafEkle" disabled>EKLE</button>
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
