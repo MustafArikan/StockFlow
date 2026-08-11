@@ -1,4 +1,4 @@
-const API_URL = `${CONFIG.API_BASE_URL}/warehouses`;
+﻿const API_URL = `${CONFIG.API_BASE_URL}/warehouses`;
 const token = localStorage.getItem('token');
 
 const userRole = typeof getUserRole === "function" ? getUserRole() : "User";
@@ -57,24 +57,10 @@ const rafView = createDataView({
     mode: 'table',
     emptyColspan: 2,
     emptyMessage: "Bu depoda henüz raf bulunmuyor.",
+    searchFields: ['code'],
+    defaultSortKey: 'code',
+    defaultSortDir: 'asc',
     pageSize: 10,
-    fetchPage: async (page, size) => {
-        const sonuc = await apiRequest(`/locations/by-warehouse/${aktifDepoId}?pageNumber=${page}&pageSize=${size}`, 'GET');
-        const raflar = sonuc.items || sonuc;
-        
-        const toplamRaf = document.getElementById("kutuToplamRaf");
-        if (toplamRaf) toplamRaf.innerText = (sonuc.totalCount || raflar.length) || 0;
-
-        const rafSelect = document.getElementById("rafAramaSelect");
-        if(rafSelect && page === 1) {
-            rafSelect.innerHTML = '<option value="">Raf Seçiniz (Tümünü Göster)</option>';
-            raflar.forEach(r => {
-                rafSelect.innerHTML += `<option value="${r.id}">${escapeHtml(r.code)}</option>`;
-            });
-        }
-
-        return { items: raflar, totalItems: sonuc.totalRecords || 0 };
-    },
     renderRow: (raf) => {
         return `
             <tr data-rafid="${raf.id}">
@@ -264,14 +250,34 @@ document.querySelector('[data-bs-target="#depoModal"]')?.addEventListener("click
 // 2. KATMAN: RAFLAR LİSTESİ VE DROPWDOWN (DEPO SEÇİLDİĞİNDE)
 // ============================================================================
 
-async function raflariGoruntule(depoId, depoIsmi) {
+async function raflariGoruntule(depoId, depoIsmi, skipHistory = false) {
+    if (!skipHistory) { history.pushState({ view: 'raf', depoId: depoId, depoName: depoIsmi }, null, ''); }
     aktifDepoId = depoId;
     document.getElementById("depoListesiGorunumu").classList.add("d-none");
     document.getElementById("urunListesiGorunumu").classList.add("d-none");
     document.getElementById("rafListesiGorunumu").classList.remove("d-none");
     
     document.getElementById("seciliDepoAdiRaflaricin").innerText = depoIsmi;
-    rafView.load(1);
+    
+    try {
+        const sonuc = await apiRequest(`/locations/by-warehouse/${aktifDepoId}?pageSize=10000`, 'GET');
+        let raflar = sonuc.items || sonuc || [];
+        
+        const toplamRaf = document.getElementById("kutuToplamRaf");
+        if (toplamRaf) toplamRaf.innerText = (sonuc.totalCount || raflar.length) || 0;
+
+        const rafSelect = document.getElementById("rafAramaSelect");
+        if(rafSelect) {
+            rafSelect.innerHTML = '<option value="">Tüm Rafları Göster</option>';
+            raflar.forEach(r => {
+                rafSelect.innerHTML += `<option value="${r.code}">${escapeHtml(r.code)}</option>`;
+            });
+        }
+        
+        rafView.setItems(raflar);
+    } catch (e) {
+        rafView.setItems([]);
+    }
     
     // 📊 Kutu İstatistiklerini Güncelle (Toplam Çeşit ve Kritik Stok)
     try {
@@ -351,7 +357,8 @@ if (btnRafKaydetModal) {
 // 3. KATMAN: ÜRÜNLER (RAF SEÇİLDİĞİNDE)
 // ============================================================================
 
-async function raftakiUrunleriGoruntule(rafId, rafKodu) {
+async function raftakiUrunleriGoruntule(rafId, rafKodu, skipHistory = false) {
+    if (!skipHistory) { history.pushState({ view: 'urun', rafId: rafId, rafName: rafKodu, depoId: aktifDepoId, depoName: document.getElementById('seciliDepoAdiRaflaricin').innerText }, null, ''); }
     aktifRafId = rafId;
     document.getElementById("rafListesiGorunumu").classList.add("d-none");
     document.getElementById("urunListesiGorunumu").classList.remove("d-none");
@@ -978,3 +985,45 @@ async function islemYapScanner(barcode) {
 }
 
 
+
+// Raf Listesi Filtreleme Event Listenerlar�
+document.getElementById('aramaKutusuRaf')?.addEventListener('input', (e) => {
+    rafView.setSearch(e.target.value);
+});
+
+document.getElementById('rafAramaSelect')?.addEventListener('change', (e) => {
+    document.getElementById('aramaKutusuRaf').value = '';
+    rafView.setSearch(e.target.value);
+});
+
+document.getElementById('btnFiltreleriTemizleRaf')?.addEventListener('click', () => {
+    document.getElementById('aramaKutusuRaf').value = '';
+    document.getElementById('rafAramaSelect').value = '';
+    rafView.setSearch('');
+});
+
+
+
+
+window.addEventListener('popstate', (e) => {
+    if (e.state && e.state.view) {
+        if (e.state.view === 'depo') {
+            document.getElementById('rafListesiGorunumu').classList.add('d-none');
+            document.getElementById('urunListesiGorunumu').classList.add('d-none');
+            document.getElementById('depoListesiGorunumu').classList.remove('d-none');
+            aktifDepoId = null;
+            aktifRafId = null;
+            depolariYukle();
+        } else if (e.state.view === 'raf') {
+            raflariGoruntule(e.state.depoId, e.state.depoName, true);
+        } else if (e.state.view === 'urun') {
+            raftakiUrunleriGoruntule(e.state.rafId, e.state.rafName, true);
+        }
+    } else {
+        document.getElementById('rafListesiGorunumu').classList.add('d-none');
+        document.getElementById('urunListesiGorunumu').classList.add('d-none');
+        document.getElementById('depoListesiGorunumu').classList.remove('d-none');
+    }
+});
+
+document.addEventListener('DOMContentLoaded', () => { history.replaceState({ view: 'depo' }, null, ''); });

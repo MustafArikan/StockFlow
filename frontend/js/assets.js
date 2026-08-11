@@ -1,4 +1,4 @@
-// XSS koruması
+﻿// XSS koruması
 
 
 let currentAssetId = null;
@@ -112,7 +112,7 @@ function initEventListeners() {
 function initSearchAndActionListeners() {
     document.getElementById('btnSearchAsset')?.addEventListener('click', searchAsset);
     document.getElementById('serialSearchInput')?.addEventListener('keyup', e => { if (e.key === 'Enter') searchAsset(); });
-    document.getElementById('btnGeriDonGrid')?.addEventListener('click', goBackToGrid);
+    document.getElementById('btnGeriDonGrid')?.addEventListener('click', () => { history.back(); });
 
     document.getElementById('equipmentGridCards')?.addEventListener('click', (e) => {
         const cardLink = e.target.closest('.grid-asset-link');
@@ -545,7 +545,7 @@ async function loadUsersForDropdown() {
     }
 }
 
-async function searchAsset(kameraBarkodu = null) {
+async function searchAsset(kameraBarkodu = null, skipHistory = false) {
     let serial = "";
     let isManualInput = false;
 
@@ -988,3 +988,27 @@ async function submitDeleteAsset() {
         }
     }
 }
+
+
+
+window.addEventListener('popstate', (e) => {
+    if (e.state && e.state.view) {
+        if (e.state.view === 'grid') {
+            document.getElementById('assetResultContainer').classList.add('d-none');
+            document.getElementById('adminGridContainer').classList.remove('d-none');
+            currentAssetId = null;
+            currentAssetProductId = null;
+            currentAssetSerialNumber = null;
+            if (['admin', 'superadmin'].includes(userRole)) {
+                loadGridCards(currentGridPage);
+            }
+        } else if (e.state.view === 'asset') {
+            searchAsset(e.state.serial, true);
+        }
+    } else {
+        document.getElementById('assetResultContainer').classList.add('d-none');
+        document.getElementById('adminGridContainer').classList.remove('d-none');
+    }
+});
+
+document.addEventListener('DOMContentLoaded', () => { history.replaceState({ view: 'grid' }, null, ''); });

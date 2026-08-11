@@ -820,7 +820,12 @@ function updateIslemAdediFromBoxes() {
     }
     
     let hasSpecificQty = boxes.some(inp => parseFloat(inp.value) > 0);
+    const labelEl = islemAdediInput.previousElementSibling;
+    
     if (hasSpecificQty) {
+        islemAdediInput.readOnly = true;
+        if (labelEl) labelEl.innerHTML = '4. Toplam Miktar <span class="text-primary">(Otomatik)</span>';
+        
         let total = 0;
         boxes.forEach(inp => {
             const val = parseFloat(inp.value) || 0;
@@ -844,6 +849,9 @@ function updateIslemAdediFromBoxes() {
         islemAdediInput.value = total;
         // Trigger input event so formuDenetle evaluates the new value
         islemAdediInput.dispatchEvent(new Event('input'));
+    } else {
+        islemAdediInput.readOnly = false;
+        if (labelEl) labelEl.textContent = '4. İşlem Miktarı';
     }
 }
 
