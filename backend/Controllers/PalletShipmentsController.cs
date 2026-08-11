@@ -29,12 +29,15 @@ public class PalletShipmentsController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> Create(CreatePalletDto dto)
     {
-        var prefix = _config["Gs1:CompanyPrefix"] ?? "999";
-        var serial = (await _context.PalletShipments.CountAsync() + 1).ToString().PadLeft(9, '0');
+        var companyPrefix = _config["Gs1Settings:CompanyPrefix"]
+            ?? throw new InvalidOperationException("GS1 şirket prefiksi tanımlı değil.");
+
+        int serialLength = 16 - companyPrefix.Length;
+        var serial = (await _context.PalletShipments.CountAsync() + 1).ToString().PadLeft(serialLength, '0');
         var extensionDigit = "1";
-        var body = extensionDigit + prefix.PadRight(7, '0') + serial;
-        var checkDigit = Gs1CheckDigitCalculator.Calculate(body[..17]);
-        var sscc = body[..17] + checkDigit;
+        var body = extensionDigit + companyPrefix + serial;
+        var checkDigit = Gs1CheckDigitCalculator.Calculate(body);
+        var sscc = body + checkDigit;
 
         var pallet = new PalletShipment { Sscc = sscc, SourceWarehouseId = dto.SourceWarehouseId, Description = dto.Description };
         _context.PalletShipments.Add(pallet);

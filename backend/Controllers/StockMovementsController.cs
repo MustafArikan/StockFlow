@@ -146,17 +146,27 @@ namespace stok_takip.Controllers
                 return BadRequest(new { message = $"Girilen miktar taban birime ({unit.Name}) çevrildiğinde geçersiz bir değer üretiyor." });
             
             int? batchId = null;
-            if (!string.IsNullOrWhiteSpace(dto.LotNumber))
+            // ÖNEMLİ: Eskiden bu blok SADECE LotNumber doluysa çalışıyordu.
+            // Bu yüzden kullanıcı/barkod sadece SKT (ExpiryDate) gönderip Lot boş bırakınca
+            // hiçbir ProductBatch oluşturulmuyor, SKT sessizce kayboluyordu.
+            // Artık LotNumber VEYA ExpiryDate'den herhangi biri doluysa batch oluşturuyoruz.
+            if (!string.IsNullOrWhiteSpace(dto.LotNumber) || dto.ExpiryDate.HasValue)
             {
+                // Lot numarası verilmediyse (örn. barkodda sadece AI(17) SKT var, AI(10) lot yoksa)
+                // ürün + SKT'ye göre deterministik bir lot numarası üretiyoruz.
+                var effectiveLotNumber = !string.IsNullOrWhiteSpace(dto.LotNumber)
+                    ? dto.LotNumber
+                    : $"OTO-{dto.ExpiryDate!.Value.ToString("yyyyMMdd")}";
+
                 var batch = await _context.ProductBatches.FirstOrDefaultAsync(
-                    b => b.ProductId == product.Id && b.LotNumber == dto.LotNumber && !b.IsDeleted);
+                    b => b.ProductId == product.Id && b.LotNumber == effectiveLotNumber && !b.IsDeleted);
 
                 if (batch == null)
                 {
                     batch = new ProductBatch
                     {
                         ProductId = product.Id,
-                        LotNumber = dto.LotNumber,
+                        LotNumber = effectiveLotNumber,
                         ExpiryDate = dto.ExpiryDate,
                         IsActive = true
                     };
@@ -165,7 +175,7 @@ namespace stok_takip.Controllers
                 }
                 else if (dto.ExpiryDate.HasValue && batch.ExpiryDate != dto.ExpiryDate)
                 {
-                    return BadRequest(new { message = $"'{dto.LotNumber}' lot numarası zaten farklı bir SKT ile kayıtlı ({batch.ExpiryDate}). Lot numaraları benzersiz olmalıdır." });
+                    return BadRequest(new { message = $"'{effectiveLotNumber}' lot numarası zaten farklı bir SKT ile kayıtlı ({batch.ExpiryDate}). Lot numaraları benzersiz olmalıdır." });
                 }
                 batchId = batch.Id;
             }

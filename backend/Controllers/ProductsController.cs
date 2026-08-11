@@ -183,7 +183,7 @@ public class ProductsController : ControllerBase
         }
 
         var detectedType = BarcodeTypeDetector.Detect(dto.Barcode);
-        if (detectedType is BarcodeType.Gtin12_UpcA or BarcodeType.Gtin13_Ean13 or BarcodeType.Gtin14_Itf14)
+        if (detectedType is BarcodeType.Gtin8_Ean8 or BarcodeType.Gtin12_UpcA or BarcodeType.Gtin13_Ean13 or BarcodeType.Gtin14_Itf14)
         {
             if (!Gs1CheckDigitCalculator.IsValid(dto.Barcode))
                 return BadRequest(new { message = "Girilen barkodun kontrol hanesi hatalı görünüyor. Barkodu tekrar kontrol edin veya elle taratın." });
@@ -300,7 +300,7 @@ public class ProductsController : ControllerBase
         }
 
         var detectedType = BarcodeTypeDetector.Detect(dto.Barcode);
-        if (detectedType is BarcodeType.Gtin12_UpcA or BarcodeType.Gtin13_Ean13 or BarcodeType.Gtin14_Itf14)
+        if (detectedType is BarcodeType.Gtin8_Ean8 or BarcodeType.Gtin12_UpcA or BarcodeType.Gtin13_Ean13 or BarcodeType.Gtin14_Itf14)
         {
             if (!Gs1CheckDigitCalculator.IsValid(dto.Barcode))
                 return BadRequest(new { message = "Girilen barkodun kontrol hanesi hatalı görünüyor. Barkodu tekrar kontrol edin veya elle taratın." });

@@ -33,6 +33,9 @@ public class BarcodesController : ControllerBase
         if (looksLikeGs1)
         {
             var parsed = Gs1BarcodeParser.Parse(raw);
+            if (parsed.GtinCheckDigitError)
+                return BadRequest(new { message = "Barkoddaki GTIN kontrol hanesi hatalı. Barkod bozuk olabilir, tekrar okutun." });
+
             if (parsed.Sscc != null)
                 return Ok(new { kind = "pallet", sscc = parsed.Sscc });
 

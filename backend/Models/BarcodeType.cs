@@ -8,5 +8,6 @@ public enum BarcodeType
     Gtin13_Ean13 = 3,
     Gtin14_Itf14 = 4,
     Gs1_128 = 5,
-    Sscc18 = 6
+    Sscc18 = 6,
+    Gtin8_Ean8 = 7
 }

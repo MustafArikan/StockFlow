@@ -11,6 +11,7 @@ public class ParsedGs1Data
     public decimal? VariableQuantity { get; set; }
     public decimal? NetWeightKg { get; set; }
     public string? Sscc { get; set; }
+    public bool GtinCheckDigitError { get; set; } = false;
 }
 
 public static class Gs1BarcodeParser
@@ -57,9 +58,13 @@ public static class Gs1BarcodeParser
             else
             {
                 int end = raw.IndexOf(FNC1, pos);
-                if (end == -1) end = raw.Length;
+                bool fnc1Found = end != -1;
+                if (!fnc1Found)
+                {
+                    end = FindNextKnownAiPosition(raw, pos);
+                }
                 value = raw.Substring(pos, end - pos);
-                pos = end + (end < raw.Length ? 1 : 0);
+                pos = end + (fnc1Found ? 1 : 0);
             }
 
             ApplyAi(result, matchedAi, value);
@@ -75,7 +80,12 @@ public static class Gs1BarcodeParser
         switch (ai)
         {
             case "00": result.Sscc = value; break;
-            case "01": result.Gtin = value; break;
+            case "01": 
+                if (Gs1CheckDigitCalculator.IsValid(value))
+                    result.Gtin = value;
+                else
+                    result.GtinCheckDigitError = true;
+                break;
             case "10": result.LotNumber = value; break;
             case "11": result.ProductionDate = ParseYyMmDd(value); break;
             case "17": result.ExpiryDate = ParseYyMmDd(value); break;
@@ -94,5 +104,16 @@ public static class Gs1BarcodeParser
         int day = int.Parse(yymmdd.Substring(4, 2));
         if (day == 0) day = DateTime.DaysInMonth(year, month);
         try { return new DateTime(year, month, day); } catch { return null; }
+    }
+
+    private static int FindNextKnownAiPosition(string raw, int searchFrom)
+    {
+        for (int i = searchFrom + 1; i < raw.Length - 1; i++)
+        {
+            var two = raw.Substring(i, 2);
+            if (FixedLengthAIs.ContainsKey(two) || IsKnownVariableAi(two))
+                return i;
+        }
+        return raw.Length;
     }
 }

@@ -218,13 +218,25 @@ function initPhysicalScannerListener() {
     });
 }
 
+function extractSymbology(rawScan) {
+    const match = rawScan.match(/^\](\w\d)/);
+    const map = { C1: 'GS1-128', E0: 'EAN-13', A0: 'CODE-39', Q0: 'QR_CODE' };
+    if (match && map[match[1]]) {
+        return { format: map[match[1]], code: rawScan.substring(3) };
+    }
+    return { format: '', code: rawScan };
+}
+
 // Sadece UI işlemlerini yapan özel fonksiyon
 async function _uygulaFizikselArama(scannedText) {
+    const parsedScan = extractSymbology(scannedText);
+    scannedText = parsedScan.code;
+
     let resolveRes = null;
     try {
         resolveRes = await apiRequest('/barcodes/resolve', 'POST', {
             rawCode: scannedText,
-            symbologyFormat: ''
+            symbologyFormat: parsedScan.format
         });
     } catch (e) {
         // Eğer resolve patlarsa eski düz arama denenebilir ama uyarı vermek daha iyi
@@ -628,8 +640,13 @@ if (urunSecimiEl) {
                                 stoklarListesi.appendChild(btn);
                             });
                             
-                            // Eğer stok varsa ilkini (FIFO) otomatik seç ki lot ve SKT alanları dolsun
-                            if (stoklar.length > 0 && stoklarListesi.firstElementChild) {
+                            // Eğer stok varsa ilkini (FIFO) otomatik seç ki lot ve SKT alanları dolsun.
+                            // NOT: Barkod okutma akışı (kamera / fiziksel okuyucu / manuel) lot ve SKT
+                            // alanlarını zaten kendi başına doldurmuş olabilir; bu durumda burada FIFO
+                            // ilk stoğu otomatik seçip o değerleri EZMEMELİYİZ.
+                            const lotDoluMu = document.getElementById("lotNumber")?.value;
+                            const sktDoluMu = document.getElementById("expiryDate")?.value;
+                            if (stoklar.length > 0 && stoklarListesi.firstElementChild && !lotDoluMu && !sktDoluMu) {
                                 stoklarListesi.firstElementChild.click();
                             }
                         }
@@ -998,7 +1015,9 @@ function initMovementCamera() {
                                 }
                             }
                             if (resolveRes.variableQuantity || resolveRes.suggestedQuantity) {
-                                const qtyInp = document.getElementById('hareketMiktar');
+                                // Düzeltme: formdaki gerçek id "islemAdedi" — "hareketMiktar" diye bir alan yok,
+                                // bu yüzden bu satır hiçbir zaman çalışmıyordu.
+                                const qtyInp = document.getElementById('islemAdedi');
                                 if (qtyInp) qtyInp.value = resolveRes.variableQuantity || resolveRes.suggestedQuantity;
                             }
                         }, 300);

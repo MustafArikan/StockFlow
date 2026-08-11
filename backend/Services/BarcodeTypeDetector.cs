@@ -13,6 +13,7 @@ public static class BarcodeTypeDetector
 
         return code.Length switch
         {
+            8 => BarcodeType.Gtin8_Ean8,
             12 => BarcodeType.Gtin12_UpcA,
             13 => BarcodeType.Gtin13_Ean13,
             14 => BarcodeType.Gtin14_Itf14,
