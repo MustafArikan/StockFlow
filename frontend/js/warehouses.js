@@ -165,12 +165,88 @@ async function yoneticileriYukle() {
     const select = document.getElementById("depoYoneticiId");
     if(!select) return;
     try {
-        const yoneticiler = await apiRequest('/users', 'GET');
+        select.innerHTML = '<option value="">Yöneticiler Yükleniyor...</option>';
+        
+        // 1. Yetkileri (Permissions) Çek ve Depo Yetki ID'lerini Bul
+        const permsRes = await apiRequest('/roles/permissions', 'GET');
+        const permsData = permsRes.data || permsRes || [];
+        
+        let warehousePermIds = new Set();
+        const extractPerms = (list) => {
+            for (const item of list) {
+                if (item.permissions) {
+                    extractPerms(item.permissions);
+                } else {
+                    const sysName = (item.systemName || item.name || "").toLowerCase();
+                    if (sysName.includes("warehouse.edit") || sysName.includes("warehouse.add") || sysName.includes("warehouse.manage")) {
+                        if (item.id) warehousePermIds.add(item.id);
+                    }
+                }
+            }
+        };
+        extractPerms(Array.isArray(permsData) ? permsData : []);
+
+        // 2. Tüm Rolleri Çek ve Depo Yetkisi Olan Rolleri Bul
+        const rolesRes = await apiRequest('/roles', 'GET');
+        const rolesArray = rolesRes.data || rolesRes.items || rolesRes || [];
+        
+        const yetkiliRoleAdlari = ["superadmin", "admin", "admin_super"];
+        const yetkiliRoleIds = new Set();
+
+        for (const role of rolesArray) {
+            const roleName = (role.name || "").toLowerCase();
+            if (yetkiliRoleAdlari.includes(roleName)) {
+                if (role.id) yetkiliRoleIds.add(role.id.toString());
+                continue;
+            }
+            
+            let rPerms = role.permissionIds;
+            
+            // Eğer liste içinde permissionIds gelmemişse, detaya gitmeyi dene
+            if (!rPerms && role.id) {
+                try {
+                    const detailRes = await apiRequest(`/roles/${role.id}`, 'GET');
+                    const detail = detailRes.data || detailRes || {};
+                    rPerms = detail.permissionIds || (detail.permissions ? detail.permissions.map(p => p.id) : []);
+                } catch(e) {}
+            }
+            
+            rPerms = rPerms || [];
+            const hasAccess = rPerms.some(id => warehousePermIds.has(id));
+            if (hasAccess) {
+                if (role.id) yetkiliRoleIds.add(role.id.toString());
+                if (roleName) yetkiliRoleAdlari.push(roleName);
+            }
+        }
+
+        // 3. Kullanıcıları Çek ve Yalnızca Yetkili Roldeki Kullanıcıları Listele
+        const response = await apiRequest('/users?pageNumber=1&pageSize=1000', 'GET');
+        const usersArray = response.items || response.data || response || [];
+        
         select.innerHTML = '<option value="">Yönetici Seçiniz...</option>';
-        yoneticiler.forEach(y => {
-                select.innerHTML += `<option value="${y.id}">${escapeHtml(y.email)}</option>`;
-        });
+        
+        if (usersArray && Array.isArray(usersArray)) {
+            const yetkiliKullanicilar = usersArray.filter(y => {
+                const uRoleId = y.roleId?.toString();
+                const uRoleName = (y.role || "").toLowerCase();
+                return yetkiliRoleIds.has(uRoleId) || yetkiliRoleAdlari.includes(uRoleName);
+            });
+            
+            yetkiliKullanicilar.forEach(y => {
+                const fname = y.firstName || y.FirstName || "";
+                const lname = y.lastName || y.LastName || "";
+                const email = y.email || y.Email || "";
+                const displayName = `${fname} ${lname}`.trim() || email;
+                
+                select.innerHTML += `<option value="${y.id || y.Id}">${escapeHtml(displayName)} (${escapeHtml(y.role || 'Yetkili')})</option>`;
+            });
+            
+            if (yetkiliKullanicilar.length === 0) {
+                select.innerHTML += '<option value="" disabled>Uygun yetkili (Warehouse.Edit vb.) bulunamadı.</option>';
+            }
+        }
     } catch(e) {
+        console.error("Yöneticiler yüklenirken hata:", e);
         select.innerHTML = '<option value="">Yöneticiler Yüklenemedi (Opsiyonel)</option>';
     }
 }
