@@ -54,7 +54,7 @@ public class TcKimlikVergiNoValidationAttribute : ValidationAttribute
 }
 
 public record AttributeAllowedValueDto(
-    [property: Required, StringLength(100, MinimumLength = 1)] string Value,
+    [Required, StringLength(100, MinimumLength = 1)] string Value,
     string? Label,
     int DisplayOrder,
     bool IsActive = true);

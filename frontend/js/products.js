@@ -12,6 +12,8 @@ let aktifArama = '';
 let siralamaSutunu = 'id';
 let siralamaYonu = 'asc';
 
+let yeniUrunCevrimleri = [];
+
 if (!token) window.location.href = 'login.html';
 
 // Alt kategorileri recursive olarak bulan fonksiyon
@@ -701,6 +703,45 @@ if (urunRafSelect && btnHedefRafEkle) {
 // =========================================================================
 // ÜRÜN EKLE/DÜZENLE MODALI İÇİN DİNAMİK KURALLAR (PIM) RENDER MOTORU
 // =========================================================================
+// Kategori seçildiğinde dinamik özellikleri yükle
+document.getElementById('urunKategoriId').addEventListener('change', async function() {
+    await loadCategoryRulesForProduct(this.value);
+});
+
+function yeniUrunCevrimTablosunuGuncelle() {
+    const kapsayici = document.getElementById("yeniUrunCevrimTablosuKapsayici");
+    const liste = document.getElementById("yeniUrunCevrimListesi");
+    
+    if (!kapsayici || !liste) return;
+    
+    if (yeniUrunCevrimleri.length === 0) {
+        kapsayici.classList.add("d-none");
+        liste.innerHTML = "";
+        return;
+    }
+    
+    kapsayici.classList.remove("d-none");
+    liste.innerHTML = "";
+    
+    yeniUrunCevrimleri.forEach(cevrim => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+            <td class="fw-medium">${escapeHtml(cevrim.alternativeUnitName.split(' (')[0])}</td>
+            <td>1 ${escapeHtml(cevrim.alternativeUnitName.split(' (')[0])} = <span class="fw-bold">${cevrim.conversionFactor}</span> Taban</td>
+            <td class="text-center">
+                ${cevrim.isDefault 
+                    ? '<span class="badge bg-success bg-opacity-10 text-success"><i class="bi bi-check-circle-fill"></i></span>' 
+                    : '<span class="badge bg-secondary bg-opacity-10 text-secondary">-</span>'}
+            </td>
+            <td class="text-end">
+                <button type="button" class="btn btn-sm btn-outline-danger btn-yeni-urun-cevrim-sil" data-id="${cevrim.alternativeUnitId}">
+                    <i class="bi bi-trash"></i>
+                </button>
+            </td>
+        `;
+        liste.appendChild(tr);
+    });
+}
 const urunKategoriSelectForm = document.getElementById('urunKategoriId');
 if (urunKategoriSelectForm) {
     urunKategoriSelectForm.addEventListener('change', async function (e) {
@@ -731,7 +772,7 @@ if (urunKategoriSelectForm) {
             let validRuleIndex = 0;
             rules.forEach(rule => {
                 const tl = rule.targetLevel ? rule.targetLevel.toLowerCase().trim() : "";
-                if (tl === "asset" || tl === "demirbaş" || tl === "demirbas") return;
+                if (tl === "asset" || tl === "ekipman" || tl === "ekipman") return;
 
                 let inputHtml = '';
                 let requiredAttr = rule.isRequired ? 'required' : '';
@@ -1009,15 +1050,13 @@ if (btnUrunKaydetEl) {
         };
 
         if (!id) {
-            const hizliBirimId = document.getElementById("yeniUrunAlternatifBirimId")?.value;
-            const hizliBirimCarpani = document.getElementById("yeniUrunCevrimCarpani")?.value;
-            if (hizliBirimId && hizliBirimCarpani) {
+            yeniUrunCevrimleri.forEach(cevrim => {
                 urunVerisi.unitConversions.push({
-                    alternativeUnitId: parseInt(hizliBirimId),
-                    conversionFactor: parseFloat(hizliBirimCarpani),
-                    isDefault: true
+                    alternativeUnitId: parseInt(cevrim.alternativeUnitId),
+                    conversionFactor: parseFloat(cevrim.conversionFactor),
+                    isDefault: cevrim.isDefault
                 });
-            }
+            });
         }
 
         const dinamikInputlar = document.querySelectorAll('.dynamic-rule-input');
@@ -1304,6 +1343,8 @@ if (btnYeniUrunModal) {
             hizliCevrim.classList.remove("d-none");
             document.getElementById("yeniUrunAlternatifBirimId").value = "";
             document.getElementById("yeniUrunCevrimCarpani").value = "";
+            yeniUrunCevrimleri = [];
+            if (typeof yeniUrunCevrimTablosunuGuncelle === 'function') yeniUrunCevrimTablosunuGuncelle();
         }
 
         document.getElementById("btnUrunKaydet").innerText = "Ekle ve Kaydet";
@@ -2382,6 +2423,45 @@ document.addEventListener("click", async (e) => {
         } catch (hata) {
             hataGoster("Tedarikçi silinemedi: " + hata.message);
         }
+    }
+    if (e.target.closest("#btnYeniUrunCevrimEkle")) {
+        const altUnitSelect = document.getElementById("yeniUrunAlternatifBirimId");
+        const altUnitId = altUnitSelect.value;
+        const altUnitName = altUnitSelect.options[altUnitSelect.selectedIndex]?.text || "";
+        const factor = document.getElementById("yeniUrunCevrimCarpani").value;
+        const isDefault = document.getElementById("yeniUrunCevrimVarsayilan").checked;
+        
+        if (!altUnitId || !factor) {
+            uyariGoster("Lütfen birim seçin ve çevrim çarpanı girin.");
+            return;
+        }
+        
+        // Aynı birimden daha önce eklenmiş mi kontrol et
+        const mevcut = yeniUrunCevrimleri.find(c => c.alternativeUnitId == altUnitId);
+        if (mevcut) {
+            uyariGoster("Bu birim için zaten bir çevrim eklenmiş.");
+            return;
+        }
+        
+        yeniUrunCevrimleri.push({
+            alternativeUnitId: altUnitId,
+            alternativeUnitName: altUnitName,
+            conversionFactor: factor,
+            isDefault: isDefault
+        });
+        
+        yeniUrunCevrimTablosunuGuncelle();
+        
+        document.getElementById("yeniUrunAlternatifBirimId").value = "";
+        document.getElementById("yeniUrunCevrimCarpani").value = "";
+        document.getElementById("yeniUrunCevrimVarsayilan").checked = true;
+    }
+
+    if (e.target.closest(".btn-yeni-urun-cevrim-sil")) {
+        const btn = e.target.closest(".btn-yeni-urun-cevrim-sil");
+        const altUnitId = btn.getAttribute("data-id");
+        yeniUrunCevrimleri = yeniUrunCevrimleri.filter(c => c.alternativeUnitId != altUnitId);
+        yeniUrunCevrimTablosunuGuncelle();
     }
 
     if (e.target.closest("#btnDuzenleCevrimEkle")) {

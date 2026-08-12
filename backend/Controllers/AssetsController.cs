@@ -97,13 +97,26 @@ public class AssetsController : ControllerBase
                 Status = "Available" // İlk eklendiğinde durumu 'Müsait/Boşta' olur
             };
 
+            var historyNotes = "Ekipman sisteme eklendi ve stoka ait depodan 1 adet düşüldü.";
+            
+            if (dto.AssignedUserId.HasValue)
+            {
+                var assignedUser = await _context.Users.FindAsync(dto.AssignedUserId.Value);
+                if (assignedUser != null)
+                {
+                    newAsset.AssignedToId = dto.AssignedUserId.Value;
+                    newAsset.Status = "InUse";
+                    historyNotes += $" Ekipman oluşturulurken {assignedUser.FirstName} {assignedUser.LastName} adlı kullanıcıya zimmetlendi.";
+                }
+            }
+
             // Ekipman eklendiğine dair ilk yaşam döngüsü logunun atılması
             var historyRecord = new AssetHistory
             {
                 Asset = newAsset,
                 UserId = GetCurrentUserId(),
-                EventType = "Sisteme Giriş",
-                Notes = "Ekipman sisteme eklendi ve stoka ait depodan 1 adet düşüldü."
+                EventType = dto.AssignedUserId.HasValue ? "Sisteme Giriş ve Zimmetleme" : "Sisteme Giriş",
+                Notes = historyNotes
             };
 
             _context.Assets.Add(newAsset);
@@ -177,12 +190,45 @@ public class AssetsController : ControllerBase
     [RequirePermission(Policies.RequireAssetRead)]
     [HttpGet]
     [NormalizePagination]
-    public async Task<IActionResult> GetAllAssets([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
+    public async Task<IActionResult> GetAllAssets(
+        [FromQuery] int pageNumber = 1, 
+        [FromQuery] int pageSize = 10,
+        [FromQuery] int? categoryId = null,
+        [FromQuery] string? status = null,
+        [FromQuery] string? dynamicAttributes = null)
     {
         var query = _context.Assets
             .AsNoTracking()
             .Include(a => a.Product)
-            .Include(a => a.AssignedTo);
+            .Include(a => a.AssignedTo)
+            .AsQueryable();
+
+        if (categoryId.HasValue)
+        {
+            query = query.Where(a => a.Product != null && a.Product.CategoryId == categoryId.Value);
+        }
+
+        if (!string.IsNullOrEmpty(status))
+        {
+            query = query.Where(a => a.Status == status);
+        }
+
+        if (!string.IsNullOrEmpty(dynamicAttributes))
+        {
+            try
+            {
+                var dict = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, string>>(dynamicAttributes);
+                if (dict != null)
+                {
+                    foreach (var kvp in dict)
+                    {
+                        var searchStr = $"\"{kvp.Key}\":\"{kvp.Value}\"";
+                        query = query.Where(a => a.Attributes != null && a.Attributes.Contains(searchStr));
+                    }
+                }
+            }
+            catch { /* Ignore parsing errors */ }
+        }
 
         var totalRecords = await query.CountAsync();
 

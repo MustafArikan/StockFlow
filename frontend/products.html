@@ -205,18 +205,46 @@
                                     </select>
                                 </div>
                                 <div class="col-md-12 mt-3 p-3 bg-light rounded border" id="yeniUrunHizliCevrimAlani">
-                                    <h6 class="small fw-bold text-secondary mb-3"><i class="bi bi-box-seam me-1"></i> (Opsiyonel) Hızlı Çevrim Tanımla (örn: Çuval)</h6>
-                                    <div class="row g-2">
-                                        <div class="col-md-6">
+                                    <h6 class="small fw-bold text-secondary mb-3"><i class="bi bi-box-seam me-1"></i> (Opsiyonel) Alternatif Birim Çevrimleri Tanımla</h6>
+                                    
+                                    <div class="table-responsive mb-3 d-none" id="yeniUrunCevrimTablosuKapsayici">
+                                        <table class="table table-sm table-bordered align-middle mb-0 bg-white">
+                                            <thead class="table-light">
+                                                <tr>
+                                                    <th>Birim</th>
+                                                    <th>Çarpan (1 Alt = X Taban)</th>
+                                                    <th class="text-center w-50px">Vars.</th>
+                                                    <th class="text-end w-50px"></th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="yeniUrunCevrimListesi">
+                                                <!-- JS ile doldurulacak -->
+                                            </tbody>
+                                        </table>
+                                    </div>
+
+                                    <div class="row g-2 align-items-center">
+                                        <div class="col-12 col-md-4">
                                             <select class="form-select form-select-sm" id="yeniUrunAlternatifBirimId">
                                                 <option value="">Alternatif birim seçiniz...</option>
                                             </select>
                                         </div>
-                                        <div class="col-md-6">
+                                        <div class="col-12 col-md-4">
                                             <input type="number" class="form-control form-control-sm" id="yeniUrunCevrimCarpani" placeholder="Çarpan (1 Alt = Kaç Taban)" min="0.0001" step="any">
                                         </div>
+                                        <div class="col-12 col-md-2">
+                                            <div class="form-check form-switch pt-1">
+                                                <input class="form-check-input cursor-pointer" type="checkbox" id="yeniUrunCevrimVarsayilan" checked>
+                                                <label class="form-check-label small text-muted cursor-pointer" for="yeniUrunCevrimVarsayilan">Vars.</label>
+                                            </div>
+                                        </div>
+                                        <div class="col-12 col-md-2 text-end">
+                                            <button type="button" class="btn btn-outline-primary btn-sm w-100" id="btnYeniUrunCevrimEkle">
+                                                <i class="bi bi-plus-lg"></i> Ekle
+                                            </button>
+                                        </div>
                                     </div>
-                                    <div class="mt-1"><small class="text-muted fst-italic">Ürünü oluştururken hızlıca 1 tane alternatif birim ekleyebilirsiniz.</small></div>
+                                    <div class="mt-2"><small class="text-muted fst-italic">Ürünü oluştururken birden fazla alternatif birim ekleyebilirsiniz.</small></div>
                                 </div>
                             </div>
                         </div>
@@ -257,7 +285,7 @@
                                     <div class="col-12 col-md-2 text-center">
                                         <div class="form-check form-switch d-inline-block">
                                             <input class="form-check-input" type="checkbox" id="duzenleCevrimVarsayilan">
-                                            <label class="form-check-label small" for="duzenleCevrimVarsayilan">Varsayılan</label>
+                                            <label class="form-check-label small" for="duzenleCevrimVarsayilan">Vars.</label>
                                         </div>
                                     </div>
                                     <div class="col-12 col-md-2 text-end">

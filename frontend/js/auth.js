@@ -86,7 +86,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (navItem) navItem.classList.remove("d-none");
             }
 
-            // Demirbaşlar (Assets)
+            // Ekipmanlar (Assets)
             if (payload.role === "superadmin" || permissions.some(p => p.startsWith("Asset."))) {
                 const navItem = document.getElementById("navAssetsItem");
                 if (navItem) navItem.classList.remove("d-none");

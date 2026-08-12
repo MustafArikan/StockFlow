@@ -580,7 +580,7 @@ async function kurallariYukle(categoryId) {
             }
 
             let targetBadge = kural.targetLevel === "Asset" 
-                ? '<span class="badge bg-dark"><i class="bi bi-phone"></i> Demirbaş</span>' 
+                ? '<span class="badge bg-dark"><i class="bi bi-phone"></i> Ekipman</span>' 
                 : '<span class="badge bg-light text-dark border"><i class="bi bi-box"></i> Katalog</span>';
 
             let zorunluBadge = kural.isRequired 
