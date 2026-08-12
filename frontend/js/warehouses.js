@@ -1,4 +1,4 @@
-﻿const API_URL = `${CONFIG.API_BASE_URL}/warehouses`;
+const API_URL = `${CONFIG.API_BASE_URL}/warehouses`;
 const token = localStorage.getItem('token');
 
 const userRole = typeof getUserRole === "function" ? getUserRole() : "User";
@@ -656,16 +656,27 @@ document.getElementById("btnDepoIciUrunKaydet")?.addEventListener("click", async
 document.getElementById("aramaKutusuDepo")?.addEventListener("input", (e) => depoView.setSearch(e.target.value));
 document.getElementById("siralamaDepo")?.addEventListener("change", (e) => {
     const val = e.target.value;
-    if (val === "URUN_COK" || val === "URUN_AZ") depoView.setSort("productCount");
-    else if (val.includes("TARIH")) depoView.setSort("id");
-    else depoView.setSort("name");
+    if (val === "TARIH_YENI") depoView.setSortState("id", "desc");
+    else if (val === "TARIH_ESKI") depoView.setSortState("id", "asc");
+    else if (val === "Z_A") depoView.setSortState("name", "desc");
+    else depoView.setSortState("name", "asc");
+});
+document.getElementById("btnFiltreleriTemizleDepo")?.addEventListener("click", () => {
+    const aramaKutu = document.getElementById("aramaKutusuDepo");
+    if (aramaKutu) aramaKutu.value = "";
+    const siralamaMenu = document.getElementById("siralamaDepo");
+    if (siralamaMenu) siralamaMenu.value = "TARIH_YENI";
+    
+    depoView.setSearch("");
+    depoView.setSortState("id", "desc");
 });
 document.getElementById("aramaKutusuUrun")?.addEventListener("input", (e) => urunView.setSearch(e.target.value));
 document.getElementById("siralamaUrun")?.addEventListener("change", (e) => {
     const val = e.target.value;
-    if (val === "MIKTAR_AZALAN" || val === "MIKTAR_ARTAN") urunView.setSort("stockQuantity");
-    else if (val === "A_Z") urunView.setSort("name");
-    else urunView.setSort("id");
+    if (val === "MIKTAR_AZALAN") urunView.setSortState("stockQuantity", "desc");
+    else if (val === "MIKTAR_ARTAN") urunView.setSortState("stockQuantity", "asc");
+    else if (val === "A_Z") urunView.setSortState("name", "asc");
+    else urunView.setSortState("id", "desc");
 });
 
 document.getElementById("btnGeriDonDepolara")?.addEventListener("click", () => {
