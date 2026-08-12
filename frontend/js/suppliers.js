@@ -13,7 +13,7 @@ const supplierView = createDataView({
     emptyMessage: "Kayıt bulunamadı.",
     searchFields: ['name', 'contactName', 'contactPhone', 'taxNumber', 'id'],
     defaultSortKey: 'id',
-    defaultSortDir: 'asc',
+    defaultSortDir: 'desc',
     pageSize: 10,
     renderRow: (t) => {
         const duzenlenebilir = hasPermission("Supplier.Edit");
@@ -38,8 +38,27 @@ const supplierView = createDataView({
 document.getElementById("thId")?.addEventListener("click", () => supplierView.setSort("id"));
 document.getElementById("thAd")?.addEventListener("click", () => supplierView.setSort("name"));
 
-document.getElementById("aramaKutusu")?.addEventListener("keyup", (e) => {
+document.getElementById("aramaKutusu")?.addEventListener("input", (e) => {
     supplierView.setSearch(e.target.value);
+});
+
+document.getElementById("siralamaTedarikci")?.addEventListener("change", (e) => {
+    const val = e.target.value;
+    if (val === "TARIH_YENI") supplierView.setSortState("id", "desc");
+    else if (val === "TARIH_ESKI") supplierView.setSortState("id", "asc");
+    else if (val === "Z_A") supplierView.setSortState("name", "desc");
+    else supplierView.setSortState("name", "asc");
+});
+
+document.getElementById("btnFiltreleriTemizle")?.addEventListener("click", () => {
+    const aramaKutu = document.getElementById("aramaKutusu");
+    if (aramaKutu) aramaKutu.value = "";
+    
+    const siralama = document.getElementById("siralamaTedarikci");
+    if (siralama) siralama.value = "TARIH_YENI";
+    
+    supplierView.setSearch("");
+    supplierView.setSortState("id", "desc");
 });
 
 async function tedarikcileriYukle() {
