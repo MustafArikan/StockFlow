@@ -132,7 +132,27 @@ async function apiRequest(endpoint, method = 'GET', bodyData = null) {
     const data = isJson ? await response.json() : null;
 
     if (!response.ok) {
-        const errorMessage = data?.message || 'Sunucu ile iletisimde bir hata olustu.';
+        let errorMessage = data?.message || 'Sunucu ile iletisimde bir hata olustu.';
+        
+        // ASP.NET Core DTO Validation Hatalarını Yakalama (400 Bad Request)
+        if (response.status === 400 && data?.errors && typeof data.errors === 'object') {
+            let errorHtml = '<div class="text-start mt-2"><ul class="mb-0 text-danger" style="list-style-type: none; padding-left: 0;">';
+            let foundValidError = false;
+            for (const key in data.errors) {
+                if (Array.isArray(data.errors[key])) {
+                    data.errors[key].forEach(msg => {
+                        errorHtml += `<li class="mb-1"><i class="bi bi-exclamation-triangle-fill me-2 text-warning"></i>${msg}</li>`;
+                        foundValidError = true;
+                    });
+                }
+            }
+            errorHtml += '</ul></div>';
+            
+            if (foundValidError) {
+                errorMessage = `<div class="mb-2 fw-bold text-dark">Lütfen aşağıdaki eksiklikleri giderin:</div> ${errorHtml}`;
+            }
+        }
+
         throw new Error(errorMessage);
     }
     return data;
