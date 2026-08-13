@@ -606,24 +606,6 @@ StockFlow/
 
 ---
 
-## Proje Durumu
-
-Aktif olarak geliştirilmektedir. Uygulama kurum içi / canlı öncesi kullanım için özellik
-bakımından tamamlanmıştır; kalan işler canlı ortam sertleştirmesidir.
-
-| Alan | Durum |
-| :--- | :--- |
-| Kimlik doğrulama, RBAC, dinamik politikalar | ✅ Tamamlandı |
-| Katalog, PIM/EAV, toplu içe aktarma | ✅ Tamamlandı |
-| Depolar, konumlar, stok hareketleri | ✅ Tamamlandı |
-| Tedarikçiler ve ürün–tedarikçi matrisi | ✅ Tamamlandı |
-| Ekipman takibi ve QR/barkod okuma | ✅ Tamamlandı |
-| Dashboard, raporlar, PDF/Excel dışa aktarma | ✅ Tamamlandı |
-| Denetim kayıtları ve yumuşak silme | ✅ Tamamlandı |
-| İzleme altyapısı (Prometheus/Grafana/Loki) | ✅ Tamamlandı |
-
----
-
 ## Katkı Rehberi
 
 1. `dev` üzerinden mevcut kurala uygun dal açın: `feature/<konu>`, `fix/<konu>`
