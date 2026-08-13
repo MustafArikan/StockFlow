@@ -4,13 +4,12 @@ namespace stok_takip.DTOs
 {
     public class StockMovementRequestDto
     {
-        [Required, StringLength(50)]
-        [RegularExpression(@"^[a-zA-Z0-9-]+$")]
+        [Required, StringLength(100)]
         public string ProductBarcode { get; set; } = string.Empty; // Örn: "VGA-4090"
         
         [Required]
-        [Range(1, 100000)]
-        public int Quantity { get; set; }
+        [Range(typeof(decimal), "0.001", "100000", ErrorMessage = "Miktar 0'dan büyük ve 100.000'den küçük olmalıdır.")]
+        public decimal Quantity { get; set; }
 
         [Required]
         [RegularExpression("^(IN|OUT|TRANSFER)$", ErrorMessage = "Hareket tipi IN, OUT veya TRANSFER olmalıdır.")]
@@ -28,6 +27,9 @@ namespace stok_takip.DTOs
         [Range(0, double.MaxValue, ErrorMessage = "Birim fiyat negatif olamaz.")]
         public decimal UnitPrice { get; set; } = 0;
 
+        public int? InputUnitId { get; set; }
+        
+
         public int? SupplierId { get; set; }
 
         [MaxLength(200)]
@@ -35,5 +37,8 @@ namespace stok_takip.DTOs
 
         [MaxLength(100)]
         public string? DocumentNumber { get; set; } // Fatura veya irsaliye no
+
+        public string? LotNumber { get; set; }
+        public DateOnly? ExpiryDate { get; set; }
     }
 }

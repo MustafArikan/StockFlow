@@ -216,7 +216,7 @@ namespace stok_takip.Controllers
             // Mevcut kuralları çekiyoruz
             var attributeRules = await _context.AttributeRules.Where(r => !r.IsDeleted).ToListAsync();
 
-            var newProducts = new List<(Product Product, int InitialQuantity)>();
+            var newProducts = new List<(Product Product, decimal InitialQuantity)>();
             var newStockLevels = new List<StockLevel>();
             var newStockMovements = new List<StockMovement>();
             var errors = new List<object>();
@@ -257,9 +257,9 @@ namespace stok_takip.Controllers
                     if (!string.IsNullOrEmpty(minStockLevelStr) && !int.TryParse(minStockLevelStr, out minStockLevel))
                         rowErrors.Add("Kritik stok seviyesi tam sayı olmalıdır.");
                         
-                    int initialQuantity = 0;
-                    if (!string.IsNullOrEmpty(initialQuantityStr) && !int.TryParse(initialQuantityStr, out initialQuantity))
-                        rowErrors.Add("Başlangıç stok adedi tam sayı olmalıdır.");
+                    decimal initialQuantity = 0m;
+                    if (!string.IsNullOrEmpty(initialQuantityStr) && !decimal.TryParse(initialQuantityStr, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out initialQuantity))
+                        rowErrors.Add("Başlangıç stok adedi geçerli bir sayı olmalıdır.");
 
                     var resolvedCategoryName = rawCategory;
                     if (dto.ValueMappings.TryGetValue("CategoryName", out var catMap) &&

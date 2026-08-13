@@ -8,7 +8,8 @@ public class StockMovement : BaseEntity
 {
     public int ProductId { get; set; }
     public string MovementType { get; set; } = string.Empty; // IN, OUT, TRANSFER
-    public int Quantity { get; set; }
+    [Column(TypeName = "decimal(18,3)")]
+    public decimal Quantity { get; set; }
     public string? Description { get; set; }
     public int? UserId { get; set; }
     public User? User { get; set; }
@@ -38,5 +39,12 @@ public class StockMovement : BaseEntity
     public int? SourceLocationId { get; set; } // WMS Entegrasyonu İçin Eklenen Alanlar
     public int? TargetLocationId { get; set; } // WMS Entegrasyonu İçin Eklenen Alanlar
 
+    public int? BatchId { get; set; }
+    public ProductBatch? Batch { get; set; }
 
+    public int? InputUnitId { get; set; }
+    public Unit? InputUnit { get; set; }
+
+    [Column(TypeName = "decimal(18,4)")]
+    public decimal? InputQuantity { get; set; }
 }

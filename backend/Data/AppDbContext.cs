@@ -16,6 +16,7 @@ public class AppDbContext : DbContext
     }
     public DbSet<User> Users { get; set; } = null!;
     public DbSet<Category> Categories { get; set; } = null!;
+    public DbSet<Unit> Units { get; set; } = null!;
     public DbSet<Product> Products { get; set; } = null!;
     public DbSet<Warehouse> Warehouses { get; set; } = null!;
     public DbSet<Location> Locations { get; set; } = null!;
@@ -31,6 +32,10 @@ public class AppDbContext : DbContext
     public DbSet<Supplier> Suppliers { get; set; } = null!;
     public DbSet<ProductSupplier> ProductSuppliers { get; set; } = null!;
     public DbSet<ImportHistory> ImportHistories { get; set; } = null!;
+    public DbSet<ProductUnitConversion> ProductUnitConversions { get; set; } = null!;
+    public DbSet<ProductBatch> ProductBatches { get; set; } = null!;
+    public DbSet<PalletShipment> PalletShipments { get; set; } = null!;
+    public DbSet<PalletContent> PalletContents { get; set; } = null!;
 
     // RBAC Entities
     public DbSet<AppRole> AppRoles { get; set; } = null!;
@@ -134,6 +139,38 @@ public class AppDbContext : DbContext
             .IsUnique()
             .HasFilter("[is_deleted] = 0"); 
 
+        modelBuilder.Entity<Unit>()
+            .HasIndex(u => u.ShortCode)
+            .IsUnique();
+
+        modelBuilder.Entity<Product>()
+            .HasOne(p => p.Unit)
+            .WithMany(u => u.Products)
+            .HasForeignKey(p => p.UnitId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<ProductUnitConversion>()
+            .HasIndex(x => new { x.ProductId, x.AlternativeUnitId })
+            .IsUnique();
+
+        modelBuilder.Entity<ProductUnitConversion>()
+            .HasOne(x => x.Product)
+            .WithMany()
+            .HasForeignKey(x => x.ProductId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<ProductUnitConversion>()
+            .HasOne(x => x.AlternativeUnit)
+            .WithMany()
+            .HasForeignKey(x => x.AlternativeUnitId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<StockMovement>()
+            .HasOne(x => x.InputUnit)
+            .WithMany()
+            .HasForeignKey(x => x.InputUnitId)
+            .OnDelete(DeleteBehavior.Restrict);
+
         modelBuilder.Entity<Product>()
             .HasIndex(p => p.Barcode)
             .IsUnique()
@@ -151,8 +188,39 @@ public class AppDbContext : DbContext
             .HasFilter("[is_deleted] = 0");
 
         modelBuilder.Entity<StockLevel>()
-            .HasIndex(sl => new { sl.ProductId, sl.LocationId })
+            .HasIndex(sl => new { sl.ProductId, sl.LocationId, sl.BatchId })
             .IsUnique();
+        
+        modelBuilder.Entity<ProductUnitConversion>()
+            .HasIndex(x => x.Barcode)
+            .IsUnique()
+            .HasFilter("[barcode] IS NOT NULL");
+
+        modelBuilder.Entity<ProductBatch>()
+            .HasIndex(x => new { x.ProductId, x.LotNumber })
+            .IsUnique();
+
+        modelBuilder.Entity<PalletShipment>()
+            .HasIndex(x => x.Sscc)
+            .IsUnique();
+
+        modelBuilder.Entity<StockMovement>()
+            .HasOne(x => x.Batch)
+            .WithMany()
+            .HasForeignKey(x => x.BatchId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<StockLevel>()
+            .HasOne(x => x.Batch)
+            .WithMany()
+            .HasForeignKey(x => x.BatchId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<PalletContent>()
+            .HasOne(x => x.PalletShipment)
+            .WithMany(p => p.Contents)
+            .HasForeignKey(x => x.PalletShipmentId)
+            .OnDelete(DeleteBehavior.Cascade);
         
         modelBuilder.Entity<UserSession>()
             .HasIndex(s => s.SessionToken)

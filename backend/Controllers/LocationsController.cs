@@ -59,6 +59,13 @@ public class LocationsController : ControllerBase
         var totalRecords = await query.CountAsync();
 
         var locations = await query
+            .Select(l => new 
+            {
+                l.Id,
+                l.WarehouseId,
+                l.Code,
+                IsEmpty = !l.StockLevels.Any(sl => !sl.IsDeleted && sl.Quantity > 0)
+            })
             .OrderByDescending(l => l.Id)
             .Skip((pageNumber - 1) * pageSize)
             .Take(pageSize)
@@ -108,10 +115,22 @@ public class LocationsController : ControllerBase
         if (location == null)
             return NotFound();
 
-        var stokVarMi = await _context.StockLevels.AnyAsync(sl => sl.LocationId == id);
-        if (stokVarMi)
+        // Yalnızca GERÇEKTEN ürün duran raflar korunur.
+        // Daha önce miktarı sıfıra düşmüş stok satırları rafta kayıt olarak durmaya devam eder;
+        // eski kontrol miktara bakmadığı için boş görünen raflar da silinemiyordu.
+        var doluMu = await _context.StockLevels.AnyAsync(sl => sl.LocationId == id && sl.Quantity > 0);
+        if (doluMu)
         {
-            return BadRequest("Bu rafta ürün (stok) var. Önce stokları boşaltmalısınız.");
+            return BadRequest(new { message = "Bu rafta ürün (stok) var. Önce stokları boşaltmalısınız." });
+        }
+
+        // Rafla birlikte, miktarı sıfır olan artık stok satırları da temizlenir
+        var bosStokSatirlari = await _context.StockLevels
+            .Where(sl => sl.LocationId == id)
+            .ToListAsync();
+        foreach (var satir in bosStokSatirlari)
+        {
+            satir.IsDeleted = true;
         }
 
         location.IsDeleted = true; // Soft delete

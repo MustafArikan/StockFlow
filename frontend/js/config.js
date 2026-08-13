@@ -10,44 +10,57 @@ const CONFIG = {
     API_BASE_URL: apiBase
 };
 
-// Merkezi Yetki Denetim Sistemi (RBAC)
-// Kullanıcının rolünü JWT token üzerinden güvenli bir şekilde çözer
-function getUserRole() {
-    try {
-        const token = localStorage.getItem('token');
-        if (!token) return "viewer"; // Token yoksa varsayılan en düşük yetki
+// Sayfa boyunca tek seferlik yüklenen, memory'de tutulan yetki bağlamı
+window.__authContext = {
+    loaded: false,
+    role: null,
+    permissions: new Set(),
+    isSuperAdmin: false,
+    email: null,
+    firstName: null,
+    lastName: null,
+    loadingPromise: null
+};
 
-        const payloadBase64 = token.split('.')[1];
-        const payloadDecoded = JSON.parse(atob(payloadBase64));
+async function loadAuthContext() {
+    if (window.__authContext.loaded) return window.__authContext;
 
-        // Sunucudan gelen rol bilgisini farklı claim tiplerine karşı güvenle okur
-        return payloadDecoded["role"] ||
-            payloadDecoded["http://schemas.microsoft.com/ws/2008/06/identity/claims/role"] ||
-            "viewer";
-    } catch (e) {
-        // Token parse edilemezse veya formatı hatalıysa sistemin çökmesini önler, güvenli rol döner
-        return "viewer";
+    if (window.__authContext.loadingPromise) {
+        return window.__authContext.loadingPromise;
     }
+
+    const token = localStorage.getItem('token');
+    if (!token) return window.__authContext;
+
+    window.__authContext.loadingPromise = (async () => {
+        try {
+            const userData = await apiRequest('/auth/me', 'GET');
+            window.__authContext.role = userData.role;
+            window.__authContext.isSuperAdmin = userData.role === 'superadmin';
+            window.__authContext.permissions = new Set(userData.permissions || []);
+            window.__authContext.email = userData.email;
+            window.__authContext.firstName = userData.firstName;
+            window.__authContext.lastName = userData.lastName;
+            window.__authContext.loaded = true;
+        } catch (e) {
+            console.error("Yetki bağlamı yüklenemedi:", e);
+        } finally {
+            window.__authContext.loadingPromise = null;
+        }
+        return window.__authContext;
+    })();
+
+    return window.__authContext.loadingPromise;
 }
 
 function hasPermission(action) {
-    try {
-        const token = localStorage.getItem('token');
-        if (!token) return false;
+    const ctx = window.__authContext;
+    if (ctx.isSuperAdmin) return true;
+    return ctx.permissions.has(action);
+}
 
-        const payload = JSON.parse(atob(token.split('.')[1]));
-        if (payload.role === "superadmin") return true;
-
-        let permissions = [];
-        if (payload.Permission) {
-            permissions = Array.isArray(payload.Permission) ? payload.Permission : [payload.Permission];
-        }
-
-        return permissions.includes(action);
-    } catch (error) {
-        console.error("Yetki kontrolünde hata:", error);
-        return false;
-    }
+function getUserRole() {
+    return window.__authContext.role || "viewer";
 }
 
 // Merkezi Şifre Göster/Gizle İşlemi (Event Delegation / CSP Uyumlu)
@@ -132,7 +145,27 @@ async function apiRequest(endpoint, method = 'GET', bodyData = null) {
     const data = isJson ? await response.json() : null;
 
     if (!response.ok) {
-        const errorMessage = data?.message || 'Sunucu ile iletisimde bir hata olustu.';
+        let errorMessage = data?.message || 'Sunucu ile iletisimde bir hata olustu.';
+        
+        // ASP.NET Core DTO Validation Hatalarını Yakalama (400 Bad Request)
+        if (response.status === 400 && data?.errors && typeof data.errors === 'object') {
+            let errorHtml = '<div class="text-start mt-2"><ul class="mb-0 text-danger" style="list-style-type: none; padding-left: 0;">';
+            let foundValidError = false;
+            for (const key in data.errors) {
+                if (Array.isArray(data.errors[key])) {
+                    data.errors[key].forEach(msg => {
+                        errorHtml += `<li class="mb-1"><i class="bi bi-exclamation-triangle-fill me-2 text-warning"></i>${msg}</li>`;
+                        foundValidError = true;
+                    });
+                }
+            }
+            errorHtml += '</ul></div>';
+            
+            if (foundValidError) {
+                errorMessage = `<div class="mb-2 fw-bold text-dark">Lütfen aşağıdaki eksiklikleri giderin:</div> ${errorHtml}`;
+            }
+        }
+
         throw new Error(errorMessage);
     }
     return data;
@@ -199,53 +232,101 @@ function renderProfessionalLayout() {
     const noNavPages = ['login.html', 'register.html', 'forgot-password.html'];
     if (noNavPages.some(p => window.location.pathname.includes(p))) return;
 
-    // 2. AKTİF SAYFAYI BULMA: URL'ye bakarak şu an hangi sayfada olduğumuzu anlar   
+    // 2. AKTİF SAYFAYI BULMA: URL'ye bakarak şu an hangi sayfada olduğumuzu anlar
     const currentPath = window.location.pathname.split('/').pop() || 'index.html';
 
+    // desktop.html "boş masaüstü" sayfasıdır: pencere açılmaz,
+    // yalnızca duvar kağıdı ve iki yandaki uygulama ikonları görünür.
+    const isDesktopPage = currentPath === 'desktop.html';
+
     // 3. SARMALAMA (WRAPPING) İŞLEMİ:
-    // HTML dosyasında yazdığımız asıl içerikleri (tablolar, grafikler) alıp 'contentContainer' 
+    // HTML dosyasında yazdığımız asıl içerikleri (tablolar, grafikler) alıp 'contentContainer'
     // adında yeni bir div'in içine taşır
     const contentContainer = document.createElement('div');
-    contentContainer.className = 'container-fluid p-4';
+    contentContainer.className = 'container-fluid p-4 dt-window-content';
 
     while (document.body.firstChild) {
         contentContainer.appendChild(document.body.firstChild);
     }
 
-    // 4. YAN MENÜYÜ (SIDEBAR) OLUŞTURMA:
+    // Masaüstü modunu açar (duvar kağıdı, pencere gölgesi vb. bu sınıfa bağlıdır)
+    document.body.classList.add('dt-desktop');
+
+    // Pencere başlığı: sayfa başlığının ilk parçası (ör. "Ürünler - StockFlow" → "Ürünler")
+    const appTitle = (document.title || 'StockFlow').split(/[-–|]/)[0].trim() || 'StockFlow';
+
+    // 4. MASAÜSTÜ İKON RAYLARINI OLUŞTURMA (sol: operasyon, sağ: sistem)
     const sidebar = document.createElement('aside');
     sidebar.id = 'sidebar';
     sidebar.innerHTML = buildSidebarHtml(currentPath);
 
-    // 5. ÜST BARI (TOPBAR) VE ANA İSKELETİ OLUŞTURMA:
+    const sidebarRight = document.createElement('aside');
+    sidebarRight.id = 'sidebar-right';
+    sidebarRight.innerHTML = buildSidebarRightHtml(currentPath);
+
+    // 5. MENÜ ÇUBUĞU: Masaüstü metaforunda en üstte, tam genişlikte durur
+    const topbar = document.createElement('header');
+    topbar.className = 'topbar';
+    topbar.innerHTML = buildTopbarHtml();
+
+    // 6. UYGULAMA PENCERESİ: Başlık çubuğu (title bar) + içerik
     const mainWrapper = document.createElement('div');
     mainWrapper.id = 'main-wrapper';
 
-    // Sidebar'ın son durumunu LocalStorage'dan al ve uygula
-    if (localStorage.getItem('sidebarState') === 'collapsed') {
-        sidebar.classList.add('collapsed');
-        mainWrapper.classList.add('expanded');
-    }
+    const titlebar = document.createElement('div');
+    titlebar.className = 'dt-titlebar';
+    titlebar.innerHTML = `
+        <div class="dt-titlebar-left">
+            <span class="dt-titlebar-icon"><i class="bi bi-hexagon-fill"></i></span>
+            <span class="dt-titlebar-text"></span>
+        </div>
+        <div class="dt-window-controls">
+            <button type="button" class="dt-wc dt-wc-max" id="dtWinMaximize" title="Tam ekran / pencere görünümü" aria-label="Tam ekran"><i class="bi bi-square"></i></button>
+            <button type="button" class="dt-wc dt-wc-close" id="dtWinClose" title="Pencereyi kapat (masaüstünü göster)" aria-label="Pencereyi kapat"><i class="bi bi-x-lg"></i></button>
+        </div>`;
+    // Başlık metni textContent ile yazılır (XSS'e karşı güvenli)
+    titlebar.querySelector('.dt-titlebar-text').textContent = appTitle;
 
-    const topbar = document.createElement('header');
-    topbar.className = 'topbar shadow-sm';
-    topbar.innerHTML = buildTopbarHtml();
-
-    mainWrapper.appendChild(topbar);
+    mainWrapper.appendChild(titlebar);
     mainWrapper.appendChild(contentContainer);
 
+    // İkon raylarının ve pencerenin son durumunu LocalStorage'dan al ve uygula
+    if (localStorage.getItem('sidebarState') === 'collapsed') {
+        sidebar.classList.add('collapsed');
+        sidebarRight.classList.add('collapsed');
+        mainWrapper.classList.add('expanded');
+    }
+    if (localStorage.getItem('windowState') === 'maximized') {
+        mainWrapper.classList.add('maximized');
+        document.body.classList.add('dt-maximized');
+    }
+
+    document.body.appendChild(topbar);
     document.body.appendChild(sidebar);
-    document.body.appendChild(mainWrapper);
+    document.body.appendChild(sidebarRight);
+
+    // Masaüstü sayfasında pencere hiç eklenmez
+    if (isDesktopPage) {
+        document.body.classList.add('dt-desktop-only');
+    } else {
+        document.body.appendChild(mainWrapper);
+    }
+
+    // Menü çubuğundaki aktif uygulama adını yazar
+    const menubarApp = document.getElementById('dtMenubarApp');
+    if (menubarApp) menubarApp.textContent = appTitle;
 
     // Sunucuya istek atarak giriş yapan kullanıcının bilgilerini (Ad, Soyad, Rol vb.) alıyoruz
-    apiRequest('/auth/me', 'GET').then(userData => {
+    // loadAuthContext() zaten bu veriyi çektiği için ondan alabiliriz
+    const ctx = window.__authContext;
+    if (ctx.loaded) {
         const userProfileEl = document.getElementById('userProfile');
         if (userProfileEl) {
-            userProfileEl.textContent = `${userData.firstName || ''} ${userData.lastName || ''}`.trim() || userData.email;
+            userProfileEl.textContent = `${ctx.firstName || ''} ${ctx.lastName || ''}`.trim() || ctx.email;
         }
 
         // Kullanıcının rolünü kontrol ediyoruz (Superadmin ise)
-        const role = userData.role || getUserRole();
+        const role = ctx.role;
         if (role === 'superadmin') {
             const navUsersItem = document.getElementById('navUsersItem');
             const navRolesItem = document.getElementById('navRolesItem');
@@ -256,31 +337,84 @@ function renderProfessionalLayout() {
                 navRolesItem.classList.remove('d-none');
             }
         }
-    }).catch((error) => {
-        // İstek başarısız olursa hem konsola hatayı logluyoruz hem de arayüzün çökmesini engellemek için "Hesap" yazdırıyoruz
-        console.error("Layout yüklenirken hata oluştu:", error);
+    } else {
         const userProfileEl = document.getElementById('userProfile');
         if (userProfileEl) userProfileEl.textContent = 'Hesap';
-    });
+    }
 
-    // 6. ETKİLEŞİMLER (EVENT LISTENERS)
+    // 8. ETKİLEŞİMLER (EVENT LISTENERS)
 
-    // Sidebar'ı açıp kapatan butonun ayarları
+    // Masaüstü ikon raylarını açıp kapatan butonun ayarları (her iki ray birlikte)
+    const raylar = [sidebar, sidebarRight];
+
     document.getElementById('btnToggleSidebar').addEventListener('click', () => {
-        const isCollapsed = document.getElementById('sidebar').classList.toggle('collapsed');
-        document.getElementById('main-wrapper').classList.toggle('expanded');
-        
+        const isCollapsed = !sidebar.classList.contains('collapsed');
+        raylar.forEach(r => r.classList.toggle('collapsed', isCollapsed));
+        mainWrapper.classList.toggle('expanded', isCollapsed);
+
         // Durumu localStorage'a kaydet
         localStorage.setItem('sidebarState', isCollapsed ? 'collapsed' : 'expanded');
 
         if (window.innerWidth < 992) {
-            document.getElementById('sidebar').classList.toggle('show-mobile');
+            const acik = !sidebar.classList.contains('show-mobile');
+            raylar.forEach(r => r.classList.toggle('show-mobile', acik));
         }
     });
 
-    document.getElementById('btnCloseSidebar').addEventListener('click', () => {
-        document.getElementById('sidebar').classList.remove('show-mobile');
-    });
+    const btnCloseSidebar = document.getElementById('btnCloseSidebar');
+    if (btnCloseSidebar) {
+        btnCloseSidebar.addEventListener('click', () => {
+            raylar.forEach(r => r.classList.remove('show-mobile'));
+        });
+    }
+
+    // --- PENCERE KONTROLLERİ (Tam Ekran / Kapat) ---
+    // Masaüstü sayfasında pencere olmadığı için bu bölüm atlanır.
+    if (!isDesktopPage) {
+        const tamEkranDegistir = () => {
+            const isMax = mainWrapper.classList.toggle('maximized');
+            document.body.classList.toggle('dt-maximized', isMax);
+            localStorage.setItem('windowState', isMax ? 'maximized' : 'windowed');
+        };
+
+        // Kırmızı çarpı: pencereyi kapatır ve boş masaüstü sayfasına götürür
+        document.getElementById('dtWinClose').addEventListener('click', () => {
+            window.location.href = 'desktop.html';
+        });
+
+        document.getElementById('dtWinMaximize').addEventListener('click', tamEkranDegistir);
+
+        // Başlık çubuğuna çift tıklama, işletim sistemlerindeki gibi tam ekrana geçirir
+        titlebar.addEventListener('dblclick', (e) => {
+            if (e.target.closest('.dt-wc')) return;
+            tamEkranDegistir();
+        });
+    } else {
+        // Masaüstü sayfasında ekranın altında yönlendirici bir ipucu gösterilir
+        const masaustuIpucu = document.createElement('div');
+        masaustuIpucu.className = 'dt-desktop-hint';
+        masaustuIpucu.textContent = 'Açmak için bir uygulama seçin';
+        document.body.appendChild(masaustuIpucu);
+
+        // Masaüstüne çift tıklamak ana sayfayı açar
+        document.addEventListener('dblclick', (e) => {
+            if (e.target.closest('#sidebar, #sidebar-right, .topbar')) return;
+            window.location.href = 'index.html';
+        });
+    }
+
+    // --- MENÜ ÇUBUĞU SAATİ ---
+    const clockEl = document.getElementById('dtClock');
+    if (clockEl) {
+        const saatiYaz = () => {
+            const now = new Date();
+            const tarih = now.toLocaleDateString('tr-TR', { weekday: 'short', day: '2-digit', month: 'short' });
+            const saat = now.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
+            clockEl.textContent = `${tarih}  ${saat}`;
+        };
+        saatiYaz();
+        setInterval(saatiYaz, 30000);
+    }
 
     // Tema Değiştirme Sistemi
     const themeBtn = document.getElementById('layoutThemeToggleBtn');
@@ -319,7 +453,10 @@ function tarihFormatla(t) {
 function tarihSaatFormatla(t) {
     return t ? new Date(t).toLocaleString("tr-TR") : "-";
 }
-document.addEventListener('DOMContentLoaded', renderProfessionalLayout);
+document.addEventListener('DOMContentLoaded', async () => {
+    await loadAuthContext();
+    renderProfessionalLayout();
+});
 // Fix Bootstrap 5 Modal aria-hidden focus warnings in Chrome
 document.addEventListener('hide.bs.modal', function () {
     if (document.activeElement) {

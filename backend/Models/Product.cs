@@ -7,17 +7,20 @@ public class Product : BaseEntity
 {
     public string Name { get; set; } = string.Empty;
     public string Barcode { get; set; } = string.Empty; // UQ
+    public BarcodeType BarcodeType { get; set; } = BarcodeType.InternalSku;
     public int MinStockLevel { get; set; }
     public int CategoryId { get; set; }
+    public int UnitId { get; set; }
 
     [Column(TypeName = "decimal(18,2)")]
-    public decimal Cost { get; set; } = 0; // Maliyet fiyat�
+    public decimal Cost { get; set; } = 0; // Maliyet fiyat
     [Column(TypeName = "decimal(18,2)")]
-    public decimal Price { get; set; } = 0; // ��k�� fiyat
+    public decimal Price { get; set; } = 0; // k fiyat
 
-    public string? Attributes { get; set; } // JSON format�nda �r�n �zellikleri
+    public string? Attributes { get; set; } // JSON formatnda rn zellikleri
 
     public Category Category { get; set; } = null!;
+    public Unit Unit { get; set; } = null!;
     public ICollection<StockLevel> StockLevels { get; set; } = new List<StockLevel>();
     public ICollection<StockMovement> StockMovements { get; set; } = new List<StockMovement>();
     public ICollection<Asset> Assets { get; set; } = new List<Asset>();

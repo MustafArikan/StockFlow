@@ -239,16 +239,30 @@ builder.Services.AddAuthorization(options =>
         .RequireAuthenticatedUser()
         .Build();
 
-    // Rol bazlı olanlar (permission listesi yok, sadece rol kontrolü) kod içinde kalıyor:
+    // SADECE gerçek yönetim izinleri "yönetim" endpoint'lerini açsın
     options.AddPolicy(Policies.SuperAdminOnly, policy => policy.RequireAssertion(context => 
+        context.User.IsInRole("superadmin") || 
+        context.User.HasClaim("Permission", "Role.Add") ||
+        context.User.HasClaim("Permission", "Role.Edit") ||
+        context.User.HasClaim("Permission", "Role.Delete")
+    ));
+
+    // Salt-okunur görüntüleme için AYRI ve daha dar bir policy
+    options.AddPolicy(Policies.RoleViewOnly, policy => policy.RequireAssertion(context => 
         context.User.IsInRole("superadmin") || 
         context.User.HasClaim("Permission", "Role.View") ||
         context.User.HasClaim("Permission", "Role.Add") ||
         context.User.HasClaim("Permission", "Role.Edit") ||
-        context.User.HasClaim("Permission", "Role.Delete") ||
+        context.User.HasClaim("Permission", "Role.Delete")
+    ));
+
+    // Policy yönetimi için ayrı policy
+    options.AddPolicy(Policies.PolicyManage, policy => policy.RequireAssertion(context => 
+        context.User.IsInRole("superadmin") || 
         context.User.HasClaim("Permission", "Policy.View") ||
         context.User.HasClaim("Permission", "Policy.Edit")
     ));
+
     options.AddPolicy(Policies.AdminOnly, policy => policy.RequireRole("admin", "superadmin"));
 });
 
@@ -275,6 +289,10 @@ builder.Services.AddCors(options =>
         policy.SetPreflightMaxAge(TimeSpan.FromMinutes(10));
     });
 });
+
+var cultureInfo = new System.Globalization.CultureInfo("en-US");
+System.Globalization.CultureInfo.DefaultThreadCurrentCulture = cultureInfo;
+System.Globalization.CultureInfo.DefaultThreadCurrentUICulture = cultureInfo;
 
 var app = builder.Build();
 

@@ -429,6 +429,10 @@ namespace backend.Migrations
                         .HasColumnType("bit")
                         .HasColumnName("is_deleted");
 
+                    b.Property<bool>("IsFeatured")
+                        .HasColumnType("bit")
+                        .HasColumnName("is_featured");
+
                     b.Property<bool>("IsRequired")
                         .HasColumnType("bit")
                         .HasColumnName("is_required");
@@ -634,6 +638,99 @@ namespace backend.Migrations
                     b.ToTable("notifications");
                 });
 
+            modelBuilder.Entity("stok_takip.Models.PalletContent", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("id");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int?>("BatchId")
+                        .HasColumnType("int")
+                        .HasColumnName("batch_id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("created_at");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit")
+                        .HasColumnName("is_deleted");
+
+                    b.Property<int>("PalletShipmentId")
+                        .HasColumnType("int")
+                        .HasColumnName("pallet_shipment_id");
+
+                    b.Property<int>("ProductId")
+                        .HasColumnType("int")
+                        .HasColumnName("product_id");
+
+                    b.Property<decimal>("Quantity")
+                        .HasColumnType("decimal(18,3)")
+                        .HasColumnName("quantity");
+
+                    b.HasKey("Id")
+                        .HasName("pk_pallet_contents");
+
+                    b.HasIndex("BatchId")
+                        .HasDatabaseName("ix_pallet_contents_batch_id");
+
+                    b.HasIndex("PalletShipmentId")
+                        .HasDatabaseName("ix_pallet_contents_pallet_shipment_id");
+
+                    b.HasIndex("ProductId")
+                        .HasDatabaseName("ix_pallet_contents_product_id");
+
+                    b.ToTable("pallet_contents");
+                });
+
+            modelBuilder.Entity("stok_takip.Models.PalletShipment", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("id");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)")
+                        .HasColumnName("description");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit")
+                        .HasColumnName("is_deleted");
+
+                    b.Property<int?>("SourceWarehouseId")
+                        .HasColumnType("int")
+                        .HasColumnName("source_warehouse_id");
+
+                    b.Property<string>("Sscc")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)")
+                        .HasColumnName("sscc");
+
+                    b.HasKey("Id")
+                        .HasName("pk_pallet_shipments");
+
+                    b.HasIndex("SourceWarehouseId")
+                        .HasDatabaseName("ix_pallet_shipments_source_warehouse_id");
+
+                    b.HasIndex("Sscc")
+                        .IsUnique()
+                        .HasDatabaseName("ix_pallet_shipments_sscc");
+
+                    b.ToTable("pallet_shipments");
+                });
+
             modelBuilder.Entity("stok_takip.Models.Product", b =>
                 {
                     b.Property<int>("Id")
@@ -651,6 +748,10 @@ namespace backend.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(450)")
                         .HasColumnName("barcode");
+
+                    b.Property<int>("BarcodeType")
+                        .HasColumnType("int")
+                        .HasColumnName("barcode_type");
 
                     b.Property<int>("CategoryId")
                         .HasColumnType("int")
@@ -681,6 +782,10 @@ namespace backend.Migrations
                         .HasColumnType("decimal(18,2)")
                         .HasColumnName("price");
 
+                    b.Property<int>("UnitId")
+                        .HasColumnType("int")
+                        .HasColumnName("unit_id");
+
                     b.HasKey("Id")
                         .HasName("pk_products");
 
@@ -692,7 +797,59 @@ namespace backend.Migrations
                     b.HasIndex("CategoryId")
                         .HasDatabaseName("ix_products_category_id");
 
+                    b.HasIndex("UnitId")
+                        .HasDatabaseName("ix_products_unit_id");
+
                     b.ToTable("products");
+                });
+
+            modelBuilder.Entity("stok_takip.Models.ProductBatch", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("id");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("created_at");
+
+                    b.Property<DateOnly?>("ExpiryDate")
+                        .HasColumnType("date")
+                        .HasColumnName("expiry_date");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit")
+                        .HasColumnName("is_active");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit")
+                        .HasColumnName("is_deleted");
+
+                    b.Property<string>("LotNumber")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)")
+                        .HasColumnName("lot_number");
+
+                    b.Property<DateOnly?>("ManufactureDate")
+                        .HasColumnType("date")
+                        .HasColumnName("manufacture_date");
+
+                    b.Property<int>("ProductId")
+                        .HasColumnType("int")
+                        .HasColumnName("product_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_product_batches");
+
+                    b.HasIndex("ProductId", "LotNumber")
+                        .IsUnique()
+                        .HasDatabaseName("ix_product_batches_product_id_lot_number");
+
+                    b.ToTable("product_batches");
                 });
 
             modelBuilder.Entity("stok_takip.Models.ProductSupplier", b =>
@@ -749,6 +906,66 @@ namespace backend.Migrations
                         .HasFilter("[is_deleted] = 0");
 
                     b.ToTable("product_suppliers");
+                });
+
+            modelBuilder.Entity("stok_takip.Models.ProductUnitConversion", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("id");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("AlternativeUnitId")
+                        .HasColumnType("int")
+                        .HasColumnName("alternative_unit_id");
+
+                    b.Property<string>("Barcode")
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)")
+                        .HasColumnName("barcode");
+
+                    b.Property<int>("BarcodeType")
+                        .HasColumnType("int")
+                        .HasColumnName("barcode_type");
+
+                    b.Property<decimal>("ConversionFactor")
+                        .HasColumnType("decimal(18,4)")
+                        .HasColumnName("conversion_factor");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("created_at");
+
+                    b.Property<bool>("IsDefault")
+                        .HasColumnType("bit")
+                        .HasColumnName("is_default");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit")
+                        .HasColumnName("is_deleted");
+
+                    b.Property<int>("ProductId")
+                        .HasColumnType("int")
+                        .HasColumnName("product_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_product_unit_conversions");
+
+                    b.HasIndex("AlternativeUnitId")
+                        .HasDatabaseName("ix_product_unit_conversions_alternative_unit_id");
+
+                    b.HasIndex("Barcode")
+                        .IsUnique()
+                        .HasDatabaseName("ix_product_unit_conversions_barcode")
+                        .HasFilter("[barcode] IS NOT NULL");
+
+                    b.HasIndex("ProductId", "AlternativeUnitId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_product_unit_conversions_product_id_alternative_unit_id");
+
+                    b.ToTable("product_unit_conversions");
                 });
 
             modelBuilder.Entity("stok_takip.Models.SecurityAuditLog", b =>
@@ -817,6 +1034,10 @@ namespace backend.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<int?>("BatchId")
+                        .HasColumnType("int")
+                        .HasColumnName("batch_id");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2")
                         .HasColumnName("created_at");
@@ -833,8 +1054,8 @@ namespace backend.Migrations
                         .HasColumnType("int")
                         .HasColumnName("product_id");
 
-                    b.Property<int>("Quantity")
-                        .HasColumnType("int")
+                    b.Property<decimal>("Quantity")
+                        .HasColumnType("decimal(18,3)")
                         .HasColumnName("quantity");
 
                     b.Property<byte[]>("RowVersion")
@@ -847,12 +1068,16 @@ namespace backend.Migrations
                     b.HasKey("Id")
                         .HasName("pk_stock_levels");
 
+                    b.HasIndex("BatchId")
+                        .HasDatabaseName("ix_stock_levels_batch_id");
+
                     b.HasIndex("LocationId")
                         .HasDatabaseName("ix_stock_levels_location_id");
 
-                    b.HasIndex("ProductId", "LocationId")
+                    b.HasIndex("ProductId", "LocationId", "BatchId")
                         .IsUnique()
-                        .HasDatabaseName("ix_stock_levels_product_id_location_id");
+                        .HasDatabaseName("ix_stock_levels_product_id_location_id_batch_id")
+                        .HasFilter("[batch_id] IS NOT NULL");
 
                     b.ToTable("stock_levels");
                 });
@@ -865,6 +1090,10 @@ namespace backend.Migrations
                         .HasColumnName("id");
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int?>("BatchId")
+                        .HasColumnType("int")
+                        .HasColumnName("batch_id");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2")
@@ -884,6 +1113,14 @@ namespace backend.Migrations
                         .HasColumnType("nvarchar(100)")
                         .HasColumnName("document_number");
 
+                    b.Property<decimal?>("InputQuantity")
+                        .HasColumnType("decimal(18,4)")
+                        .HasColumnName("input_quantity");
+
+                    b.Property<int?>("InputUnitId")
+                        .HasColumnType("int")
+                        .HasColumnName("input_unit_id");
+
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("bit")
                         .HasColumnName("is_deleted");
@@ -897,8 +1134,8 @@ namespace backend.Migrations
                         .HasColumnType("int")
                         .HasColumnName("product_id");
 
-                    b.Property<int>("Quantity")
-                        .HasColumnType("int")
+                    b.Property<decimal>("Quantity")
+                        .HasColumnType("decimal(18,3)")
                         .HasColumnName("quantity");
 
                     b.Property<int?>("SourceLocationId")
@@ -937,6 +1174,12 @@ namespace backend.Migrations
 
                     b.HasKey("Id")
                         .HasName("pk_stock_movements");
+
+                    b.HasIndex("BatchId")
+                        .HasDatabaseName("ix_stock_movements_batch_id");
+
+                    b.HasIndex("InputUnitId")
+                        .HasDatabaseName("ix_stock_movements_input_unit_id");
 
                     b.HasIndex("ProductId")
                         .HasDatabaseName("ix_stock_movements_product_id");
@@ -1006,6 +1249,61 @@ namespace backend.Migrations
                         .HasFilter("[is_deleted] = 0");
 
                     b.ToTable("suppliers");
+                });
+
+            modelBuilder.Entity("stok_takip.Models.Unit", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("id");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<bool>("AllowsDecimal")
+                        .HasColumnType("bit")
+                        .HasColumnName("allows_decimal");
+
+                    b.Property<int>("Category")
+                        .HasColumnType("int")
+                        .HasColumnName("category");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("created_at");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit")
+                        .HasColumnName("is_active");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit")
+                        .HasColumnName("is_deleted");
+
+                    b.Property<bool>("IsSystemUnit")
+                        .HasColumnType("bit")
+                        .HasColumnName("is_system_unit");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)")
+                        .HasColumnName("name");
+
+                    b.Property<string>("ShortCode")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)")
+                        .HasColumnName("short_code");
+
+                    b.HasKey("Id")
+                        .HasName("pk_units");
+
+                    b.HasIndex("ShortCode")
+                        .IsUnique()
+                        .HasDatabaseName("ix_units_short_code");
+
+                    b.ToTable("units");
                 });
 
             modelBuilder.Entity("stok_takip.Models.User", b =>
@@ -1390,6 +1688,44 @@ namespace backend.Migrations
                     b.Navigation("Warehouse");
                 });
 
+            modelBuilder.Entity("stok_takip.Models.PalletContent", b =>
+                {
+                    b.HasOne("stok_takip.Models.ProductBatch", "Batch")
+                        .WithMany()
+                        .HasForeignKey("BatchId")
+                        .HasConstraintName("fk_pallet_contents_product_batches_batch_id");
+
+                    b.HasOne("stok_takip.Models.PalletShipment", "PalletShipment")
+                        .WithMany("Contents")
+                        .HasForeignKey("PalletShipmentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_pallet_contents_pallet_shipments_pallet_shipment_id");
+
+                    b.HasOne("stok_takip.Models.Product", "Product")
+                        .WithMany()
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_pallet_contents_products_product_id");
+
+                    b.Navigation("Batch");
+
+                    b.Navigation("PalletShipment");
+
+                    b.Navigation("Product");
+                });
+
+            modelBuilder.Entity("stok_takip.Models.PalletShipment", b =>
+                {
+                    b.HasOne("stok_takip.Models.Warehouse", "SourceWarehouse")
+                        .WithMany()
+                        .HasForeignKey("SourceWarehouseId")
+                        .HasConstraintName("fk_pallet_shipments_warehouses_source_warehouse_id");
+
+                    b.Navigation("SourceWarehouse");
+                });
+
             modelBuilder.Entity("stok_takip.Models.Product", b =>
                 {
                     b.HasOne("stok_takip.Models.Category", "Category")
@@ -1399,7 +1735,28 @@ namespace backend.Migrations
                         .IsRequired()
                         .HasConstraintName("fk_products_categories_category_id");
 
+                    b.HasOne("stok_takip.Models.Unit", "Unit")
+                        .WithMany("Products")
+                        .HasForeignKey("UnitId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_products_units_unit_id");
+
                     b.Navigation("Category");
+
+                    b.Navigation("Unit");
+                });
+
+            modelBuilder.Entity("stok_takip.Models.ProductBatch", b =>
+                {
+                    b.HasOne("stok_takip.Models.Product", "Product")
+                        .WithMany()
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_product_batches_products_product_id");
+
+                    b.Navigation("Product");
                 });
 
             modelBuilder.Entity("stok_takip.Models.ProductSupplier", b =>
@@ -1423,6 +1780,27 @@ namespace backend.Migrations
                     b.Navigation("Supplier");
                 });
 
+            modelBuilder.Entity("stok_takip.Models.ProductUnitConversion", b =>
+                {
+                    b.HasOne("stok_takip.Models.Unit", "AlternativeUnit")
+                        .WithMany()
+                        .HasForeignKey("AlternativeUnitId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_product_unit_conversions_units_alternative_unit_id");
+
+                    b.HasOne("stok_takip.Models.Product", "Product")
+                        .WithMany()
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_product_unit_conversions_products_product_id");
+
+                    b.Navigation("AlternativeUnit");
+
+                    b.Navigation("Product");
+                });
+
             modelBuilder.Entity("stok_takip.Models.SecurityAuditLog", b =>
                 {
                     b.HasOne("stok_takip.Models.User", "User")
@@ -1435,6 +1813,12 @@ namespace backend.Migrations
 
             modelBuilder.Entity("stok_takip.Models.StockLevel", b =>
                 {
+                    b.HasOne("stok_takip.Models.ProductBatch", "Batch")
+                        .WithMany()
+                        .HasForeignKey("BatchId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_stock_levels_product_batches_batch_id");
+
                     b.HasOne("stok_takip.Models.Location", "Location")
                         .WithMany("StockLevels")
                         .HasForeignKey("LocationId")
@@ -1449,6 +1833,8 @@ namespace backend.Migrations
                         .IsRequired()
                         .HasConstraintName("fk_stock_levels_products_product_id");
 
+                    b.Navigation("Batch");
+
                     b.Navigation("Location");
 
                     b.Navigation("Product");
@@ -1456,6 +1842,18 @@ namespace backend.Migrations
 
             modelBuilder.Entity("stok_takip.Models.StockMovement", b =>
                 {
+                    b.HasOne("stok_takip.Models.ProductBatch", "Batch")
+                        .WithMany()
+                        .HasForeignKey("BatchId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_stock_movements_product_batches_batch_id");
+
+                    b.HasOne("stok_takip.Models.Unit", "InputUnit")
+                        .WithMany()
+                        .HasForeignKey("InputUnitId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_stock_movements_units_input_unit_id");
+
                     b.HasOne("stok_takip.Models.Product", "Product")
                         .WithMany("StockMovements")
                         .HasForeignKey("ProductId")
@@ -1473,6 +1871,10 @@ namespace backend.Migrations
                         .WithMany()
                         .HasForeignKey("UserId")
                         .HasConstraintName("fk_stock_movements_users_user_id");
+
+                    b.Navigation("Batch");
+
+                    b.Navigation("InputUnit");
 
                     b.Navigation("Product");
 
@@ -1561,6 +1963,11 @@ namespace backend.Migrations
                     b.Navigation("StockLevels");
                 });
 
+            modelBuilder.Entity("stok_takip.Models.PalletShipment", b =>
+                {
+                    b.Navigation("Contents");
+                });
+
             modelBuilder.Entity("stok_takip.Models.Product", b =>
                 {
                     b.Navigation("Assets");
@@ -1577,6 +1984,11 @@ namespace backend.Migrations
                     b.Navigation("ProductSuppliers");
 
                     b.Navigation("StockMovements");
+                });
+
+            modelBuilder.Entity("stok_takip.Models.Unit", b =>
+                {
+                    b.Navigation("Products");
                 });
 
             modelBuilder.Entity("stok_takip.Models.User", b =>

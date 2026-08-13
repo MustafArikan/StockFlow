@@ -18,17 +18,7 @@
     <!-- Ana içerik alanını oluşturur -->
     <div class="container-fluid px-0 px-md-1 my-2">
 
-        <!-- Sayfa başlığı ve yeni işlem butonunu hizalar -->
-        <div class="d-flex justify-content-between align-items-center mb-4 px-3">
-            <div>
-                <h1 class="fw-bold">Stok Hareketleri</h1>
-                <p class="text-muted mb-0">Ürün giriş ve çıkış kayıtları</p>
-            </div>
-            <button id="btnYeniIslem" class="btn btn-primary rounded-pill px-4 shadow-sm text-nowrap"
-                data-bs-toggle="modal" data-bs-target="#stokIslemModal">
-                + Yeni İşlem Ekle
-            </button>
-        </div>
+
 
         <div class="row g-2">
             <!-- SOL FİLTRE PANELİ -->
@@ -114,6 +104,12 @@
                     <div class="card-body p-3">
                         <div class="d-flex justify-content-between align-items-center mb-4">
                             <h6 class="fw-bold mb-0 text-muted">Hareket Listesi</h6>
+                            <div class="d-flex gap-2 align-items-center">
+                                <button id="btnYeniIslem" class="btn btn-primary btn-sm rounded-pill px-3 shadow-sm text-nowrap"
+                                    data-bs-toggle="modal" data-bs-target="#stokIslemModal">
+                                    + <span class="d-none d-md-inline">Yeni İşlem Ekle</span>
+                                </button>
+                            </div>
                         </div>
 
                         <!-- Stok hareketlerini listeleyen tabloyu tanımlar -->
@@ -181,6 +177,10 @@
                                 </button>
                             </div>
 
+                            <div class="mb-3">
+                                <input type="text" class="form-control form-control-sm border-primary" id="manuelBarkodInp" placeholder="Veya barkodu (GS1/Koli/Ürün) elle girip Enter'a basın...">
+                            </div>
+
                             <div id="kameraAlani" class="d-none mb-3 rounded-3 overflow-hidden position-relative">
                                 <div id="reader"></div>
                                 <button type="button"
@@ -190,6 +190,14 @@
                             <select class="form-select" id="urunSecimi" required>
                                 <option value="" selected disabled>Yükleniyor...</option>
                             </select>
+
+                            <!-- ÜRÜN SEÇİLİNCE GÖRÜNECEK MEVCUT STOK BİLGİ ALANI -->
+                            <div id="mevcutStoklarAlani" class="d-none mt-3 p-2 bg-light border rounded-3 small">
+                                <h6 class="fw-bold text-secondary mb-2"><i class="bi bi-info-circle me-1"></i>Mevcut Stoklar ve Konumları (Tıklayarak Seçebilirsiniz)</h6>
+                                <div id="mevcutStoklarListesi" class="list-group list-group-flush border rounded-3">
+                                    <!-- Dinamik olarak doldurulacak -->
+                                </div>
+                            </div>
                         </div>
 
                         <!-- 3. ADIM: Kaynak lokasyon alanını gösterir -->
@@ -206,21 +214,37 @@
                             </select>
                         </div>
 
-                        <!-- 3. ADIM: Hedef lokasyon alanını gösterir -->
-                        <div class="mb-4 d-none p-3 bg-white border rounded-3 shadow-sm" id="targetLocationGroup">
-                            <h6 class="fw-bold text-success mb-3"><i class="bi bi-box-arrow-in-down me-2"></i>3. Giriş
-                                (Hedef) Konumu</h6>
-                            <label class="form-label text-muted small fw-bold">Depo Seçin</label>
-                            <select class="form-select mb-2" id="targetWarehouseId">
-                                <option value="">Seçiniz...</option>
-                            </select>
-                            <label class="form-label text-muted small fw-bold">Raf Seçin</label>
-                            <select class="form-select" id="targetLocationId" disabled>
-                                <option value="">Önce depo seçin...</option>
-                            </select>
-                            <div id="targetLocationStockInfo" class="d-none mt-2 small text-primary fw-bold">
-                                <i class="bi bi-info-circle"></i> Bu raftaki mevcut stok: <span
-                                    id="targetLocationStockValue">0</span> Adet
+                        <!-- 3. ADIM: Hedef lokasyon alanını gösterir (GİRİŞ ve TRANSFER için çoklu liste) -->
+                        <div id="hedefLokasyonlarAlani" class="d-none mt-4 mb-4 p-3 bg-white border border-success rounded-3 shadow-sm">
+                            <h6 class="fw-bold text-success mb-3"><i class="bi bi-box-arrow-in-down me-2"></i>3. Giriş (Hedef) Konumları</h6>
+                            
+                            <div class="alert alert-success bg-success bg-opacity-10 border-success border-opacity-25 small mb-3">
+                                <i class="bi bi-info-circle-fill me-1"></i> Ürünü birden fazla rafa dağıtabilirsiniz. Önerilen (mevcut) rafları seçebilir veya aşağıdan yeni raf ekleyebilirsiniz.
+                            </div>
+
+                            <div id="hedefLokasyonlarListesi" class="list-group list-group-flush border rounded-3 mb-3">
+                                <!-- Dinamik eklenecek -->
+                            </div>
+                            
+                            <div class="p-3 bg-light border border-secondary border-opacity-25 rounded-3">
+                                <h6 class="fw-bold text-secondary mb-2 small"><i class="bi bi-plus-circle me-1"></i>Farklı Bir Raf Ekle</h6>
+                                <div class="row g-2 align-items-end">
+                                    <div class="col-md-5">
+                                        <label class="form-label text-muted small fw-bold">Depo</label>
+                                        <select class="form-select form-select-sm" id="targetWarehouseId">
+                                            <option value="">Seçiniz...</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-5">
+                                        <label class="form-label text-muted small fw-bold">Raf</label>
+                                        <select class="form-select form-select-sm" id="targetLocationId" disabled>
+                                            <option value="">Önce depo seçin...</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <button type="button" class="btn btn-sm btn-success w-100 fw-bold" id="btnHedefRafEkle" disabled>EKLE</button>
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
@@ -254,11 +278,38 @@
                             </div>
                         </div>
 
-                        <!-- 4. ADIM: Miktar girişi alanını barındırır -->
+                        <!-- LOT / SKT TAKİBİ -->
+                        <div class="mb-4 p-3 bg-white border rounded-3 shadow-sm" id="lotSktGroup">
+                            <h6 class="fw-bold text-secondary mb-3"><i class="bi bi-box-seam me-2"></i>Parti (Lot) & SKT Bilgileri (Opsiyonel)</h6>
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label text-muted small fw-bold">Lot / Parti Numarası</label>
+                                    <div class="input-group">
+                                        <input type="text" class="form-control" id="lotNumber" placeholder="Örn: L-2023-01">
+                                        <button class="btn btn-outline-secondary" type="button" id="btnLotUret" title="Otomatik Lot Numarası Üret"><i class="bi bi-magic"></i> Üret</button>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label text-muted small fw-bold">Son Kullanma Tarihi</label>
+                                    <input type="date" class="form-control native-date" id="expiryDate">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 4. ADIM: Miktar girişi ve Birim Seçimi alanını barındırır -->
                         <div class="mb-4 p-3 bg-white border rounded-3 shadow-sm">
-                            <label class="form-label text-muted small fw-bold">4. İşlem Adedi (Max: 100.000)</label>
-                            <input type="number" class="form-control" id="islemAdedi" placeholder="Örn: 10" min="1"
-                                max="100000" required>
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label text-muted small fw-bold">4. İşlem Miktarı</label>
+                                    <input type="number" class="form-control" id="islemAdedi" placeholder="Örn: 10" min="0.0001" step="any" required>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label text-muted small fw-bold">İşlem Birimi <span class="text-danger">*</span></label>
+                                    <select class="form-select" id="islemBirimi" required disabled>
+                                        <option value="">Ürün seçin...</option>
+                                    </select>
+                                </div>
+                            </div>
                         </div>
 
                         <button type="submit" id="btnKaydet"

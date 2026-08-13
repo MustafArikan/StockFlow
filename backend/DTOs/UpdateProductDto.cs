@@ -18,6 +18,10 @@ public class UpdateProductDto
     [Range(1, int.MaxValue, ErrorMessage = "Geçerli bir kategori seçilmelidir.")]
     public int CategoryId { get; set; }
 
+    [Required(ErrorMessage = "Ürünün stok birimi seçilmelidir.")]
+    [Range(1, int.MaxValue, ErrorMessage = "Geçerli bir birim seçilmelidir.")]
+    public int UnitId { get; set; }
+
     [Range(0, double.MaxValue, ErrorMessage = "Maliyet fiyatı negatif olamaz.")]
     public decimal Cost { get; set; } = 0;
 

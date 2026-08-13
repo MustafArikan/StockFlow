@@ -3,7 +3,7 @@ function hataGoster(mesaj) {
     Swal.fire({
         icon: "error",              // ikon: error | warning | success | info | question
         title: "Hata",              // kalın büyük başlık
-        text: mesaj,                // başlığın altındaki açıklama metni
+        html: mesaj,                // başlığın altındaki açıklama metni
         confirmButtonText: "Tamam"  // varsayılan "OK" yerine Türkçe
     });
 }
@@ -13,7 +13,7 @@ function uyariGoster(mesaj) {
     Swal.fire({
         icon: "warning",
         title: "Eksik bilgi",
-        text: mesaj,
+        html: mesaj,
         confirmButtonText: "Tamam"
     });
 }

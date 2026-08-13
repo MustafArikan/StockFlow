@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
@@ -14,23 +14,16 @@
 
 </head>
 <body>  
-    <div class="container my-5">
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <div>
-                <h1 class="fw-bold">Rol ve Yetki Yönetimi</h1>
-                <p class="text-muted mb-0">Sistemdeki rolleri yapılandırın ve ince ayar yetkilerini belirleyin (Süper Admin Özel)</p>
-            </div>
-            <button id="btnYeniRol" class="btn btn-primary rounded-pill px-4 shadow-sm">
-                <i class="bi bi-shield-plus me-2"></i> Yeni Rol Oluştur
-            </button>
-        </div>
-
+    <div class="container-fluid px-0 px-md-1 my-2">
         <div class="row g-4">
             <!-- Sol Panel: Roller Listesi -->
             <div class="col-12 col-lg-4">
                 <div class="card border-0 shadow-sm rounded-4 d-flex flex-column roles-panel-height">
-                    <div class="card-header bg-transparent border-bottom-0 pt-4 pb-0 px-4 flex-shrink-0">
+                    <div class="card-header bg-transparent border-bottom-0 pt-4 pb-0 px-4 flex-shrink-0 d-flex justify-content-between align-items-center">
                         <h5 class="fw-bold mb-0">Roller</h5>
+                        <button id="btnYeniRol" class="btn btn-primary btn-sm rounded-pill px-3 shadow-sm">
+                            <i class="bi bi-shield-plus"></i> <span class="d-none d-md-inline ms-1">Yeni Rol</span>
+                        </button>
                     </div>
                     <div class="card-body p-0 mt-3 flex-grow-1 overflow-y-auto" id="rolesListContainer">
                         <!-- Roller buraya dinamik eklenecek -->

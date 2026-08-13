@@ -32,6 +32,8 @@ public class AttributeRule : BaseEntity
     [MaxLength(20)]
     public string TargetLevel { get; set; } = "Product"; // "Product" or "Asset"
 
+    public bool IsFeatured { get; set; } = false;
+
     public int DisplayOrder { get; set; } = 0;
 
     public ICollection<AttributeAllowedValue> AttributeAllowedValues { get; set; } = new List<AttributeAllowedValue>();

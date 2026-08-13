@@ -36,6 +36,17 @@ public class RolesController : ControllerBase
         return null;
     }
 
+    private async Task<int> GetCurrentUserRoleLevelAsync()
+    {
+        var uid = GetCurrentUserId();
+        if (uid.HasValue)
+        {
+            var currentUser = await _context.Users.Include(u => u.Role).FirstOrDefaultAsync(u => u.Id == uid.Value);
+            return currentUser?.Role?.Level ?? 0;
+        }
+        return 0;
+    }
+
     private void AddCustomAuditLog(string actionType, string entityName, int? entityId, object? oldValues = null, object? newValues = null)
     {
         var auditLog = new SecurityAuditLog
@@ -91,7 +102,7 @@ public class RolesController : ControllerBase
     }
 
     [HttpGet("permissions")]
-    [Authorize(Policy = Policies.SuperAdminOnly)]
+    [Authorize(Policy = Policies.RoleViewOnly)]
     public async Task<IActionResult> GetPermissions()
     {
         var permissions = await _context.AppPermissions
@@ -107,7 +118,7 @@ public class RolesController : ControllerBase
     }
 
     [HttpGet("{id}")]
-    [Authorize(Policy = Policies.SuperAdminOnly)]
+    [Authorize(Policy = Policies.RoleViewOnly)]
     public async Task<IActionResult> GetRole(int id)
     {
         var role = await _context.AppRoles
@@ -115,7 +126,7 @@ public class RolesController : ControllerBase
             .Include(r => r.RolePermissions)
             .FirstOrDefaultAsync(r => r.Id == id);
 
-        if (role == null) return NotFound("Role not found.");
+        if (role == null) return NotFound(new { message = "Role not found." });
 
         var response = new AppRoleResponseDto
         {
@@ -137,7 +148,13 @@ public class RolesController : ControllerBase
     {
         if (await _context.AppRoles.AnyAsync(r => r.Name == dto.Name))
         {
-            return BadRequest("Role with the same name already exists.");
+            return BadRequest(new { message = "Role with the same name already exists." });
+        }
+
+        var currentUserLevel = await GetCurrentUserRoleLevelAsync();
+        if (dto.Level > currentUserLevel)
+        {
+            return Forbid();
         }
 
         var newRole = new AppRole
@@ -182,11 +199,28 @@ public class RolesController : ControllerBase
             .Include(r => r.RolePermissions)
             .FirstOrDefaultAsync(r => r.Id == id);
 
-        if (role == null) return NotFound("Role not found.");
+        if (role == null) return NotFound(new { message = "Role not found." });
 
         if (await _context.AppRoles.AnyAsync(r => r.Name == dto.Name && r.Id != id))
         {
-            return BadRequest("Role with the same name already exists.");
+            return BadRequest(new { message = "Role with the same name already exists." });
+        }
+        
+        var currentUserLevel = await GetCurrentUserRoleLevelAsync();
+
+        if (!User.IsInRole("superadmin") && role.Level >= currentUserLevel)
+        {
+            return Forbid();
+        }
+
+        if (dto.Level > currentUserLevel)
+        {
+            return Forbid();
+        }
+
+        if (role.IsSystemRole && !User.IsInRole("superadmin"))
+        {
+            return Forbid();
         }
         
         var oldValues = new { role.Name, role.Description, role.Level, PermissionIds = role.RolePermissions.Select(rp => rp.PermissionId).ToList() };
@@ -238,16 +272,16 @@ public class RolesController : ControllerBase
             .Include(r => r.RolePermissions)
             .FirstOrDefaultAsync(r => r.Id == id);
 
-        if (role == null) return NotFound("Role not found.");
+        if (role == null) return NotFound(new { message = "Role not found." });
 
         if (role.IsSystemRole)
         {
-            return BadRequest("Cannot delete a system role.");
+            return BadRequest(new { message = "Cannot delete a system role." });
         }
 
         if (role.Users.Any(u => !u.IsDeleted))
         {
-            return BadRequest("Cannot delete a role that has assigned users.");
+            return BadRequest(new { message = "Cannot delete a role that has assigned users." });
         }
         
         var oldValues = new { role.Name, role.Description };

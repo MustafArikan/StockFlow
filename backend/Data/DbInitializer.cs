@@ -87,11 +87,11 @@ public static class DbInitializer
             ("Supplier.Add", "Yeni tedarikçi firması ekleme", "Tedarikçiler"),
             ("Supplier.Edit", "Tedarikçi firma bilgilerini düzenleme", "Tedarikçiler"),
             ("Supplier.Delete", "Tedarikçi silme", "Tedarikçiler"),
-            ("Asset.View", "Demirbaş listesini görüntüleme", "Demirbaşlar"),
-            ("Asset.Add", "Sisteme yeni demirbaş ekleme", "Demirbaşlar"),
-            ("Asset.Edit", "Demirbaş bilgilerini düzenleme", "Demirbaşlar"),
-            ("Asset.Delete", "Demirbaş silme veya hurdaya çıkarma", "Demirbaşlar"),
-            ("Asset.Assign", "Demirbaşları personellere zimmetleme yetkisi", "Demirbaşlar"),
+            ("Asset.View", "Ekipman listesini görüntüleme", "Ekipmanlar"),
+            ("Asset.Add", "Sisteme yeni ekipman ekleme", "Ekipmanlar"),
+            ("Asset.Edit", "Ekipman bilgilerini düzenleme", "Ekipmanlar"),
+            ("Asset.Delete", "Ekipman silme veya hurdaya çıkarma", "Ekipmanlar"),
+            ("Asset.Assign", "Ekipmanları personellere atama yetkisi", "Ekipmanlar"),
             ("Scanner.Use", "Kamera/Barkod okuyucu ile işlem yapma", "Sistem Araçları"),
             ("Report.View", "Sistem raporlarını görüntüleme", "Raporlar"),
             ("Report.Export", "Verileri Excel, PDF formatlarında dışa aktarma", "Raporlar"),
@@ -111,7 +111,11 @@ public static class DbInitializer
             ("Notification.ManageSettings", "Bildirim kurallarını ve ayarlarını yönetme", "Bildirimler"),
             ("Settings.View", "Sistem ayarlarını görüntüleme", "Sistem"),
             ("Settings.Edit", "Sistem ayarlarını değiştirme", "Sistem"),
-            ("System.AuditLogs", "Sistemdeki tüm güvenlik loglarını görüntüleme", "Güvenlik")
+            ("System.AuditLogs", "Sistemdeki tüm güvenlik loglarını görüntüleme", "Güvenlik"),
+            ("Unit.View", "Birim listesini görüntüleme", "Birimler"),
+            ("Unit.Add", "Yeni birim ekleme", "Birimler"),
+            ("Unit.Edit", "Mevcut birimleri düzenleme", "Birimler"),
+            ("Unit.Delete", "Birim pasifleştirme/silme", "Birimler")
         };
 
         var existingNames = context.AppPermissions
@@ -137,7 +141,7 @@ public static class DbInitializer
 
         var policyDefs = new List<(string Key, string Description, int Limit, int Window, string[] Perms)>
         {
-            ("RequireAssetWrite", "Demirbaş Ekleme ve Düzenleme Yetkisi", 30, 60, new[] { "Asset.Add", "Asset.Edit" }),
+            ("RequireAssetWrite", "Ekipman Ekleme ve Düzenleme Yetkisi", 30, 60, new[] { "Asset.Add", "Asset.Edit" }),
             ("RequireAuditLogRead", "Sistem Loglarını Okuma Yetkisi", 20, 60, new[] { "System.AuditLogs" }),
             ("RequireCategoryWrite", "Kategori Ekleme ve Düzenleme Yetkisi", 30, 60, new[] { "Category.Add", "Category.Edit" }),
             ("RequireLocationWrite", "Konum/Raf Ekleme Yetkisi", 30, 60, new[] { "Location.Add" }),
@@ -147,7 +151,7 @@ public static class DbInitializer
             ("RequireSupplierWrite", "Tedarikçi Ekleme ve Düzenleme Yetkisi", 30, 60, new[] { "Supplier.Add", "Supplier.Edit" }),
             ("RequireWarehouseWrite", "Depo Ekleme ve Düzenleme Yetkisi", 30, 60, new[] { "Warehouse.Add", "Warehouse.Edit" }),
             ("RequireUserManage", "Kullanıcı Yönetim (Listele, Ekle, Düzenle, Sil) Yetkisi", 15, 60, new[] { "User.View", "User.Add", "User.Edit", "User.Delete" }),
-            ("RequireAssetRead", "Demirbaş Görüntüleme Yetkisi", 50, 60, new[] { "Asset.View" }),
+            ("RequireAssetRead", "Ekipman Görüntüleme Yetkisi", 50, 60, new[] { "Asset.View" }),
             ("RequireCategoryRead", "Kategori Görüntüleme Yetkisi", 50, 60, new[] { "Category.View" }),
             ("RequireLocationRead", "Konum/Raf Görüntüleme Yetkisi", 50, 60, new[] { "Location.View" }),
             ("RequireProductRead", "Ürün Görüntüleme Yetkisi", 50, 60, new[] { "Product.View" }),
@@ -157,7 +161,9 @@ public static class DbInitializer
             ("RequireReportRead", "Rapor Görüntüleme Yetkisi", 20, 60, new[] { "Report.View" }),
             ("RequireDashboardRead", "Ana Sayfa Görüntüleme Yetkisi", 50, 60, new[] { "Dashboard.View" }),
             ("RequireNotificationRead", "Bildirim Görüntüleme Yetkisi", 50, 60, new[] { "Notification.View" }),
-            ("RequireSettingsRead", "Ayarlar Görüntüleme Yetkisi", 50, 60, new[] { "Settings.View" })
+            ("RequireSettingsRead", "Ayarlar Görüntüleme Yetkisi", 50, 60, new[] { "Settings.View" }),
+            ("RequireUnitWrite", "Birim Ekleme ve Düzenleme Yetkisi", 30, 60, new[] { "Unit.Add", "Unit.Edit", "Unit.Delete" }),
+            ("RequireUnitRead", "Birim Görüntüleme Yetkisi", 50, 60, new[] { "Unit.View" })
         };
 
         var existingPolicies = context.AppAuthorizationPolicies.Select(p => p.Key).ToList();
@@ -256,6 +262,65 @@ public static class DbInitializer
                 new Category { Name = "Depolama Birimleri" }
             };
             context.Categories.AddRange(defaultCategories);
+            context.SaveChanges();
+        }
+
+        var units = new List<(string Name, string ShortCode, bool AllowsDecimal, bool IsSystemUnit, UnitCategory Category)>
+        {
+            // --- Sayısal (paketleme/sayma) birimleri ---
+            ("Adet",        "ADET",  false, true,  UnitCategory.Sayisal),
+            ("Çift",        "CIFT",  false, false, UnitCategory.Sayisal),
+            ("Takım",       "TKM",   false, false, UnitCategory.Sayisal),
+            ("Koli",        "KOLI",  false, true,  UnitCategory.Sayisal),
+            ("Paket",       "PKT",   false, false, UnitCategory.Sayisal),
+            ("Kutu",        "KUTU",  false, false, UnitCategory.Sayisal),
+            ("Top",         "TOP",   false, false, UnitCategory.Sayisal),
+            ("Rulo",        "RULO",  false, false, UnitCategory.Sayisal),
+            ("Kasa",        "KASA",  false, false, UnitCategory.Sayisal),
+            ("Palet",       "PLT",   false, false, UnitCategory.Sayisal),
+            ("Çuval",       "CUVAL", false, false, UnitCategory.Sayisal),
+            ("Demet",       "DEMET", false, false, UnitCategory.Sayisal),
+            ("Düzine",      "DUZINE",false, false, UnitCategory.Sayisal),
+            ("Bidon",       "BIDON", false, false, UnitCategory.Sayisal),
+            ("Varil",       "VARIL", false, false, UnitCategory.Sayisal),
+            ("Şişe",        "SISE",  false, false, UnitCategory.Sayisal),
+
+            // --- Ağırlık ---
+            ("Kilogram",    "KG",    true,  true,  UnitCategory.Agirlik),
+            ("Gram",        "GR",    true,  false, UnitCategory.Agirlik),
+            ("Ton",         "TON",   true,  false, UnitCategory.Agirlik),
+
+            // --- Hacim ---
+            ("Litre",       "LT",    true,  true,  UnitCategory.Hacim),
+            ("Mililitre",   "ML",    true,  false, UnitCategory.Hacim),
+            ("Metreküp",    "M3",    true,  false, UnitCategory.Hacim),
+
+            // --- Uzunluk ---
+            ("Metre",       "M",     true,  true,  UnitCategory.Uzunluk),
+            ("Santimetre",  "CM",    true,  false, UnitCategory.Uzunluk),
+
+            // --- Alan ---
+            ("Metrekare",   "M2",    true,  false, UnitCategory.Alan),
+        };
+
+        var existingUnitCodes = context.Units.Select(u => u.ShortCode).ToList();
+        var unitsToInsert = units
+            .Where(u => !existingUnitCodes.Contains(u.ShortCode))
+            .Select(u => new Unit
+            {
+                Name = u.Name,
+                ShortCode = u.ShortCode,
+                AllowsDecimal = u.AllowsDecimal,
+                IsSystemUnit = u.IsSystemUnit,
+                Category = u.Category,
+                IsActive = true,
+                CreatedAt = DateTime.UtcNow,
+                IsDeleted = false
+            }).ToList();
+
+        if (unitsToInsert.Any())
+        {
+            context.Units.AddRange(unitsToInsert);
             context.SaveChanges();
         }
 

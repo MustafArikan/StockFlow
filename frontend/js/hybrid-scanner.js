@@ -101,25 +101,62 @@ function onScanSuccess(decodedText, decodedResult) {
 
         // ARAMA MOTORU (Raf ve Ürün Kontrolü)
         try {
+            // ÖNCE GS1 BARKOD RESOLVER API (Faz 3 Entegrasyonu)
+            try {
+                const formatName = decodedResult?.result?.format?.formatName || '';
+                const resolveRes = await apiRequest('/barcodes/resolve', 'POST', {
+                    rawCode: okunanMetin,
+                    symbologyFormat: formatName
+                });
+            
+                switch (resolveRes.kind) {
+                    case 'product':
+                        window.location.href = `products.html?viewProductBarcode=${encodeURIComponent(okunanMetin)}`;
+                        return;
+                    case 'product_packaging':
+                        window.location.href = `movements.html?productId=${resolveRes.productId}&inputUnitId=${resolveRes.inputUnitId}&qty=1`;
+                        return;
+                    case 'product_with_batch':
+                        const params = new URLSearchParams({
+                            productId: resolveRes.productId,
+                            lotNumber: resolveRes.lotNumber || '',
+                            expiryDate: resolveRes.expiryDate || '',
+                            qty: resolveRes.variableQuantity || ''
+                        });
+                        window.location.href = `movements.html?${params.toString()}`;
+                        return;
+                    case 'pallet':
+                        window.location.href = `pallets.html?sscc=${encodeURIComponent(resolveRes.sscc)}`;
+                        return;
+                }
+            } catch (resolveHatasi) {
+                // 404/400 ise eski akışa (raf/ürün arama) düş - geriye dönük uyumluluk korunur
+            }
+
+            let arananKod = okunanMetin;
+            let queryParams = "";
+            
+            // DÜZ ARAMALAR İÇİN ESKİ YAPI DEVAM EDER
+            if (typeof window.parseGs1Barcode === 'function') {
+                const parsedGs1 = window.parseGs1Barcode(okunanMetin);
+                if (parsedGs1.isGs1 && parsedGs1.gtin) {
+                    arananKod = parsedGs1.gtin;
+                }
+            }
+
             // ÖNCE RAF (LOCATION) OLARAK KONTROL ET
             try {
-                await apiRequest(`/locations/by-code/${encodeURIComponent(okunanMetin)}`, 'GET');
-                // Hata fırlatmadıysa raf bulunmuştur!
-                window.location.href = `warehouses.html?viewShelfCode=${encodeURIComponent(okunanMetin)}`;
+                await apiRequest(`/locations/by-code/${encodeURIComponent(arananKod)}`, 'GET');
+                window.location.href = `warehouses.html?viewShelfCode=${encodeURIComponent(arananKod)}`;
                 return;
-            } catch (rafHatasi) {
-                // 404 döndüyse raf değildir, ürün aramaya geç
-            }
+            } catch (rafHatasi) {}
 
             // EĞER RAF DEĞİLSE, ÜRÜN (PRODUCT) OLARAK KONTROL ET
             try {
-                await apiRequest(`/products/by-barcode/${encodeURIComponent(okunanMetin)}`, 'GET');
-                // Hata fırlatmadıysa ürün bulunmuştur!
-                window.location.href = `products.html?viewProductBarcode=${encodeURIComponent(okunanMetin)}`;
+                await apiRequest(`/products/by-barcode/${encodeURIComponent(arananKod)}`, 'GET');
+                window.location.href = `products.html?viewProductBarcode=${encodeURIComponent(arananKod)}`;
                 return;
-            } catch (urunHatasi) {
-                // 404 döndüyse ürün de değildir.
-            }
+            } catch (urunHatasi) {}
 
             // NE RAF NE DE ÜRÜN BULUNAMADI! (UI HATA DURUMU)
             if (resultText) {
