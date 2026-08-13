@@ -1,11 +1,8 @@
-// XSS koruması
-
-
 let currentAssetId = null;
 let currentAssetProductId = null;
 let currentAssetSerialNumber = null; //Uygulamanın baktığı cihazı unutmaması için
 let currentGridPage = 1;
-let currentGridPageSize = 8; // Izgara tasarımı için varsayılan 8
+let currentGridPageSize = 8;
 const userRole = typeof getUserRole === "function" ? getUserRole() : "User";
 const token = localStorage.getItem('token');
 if (!token) window.location.href = 'login.html';
@@ -17,7 +14,7 @@ function getAssetStatusUI(status) {
     switch (status) {
         case 'Available':
             return { text: "Müsait (Boşta)", shortText: "Boşta", badgeClass: "bg-success", iconColor: "text-success", bgClass: "bg-success bg-opacity-10" };
-        case 'In Use':
+        case 'InUse':
             return { text: "Kullanımda", shortText: "Kullanımda", badgeClass: "bg-primary", iconColor: "text-primary", bgClass: "bg-primary bg-opacity-10" };
         case 'Broken':
             return { text: "Arızalı", shortText: "Arızalı", badgeClass: "bg-danger", iconColor: "text-danger", bgClass: "bg-danger bg-opacity-10" };
@@ -57,13 +54,19 @@ function parseAssetBarcode(rawText) {
 // SAYFA YÜKLENDİĞİNDE ÇALIŞACAKLAR 
 // ==========================================
 document.addEventListener("DOMContentLoaded", () => {
+    // Yetki ve Olay Dinleyicileri
     applyPermissions();
     initEventListeners();
 
+    // Dropdown (Açılır Menü) Yüklemeleri
     loadProductsForDropdown();
     loadUsersForDropdown();
+    dropdownKategorileriYukleAssets();
 
-    // Güvenli WMS Entegrasyonu: İstek hatası durumunda uygulamanın çökmesini engeller
+    // Tarayıcı Geçmişi Başlatma
+    history.replaceState({ view: 'grid' }, null, '');
+
+    // Güvenli WMS Entegrasyonu
     if (typeof StockUtils !== 'undefined') {
         try {
             StockUtils.loadAllWarehouses('deleteAssetTargetWarehouse');
@@ -72,6 +75,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
+    // Admin Grid Başlatma
     if (["admin", "superadmin"].includes(userRole)) {
         document.getElementById("adminGridContainer")?.classList.remove("d-none");
         loadGridCards(1);
@@ -108,12 +112,14 @@ function initEventListeners() {
     initAddAssetCamera();
 }
 
-// Arama çubuğu ve modal içindeki işlem butonlarının tıklanma olaylarını yönetir.
+// Arama çubuğu ve modal içindeki işlem butonlarının tıklanma olaylarını ve ızgara filtrelerini yönetir.
 function initSearchAndActionListeners() {
+    // Arama ve Geri Dönüş İşlemleri
     document.getElementById('btnSearchAsset')?.addEventListener('click', searchAsset);
     document.getElementById('serialSearchInput')?.addEventListener('keyup', e => { if (e.key === 'Enter') searchAsset(); });
-    document.getElementById('btnGeriDonGrid')?.addEventListener('click', () => { history.back(); });
+    document.getElementById('btnGeriDonGrid')?.addEventListener('click', goBackToGrid);
 
+    // Tablo (Grid) Kartına Tıklama
     document.getElementById('equipmentGridCards')?.addEventListener('click', (e) => {
         const cardLink = e.target.closest('.grid-asset-link');
         if (cardLink) {
@@ -123,6 +129,7 @@ function initSearchAndActionListeners() {
         }
     });
 
+    // Modal Aksiyon Butonları
     document.getElementById('btnSubmitCreateAsset')?.addEventListener('click', submitCreateAsset);
     document.getElementById('btnSubmitAssign')?.addEventListener('click', submitAssignAsset);
     document.getElementById('btnSubmitReturn')?.addEventListener('click', submitReturnAsset);
@@ -130,6 +137,125 @@ function initSearchAndActionListeners() {
     document.getElementById('btnSubmitResolve')?.addEventListener('click', submitResolve);
     document.getElementById('btnSubmitMaintenance')?.addEventListener('click', submitMaintenance);
     document.getElementById('btnSubmitDeleteAsset')?.addEventListener('click', submitDeleteAsset);
+
+    // Sıralama ve Temel Filtre İşlemleri
+    document.getElementById('assetGridSort')?.addEventListener('change', function () {
+        const [key, dir] = this.value.split('_');
+        assetGrid.setSortState(key, dir);
+        loadGridCards(1);
+    });
+
+    document.getElementById('filtreDurum')?.addEventListener('change', function () {
+        loadGridCards(1);
+    });
+
+    document.getElementById('btnFiltreleriTemizle')?.addEventListener('click', () => {
+        if (document.getElementById('filtreDurum')) document.getElementById('filtreDurum').value = '';
+        const catSelect = document.getElementById('filtreKategoriId');
+        if (catSelect) {
+            catSelect.value = '';
+            if (typeof buildCategoryCascader === 'function') {
+                buildCategoryCascader('filtreKategoriContainer', 'filtreKategoriId', null, true);
+            }
+            document.getElementById('dynamicFilterArea')?.classList.add('d-none');
+            const filterContainer = document.getElementById('dynamicFilterContainer');
+            if (filterContainer) filterContainer.innerHTML = '';
+        }
+        loadGridCards(1);
+    });
+
+    // Dinamik Kategori Özellikleri Filtresi
+    document.getElementById("filtreKategoriId")?.addEventListener("change", async function () {
+        const categoryId = this.value;
+        const filterArea = document.getElementById("dynamicFilterArea");
+        const filterContainer = document.getElementById("dynamicFilterContainer");
+
+        if (!categoryId) {
+            if (filterArea) filterArea.classList.add("d-none");
+            if (filterContainer) filterContainer.innerHTML = "";
+            loadGridCards(1);
+            return;
+        }
+
+        try {
+            if (filterArea) filterArea.classList.remove("d-none");
+            if (filterContainer) filterContainer.innerHTML = `<div class="col-12 text-center text-muted"><div class="spinner-border spinner-border-sm me-2"></div>Özellikler yükleniyor...</div>`;
+
+            loadGridCards(1);
+
+            const rules = await apiRequest(`/attribute-rules/category/${categoryId}`, "GET");
+
+            if (filterContainer) filterContainer.innerHTML = "";
+
+            if (rules.length === 0) {
+                if (filterContainer) filterContainer.innerHTML = `<div class="col-12 text-muted fst-italic">Bu kategoriye ait filtrelenebilir özellik bulunamadı.</div>`;
+                return;
+            }
+
+            rules.forEach(rule => {
+                let options = [];
+                if (rule.allowedValues && rule.allowedValues !== "[]") {
+                    try { options = JSON.parse(rule.allowedValues); }
+                    catch (e) { options = rule.allowedValues.split(",").map(s => s.trim()); }
+                }
+
+                if (rule.uiComponent === "color_picker" && rule.allowedValueList) {
+                    options = options.map(val => {
+                        const eslesen = rule.allowedValueList.find(a => a.value === val);
+                        return { value: val, hex: eslesen ? eslesen.label : val };
+                    });
+                }
+
+                let inputHtml = "";
+                if (rule.uiComponent === "select" || rule.uiComponent === "color_picker") {
+                    inputHtml = `<select id="filter_${rule.attributeKey}" class="form-select form-select-sm bg-light border-0 rounded-pill px-3 kural-filtresi">
+                                    <option value="">Tümü</option>`;
+                    options.forEach(opt => {
+                        let val = typeof opt === "object" ? opt.value : opt;
+                        inputHtml += `<option value="${escapeHtml(val)}">${escapeHtml(val)}</option>`;
+                    });
+                    inputHtml += `</select>`;
+                } else {
+                    inputHtml = `<input type="text" id="filter_${rule.attributeKey}" class="form-control form-control-sm bg-light border-0 rounded-pill px-3 kural-filtresi" placeholder="Ara...">`;
+                }
+
+                const div = document.createElement("div");
+                div.className = "col-12 mb-3";
+                div.innerHTML = `<label class="form-label small fw-bold mb-1">${escapeHtml(rule.attributeKey)}</label>${inputHtml}`;
+                if (filterContainer) filterContainer.appendChild(div);
+            });
+
+            document.querySelectorAll(".kural-filtresi").forEach(el => {
+                el.addEventListener("change", () => loadGridCards(1));
+                el.addEventListener("input", () => loadGridCards(1));
+            });
+
+        } catch (e) {
+            console.error("Filtre kuralları yüklenirken hata:", e);
+            if (filterContainer) filterContainer.innerHTML = `<div class="col-12 text-danger">Özellikler yüklenemedi.</div>`;
+        }
+    });
+
+    // Tarayıcı Geri Tuşu Yönetimi
+    window.addEventListener('popstate', (e) => {
+        if (e.state && e.state.view) {
+            if (e.state.view === 'grid') {
+                document.getElementById('assetResultContainer').classList.add('d-none');
+                document.getElementById('adminGridContainer').classList.remove('d-none');
+                currentAssetId = null;
+                currentAssetProductId = null;
+                currentAssetSerialNumber = null;
+                if (['admin', 'superadmin'].includes(userRole)) {
+                    loadGridCards(currentGridPage);
+                }
+            } else if (e.state.view === 'asset') {
+                searchAsset(e.state.serial, true);
+            }
+        } else {
+            document.getElementById('assetResultContainer').classList.add('d-none');
+            document.getElementById('adminGridContainer').classList.remove('d-none');
+        }
+    });
 }
 
 // Depo, Raf ve Kategori seçimi gibi dinamik değişen elemanların olaylarını dinler ve yönetir.
@@ -165,7 +291,7 @@ function initWMSDropdownListeners() {
             if (res.ok) {
                 const stoklar = await res.json();
                 if (stoklarListesi) stoklarListesi.innerHTML = '';
-                
+
                 if (stoklar.length === 0) {
                     if (stoklarListesi) {
                         stoklarListesi.innerHTML = '<div class="p-2 text-center text-danger fw-bold">Bu ürün için depolarda stok bulunmuyor!</div>';
@@ -174,15 +300,18 @@ function initWMSDropdownListeners() {
                     stoklar.forEach(stok => {
                         const item = document.createElement("div");
                         item.className = "list-group-item list-group-item-action d-flex flex-column flex-md-row justify-content-between align-items-md-center p-3 border-start border-4 border-top-0 border-end-0 border-bottom-1 mb-2 shadow-sm rounded border-secondary stock-location-item cursor-pointer";
-                        
-                        item.innerHTML = `
-                            <div class="d-flex align-items-center mb-3 mb-md-0 w-100" style="cursor: pointer;">
+
+                        const depoAdi = stok.warehouseName || stok.WarehouseName || stok.warehouse || "Bilinmeyen Depo";
+                        const rafAdi = stok.locationCode || stok.locationName || "Bilinmeyen Raf";
+
+                        item.innerHTML = `                             
+                            <div class="d-flex align-items-center mb-3 mb-md-0 w-100 cursor-pointer">
                                 <div class="form-check me-3 fs-4">
-                                    <input class="form-check-input mt-0 cursor-pointer" type="radio" name="assetSourceLocRadio" style="cursor: pointer;">
+                                    <input class="form-check-input mt-0 cursor-pointer" type="radio" name="assetSourceLocRadio">
                                 </div>
                                 <div class="flex-grow-1">
-                                    <div class="fw-bold text-dark fs-6"><i class="bi bi-building me-1 text-primary"></i>${escapeHtml(stok.warehouseName)}</div>
-                                    <div class="text-secondary small"><i class="bi bi-box me-1"></i>Raf: <span class="fw-bold text-dark">${escapeHtml(stok.locationName)}</span></div>
+                                    <div class="fw-bold text-dark fs-6"><i class="bi bi-building me-1 text-primary"></i>${escapeHtml(depoAdi)}</div>
+                                    <div class="text-secondary small"><i class="bi bi-box me-1"></i>Raf: <span class="fw-bold text-dark">${escapeHtml(rafAdi)}</span></div>
                                 </div>
                             </div>
                             <div class="d-flex align-items-center justify-content-between w-100 mt-2 mt-md-0 w-md-25">
@@ -190,7 +319,7 @@ function initWMSDropdownListeners() {
                                 <input type="number" class="form-control form-control-sm border-success text-center fw-bold shadow-sm d-none qty-input" value="1" disabled>
                             </div>
                         `;
-                        
+
                         const radio = item.querySelector('input[type="radio"]');
                         const qtyInput = item.querySelector('.qty-input');
 
@@ -198,7 +327,7 @@ function initWMSDropdownListeners() {
                             if (e.target !== radio && e.target !== qtyInput) {
                                 radio.checked = true;
                             }
-                            
+
                             // Tümünü sıfırla
                             Array.from(stoklarListesi.children).forEach(child => {
                                 child.classList.remove('bg-success', 'bg-opacity-10', 'border-success');
@@ -206,7 +335,7 @@ function initWMSDropdownListeners() {
                                 const childQty = child.querySelector('.qty-input');
                                 if (childQty) childQty.classList.add('d-none');
                             });
-                            
+
                             // Seçileni aktif et
                             item.classList.remove('border-secondary');
                             item.classList.add('bg-success', 'bg-opacity-10', 'border-success');
@@ -219,7 +348,7 @@ function initWMSDropdownListeners() {
                             if (whSelect) {
                                 whSelect.value = stok.warehouseId;
                                 whSelect.dispatchEvent(new Event('change'));
-                                
+
                                 // Raf listesinin yüklenmesini bekle
                                 setTimeout(() => {
                                     if (locSelect) {
@@ -367,7 +496,7 @@ function initModalResetListeners() {
 
         const attrContainer = document.getElementById('newAssetAttributesContainer');
         if (attrContainer) attrContainer.innerHTML = '';
-        
+
         const assignedUserSelect = document.getElementById('newAssetAssignedUser');
         if (assignedUserSelect) assignedUserSelect.value = '';
 
@@ -636,14 +765,14 @@ async function loadUsersForDropdown() {
         const users = response.items || response.data || response;
         const select = document.getElementById('assignUserSelect');
         const selectNewAsset = document.getElementById('newAssetAssignedUser');
-        
+
         if (select) select.length = 0;
         if (selectNewAsset) selectNewAsset.length = 0;
 
         if (users && users.length > 0) {
             if (select) select.add(new Option("-- Kullanıcıyı Seçiniz --", ""));
             if (selectNewAsset) selectNewAsset.add(new Option("Şimdilik boşta kalsın...", ""));
-            
+
             users.forEach(user => {
                 const fname = user.firstName ?? user.FirstName ?? "";
                 const lname = user.lastName ?? user.LastName ?? "";
@@ -698,9 +827,7 @@ async function searchAsset(kameraBarkodu = null, skipHistory = false) {
         const iconElement = document.getElementById('resIconElement');
 
         if (iconContainer) {
-            iconContainer.className = `d-inline-flex align-items-center justify-content-center ${ui.bgClass} rounded-circle mb-3`;
-            iconContainer.style.width = "90px";
-            iconContainer.style.height = "90px";
+            iconContainer.className = `d-inline-flex align-items-center justify-content-center ${ui.bgClass} rounded-circle mb-3 h-60px w-60px`;
         }
         if (iconElement) {
             iconElement.className = `bi bi-laptop fs-1 ${ui.iconColor}`;
@@ -729,7 +856,7 @@ async function searchAsset(kameraBarkodu = null, skipHistory = false) {
 
         // Tüm liste öğeleri için güvenlik kapıları
         btnAssign.forEach(btn => btn.classList.toggle('d-none', status !== 'Available' || !canAssign));
-        btnReturn.forEach(btn => btn.classList.toggle('d-none', status !== 'In Use' || !canAssign));
+        btnReturn.forEach(btn => btn.classList.toggle('d-none', status !== 'InUse' || !canAssign));
 
         // Kullanım Dışı ise Bakımı Gizler
         btnMaintenance.forEach(btn => btn.classList.toggle('d-none', status === 'Retired' || !canEdit));
@@ -766,8 +893,19 @@ async function searchAsset(kameraBarkodu = null, skipHistory = false) {
                     iconHtml = `<i class="bi bi-tools ${iconColor}"></i>`;
                 }
 
-                // Tarihi formatla
-                const dateString = event.date ? new Date(event.date).toLocaleString('tr-TR') : "Tarih Yok";
+                // Tarihi formatla                
+                let dateString = "Tarih Yok";
+                if (event.date) {
+                    const parsedDate = new Date(event.date);
+
+                    if (!isNaN(parsedDate.getTime())) {
+                        // UTC'den Yerel Saate (Local Time) güvenli çeviri
+                        dateString = parsedDate.toLocaleString('tr-TR', {
+                            year: 'numeric', month: '2-digit', day: '2-digit',
+                            hour: '2-digit', minute: '2-digit', second: '2-digit'
+                        });
+                    }
+                }
 
                 return `
                     <li class="timeline-item ${dotClass}">
@@ -989,21 +1127,18 @@ const assetGrid = createDataView({
     paginationContainerId: "assetsPaginationContainer",
     mode: 'grid',
     emptyMessage: "Sistemde henüz kayıtlı ekipman yok.",
-    pageSize: 12,
+    pageSize: 8, // Sayfa başına 8 kart
     fetchPage: async (page, pageSize, sortKey, sortDir) => {
-        let url = `/assets?pageNumber=${page}&pageSize=${pageSize}`;
-        if (sortKey) {
-            url += `&sortKey=${sortKey}&sortDir=${sortDir}`;
-        }
 
-        // --- FİLTRELERİ URL'E EKLE ---
+        let url = `/assets?pageNumber=1&pageSize=10000`;
+
+        // FİLTRELERİ URL'E EKLE
         const categoryId = document.getElementById('filtreKategoriId')?.value;
         if (categoryId) url += `&categoryId=${categoryId}`;
 
         const statusFilter = document.getElementById('filtreDurum')?.value;
         if (statusFilter) url += `&status=${encodeURIComponent(statusFilter)}`;
 
-        // Dinamik filtreleri topla
         const dynamicInputs = document.querySelectorAll('.kural-filtresi');
         let dAttributes = {};
         dynamicInputs.forEach(input => {
@@ -1017,45 +1152,49 @@ const assetGrid = createDataView({
             url += `&dynamicAttributes=${encodeURIComponent(JSON.stringify(dAttributes))}`;
         }
 
+        // 1. Veriyi Backend'den Çek
         const response = await apiRequest(url, 'GET');
-        let assets = response.assets || response;
-        const totalRecords = response.totalRecords || (assets ? assets.length : 0);
+        let allAssets = response.assets || response.items || response.data || response || [];
 
-        // Fallback: If backend didn't sort, we sort it locally just in case
-        if (sortKey && Array.isArray(assets) && assets.length > 0) {
-            window.TableUtils.sortData(assets, sortKey, sortDir === 'asc');
+        // 2. TEMİZ VE KUSURSUZ SIRALAMA MOTORU
+        if (sortKey && Array.isArray(allAssets) && allAssets.length > 0) {
+            allAssets.sort((a, b) => {
+                const actualKey = Object.keys(a).find(k => k.toLowerCase() === sortKey.toLowerCase()) || sortKey;
+
+                let valA = a[actualKey] ?? "";
+                let valB = b[actualKey] ?? "";
+
+                // EĞER SIRALANAN SÜTUN "TARİH" İSE (Örn: CreatedAt)
+                if (actualKey.toLowerCase().includes('date') || actualKey.toLowerCase().includes('time') || actualKey.toLowerCase() === 'createdat') {
+                    // Tarihleri milisaniyeye (sayıya) çevir
+                    const dateA = valA ? new Date(valA).getTime() : 0;
+                    const dateB = valB ? new Date(valB).getTime() : 0;
+
+                    // Matematiksel sıralama: asc ise küçükten büyüğe, desc ise büyükten küçüğe
+                    return sortDir === 'asc' ? (dateA - dateB) : (dateB - dateA);
+                }
+
+                // EĞER SIRALANAN SÜTUN "METİN" İSE (Örn: İsim, Durum vb. A-Z)
+                valA = valA.toString().toLowerCase();
+                valB = valB.toString().toLowerCase();
+
+                if (valA < valB) return sortDir === 'asc' ? -1 : 1;
+                if (valA > valB) return sortDir === 'asc' ? 1 : -1;
+                return 0;
+            });
         }
 
+        // 3. SIRALANMIŞ VERİDEN İLGİLİ SAYFAYI KES
+        const startIndex = (page - 1) * pageSize;
+        const endIndex = startIndex + pageSize;
+        const paginatedAssets = allAssets.slice(startIndex, endIndex);
+
         return {
-            items: assets || [],
-            totalItems: totalRecords
+            items: paginatedAssets,
+            totalItems: allAssets.length
         };
     },
     renderCard: buildAssetCardHtml
-});
-
-document.getElementById('assetGridSort')?.addEventListener('change', function () {
-    const [key, dir] = this.value.split('_');
-    assetGrid.setSortState(key, dir);
-});
-
-document.getElementById('filtreDurum')?.addEventListener('change', function () {
-    loadGridCards(1);
-});
-
-document.getElementById('btnFiltreleriTemizle')?.addEventListener('click', () => {
-    if (document.getElementById('filtreDurum')) document.getElementById('filtreDurum').value = '';
-    const catSelect = document.getElementById('filtreKategoriId');
-    if (catSelect) {
-        catSelect.value = '';
-        if (typeof buildCategoryCascader === 'function') {
-            buildCategoryCascader('filtreKategoriContainer', 'filtreKategoriId', null, true);
-        }
-        document.getElementById('dynamicFilterArea')?.classList.add('d-none');
-        const filterContainer = document.getElementById('dynamicFilterContainer');
-        if (filterContainer) filterContainer.innerHTML = '';
-    }
-    loadGridCards(1);
 });
 
 async function loadGridCards(page = 1) {
@@ -1067,9 +1206,8 @@ async function loadGridCards(page = 1) {
 // KART HTML ÜRETİCİSİ (UI VE DATA AYRIMI)
 // ==========================================
 function buildAssetCardHtml(asset) {
-    const ui = getAssetStatusUI(asset.status); // Ortak Yardımcı fonksiyondan UI değerlerini al    
+    const ui = getAssetStatusUI(asset.status);
 
-    // Eğer cihaz kullanımdan kaldırılmışsa personeli boş göster, değilse atanmış kişiyi yaz
     const personelAdi = asset.status === 'Retired' ? "Kullanımdan Kaldırıldı" : (asset.assignedToName ?? "Şu an Boşta");
 
     return `
@@ -1084,13 +1222,15 @@ function buildAssetCardHtml(asset) {
                     <h6 class="fw-bold mb-1 text-truncate" title="${escapeHtml(asset.productName)}">${escapeHtml(asset.productName)}</h6>
                     <div class="mb-3">
                         <span class="badge bg-dark rounded-pill fw-normal asset-sn-badge">SN: ${escapeHtml(asset.serialNumber)}</span>
+                    </div>                    
+                    
+                    <div class="d-flex flex-column align-items-center justify-content-center border-top pt-3 mt-auto gap-2">                        
+                        <span class="badge ${ui.badgeClass} rounded-pill px-3 text-wrap lh-base">${ui.shortText}</span> 
+                      
+                        <small class="text-muted w-100 text-center text-wrap lh-sm fs-080rem"><i class="bi bi-person-fill"></i> ${escapeHtml(personelAdi)}</small>
                     </div>
-                    <div class="d-flex justify-content-between align-items-center border-top pt-3 mt-auto">
-                        <span class="badge ${ui.badgeClass} text-white rounded-pill">${ui.shortText}</span>
-                        <small class="text-muted text-truncate ms-2 asset-person-name"><i class="bi bi-person-fill"></i> ${escapeHtml(personelAdi)}</small>
-                    </div>
+                    
                 </div>
-                <!-- CSP Uyumlu Tıklanabilir Gizli Link -->
                 <a href="#" class="stretched-link grid-asset-link" data-serial="${escapeHtml(asset.serialNumber)}"></a>
             </div>
         </div>
@@ -1151,30 +1291,6 @@ async function submitDeleteAsset() {
         }
     }
 }
-
-
-
-window.addEventListener('popstate', (e) => {
-    if (e.state && e.state.view) {
-        if (e.state.view === 'grid') {
-            document.getElementById('assetResultContainer').classList.add('d-none');
-            document.getElementById('adminGridContainer').classList.remove('d-none');
-            currentAssetId = null;
-            currentAssetProductId = null;
-            currentAssetSerialNumber = null;
-            if (['admin', 'superadmin'].includes(userRole)) {
-                loadGridCards(currentGridPage);
-            }
-        } else if (e.state.view === 'asset') {
-            searchAsset(e.state.serial, true);
-        }
-    } else {
-        document.getElementById('assetResultContainer').classList.add('d-none');
-        document.getElementById('adminGridContainer').classList.remove('d-none');
-    }
-});
-
-document.addEventListener('DOMContentLoaded', () => { history.replaceState({ view: 'grid' }, null, ''); });
 
 // ==========================================
 // KATEGORI CASCADER VE DINAMIK FILTRE MOTORU
@@ -1237,9 +1353,7 @@ function buildCategoryCascader(containerId, hiddenInputId, selectedCategoryId = 
     button.appendChild(caretIcon);
 
     const menu = document.createElement("ul");
-    menu.className = "dropdown-menu w-100 shadow-sm";
-    menu.style.maxHeight = "300px";
-    menu.style.overflowY = "auto";
+    menu.className = "dropdown-menu w-100 shadow-sm scrollable-dropdown";
 
     dropdownDiv.appendChild(button);
     dropdownDiv.appendChild(menu);
@@ -1277,18 +1391,17 @@ function buildCategoryCascader(containerId, hiddenInputId, selectedCategoryId = 
             if (isSelected) {
                 itemDiv.classList.add("bg-primary", "bg-opacity-10", "text-primary", "fw-bold");
             } else {
-                itemDiv.style.cursor = "pointer";
+                itemDiv.classList.add("cursor-pointer");
             }
-            itemDiv.style.marginLeft = (level * 15) + "px";
+            if (level > 0) itemDiv.classList.add(`ms-${Math.min(level, 5)}`);
 
             const leftDiv = document.createElement("div");
             leftDiv.className = "d-flex align-items-center flex-grow-1";
 
             if (hasChildren) {
                 const toggleBtn = document.createElement("span");
-                toggleBtn.className = "me-2 text-muted";
+                toggleBtn.className = "me-2 text-muted cursor-pointer";
                 toggleBtn.innerHTML = isExpanded ? `<i class="bi bi-dash-square"></i>` : `<i class="bi bi-plus-square"></i>`;
-                toggleBtn.style.cursor = "pointer";
                 toggleBtn.onclick = (e) => {
                     e.stopPropagation();
                     if (expandedCategories.has(c.id)) {
@@ -1350,7 +1463,7 @@ function buildCategoryCascader(containerId, hiddenInputId, selectedCategoryId = 
             if (!finalizedCategoryId) {
                 allDiv.classList.add("bg-primary", "bg-opacity-10", "text-primary", "fw-bold");
             } else {
-                allDiv.style.cursor = "pointer";
+                allDiv.classList.add("cursor-pointer");
             }
             allDiv.innerHTML = `<span class="ms-4">Tümü</span>`;
             allDiv.onclick = (e) => {
@@ -1371,79 +1484,3 @@ function buildCategoryCascader(containerId, hiddenInputId, selectedCategoryId = 
     renderMenu();
     updateButtonText();
 }
-
-document.getElementById("filtreKategoriId")?.addEventListener("change", async function () {
-    const categoryId = this.value;
-    const filterArea = document.getElementById("dynamicFilterArea");
-    const filterContainer = document.getElementById("dynamicFilterContainer");
-
-    if (!categoryId) {
-        if (filterArea) filterArea.classList.add("d-none");
-        if (filterContainer) filterContainer.innerHTML = "";
-        loadGridCards(1);
-        return;
-    }
-
-    try {
-        if (filterArea) filterArea.classList.remove("d-none");
-        if (filterContainer) filterContainer.innerHTML = `<div class="col-12 text-center text-muted"><div class="spinner-border spinner-border-sm me-2"></div>Özellikler yükleniyor...</div>`;
-        
-        loadGridCards(1);
-
-        const rules = await apiRequest(`/attribute-rules/category/${categoryId}`, "GET");
-        
-        if (filterContainer) filterContainer.innerHTML = "";
-
-        if (rules.length === 0) {
-            if (filterContainer) filterContainer.innerHTML = `<div class="col-12 text-muted fst-italic">Bu kategoriye ait filtrelenebilir özellik bulunamadı.</div>`;
-            return;
-        }
-
-        rules.forEach(rule => {
-            let options = [];
-            if (rule.allowedValues && rule.allowedValues !== "[]") {
-                try { options = JSON.parse(rule.allowedValues); }
-                catch (e) { options = rule.allowedValues.split(",").map(s => s.trim()); }
-            }
-
-            if (rule.uiComponent === "color_picker" && rule.allowedValueList) {
-                options = options.map(val => {
-                    const eslesen = rule.allowedValueList.find(a => a.value === val);
-                    return { value: val, hex: eslesen ? eslesen.label : val };
-                });
-            }
-
-            let inputHtml = "";
-            if (rule.uiComponent === "select" || rule.uiComponent === "color_picker") {
-                inputHtml = `<select id="filter_${rule.attributeKey}" class="form-select form-select-sm bg-light border-0 rounded-pill px-3 kural-filtresi">
-                                <option value="">Tümü</option>`;
-                options.forEach(opt => {
-                    let val = typeof opt === "object" ? opt.value : opt;
-                    inputHtml += `<option value="${escapeHtml(val)}">${escapeHtml(val)}</option>`;
-                });
-                inputHtml += `</select>`;
-            } else {
-                inputHtml = `<input type="text" id="filter_${rule.attributeKey}" class="form-control form-control-sm bg-light border-0 rounded-pill px-3 kural-filtresi" placeholder="Ara...">`;
-            }
-
-            const div = document.createElement("div");
-            div.className = "col-12 mb-3";
-            div.innerHTML = `<label class="form-label small fw-bold mb-1">${escapeHtml(rule.attributeKey)}</label>${inputHtml}`;
-            if (filterContainer) filterContainer.appendChild(div);
-        });
-
-        document.querySelectorAll(".kural-filtresi").forEach(el => {
-            el.addEventListener("change", () => loadGridCards(1));
-            el.addEventListener("input", () => loadGridCards(1));
-        });
-
-    } catch (e) {
-        console.error("Filtre kuralları yüklenirken hata:", e);
-        if (filterContainer) filterContainer.innerHTML = `<div class="col-12 text-danger">Özellikler yüklenemedi.</div>`;
-    }
-});
-
-document.addEventListener("DOMContentLoaded", () => {
-    dropdownKategorileriYukleAssets();
-});
-
