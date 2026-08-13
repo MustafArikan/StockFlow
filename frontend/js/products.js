@@ -2249,7 +2249,7 @@ function initYeniUrunCamera() {
 // UYGULAMA BAŞLATICI FONKSİYON
 // =========================================================================
 document.addEventListener("DOMContentLoaded", async () => {
-
+    await loadAuthContext();
     // 1. Kamera ve barkod dinleyicilerini aktif et
     initProductSearchCamera();
     initYeniUrunCamera();

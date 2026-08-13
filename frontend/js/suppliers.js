@@ -259,10 +259,12 @@ document.querySelector('[data-bs-target="#tedarikciModal"]')?.addEventListener("
     document.getElementById("btnTedarikciKaydet").innerText = "Ekle ve Kaydet";
 });
 
-// Yetkiye göre buton/kolon gizleme
-if (!hasPermission("Supplier.Add")) {
-    document.querySelector('[data-bs-target="#tedarikciModal"]')?.classList.add('d-none');
-}
+document.addEventListener("DOMContentLoaded", async () => {
+    await loadAuthContext();
+    // Yetkiye göre buton/kolon gizleme
+    if (!hasPermission("Supplier.Add")) {
+        document.querySelector('[data-bs-target="#tedarikciModal"]')?.classList.add('d-none');
+    }
 
-
-tedarikcileriYukle();
+    tedarikcileriYukle();
+});

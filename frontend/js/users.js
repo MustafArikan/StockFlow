@@ -2,10 +2,10 @@ let userRoleName = "";
 let userPermissionsList = [];
 
 function hasPerm(p) {
-    return userRoleName === "superadmin" || userPermissionsList.includes(p);
+    return userRoleName === "superadmin" || (userPermissionsList && userPermissionsList.has(p));
 }
 
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", async () => {
     // Sadece superadmin erişebilir, değilse anasayfaya yönlendir
     const token = localStorage.getItem("token");
     if (!token) {
@@ -13,19 +13,15 @@ document.addEventListener("DOMContentLoaded", () => {
         return;
     }
     try {   
-        const payload = JSON.parse(atob(token.split('.')[1]));
-        userRoleName = payload.role;
-        let permissions = [];
-        if (payload.Permission) {
-            permissions = Array.isArray(payload.Permission) ? payload.Permission : [payload.Permission];
-        }
-        userPermissionsList = permissions;
+        const ctx = await loadAuthContext();
+        userRoleName = ctx.role;
+        userPermissionsList = ctx.permissions;
 
-        const canManageUsers = payload.role === "superadmin" || 
-            permissions.includes("User.View") || 
-            permissions.includes("User.Add") || 
-            permissions.includes("User.Edit") || 
-            permissions.includes("User.Delete");
+        const canManageUsers = ctx.isSuperAdmin || 
+            ctx.permissions.has("User.View") || 
+            ctx.permissions.has("User.Add") || 
+            ctx.permissions.has("User.Edit") || 
+            ctx.permissions.has("User.Delete");
 
         if (!canManageUsers) {
             Swal.fire({
@@ -43,7 +39,7 @@ document.addEventListener("DOMContentLoaded", () => {
             if (btnYeni) btnYeni.classList.remove("d-none");
         }
     } catch (e) {
-        console.error("Token çözümlenemedi", e);
+        console.error("Yetki yüklenemedi", e);
     }
 
     rolleriGetir();

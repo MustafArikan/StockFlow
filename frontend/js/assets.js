@@ -6,7 +6,7 @@ let currentAssetProductId = null;
 let currentAssetSerialNumber = null; //Uygulamanın baktığı cihazı unutmaması için
 let currentGridPage = 1;
 let currentGridPageSize = 8; // Izgara tasarımı için varsayılan 8
-const userRole = typeof getUserRole === "function" ? getUserRole() : "User";
+let userRole = "User";
 const token = localStorage.getItem('token');
 if (!token) window.location.href = 'login.html';
 
@@ -56,7 +56,10 @@ function parseAssetBarcode(rawText) {
 // ==========================================
 // SAYFA YÜKLENDİĞİNDE ÇALIŞACAKLAR 
 // ==========================================
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", async () => {
+    await loadAuthContext();
+    userRole = typeof getUserRole === "function" ? getUserRole() : "User";
+    
     applyPermissions();
     initEventListeners();
 

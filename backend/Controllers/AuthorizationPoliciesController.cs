@@ -13,7 +13,7 @@ namespace stok_takip.Controllers;
 
 [Route("api/[controller]")]
 [ApiController]
-[Authorize(Policy = Policies.SuperAdminOnly)] // Only SuperAdmin
+[Authorize(Policy = Policies.PolicyManage)]
 public class AuthorizationPoliciesController : ControllerBase
 {
     private readonly AppDbContext _context;

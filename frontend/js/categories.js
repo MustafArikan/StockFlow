@@ -524,17 +524,20 @@ document.querySelector('[data-bs-target="#kategoriModal"]').addEventListener("cl
     document.getElementById("btnKategoriKaydet").innerText = "Ekle ve Kaydet";
 });
 
-if (!hasPermission("Category.Add")) {
-    const btnEkle = document.querySelector('[data-bs-target="#kategoriModal"]');
-    if (btnEkle) btnEkle.classList.add('d-none');
-}
+document.addEventListener("DOMContentLoaded", async () => {
+    await loadAuthContext();
+    if (!hasPermission("Category.Add")) {
+        const btnEkle = document.querySelector('[data-bs-target="#kategoriModal"]');
+        if (btnEkle) btnEkle.classList.add('d-none');
+    }
 
-if (!hasPermission("Category.Edit") && !hasPermission("Category.Delete")) {
-    const islemSutunuBasligi = document.getElementById("islemSutunuBasligi");
-    if (islemSutunuBasligi) islemSutunuBasligi.classList.add('d-none');
-}
+    if (!hasPermission("Category.Edit") && !hasPermission("Category.Delete")) {
+        const islemSutunuBasligi = document.getElementById("islemSutunuBasligi");
+        if (islemSutunuBasligi) islemSutunuBasligi.classList.add('d-none');
+    }
 
-kategorileriYukle();
+    kategorileriYukle();
+});
 // ==========================================
 // DİNAMİK KATEGORİ KURALLARI (EAV) YÖNETİMİ
 // ==========================================

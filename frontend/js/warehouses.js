@@ -121,24 +121,7 @@ const urunView = createDataView({
 // XSS koruması için HTML karakterlerini encode eder
 
 
-function kullaniciBilgisiniDoldur() {
-    try {
-        const payloadBase64 = token.split('.')[1];
-        const decodedPayload = JSON.parse(atob(payloadBase64));
-        const email = decodedPayload.email || decodedPayload["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress"] || "Kullanıcı";
-        const userProfileElem = document.getElementById("userProfile");
-        if(userProfileElem) userProfileElem.innerText = email;
-    } catch (e) {
-        const userProfileElem = document.getElementById("userProfile");
-        if(userProfileElem) userProfileElem.innerText = "Yetkili";
-    }
-}
-
-document.getElementById("btnNavbarLogout")?.addEventListener("click", () => {
-    localStorage.removeItem('token');
-    window.location.href = 'login.html';
-});
-
+// Removed redundant userProfile and logout handlers
 // ============================================================================
 // 1. KATMAN: DEPO İŞLEMLERİ 
 // ============================================================================
@@ -772,8 +755,8 @@ document.getElementById("btnGeriDonRaflara")?.addEventListener("click", () => {
     if(aktifDepoId) rafView.load(1);
 });
 
-document.addEventListener("DOMContentLoaded", () => {
-    kullaniciBilgisiniDoldur();
+document.addEventListener("DOMContentLoaded", async () => {
+    await loadAuthContext();
     depolariYukle();
 
     // URL'de raf kodu varsa otomatik okutulmuş gibi davran
