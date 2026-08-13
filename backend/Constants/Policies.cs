@@ -3,6 +3,8 @@ namespace stok_takip.Constants;
 public static class Policies
 {
     public const string SuperAdminOnly = "SuperAdminOnly";
+    public const string RoleViewOnly = "RoleViewOnly";
+    public const string PolicyManage = "PolicyManage";
     public const string AdminOnly = "AdminOnly";
     public const string RequireAssetWrite = "RequireAssetWrite";
     public const string RequireAssetRead = "RequireAssetRead";
@@ -25,4 +27,6 @@ public static class Policies
     public const string RequireDashboardRead = "RequireDashboardRead";
     public const string RequireNotificationRead = "RequireNotificationRead";
     public const string RequireSettingsRead = "RequireSettingsRead";
+    public const string RequireUnitWrite = "RequireUnitWrite";
+    public const string RequireUnitRead = "RequireUnitRead";
 }

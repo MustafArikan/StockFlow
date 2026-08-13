@@ -54,7 +54,8 @@ public async Task<IActionResult> Register([FromBody] RegisterDto dto)
         var emailExists = await _context.Users.AsNoTracking().AnyAsync(u => u.Email == dto.Email);
         if (emailExists)
         {
-            return BadRequest(new {message = "The email you have provided is already associated with an account. Sign in or reset your password."});
+            // Enumeration'ı önlemek için generic mesaj
+            return Ok(new { message = "If the information is valid, please check your email for further instructions." });
         }
 
         var defaultRole = await _context.AppRoles.FirstOrDefaultAsync(r => r.Name == "Default");
@@ -90,7 +91,7 @@ public async Task<IActionResult> Register([FromBody] RegisterDto dto)
 
         await _emailService.SendEmailAsync(newUser.Email, emailSubject, emailBody);
 
-        return Ok(new { message = "User registered successfully. Please check your email for the verification code." });
+        return Ok(new { message = "If the information is valid, please check your email for further instructions." });
     }
 
 [AllowAnonymous]
@@ -152,8 +153,6 @@ public async Task<IActionResult> Login([FromBody] LoginDto dto)
 
         var user = await _context.Users
             .Include(u => u.Role)
-                .ThenInclude(r => r.RolePermissions)
-                    .ThenInclude(rp => rp.Permission)
             .FirstOrDefaultAsync(u => u.Email == dto.Email);
         if (user == null)
         {
@@ -255,11 +254,24 @@ public async Task<IActionResult> GetMe()
             return Unauthorized(new { message = "Invalid token claims."});
         }
 
-        var user = await _context.Users.Include(u => u.Role).AsNoTracking().FirstOrDefaultAsync(u => u.Id == userID);
+        var user = await _context.Users
+            .Include(u => u.Role)
+                .ThenInclude(r => r.RolePermissions)
+                    .ThenInclude(rp => rp.Permission)
+            .AsNoTracking()
+            .FirstOrDefaultAsync(u => u.Id == userID);
+
         if (user == null)
         {
             return NotFound(new { message = "User not found." });
         }
+
+        var permissions = user.Role.Name.ToLower() == "superadmin"
+            ? new[] { "*" }
+            : user.Role.RolePermissions
+                .Where(rp => rp.Permission != null)
+                .Select(rp => rp.Permission.Name)
+                .ToArray();
 
         return Ok(new
         {
@@ -271,6 +283,7 @@ public async Task<IActionResult> GetMe()
             identityNumber = user.IdentityNumber,
             role = user.Role.Name,
             createdAt = user.CreatedAt,
+            permissions = permissions
         });
     }
 
@@ -369,16 +382,7 @@ public async Task<IActionResult> Logout()
             new Claim(JwtRegisteredClaimNames.Jti, sessionToken)
         };
 
-        if (user.Role?.RolePermissions != null)
-        {
-            foreach (var rp in user.Role.RolePermissions)
-            {
-                if (rp.Permission != null)
-                {
-                    claims.Add(new Claim("Permission", rp.Permission.Name));
-                }
-            }
-        }
+
 
         var tokenDescriptor = new SecurityTokenDescriptor
         {

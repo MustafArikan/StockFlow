@@ -13,7 +13,7 @@ namespace stok_takip.Controllers;
 
 [Route("api/[controller]")]
 [ApiController]
-[Authorize(Policy = Policies.SuperAdminOnly)] // Only SuperAdmin
+[Authorize(Policy = Policies.PolicyManage)]
 public class AuthorizationPoliciesController : ControllerBase
 {
     private readonly AppDbContext _context;
@@ -75,7 +75,7 @@ public class AuthorizationPoliciesController : ControllerBase
             .Include(p => p.PolicyPermissions)
             .FirstOrDefaultAsync(p => p.Id == id);
 
-        if (policy == null) return NotFound("Policy not found.");
+        if (policy == null) return NotFound(new { message = "Policy not found." });
 
         var response = new AppPolicyResponseDto
         {
@@ -97,7 +97,7 @@ public class AuthorizationPoliciesController : ControllerBase
             .Include(p => p.PolicyPermissions)
             .FirstOrDefaultAsync(p => p.Id == id);
 
-        if (policy == null) return NotFound("Policy not found.");
+        if (policy == null) return NotFound(new { message = "Policy not found." });
 
         var oldValues = new 
         { 

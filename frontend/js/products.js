@@ -12,6 +12,8 @@ let aktifArama = '';
 let siralamaSutunu = 'id';
 let siralamaYonu = 'asc';
 
+let yeniUrunCevrimleri = [];
+
 if (!token) window.location.href = 'login.html';
 
 // Alt kategorileri recursive olarak bulan fonksiyon
@@ -207,13 +209,12 @@ const productView = createDataView({
         let btnIncele = `<button class="btn btn-sm btn-outline-info rounded-pill btn-incele me-1" title="Detayları Gör" data-id="${urun.id}"><i class="bi bi-eye"></i> Görüntüle</button>`;
         let btnDuzenle = hasPermission("Product.Edit") ? `<button class="btn btn-sm btn-outline-primary rounded-pill btn-duzenle me-1" data-id="${urun.id}">Düzenle</button>` : "";
         let btnSil = hasPermission("Product.Delete") ? `<button class="btn btn-sm btn-outline-danger rounded-pill btn-sil" data-id="${urun.id}">Sil</button>` : "";
-        let aksiyonButonlari = `<td class="text-end">${btnIncele} ${btnDuzenle} ${btnSil}</td>`;
-
+        
         return `
             <tr>
-                <td class="text-muted small">${tarihFormatla(urun.createdAt)}</td>
-                <td class="fw-bold">${escapeHtml(urun.name)}</td>
-                <td>
+                <td class="text-muted small py-2">${tarihFormatla(urun.createdAt)}</td>
+                <td class="fw-bold py-2">${escapeHtml(urun.name)}</td>
+                <td class="py-2">
                     <button class="btn btn-sm btn-outline-secondary rounded-pill btn-print-barcode d-inline-flex align-items-center shadow-sm" 
                             data-barcode="${escapeHtml(urun.barcode)}" 
                             data-name="${escapeHtml(urun.name)}" 
@@ -223,14 +224,14 @@ const productView = createDataView({
                         <span class="fw-bold">${escapeHtml(urun.barcode)}</span>
                     </button>
                 </td>
-                <td>${urun.minStockLevel}</td>
-                <td>${escapeHtml(urun.categoryName)}</td>
-                <td>
+                <td class="text-center py-2">${urun.minStockLevel}</td>
+                <td class="py-2">${escapeHtml(urun.categoryName)}</td>
+                <td class="text-center py-2">
                     <span class="badge ${urun.stockQuantity <= urun.minStockLevel ? 'bg-danger text-danger' : 'bg-success text-success'} bg-opacity-10 border ${urun.stockQuantity <= urun.minStockLevel ? 'border-danger' : 'border-success'} px-2 py-1 rounded-pill">
-                        ${urun.stockQuantity} Adet
+                        ${formatQuantity(urun.stockQuantity)} ${escapeHtml(urun.unitShortCode || 'ADET')}
                     </span>
                 </td>
-                ${aksiyonButonlari}
+                <td class="text-end py-2"><div class="d-flex gap-1 justify-content-end">${btnIncele} ${btnDuzenle} ${btnSil}</div></td>
             </tr>`;
     }
 });
@@ -588,7 +589,11 @@ if (urunDepoSelect) {
             raflar.forEach(raf => {
                 const option = document.createElement("option");
                 option.value = raf.id;
-                option.textContent = escapeHtml(raf.code);
+                
+                const baseText = raf.code || raf.name;
+                const isBos = raf.isEmpty || raf.IsEmpty;
+                option.textContent = isBos ? `${baseText} (Boş)` : baseText;
+                
                 rafSelect.appendChild(option);
             });
         } catch (hata) {
@@ -598,9 +603,147 @@ if (urunDepoSelect) {
     });
 }
 
+const urunRafSelect = document.getElementById("urunRafId");
+const btnHedefRafEkle = document.getElementById("btnHedefRafEkle");
+
+if (urunRafSelect && btnHedefRafEkle) {
+    urunRafSelect.addEventListener("change", (e) => {
+        btnHedefRafEkle.disabled = !e.target.value;
+    });
+
+    function getBaseQuantity(inputEl) {
+        if (!inputEl || !inputEl.value) return 0;
+        const rawVal = parseFloat(inputEl.value) || 0;
+        const selectEl = inputEl.parentElement.querySelector('select');
+        if (selectEl) {
+            const opt = selectEl.options[selectEl.selectedIndex];
+            const mult = parseFloat(opt.getAttribute('data-multiplier')) || 1;
+            return rawVal * mult;
+        }
+        return rawVal;
+    }
+
+    function updateBaslangicStok() {
+        const rackItems = document.querySelectorAll('.target-location-item');
+        let total = 0;
+        rackItems.forEach(item => {
+            const qtyInput = item.querySelector('.target-loc-qty');
+            total += getBaseQuantity(qtyInput);
+        });
+        const urunBaslangicStok = document.getElementById("urunBaslangicStok");
+        if (urunBaslangicStok) urunBaslangicStok.value = total;
+    }
+
+    btnHedefRafEkle.addEventListener("click", () => {
+        const whDropdown = document.getElementById("urunDepoId");
+        if (!whDropdown.value || !urunRafSelect.value) return;
+
+        const whName = whDropdown.options[whDropdown.selectedIndex].text;
+        const locCode = urunRafSelect.options[urunRafSelect.selectedIndex].text;
+        const whId = whDropdown.value;
+        const locId = urunRafSelect.value;
+
+        const hedefListesi = document.getElementById("hedefLokasyonlarListesi");
+        
+        if (hedefListesi.querySelector(`[data-loc-id="${locId}"]`)) {
+            if (typeof hataGoster === 'function') hataGoster("Bu raf zaten listede ekli!");
+            else alert("Bu raf zaten listede ekli!");
+            return;
+        }
+        
+        const uyari = document.getElementById("bosListeUyari");
+        if (uyari) uyari.remove();
+
+        let isBos = locCode.includes("(Boş)");
+        let cleanLocCode = isBos ? locCode.replace(" (Boş)", "") : locCode;
+        let emptyBadge = isBos ? `<span class="badge bg-warning text-dark ms-2 border border-warning"><i class="bi bi-info-circle me-1"></i>Tamamen Boş</span>` : '';
+
+        const div = document.createElement("div");
+        div.className = "list-group-item d-flex flex-column flex-md-row justify-content-between align-items-md-center p-3 border-start border-4 border-success target-location-item border-top-0 border-end-0 border-bottom-1 mb-2 shadow-sm rounded bg-success bg-opacity-10";
+        div.setAttribute("data-loc-id", locId);
+
+        div.innerHTML = `
+            <div class="d-flex align-items-center mb-3 mb-md-0 w-100">
+                <div class="flex-grow-1">
+                    <div class="fw-bold text-dark fs-6"><i class="bi bi-building me-1 text-primary"></i>${escapeHtml(whName)}</div>
+                    <div class="text-secondary small"><i class="bi bi-box me-1"></i>Raf: <span class="fw-bold text-dark">${escapeHtml(cleanLocCode)}</span>${emptyBadge}</div>
+                </div>
+            </div>
+            <div class="d-flex align-items-center justify-content-between w-100 mt-2 mt-md-0 w-md-25">
+                <div class="input-group input-group-sm">
+                    <input type="number" class="form-control target-loc-qty border-success text-center fw-bold shadow-sm" placeholder="Miktar" min="0" step="any">
+                    <select class="form-select border-success bg-light text-success fw-bold w-auto raf-birim-secici" tabindex="-1">
+                        <option value="base" data-multiplier="1">Birim</option>
+                    </select>
+                </div>
+                <button type="button" class="btn btn-sm btn-outline-danger ms-2"><i class="bi bi-trash"></i></button>
+            </div>
+        `;
+
+        const qtyInp = div.querySelector('.target-loc-qty');
+        qtyInp.addEventListener('input', updateBaslangicStok);
+        
+        const selInp = div.querySelector('.raf-birim-secici');
+        if (selInp) {
+            selInp.addEventListener('change', updateBaslangicStok);
+            syncUnitDropdowns(); // Apply current base/alt unit names to the new select
+        }
+
+        const removeBtn = div.querySelector('button');
+        removeBtn.addEventListener('click', () => {
+            div.remove();
+            updateBaslangicStok();
+            if (hedefListesi.children.length === 0) {
+                hedefListesi.innerHTML = `<div class="p-3 text-center text-muted small fst-italic" id="bosListeUyari">Henüz raf eklemediniz. (Başlangıç stoğu 0 olacak)</div>`;
+            }
+        });
+
+        hedefListesi.appendChild(div);
+    });
+}
+
 // =========================================================================
 // ÜRÜN EKLE/DÜZENLE MODALI İÇİN DİNAMİK KURALLAR (PIM) RENDER MOTORU
 // =========================================================================
+// Kategori seçildiğinde dinamik özellikleri yükle
+document.getElementById('urunKategoriId').addEventListener('change', async function() {
+    await loadCategoryRulesForProduct(this.value);
+});
+
+function yeniUrunCevrimTablosunuGuncelle() {
+    const kapsayici = document.getElementById("yeniUrunCevrimTablosuKapsayici");
+    const liste = document.getElementById("yeniUrunCevrimListesi");
+    
+    if (!kapsayici || !liste) return;
+    
+    if (yeniUrunCevrimleri.length === 0) {
+        kapsayici.classList.add("d-none");
+        liste.innerHTML = "";
+        return;
+    }
+    
+    kapsayici.classList.remove("d-none");
+    liste.innerHTML = "";
+    
+    yeniUrunCevrimleri.forEach(cevrim => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+            <td class="fw-medium">${escapeHtml(cevrim.alternativeUnitName.split(' (')[0])}</td>
+            <td>1 ${escapeHtml(cevrim.alternativeUnitName.split(' (')[0])} = <span class="fw-bold">${cevrim.conversionFactor}</span> Taban</td>
+            <td class="text-center">
+                ${cevrim.isDefault 
+                    ? '<span class="badge bg-success bg-opacity-10 text-success"><i class="bi bi-check-circle-fill"></i></span>' 
+                    : '<span class="badge bg-secondary bg-opacity-10 text-secondary">-</span>'}
+            </td>
+            <td class="text-end">
+                <button type="button" class="btn btn-sm btn-outline-danger btn-yeni-urun-cevrim-sil" data-id="${cevrim.alternativeUnitId}">
+                    <i class="bi bi-trash"></i>
+                </button>
+            </td>
+        `;
+        liste.appendChild(tr);
+    });
+}
 const urunKategoriSelectForm = document.getElementById('urunKategoriId');
 if (urunKategoriSelectForm) {
     urunKategoriSelectForm.addEventListener('change', async function (e) {
@@ -631,7 +774,7 @@ if (urunKategoriSelectForm) {
             let validRuleIndex = 0;
             rules.forEach(rule => {
                 const tl = rule.targetLevel ? rule.targetLevel.toLowerCase().trim() : "";
-                if (tl === "asset" || tl === "demirbaş" || tl === "demirbas") return;
+                if (tl === "asset" || tl === "ekipman" || tl === "ekipman") return;
 
                 let inputHtml = '';
                 let requiredAttr = rule.isRequired ? 'required' : '';
@@ -757,6 +900,12 @@ if (urunKategoriSelectForm) {
                 else if (rule.dataType === 'decimal') {
                     inputHtml = `<input type="number" step="0.1" class="form-control dynamic-rule-input" data-rule-id="${rule.id}" data-rule-key="${escapeHtml(rule.attributeKey)}" data-rule-type="decimal" ${requiredAttr}>`;
                 }
+                else if (uiType === 'datepicker' || rule.dataType === 'date') {
+                    inputHtml = `<input type="date" class="form-control dynamic-rule-input" data-rule-id="${rule.id}" data-rule-key="${escapeHtml(rule.attributeKey)}" data-rule-type="date" ${requiredAttr}>`;
+                }
+                else if (uiType === 'datetimepicker' || rule.dataType === 'datetime') {
+                    inputHtml = `<input type="datetime-local" class="form-control dynamic-rule-input" data-rule-id="${rule.id}" data-rule-key="${escapeHtml(rule.attributeKey)}" data-rule-type="datetime" ${requiredAttr}>`;
+                }
                 else {
                     inputHtml = `<input type="text" class="form-control dynamic-rule-input" data-rule-id="${rule.id}" data-rule-key="${escapeHtml(rule.attributeKey)}" data-rule-type="text" ${requiredAttr}>`;
                 }
@@ -866,22 +1015,51 @@ if (btnUrunKaydetEl) {
         const id = document.getElementById("urunId").value;
         const name = document.getElementById("urunAdi").value;
         const barcode = document.getElementById("urunBarkod").value;
-        const minStockLevel = document.getElementById("urunMinStok").value;
+        const minStockLevelEl = document.getElementById("urunMinStok");
         const categoryId = document.getElementById("urunKategoriId").value;
-        const targetLocationId = document.getElementById("urunRafId")?.value;
-        const initialQuantity = document.getElementById("urunBaslangicStok")?.value;
+        const unitId = document.getElementById("urunBirimId").value;
+        
+        let selectedRacks = [];
+        if (!id) {
+            const rackItems = document.querySelectorAll('.target-location-item');
+            rackItems.forEach(item => {
+                const locId = item.getAttribute('data-loc-id');
+                const qtyInput = item.querySelector('.target-loc-qty');
+                if (locId) {
+                    selectedRacks.push({ locationId: parseInt(locId), quantity: getBaseQuantity(qtyInput) });
+                }
+            });
+            
+            if (selectedRacks.length === 0) {
+                hataGoster("Lütfen başlangıç için en az bir raf ekleyin.");
+                return;
+            }
+        }
+
         const btnKaydet = document.getElementById("btnUrunKaydet");
 
         const urunVerisi = {
             name: name,
             barcode: barcode,
-            minStockLevel: parseInt(minStockLevel) || 0,
+            minStockLevel: getBaseQuantity(minStockLevelEl),
             categoryId: parseInt(categoryId) || null,
-            targetLocationId: parseInt(targetLocationId) || 0,
-            initialQuantity: parseInt(initialQuantity) || 0,
+            unitId: parseInt(unitId) || null,
+            targetLocationId: !id ? selectedRacks[0].locationId : 0,
+            initialQuantity: !id ? selectedRacks[0].quantity : 0,
             cost: 0,
-            price: 0
+            price: 0,
+            unitConversions: []
         };
+
+        if (!id) {
+            yeniUrunCevrimleri.forEach(cevrim => {
+                urunVerisi.unitConversions.push({
+                    alternativeUnitId: parseInt(cevrim.alternativeUnitId),
+                    conversionFactor: parseFloat(cevrim.conversionFactor),
+                    isDefault: cevrim.isDefault
+                });
+            });
+        }
 
         const dinamikInputlar = document.querySelectorAll('.dynamic-rule-input');
         if (dinamikInputlar.length > 0) {
@@ -931,7 +1109,24 @@ if (btnUrunKaydetEl) {
             btnKaydet.disabled = true;
             btnKaydet.innerText = "Kaydediliyor...";
 
-            await apiRequest(adres, metod, urunVerisi);
+            const createdProduct = await apiRequest(adres, metod, urunVerisi);
+            const newProductId = id ? id : createdProduct.id;
+            
+            if (!id && selectedRacks.length > 1) {
+                for (let i = 1; i < selectedRacks.length; i++) {
+                    const rack = selectedRacks[i];
+                    if (rack.quantity > 0) {
+                        const movePayload = {
+                            type: 'GIRIS',
+                            productId: newProductId,
+                            quantity: rack.quantity,
+                            targetLocationId: rack.locationId,
+                            description: 'Başlangıç stok girişi (Çoklu Raf)'
+                        };
+                        await apiRequest('/stock/movements', 'POST', movePayload);
+                    }
+                }
+            }
 
             const modalElement = document.getElementById("urunModal");
             const modalInstance = bootstrap.Modal.getOrCreateInstance(modalElement);
@@ -980,14 +1175,17 @@ function urunDuzenle(id) {
     document.getElementById("urunAdi").value = urun.name;
     document.getElementById("urunBarkod").value = urun.barcode;
     document.getElementById("urunMinStok").value = urun.minStockLevel;
+    if(document.getElementById("urunBirimId")) document.getElementById("urunBirimId").value = urun.unitId;
 
     buildCategoryCascader('urunKategoriContainer', 'urunKategoriId', urun.categoryId || null, false);
 
     document.getElementById("modalBaslik").innerText = "Ürün Düzenle";
     const depoSecimi = document.getElementById("depoSecimiAlani");
     if (depoSecimi) depoSecimi.classList.add("d-none");
-    document.getElementById("rafSecimiAlani").classList.add("d-none");
-    document.getElementById("baslangicStokAlani").classList.add("d-none");
+    const rafSecimi = document.getElementById("rafSecimiAlani");
+    if (rafSecimi) rafSecimi.classList.add("d-none");
+    const baslangicStok = document.getElementById("baslangicStokAlani");
+    if (baslangicStok) baslangicStok.classList.add("d-none");
     document.getElementById("btnUrunKaydet").innerText = "Güncelle";
 
     const tedAlani = document.getElementById("duzenleTedarikciAlani");
@@ -998,6 +1196,15 @@ function urunDuzenle(id) {
     } else if (tedAlani) {
         tedAlani.classList.add("d-none");
     }
+
+    const cevrimAlani = document.getElementById("duzenleBirimCevrimAlani");
+    if (cevrimAlani) {
+        cevrimAlani.classList.remove("d-none");
+        duzenleBirimCevrimleriYukle(urun.id);
+        duzenleAlternatifBirimSecenekleriniYukle(urun.unitId);
+    }
+    const hizliCevrim = document.getElementById("yeniUrunHizliCevrimAlani");
+    if (hizliCevrim) hizliCevrim.classList.add("d-none");
 
     const event = new Event('change');
     document.getElementById("urunKategoriId").dispatchEvent(event);
@@ -1099,13 +1306,27 @@ if (btnYeniUrunModal) {
 
         buildCategoryCascader('urunKategoriContainer', 'urunKategoriId', null, false);
 
-        const depoSecimi = document.getElementById("depoSecimiAlani");
-        if (depoSecimi) depoSecimi.classList.remove("d-none");
-        document.getElementById("rafSecimiAlani").classList.remove("d-none");
-        document.getElementById("baslangicStokAlani").classList.remove("d-none");
+        const baslangicStok = document.getElementById("baslangicStokAlani");
+        if (baslangicStok) baslangicStok.classList.remove("d-none");
 
-        document.getElementById("urunRafId").disabled = true;
-        document.getElementById("urunRafId").innerHTML = '<option value="">Depo bekleniyor...</option>';
+
+        
+        // Reset racks list
+        const hedefListesi = document.getElementById("hedefLokasyonlarListesi");
+        if (hedefListesi) {
+            hedefListesi.innerHTML = `<div class="p-3 text-center text-muted small fst-italic" id="bosListeUyari">Henüz raf eklemediniz. (Başlangıç stoğu 0 olacak)</div>`;
+        }
+        
+        const urunDepo = document.getElementById("urunDepoId");
+        if (urunDepo) urunDepo.value = "";
+        const urunRaf = document.getElementById("urunRafId");
+        if (urunRaf) {
+            urunRaf.innerHTML = '<option value="">Önce depo seçin...</option>';
+            urunRaf.disabled = true;
+        }
+
+        const btnHedefRaf = document.getElementById("btnHedefRafEkle");
+        if (btnHedefRaf) btnHedefRaf.disabled = true;
 
         const dynamicAttr = document.getElementById("dynamicAttributesArea");
         if (dynamicAttr) dynamicAttr.classList.add("d-none");
@@ -1115,6 +1336,18 @@ if (btnYeniUrunModal) {
 
         const tedAlani = document.getElementById("duzenleTedarikciAlani");
         if (tedAlani) tedAlani.classList.add("d-none");
+
+        const cevrimAlani = document.getElementById("duzenleBirimCevrimAlani");
+        if (cevrimAlani) cevrimAlani.classList.add("d-none");
+
+        const hizliCevrim = document.getElementById("yeniUrunHizliCevrimAlani");
+        if (hizliCevrim) {
+            hizliCevrim.classList.remove("d-none");
+            document.getElementById("yeniUrunAlternatifBirimId").value = "";
+            document.getElementById("yeniUrunCevrimCarpani").value = "";
+            yeniUrunCevrimleri = [];
+            if (typeof yeniUrunCevrimTablosunuGuncelle === 'function') yeniUrunCevrimTablosunuGuncelle();
+        }
 
         document.getElementById("btnUrunKaydet").innerText = "Ekle ve Kaydet";
     });
@@ -1126,7 +1359,7 @@ async function dropdownDepolariYukle() {
         const depolar = data.items || data;
         const select = document.getElementById("urunDepoId");
         if (select) {
-            select.innerHTML = '<option value="">Önce depo seçin...</option>';
+            select.innerHTML = '<option value="">Depo Seçiniz...</option>';
             depolar.forEach(depo => {
                 const option = document.createElement("option");
                 option.value = depo.id;
@@ -1140,6 +1373,108 @@ async function dropdownDepolariYukle() {
 }
 
 dropdownDepolariYukle();
+
+function syncUnitDropdowns() {
+    const baseUnitSelect = document.getElementById("urunBirimId");
+    if (!baseUnitSelect) return;
+    const baseOpt = baseUnitSelect.options[baseUnitSelect.selectedIndex];
+    let baseUnitName = baseOpt && baseOpt.value ? baseOpt.textContent.split(' (')[0] : "Birim";
+    
+    const altUnitSelect = document.getElementById("yeniUrunAlternatifBirimId");
+    const altOpt = altUnitSelect && altUnitSelect.options[altUnitSelect.selectedIndex];
+    let altUnitName = altOpt && altOpt.value ? altOpt.textContent.split(' (')[0] : "";
+    const altUnitMultiplier = document.getElementById("yeniUrunCevrimCarpani")?.value;
+    
+    const updateDropdown = (selectEl, isBaseOnly) => {
+        if (!selectEl) return;
+        const currentVal = selectEl.value;
+        selectEl.innerHTML = `<option value="base" data-multiplier="1">${escapeHtml(baseUnitName)}</option>`;
+        
+        if (altUnitSelect && altUnitSelect.value && altUnitMultiplier && !isBaseOnly) {
+            selectEl.innerHTML += `<option value="alt" data-multiplier="${altUnitMultiplier}">${escapeHtml(altUnitName)}</option>`;
+        }
+        
+        if (currentVal === 'alt' && altUnitSelect && altUnitSelect.value && altUnitMultiplier) {
+            selectEl.value = 'alt';
+        } else {
+            selectEl.value = 'base';
+        }
+    };
+
+    updateDropdown(document.getElementById("minStokBirimSecici"), false);
+    document.querySelectorAll(".raf-birim-secici").forEach(sel => {
+        updateDropdown(sel, false);
+    });
+    
+    // updateBaslangicStok can be called if available to recalculate base total
+    if (typeof updateBaslangicStok === 'function') {
+        updateBaslangicStok();
+    } else {
+        // Fallback scope resolution
+        const urunBaslangicStok = document.getElementById("urunBaslangicStok");
+        if (urunBaslangicStok) {
+            const rackItems = document.querySelectorAll('.target-location-item');
+            let total = 0;
+            rackItems.forEach(item => {
+                const qtyInput = item.querySelector('.target-loc-qty');
+                if (qtyInput) {
+                    const rawVal = parseFloat(qtyInput.value) || 0;
+                    const selectEl = qtyInput.parentElement.querySelector('select');
+                    let mult = 1;
+                    if (selectEl) {
+                        const opt = selectEl.options[selectEl.selectedIndex];
+                        mult = parseFloat(opt.getAttribute('data-multiplier')) || 1;
+                    }
+                    total += (rawVal * mult);
+                }
+            });
+            urunBaslangicStok.value = total;
+        }
+    }
+}
+
+async function dropdownBirimleriYukle() {
+    try {
+        const data = await apiRequest('/units', 'GET');
+        window.tumBirimler = data;
+        const select = document.getElementById("urunBirimId");
+        const hizliSelect = document.getElementById("yeniUrunAlternatifBirimId");
+        if (select) {
+            select.innerHTML = '<option value="">Seçiniz...</option>';
+            if (hizliSelect) hizliSelect.innerHTML = '<option value="">Seçiniz...</option>';
+            data.forEach(birim => {
+                const option = document.createElement("option");
+                option.value = birim.id;
+                option.textContent = escapeHtml(`${birim.name} (${birim.shortCode})`);
+                option.dataset.allowsDecimal = birim.allowsDecimal;
+                select.appendChild(option);
+                
+                if (hizliSelect) {
+                    const optHizli = document.createElement("option");
+                    optHizli.value = birim.id;
+                    optHizli.textContent = escapeHtml(`${birim.name} (${birim.shortCode})`);
+                    hizliSelect.appendChild(optHizli);
+                }
+            });
+            
+            select.addEventListener('change', function() {
+                const selectedOpt = this.options[this.selectedIndex];
+                const allowsDec = selectedOpt?.dataset.allowsDecimal === 'true';
+                document.getElementById('urunMinStok').step = allowsDec ? '0.001' : '1';
+                if(document.getElementById('urunBaslangicStok')) {
+                    document.getElementById('urunBaslangicStok').step = allowsDec ? '0.001' : '1';
+                }
+                syncUnitDropdowns();
+            });
+            if (hizliSelect) hizliSelect.addEventListener('change', syncUnitDropdowns);
+            const hizliCarpan = document.getElementById('yeniUrunCevrimCarpani');
+            if (hizliCarpan) hizliCarpan.addEventListener('input', syncUnitDropdowns);
+        }
+    } catch (hata) {
+        console.error("Birim dropdown yükleme hatası:", hata);
+    }
+}
+dropdownBirimleriYukle();
 
 async function dropdownTedarikcileriYukle() {
     try {
@@ -1732,7 +2067,15 @@ function initProductSearchCamera() {
                     isProcessingQR = true;
 
                     try {
-                        const bulunanUrun = tumUrunler.find(u => (u.barcode || "").toLowerCase() === scannedText.toLowerCase());
+                        let gtinToSearch = scannedText;
+                        if (typeof window.parseGs1Barcode === 'function') {
+                            const parsedGs1 = window.parseGs1Barcode(scannedText);
+                            if (parsedGs1.isGs1 && parsedGs1.gtin) {
+                                gtinToSearch = parsedGs1.gtin;
+                            }
+                        }
+
+                        const bulunanUrun = tumUrunler.find(u => (u.barcode || "").toLowerCase() === gtinToSearch.toLowerCase() || (u.barcode || "").toLowerCase() === scannedText.toLowerCase());
 
                         if (bulunanUrun) {
                             if (durumEl) {
@@ -1803,7 +2146,14 @@ document.addEventListener("keydown", (e) => {
     if (e.key === "Enter") {
         if (scannerBuffer.length > 2) {
             e.preventDefault();
-            const p = tumUrunler.find(u => (u.barcode || "").toLowerCase() === scannerBuffer.toLowerCase());
+            let gtinToSearch = scannerBuffer;
+            if (typeof window.parseGs1Barcode === 'function') {
+                const parsedGs1 = window.parseGs1Barcode(scannerBuffer);
+                if (parsedGs1.isGs1 && parsedGs1.gtin) {
+                    gtinToSearch = parsedGs1.gtin;
+                }
+            }
+            const p = tumUrunler.find(u => (u.barcode || "").toLowerCase() === gtinToSearch.toLowerCase() || (u.barcode || "").toLowerCase() === scannerBuffer.toLowerCase());
             if (p && typeof urunDetayAc === 'function') {
                 urunDetayAc(p.id, { tedarikciYonetimi: hasPermission("Supplier.Edit") });
                 if (typeof basariToast === 'function') basariToast(`"${scannerBuffer}" barkodlu ürün okundu.`);
@@ -1824,12 +2174,85 @@ document.addEventListener("keydown", (e) => {
 });
 
 // =========================================================================
+// YENİ ÜRÜN BARKOD OKUYUCU ENTEGRASYONU
+// =========================================================================
+function initYeniUrunCamera() {
+    const btnKameraAc = document.getElementById("btnYeniUrunKameraAc");
+    const scannerModalEl = document.getElementById("scannerModalUrunler");
+    const urunBarkodInput = document.getElementById("urunBarkod");
+
+    btnKameraAc?.addEventListener('click', async () => {
+        const durumEl = document.getElementById('kameraDurumUrunler');
+
+        if (btnKameraAc) btnKameraAc.disabled = true;
+
+        const scannerModalInstance = bootstrap.Modal.getOrCreateInstance(scannerModalEl);
+
+        try {
+            if (typeof checkCameraPermission === 'function') {
+                await checkCameraPermission();
+            }
+
+            scannerModalInstance.show();
+
+            if (durumEl) {
+                durumEl.textContent = "Kamera başlatılıyor...";
+                durumEl.className = "text-center text-muted small mt-3 fw-bold";
+            }
+
+            if (typeof startScanner === 'function') {
+                let isProcessingQR = false;
+
+                await startScanner("readerUrunler", async (scannedText) => {
+                    if (isProcessingQR) return;
+                    isProcessingQR = true;
+
+                    try {
+                        let gtinToFill = scannedText;
+                        if (typeof window.parseGs1Barcode === 'function') {
+                            const parsedGs1 = window.parseGs1Barcode(scannedText);
+                            if (parsedGs1.isGs1 && parsedGs1.gtin) {
+                                gtinToFill = parsedGs1.gtin;
+                            }
+                        }
+
+                        if (urunBarkodInput) {
+                            urunBarkodInput.value = gtinToFill;
+                            if (typeof basariToast === 'function') basariToast(`Barkod okundu: ${gtinToFill}`);
+                        }
+
+                        if (typeof stopScanner === 'function') stopScanner();
+                        setTimeout(() => scannerModalInstance.hide(), 200);
+                        
+                    } finally {
+                        setTimeout(() => isProcessingQR = false, 1000);
+                    }
+                }, (error) => {
+                    // ignore
+                });
+                
+                if (durumEl) {
+                    durumEl.textContent = "Karekod veya Barkod aranıyor, kameraya gösterin...";
+                }
+            }
+        } catch (error) {
+            scannerModalInstance.hide();
+            const hataMetni = error?.message ? error.message : "Kameraya erişilemedi veya izin reddedildi.";
+            if (typeof uyariGoster === 'function') uyariGoster(hataMetni);
+        } finally {
+            if (btnKameraAc) btnKameraAc.disabled = false;
+        }
+    });
+}
+
+// =========================================================================
 // UYGULAMA BAŞLATICI FONKSİYON
 // =========================================================================
 document.addEventListener("DOMContentLoaded", async () => {
-
+    await loadAuthContext();
     // 1. Kamera ve barkod dinleyicilerini aktif et
     initProductSearchCamera();
+    initYeniUrunCamera();
 
     // 2. Yetki kontrolü (Ürün ekleme yetkisi yoksa butonu gizle)
     if (!hasPermission("Product.Add")) {
@@ -2003,4 +2426,216 @@ document.addEventListener("click", async (e) => {
             hataGoster("Tedarikçi silinemedi: " + hata.message);
         }
     }
+    if (e.target.closest("#btnYeniUrunCevrimEkle")) {
+        const altUnitSelect = document.getElementById("yeniUrunAlternatifBirimId");
+        const altUnitId = altUnitSelect.value;
+        const altUnitName = altUnitSelect.options[altUnitSelect.selectedIndex]?.text || "";
+        const factor = document.getElementById("yeniUrunCevrimCarpani").value;
+        const isDefault = document.getElementById("yeniUrunCevrimVarsayilan").checked;
+        
+        if (!altUnitId || !factor) {
+            uyariGoster("Lütfen birim seçin ve çevrim çarpanı girin.");
+            return;
+        }
+        
+        // Aynı birimden daha önce eklenmiş mi kontrol et
+        const mevcut = yeniUrunCevrimleri.find(c => c.alternativeUnitId == altUnitId);
+        if (mevcut) {
+            uyariGoster("Bu birim için zaten bir çevrim eklenmiş.");
+            return;
+        }
+        
+        yeniUrunCevrimleri.push({
+            alternativeUnitId: altUnitId,
+            alternativeUnitName: altUnitName,
+            conversionFactor: factor,
+            isDefault: isDefault
+        });
+        
+        yeniUrunCevrimTablosunuGuncelle();
+        
+        document.getElementById("yeniUrunAlternatifBirimId").value = "";
+        document.getElementById("yeniUrunCevrimCarpani").value = "";
+        document.getElementById("yeniUrunCevrimVarsayilan").checked = true;
+    }
+
+    if (e.target.closest(".btn-yeni-urun-cevrim-sil")) {
+        const btn = e.target.closest(".btn-yeni-urun-cevrim-sil");
+        const altUnitId = btn.getAttribute("data-id");
+        yeniUrunCevrimleri = yeniUrunCevrimleri.filter(c => c.alternativeUnitId != altUnitId);
+        yeniUrunCevrimTablosunuGuncelle();
+    }
+
+    if (e.target.closest("#btnDuzenleCevrimEkle")) {
+        const urunId = document.getElementById("urunId").value;
+        if (!urunId) return;
+
+        const altUnitId = document.getElementById("duzenleAlternatifBirimSelect").value;
+        const factor = document.getElementById("duzenleCevrimCarpani").value;
+        const isDefault = document.getElementById("duzenleCevrimVarsayilan").checked;
+        
+        if (!altUnitId || !factor) {
+            uyariGoster("Lütfen birim seçin ve çevrim çarpanı girin."); 
+            return;
+        }
+        const veri = {
+            productId: parseInt(urunId),
+            alternativeUnitId: parseInt(altUnitId),
+            conversionFactor: parseFloat(factor),
+            isDefault: isDefault
+        };
+        try {
+            const cevap = await fetch(`${CONFIG.API_BASE_URL}/products/${urunId}/unit-conversions`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${token}`
+                },
+                body: JSON.stringify(veri)
+            });
+
+            if (!cevap.ok) throw new Error(await cevap.text() || "Bağlama başarısız.");
+
+            const json = await cevap.json();
+
+            duzenleBirimCevrimleriYukle(urunId);
+            document.getElementById("duzenleAlternatifBirimSelect").value = "";
+            document.getElementById("duzenleCevrimCarpani").value = "";
+            document.getElementById("duzenleCevrimVarsayilan").checked = false;
+
+            urunleriYukle(currentPage);
+            
+            if (json && json.warning) {
+                if (typeof uyariGoster === 'function') uyariGoster(json.warning);
+            } else {
+                if (typeof basariToast === 'function') basariToast("Birim çevrimi başarıyla eklendi.");
+            }
+        } catch (hata) {
+            hataGoster("Hata: " + hata.message);
+        }
+    }
+
+    const kaldirCevrimBtn = e.target.closest(".btn-duzenle-cevrim-kaldir");
+    if (kaldirCevrimBtn) {
+        const urunId = document.getElementById("urunId").value;
+        if (!urunId) return;
+
+        if (!(await onayla("Bu çevrim tanımını kaldırmak istiyor musunuz?", "Evet, kaldır"))) return;
+        const cid = kaldirCevrimBtn.getAttribute("data-cid");
+        try {
+            const cevap = await fetch(`${CONFIG.API_BASE_URL}/products/${urunId}/unit-conversions/${cid}`, {
+                method: "DELETE",
+                headers: { "Authorization": `Bearer ${token}` }
+            });
+
+            if (!cevap.ok) throw new Error("Silme başarısız.");
+            duzenleBirimCevrimleriYukle(urunId);
+
+            urunleriYukle(currentPage);
+        } catch (hata) {
+            hataGoster("Çevrim silinemedi: " + hata.message);
+        }
+    }
+
+    const barkodCevrimBtn = e.target.closest(".btn-duzenle-cevrim-barkod");
+    const printCevrimBtn = e.target.closest(".btn-print-barcode");
+    
+    if (printCevrimBtn) {
+        if (typeof openBarcodePrintModal === 'function') {
+            openBarcodePrintModal(printCevrimBtn.getAttribute("data-barcode"), printCevrimBtn.getAttribute("data-name"), printCevrimBtn.getAttribute("data-id"));
+        }
+        return;
+    }
+
+    if (barkodCevrimBtn) {
+        const urunId = document.getElementById("urunId").value;
+        if (!urunId) return;
+
+        const cid = barkodCevrimBtn.getAttribute("data-cid");
+        try {
+            const cevap = await fetch(`${CONFIG.API_BASE_URL}/products/${urunId}/unit-conversions/${cid}/generate-barcode`, {
+                method: "POST",
+                headers: { "Authorization": `Bearer ${token}` }
+            });
+
+            if (!cevap.ok) {
+                const hataJson = await cevap.json().catch(() => ({}));
+                throw new Error(hataJson.message || "Barkod üretilemedi.");
+            }
+            
+            if (typeof basariToast === 'function') basariToast("Koli barkodu başarıyla üretildi!");
+            duzenleBirimCevrimleriYukle(urunId);
+            urunleriYukle(currentPage);
+        } catch (hata) {
+            if (typeof uyariGoster === 'function') uyariGoster(hata.message);
+            else hataGoster(hata.message);
+        }
+    }
 });
+
+// =========================================================================
+// BİRİM ÇEVRİM YÖNETİMİ (Düzenle Modalı İçin)
+// =========================================================================
+async function duzenleBirimCevrimleriYukle(productId) {
+    const tablo = document.getElementById("duzenleBirimCevrimListesi");
+    if(!tablo) return;
+    try {
+        const cevap = await fetch(`${CONFIG.API_BASE_URL}/products/${productId}/unit-conversions`, {
+            method: "GET",
+            headers: { "Authorization": `Bearer ${token}` }
+        });
+        if (!cevap.ok) throw new Error("Çevrimler alınamadı.");
+        
+        const liste = await cevap.json();
+        tablo.innerHTML = "";
+
+        if (liste.length === 0) { 
+            tablo.innerHTML = `<tr><td colspan="4" class="text-center text-muted fst-italic py-4">Bu ürüne bağlı alternatif birim çevrimi bulunmamaktadır.</td></tr>`; return; 
+        }
+
+        liste.forEach(c => {
+            const defaultBadge = c.isDefault ? '<span class="badge bg-success">Evet</span>' : '<span class="text-muted">-</span>';
+            const urunAdi = document.getElementById('duzenleAd') ? document.getElementById('duzenleAd').value : 'Ürün';
+            
+            const barkodGosterimi = c.barcode ? `<div class="small fw-bold text-primary mt-1 d-flex align-items-center">
+                <i class="bi bi-upc-scan me-1"></i> ${escapeHtml(c.barcode)}
+            </div>` : '';
+            
+            tablo.innerHTML += `<tr>
+                <td class="fw-semibold">
+                    ${escapeHtml(c.alternativeUnitName)}
+                    ${barkodGosterimi}
+                </td>
+                <td class="text-muted fw-bold">1 ${escapeHtml(c.alternativeUnitShortCode)} = ${c.conversionFactor} Taban Birim</td>
+                <td>${defaultBadge}</td>
+                <td class="text-end">
+                    ${!c.barcode ? `<button type="button" class="btn btn-sm btn-outline-primary rounded-pill btn-duzenle-cevrim-barkod shadow-sm px-2 me-1" data-cid="${c.id}" title="Otomatik ITF-14 Koli Barkodu Üret">
+                        <i class="bi bi-upc-scan"></i> SKU Üret
+                    </button>` : `<button type="button" class="btn btn-sm btn-outline-secondary rounded-pill btn-print-barcode shadow-sm px-2 me-1" data-barcode="${escapeHtml(c.barcode)}" data-name="${escapeHtml(urunAdi)} (${escapeHtml(c.alternativeUnitName)})" data-id="${productId}" title="Bu birimin barkodunu yazdır">
+                        <i class="bi bi-printer"></i> Yazdır
+                    </button>`}
+                    <button type="button" class="btn btn-sm btn-outline-danger rounded-pill btn-duzenle-cevrim-kaldir shadow-sm px-3" data-cid="${c.id}">
+                        <i class="bi bi-trash3 me-1"></i> Kaldır
+                    </button>
+                </td>
+            </tr>`;
+        });
+    } catch(hata) {
+        tablo.innerHTML = `<tr><td colspan="4" class="text-center text-danger py-4">${escapeHtml(hata.message)}</td></tr>`;
+    }
+}
+
+function duzenleAlternatifBirimSecenekleriniYukle(urunBirimId) {
+    const select = document.getElementById("duzenleAlternatifBirimSelect");
+    if (!select || !window.tumBirimler) return;
+
+    select.innerHTML = '<option value="">Birim seçin...</option>';
+    window.tumBirimler.forEach(birim => {
+        if (birim.id !== urunBirimId) {
+            const option = document.createElement("option");
+            option.value = birim.id;
+            option.textContent = escapeHtml(`${birim.name} (${birim.shortCode})`);
+            select.appendChild(option);
+        }
+    });
+}
