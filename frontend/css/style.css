@@ -2800,7 +2800,7 @@ a {
 }
 
 /* ---------- 8.2 Duvar Kağıdı (Wallpaper) ---------- */
-/* Duvar kağıdı görseli: frontend/img/backgroundStockFlow.jpeg
+/* Duvar kağıdı görseli: frontend/img/backgroundStockFlow.png
    Görsel bulunamazsa altındaki gradyan katmanı yedek olarak devreye girer,
    yani dosya eksik olsa bile arayüz bozulmaz. */
 body.dt-desktop {
@@ -2808,7 +2808,7 @@ body.dt-desktop {
     /* Perde YOK: görsel olduğu gibi, en net haliyle gösterilir.
        Okunurluk, ikon etiketlerinin kendi gölgesiyle sağlanır. */
     background-image:
-        url("../img/backgroundStockFlow.jpeg"),
+        url("../img/backgroundStockFlow.png"),
         /* --- görsel yoksa yedek gradyan manzara --- */
         linear-gradient(180deg, #d9ecc0 0%, #b9d996 55%, #a4cc84 100%);
     background-position: center center;
@@ -2826,7 +2826,7 @@ body.dt-desktop {
     /* Koyu temada da görsel karartılmaz; yalnızca çok hafif bir soğuk ton verilir */
     background-image:
         linear-gradient(180deg, rgba(12, 16, 28, .14), rgba(12, 16, 28, .22)),
-        url("../img/backgroundStockFlow.jpeg"),
+        url("../img/backgroundStockFlow.png"),
         linear-gradient(180deg, #171a24 0%, #101219 60%, #0b0d12 100%);
 }
 
@@ -3967,7 +3967,7 @@ body.dt-maximized #sidebar-right {
 [data-theme="dark"] body.dt-desktop {
     background-image:
         linear-gradient(180deg, rgba(12, 16, 28, .14), rgba(12, 16, 28, .22)),
-        url("../img/backgroundStockFlow.jpeg"),
+        url("../img/backgroundStockFlow.png"),
         linear-gradient(180deg, #171a24 0%, #101219 60%, #0b0d12 100%);
 }
 
