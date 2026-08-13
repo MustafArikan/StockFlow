@@ -598,17 +598,23 @@ async function kurallariYukle(categoryId) {
                 } catch(e){}
             }
 
+            const isInherited = kural.categoryId != categoryId;
+
             if (kural.uiComponent === "slider" && (kural.minValue !== null || kural.maxValue !== null)) {
                 opts += `<br><small class="text-muted text-xs">Aralık: ${kural.minValue ?? '*'} - ${kural.maxValue ?? '*'}</small>`;
             }
 
             const tr = document.createElement("tr");
             tr.setAttribute("data-id", kural.id);
+            if (isInherited) {
+                tr.classList.add("bg-light");
+            }
+            
             // Sürüklerken düzgün dursun diye arkaplan verebiliriz ama Sortable ghostClass hallediyor
             tr.innerHTML = `
                 <td class="text-center cursor-grab"><i class="bi bi-grip-vertical text-muted fs-5 handle"></i></td>
                 <td>${targetBadge}</td>
-                <td class="fw-bold text-dark">${escapeHtml(kural.attributeKey)} ${opts}</td>
+                <td class="fw-bold text-dark">${escapeHtml(kural.attributeKey)} ${isInherited ? '<span class="badge bg-secondary ms-1" style="font-size: 0.6rem;">Miras</span>' : ''} ${opts}</td>
                 <td>${tipBadge}</td>
                 <td>${zorunluBadge}</td>
                 <td class="text-end">
@@ -633,11 +639,13 @@ async function kurallariYukle(categoryId) {
                         displayOrder: index
                     }));
 
+                    if (reorderData.length === 0) return;
+
                     try {
                         await apiRequest('/attribute-rules/reorder', 'PUT', reorderData);
                     } catch (e) {
                         console.error(e);
-                        hataGoster("Sıralama kaydedilirken hata oluştu.");
+                        hataGoster(e.message || "Sıralama kaydedilirken hata oluştu.");
                     }
                 }
             });
