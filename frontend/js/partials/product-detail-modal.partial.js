@@ -37,6 +37,7 @@ function buildProductDetailModalHtml() {
                                 <button type="button" data-bs-target="#urunDetayCarousel" data-bs-slide-to="2" class="bg-primary" aria-label="Tedarikçiler"></button>
                                 <button type="button" data-bs-target="#urunDetayCarousel" data-bs-slide-to="3" class="bg-primary" aria-label="Stok Dağılımı"></button>
                                 <button type="button" data-bs-target="#urunDetayCarousel" data-bs-slide-to="4" class="bg-primary" aria-label="Stok Hareketleri"></button>
+                                <button type="button" data-bs-target="#urunDetayCarousel" data-bs-slide-to="5" class="bg-primary" aria-label="Paketleme Birimleri"></button>
                             </div>
 
                             <button class="btn btn-sm btn-outline-primary rounded-pill px-3 fw-bold" type="button" data-bs-target="#urunDetayCarousel" data-bs-slide="next">
@@ -48,19 +49,8 @@ function buildProductDetailModalHtml() {
 
                             <div class="carousel-item active">
 
-                                <div class="row mb-4 g-3">
-                                    <div class="col-12 col-md-6">
-                                        <div class="bg-primary bg-opacity-10 text-primary p-4 rounded-4 h-100 border border-primary border-opacity-25 d-flex flex-column justify-content-center">
-                                            <small class="text-uppercase fw-bold opacity-75 mb-1"><i class="bi bi-tags me-1"></i> Kategori</small>
-                                            <div class="fs-4 fw-bold" id="detayKategoriAdi">-</div>
-                                        </div>
-                                    </div>
-                                    <div class="col-12 col-md-6">
-                                        <div class="bg-secondary bg-opacity-10 text-secondary p-4 rounded-4 h-100 border border-secondary border-opacity-25 d-flex flex-column justify-content-center">
-                                            <small class="text-uppercase fw-bold opacity-75 mb-1"><i class="bi bi-box me-1"></i> Ürün Modeli</small>
-                                            <div class="fs-4 fw-bold" id="detayUrunModeli">-</div>
-                                        </div>
-                                    </div>
+                                <div class="row mb-4 g-3" id="detayOneCikanNitelikler">
+                                    <!-- Dinamik: kategoriye göre "öne çıkan" nitelik kartları buraya basılır -->
                                 </div>
 
                                 <h6 class="fw-bold text-primary text-uppercase small mb-4 border-bottom pb-2">
@@ -185,6 +175,18 @@ function buildProductDetailModalHtml() {
                                                 <tr><td colspan="5" class="text-center text-muted fst-italic py-4">Hareketler yükleniyor...</td></tr>
                                             </tbody>
                                         </table>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="carousel-item">
+                                <h6 class="fw-bold text-primary text-uppercase small mb-4 border-bottom pb-2">
+                                    <span class="bg-primary text-white rounded-circle d-inline-flex align-items-center justify-content-center me-2 p-1"><i class="bi bi-box2-heart"></i></span>
+                                    Paketleme Birimleri (Kutu / Koli / Palet)
+                                </h6>
+                                <div class="bg-white p-4 rounded-4 shadow-sm border border-light">
+                                    <div class="row g-3" id="detayPaketlemeListesi">
+                                        <!-- Dinamik: her birim için tıklanabilir bir kart -->
                                     </div>
                                 </div>
                             </div>

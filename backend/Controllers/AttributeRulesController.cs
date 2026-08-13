@@ -64,6 +64,7 @@ public class AttributeRulesController : ControllerBase
             rule.MaxValue,
             rule.TargetLevel,
             rule.DisplayOrder,
+            rule.IsFeatured,
             rule.AttributeAllowedValues.Where(v => !v.IsDeleted).OrderBy(v => v.DisplayOrder).Select(v => new stok_takip.DTOs.AttributeAllowedValueDto(v.Value, v.Label, v.DisplayOrder, v.IsActive)).ToList()))
         .ToList();
 
@@ -95,7 +96,8 @@ public class AttributeRulesController : ControllerBase
             UiComponent = dto.UiComponent,
             MinValue = dto.MinValue,
             MaxValue = dto.MaxValue,
-            TargetLevel = dto.TargetLevel
+            TargetLevel = dto.TargetLevel,
+            IsFeatured = dto.IsFeatured
         };
 
         if (dto.AllowedValueList != null && dto.AllowedValueList.Any())
@@ -142,7 +144,7 @@ public class AttributeRulesController : ControllerBase
         var responseDto = new stok_takip.DTOs.AttributeRuleResponseDto(
             rule.Id, rule.CategoryId, rule.AttributeKey, rule.DataType, rule.IsRequired, 
             System.Text.Json.JsonSerializer.Serialize(rule.AttributeAllowedValues.Where(v => !v.IsDeleted && v.IsActive).OrderBy(v => v.DisplayOrder).Select(x => x.Value)), 
-            rule.UiComponent, rule.MinValue, rule.MaxValue, rule.TargetLevel, rule.DisplayOrder, 
+            rule.UiComponent, rule.MinValue, rule.MaxValue, rule.TargetLevel, rule.DisplayOrder, rule.IsFeatured, 
             rule.AttributeAllowedValues.Where(v => !v.IsDeleted).OrderBy(v => v.DisplayOrder).Select(v => new stok_takip.DTOs.AttributeAllowedValueDto(v.Value, v.Label, v.DisplayOrder, v.IsActive)).ToList());
         return Ok(responseDto);
     }
@@ -170,6 +172,7 @@ public class AttributeRulesController : ControllerBase
         rule.MinValue = dto.MinValue;
         rule.MaxValue = dto.MaxValue;
         rule.TargetLevel = dto.TargetLevel;
+        rule.IsFeatured = dto.IsFeatured;
 
         // Gelen yeni değer listesini hazırla
         List<stok_takip.DTOs.AttributeAllowedValueDto> incomingList = new();
@@ -239,7 +242,7 @@ public class AttributeRulesController : ControllerBase
         var responseDto = new stok_takip.DTOs.AttributeRuleResponseDto(
             rule.Id, rule.CategoryId, rule.AttributeKey, rule.DataType, rule.IsRequired, 
             System.Text.Json.JsonSerializer.Serialize(rule.AttributeAllowedValues.Where(v => !v.IsDeleted && v.IsActive).OrderBy(v => v.DisplayOrder).Select(x => x.Value)), 
-            rule.UiComponent, rule.MinValue, rule.MaxValue, rule.TargetLevel, rule.DisplayOrder, 
+            rule.UiComponent, rule.MinValue, rule.MaxValue, rule.TargetLevel, rule.DisplayOrder, rule.IsFeatured, 
             rule.AttributeAllowedValues.Where(v => !v.IsDeleted).OrderBy(v => v.DisplayOrder).Select(v => new stok_takip.DTOs.AttributeAllowedValueDto(v.Value, v.Label, v.DisplayOrder, v.IsActive)).ToList());
         return Ok(responseDto);
     }
@@ -275,11 +278,6 @@ public class AttributeRulesController : ControllerBase
 
         var ruleIds = dtos.Select(d => d.Id).ToList();
         var rules = await _context.AttributeRules.Where(r => ruleIds.Contains(r.Id)).ToListAsync();
-
-        if (rules.Select(r => r.CategoryId).Distinct().Count() > 1)
-        {
-            return BadRequest(new { message = "Farklı kategorilere ait kurallar aynı anda sıralanamaz." });
-        }
 
         foreach (var rule in rules)
         {

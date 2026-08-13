@@ -2,10 +2,10 @@
 
 # StockFlow
 
-**Canlı ortama hazırlanan bir stok, depo ve demirbaş yönetim platformu.**
+**Canlı ortama hazırlanan bir stok, depo ve ekipman yönetim platformu.**
 
 Granüler yetkilendirme (RBAC), ACID uyumlu stok hareketleri, hibrit EAV ürün bilgi yönetimi,
-seri numarası bazlı demirbaş takibi ve uçtan uca izleme altyapısı — tamamı konteynerize.
+seri numarası bazlı ekipman takibi ve uçtan uca izleme altyapısı — tamamı konteynerize.
 
 [![.NET](https://img.shields.io/badge/.NET-10.0-512BD4?logo=dotnet&logoColor=white)](https://dotnet.microsoft.com/)
 [![SQL Server](https://img.shields.io/badge/SQL%20Server-2022-CC2927?logo=microsoftsqlserver&logoColor=white)](https://www.microsoft.com/sql-server)
@@ -62,7 +62,7 @@ Sistem dört temel fikir üzerine kurulmuştur:
    kendi özellik setini (veri tipi, arayüz bileşeni, min/maks, seçenek listesi) tanımlar; form
    arayüzde dinamik olarak üretilir.
 4. **Fiziksel cihazlar tekil olarak izlenir.** Toplam miktarın ötesinde, her fiziksel cihaz tekil
-   seri numarası / QR kodu ile kaydedilir; zimmet, arıza, bakım ve iade olayları bir zaman
+   seri numarası / QR kodu ile kaydedilir; atama, arıza, bakım ve iade olayları bir zaman
    çizelgesi üzerinde takip edilir.
 
 ---
@@ -107,7 +107,7 @@ Sistem dört temel fikir üzerine kurulmuştur:
 - Tekil barkod, minimum stok seviyesi, maliyet / satış fiyatı ve SKU üretimi ile ürünler
 - **Hibrit EAV özellik motoru**: kategori bazlı `AttributeRule` kayıtları veri tipini,
   arayüz bileşenini (textbox, select, radio, slider, toggle …), min/maks sınırları,
-  zorunluluk bayrağını, sıralamayı ve hedef seviyeyi (Ürün veya Demirbaş) tanımlar
+  zorunluluk bayrağını, sıralamayı ve hedef seviyeyi (Ürün veya Ekipman) tanımlar
 - Etiket, sıra ve aktiflik durumu taşıyan yönetilebilir `AttributeAllowedValue` listeleri
 - Dinamik form üretimi + kademeli (cascading) depo → raf seçimi
 - Aşamalı oturumlar, kolon eşleştirme, tekil değer incelemesi, doğrulama raporu ve
@@ -131,10 +131,10 @@ Sistem dört temel fikir üzerine kurulmuştur:
 </details>
 
 <details open>
-<summary><b>Demirbaş (Zimmet) Takibi</b></summary>
+<summary><b>Ekipman (Atama) Takibi</b></summary>
 
 - Tekil fiziksel cihazlar için seri numarası kütüğü
-- Kullanıcıya zimmetleme / iade, arıza bildirimi / çözüm, sonraki bakım tarihiyle bakım kaydı
+- Kullanıcıya atama / iade, arıza bildirimi / çözüm, sonraki bakım tarihiyle bakım kaydı
 - Cihaz başına tam olay zaman çizelgesi (kim, ne zaman, neden devraldı)
 - QR kod üretimi ve kamerayla okuma (`html5-qrcode`) — okutulan cihaz mobilde doğrudan
   teknik detay kartını açar
@@ -456,7 +456,7 @@ dokümantasyon `/scalar/v1` adresindedir.
 </details>
 
 <details>
-<summary><b>Tedarikçiler ve demirbaşlar</b></summary>
+<summary><b>Tedarikçiler ve ekipmanlar</b></summary>
 
 | Metot | Endpoint | İzin politikası |
 | :--- | :--- | :--- |
@@ -519,7 +519,7 @@ Tablolar bir EF Core adlandırma kuralı ile `snake_case` üretilir. Tüm varlı
 | `suppliers` | Vergi numaralı tedarikçi firmalar | `name` UQ (filtreli) |
 | `product_suppliers` | Alış fiyatı, teslim süresi, tercih bayrağı | (`product_id`, `supplier_id`) UQ (filtreli) |
 | `assets` | Tekil takip edilen fiziksel cihazlar | `serial_number` UQ (filtreli) |
-| `asset_histories` | Zimmet / bakım / arıza olayları | FK → `assets`, `users` |
+| `asset_histories` | Atama / bakım / arıza olayları | FK → `assets`, `users` |
 | `notifications` | Önem dereceli kritik stok uyarıları | |
 | `import_histories` | Toplu içe aktarma sonuç kayıtları | FK → `users` |
 | `security_audit_logs` | Otomatik değişiklik günlüğü (eski/yeni JSON, IP) | FK → `users` |
@@ -597,30 +597,12 @@ StockFlow/
 │   ├── css/                     # style.css, import-wizard.css
 │   ├── js/                      # config.js (API istemcisi + layout motoru), sayfa modülleri
 │   │   └── partials/            # sidebar, topbar, sayfalama üreticileri
-│   └── *.html                   # 16 sayfa (dashboard, ürünler, hareketler, demirbaşlar …)
+│   └── *.html                   # 16 sayfa (dashboard, ürünler, hareketler, ekipmanlar …)
 ├── nginx/default.conf           # Statik sunum, ters vekil, CSP ve güvenlik başlıkları
 ├── monitoring/                  # Prometheus, Grafana, Loki, Promtail, exporter'lar
 ├── docker-compose.yml           # 12 servisli stack
 └── .env                         # Yerel ortam değişkenleri (git tarafından yoksayılır)
 ```
-
----
-
-## Proje Durumu
-
-Aktif olarak geliştirilmektedir. Uygulama kurum içi / canlı öncesi kullanım için özellik
-bakımından tamamlanmıştır; kalan işler canlı ortam sertleştirmesidir.
-
-| Alan | Durum |
-| :--- | :--- |
-| Kimlik doğrulama, RBAC, dinamik politikalar | ✅ Tamamlandı |
-| Katalog, PIM/EAV, toplu içe aktarma | ✅ Tamamlandı |
-| Depolar, konumlar, stok hareketleri | ✅ Tamamlandı |
-| Tedarikçiler ve ürün–tedarikçi matrisi | ✅ Tamamlandı |
-| Demirbaş takibi ve QR/barkod okuma | ✅ Tamamlandı |
-| Dashboard, raporlar, PDF/Excel dışa aktarma | ✅ Tamamlandı |
-| Denetim kayıtları ve yumuşak silme | ✅ Tamamlandı |
-| İzleme altyapısı (Prometheus/Grafana/Loki) | ✅ Tamamlandı |
 
 ---
 

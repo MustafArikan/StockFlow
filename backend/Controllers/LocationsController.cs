@@ -59,6 +59,13 @@ public class LocationsController : ControllerBase
         var totalRecords = await query.CountAsync();
 
         var locations = await query
+            .Select(l => new 
+            {
+                l.Id,
+                l.WarehouseId,
+                l.Code,
+                IsEmpty = !l.StockLevels.Any(sl => !sl.IsDeleted && sl.Quantity > 0)
+            })
             .OrderByDescending(l => l.Id)
             .Skip((pageNumber - 1) * pageSize)
             .Take(pageSize)

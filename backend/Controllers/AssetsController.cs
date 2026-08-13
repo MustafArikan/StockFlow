@@ -94,16 +94,30 @@ public class AssetsController : ControllerBase
                 SerialNumber = dto.SerialNumber,
                 Notes = dto.Notes,
                 Attributes = dto.Attributes,
-                Status = "Available" // İlk eklendiğinde durumu 'Müsait/Boşta' olur
+                Status = AssetStatuses.Available // İlk eklendiğinde durumu 'Müsait/Boşta' olur              
+
             };
+
+            var historyNotes = "Ekipman sisteme eklendi ve stoka ait depodan 1 adet düşüldü.";
+
+            if (dto.AssignedUserId.HasValue)
+            {
+                var assignedUser = await _context.Users.FindAsync(dto.AssignedUserId.Value);
+                if (assignedUser != null)
+                {
+                    newAsset.AssignedToId = dto.AssignedUserId.Value;
+                    newAsset.Status = AssetStatuses.InUse;
+                    historyNotes += $" Ekipman oluşturulurken {assignedUser.FirstName} {assignedUser.LastName} adlı kullanıcıya atandı.";
+                }
+            }
 
             // Ekipman eklendiğine dair ilk yaşam döngüsü logunun atılması
             var historyRecord = new AssetHistory
             {
                 Asset = newAsset,
                 UserId = GetCurrentUserId(),
-                EventType = "Sisteme Giriş",
-                Notes = "Ekipman sisteme eklendi ve stoka ait depodan 1 adet düşüldü."
+                EventType = dto.AssignedUserId.HasValue ? "Sisteme Giriş ve Atama" : "Sisteme Giriş",
+                Notes = historyNotes
             };
 
             _context.Assets.Add(newAsset);
@@ -141,7 +155,7 @@ public class AssetsController : ControllerBase
         }
 
         // Ekipman başkasındaysa engeller
-        if (asset.Status == "In Use" || asset.AssignedToId != null)
+        if (asset.Status == AssetStatuses.InUse || asset.AssignedToId != null)
         {
             return BadRequest(new { message = "Bu Ekipman zaten bir kullanıcıya atanmış." });
         }
@@ -156,7 +170,7 @@ public class AssetsController : ControllerBase
         }
 
         asset.AssignedToId = dto.UserId;
-        asset.Status = "In Use";
+        asset.Status = AssetStatuses.InUse;
 
         // Atama işlemi kaydının oluşturulması
         var historyRecord = new AssetHistory
@@ -177,12 +191,45 @@ public class AssetsController : ControllerBase
     [RequirePermission(Policies.RequireAssetRead)]
     [HttpGet]
     [NormalizePagination]
-    public async Task<IActionResult> GetAllAssets([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
+    public async Task<IActionResult> GetAllAssets(
+        [FromQuery] int pageNumber = 1,
+        [FromQuery] int pageSize = 10,
+        [FromQuery] int? categoryId = null,
+        [FromQuery] string? status = null,
+        [FromQuery] string? dynamicAttributes = null)
     {
         var query = _context.Assets
             .AsNoTracking()
             .Include(a => a.Product)
-            .Include(a => a.AssignedTo);
+            .Include(a => a.AssignedTo)
+            .AsQueryable();
+
+        if (categoryId.HasValue)
+        {
+            query = query.Where(a => a.Product != null && a.Product.CategoryId == categoryId.Value);
+        }
+
+        if (!string.IsNullOrEmpty(status))
+        {
+            query = query.Where(a => a.Status == status);
+        }
+
+        if (!string.IsNullOrEmpty(dynamicAttributes))
+        {
+            try
+            {
+                var dict = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, string>>(dynamicAttributes);
+                if (dict != null)
+                {
+                    foreach (var kvp in dict)
+                    {
+                        var searchStr = $"\"{kvp.Key}\":\"{kvp.Value}\"";
+                        query = query.Where(a => a.Attributes != null && a.Attributes.Contains(searchStr));
+                    }
+                }
+            }
+            catch { /* Ignore parsing errors */ }
+        }
 
         var totalRecords = await query.CountAsync();
 
@@ -203,7 +250,8 @@ public class AssetsController : ControllerBase
 
                 AssignedToId = a.AssignedToId,
                 AssignedToName = a.AssignedTo != null ? a.AssignedTo.FirstName + " " + a.AssignedTo.LastName : "Şu an Boşta",
-                AssignedToEmail = a.AssignedTo != null ? a.AssignedTo.Email : ""
+                AssignedToEmail = a.AssignedTo != null ? a.AssignedTo.Email : "",
+                CreatedAt = a.CreatedAt
             })
             .ToListAsync();
 
@@ -289,7 +337,7 @@ public class AssetsController : ControllerBase
             };
 
             asset.AssignedToId = null;
-            asset.Status = "Available";
+            asset.Status = AssetStatuses.Available;
 
             _context.AssetHistories.Add(historyRecord);
             await _context.SaveChangesAsync();
@@ -314,7 +362,7 @@ public class AssetsController : ControllerBase
         var asset = await _context.Assets.FindAsync(id);
         if (asset == null) return NotFound(new { message = "Ekipman bulunamadı." });
 
-        asset.Status = "Broken";
+        asset.Status = AssetStatuses.Broken;
 
         var historyRecord = new AssetHistory
         {
@@ -339,7 +387,7 @@ public class AssetsController : ControllerBase
         var asset = await _context.Assets.FindAsync(id);
         if (asset == null) return NotFound(new { message = "Ekipman bulunamadı." });
 
-        asset.Status = asset.AssignedToId != null ? "In Use" : "Available";
+        asset.Status = asset.AssignedToId != null ? AssetStatuses.InUse : AssetStatuses.Available;
 
         var historyRecord = new AssetHistory
         {
@@ -397,7 +445,7 @@ public class AssetsController : ControllerBase
         if (asset == null)
             return NotFound(new { message = "İşlem yapılacak ekipman bulunamadı." });
 
-        if (asset.Status == "Retired")
+        if (asset.Status == AssetStatuses.Retired)
             return BadRequest(new { message = "Bu ekipman zaten kullanımdan kaldırılmış." });
 
         using var transaction = await _context.Database.BeginTransactionAsync();
@@ -441,7 +489,7 @@ public class AssetsController : ControllerBase
             }
 
             // Hard Delete yerine Soft Delete yapıyoruz
-            asset.Status = "Retired";
+            asset.Status = AssetStatuses.Retired;
             asset.AssignedToId = null; // Ekipman pasife alındığı için kullanıcının ataması kaldırılır
 
             var historyRecord = new AssetHistory

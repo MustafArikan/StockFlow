@@ -17,72 +17,120 @@
 
 <body>
     <div class="container-fluid mt-4">
-        <!-- Ekipman Ekleme Butonu -->
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <div>
-                <h1 class="fw-bold text-dark mb-0">Ekipman Yönetimi</h1>
-                <p class="text-muted mb-0">Şirket varlıklarını ve ekipman durumlarını yönetin</p>
-            </div>
-            <button type="button" class="btn btn-success rounded-pill px-4 shadow-sm fw-bold" id="btnYeniEkipman"
-                data-bs-toggle="modal" data-bs-target="#createAssetModal">
-                + Yeni Ekipman Kaydet
-            </button>
-        </div>
 
-        <!-- 1. Ekipman Arama Kutusu / QR Okutma Alanı -->
-        <div class="row mb-4">
-            <div class="col-12">
-                <div class="card bg-white border-0 shadow-sm rounded-4 p-3">
-                    <div class="row align-items-center g-2">
-                        <div class="col-md-9">
-                            <!-- Arama Kutusu ve İkonlar -->
-                            <div class="position-relative d-flex align-items-center">
-                                <span class="position-absolute ms-3 text-muted">
-                                    <i class="bi bi-search"></i>
-                                </span>
-                                <input type="text" id="serialSearchInput"
-                                    class="form-control form-control-lg rounded-pill ps-5 pe-5 bg-light border-0"
-                                    placeholder="Ekipmanın seri numarasını veya Barkod/QR kodunu okutun...">
+        <!-- ADMİNLER İÇİN GRİD (IZGARA) ALANI VE FİLTRELER -->
+        <div id="adminGridContainer" class="d-none mb-4">
+            <div class="row g-3">
+                <!-- SOL FİLTRE PANELİ -->
+                <div class="col-12 col-md-4 col-lg-3">
+                    <div class="card border-0 shadow-sm rounded-4 h-100">
+                        <div
+                            class="card-header bg-white border-bottom-0 pt-3 pb-0 d-flex justify-content-between align-items-center">
+                            <h6 class="fw-bold mb-0"><i class="bi bi-funnel-fill text-primary me-2"></i>Filtreler</h6>
+                            <button type="button" id="btnFiltreleriTemizle"
+                                class="btn btn-sm btn-link text-decoration-none text-muted p-0">Temizle</button>
+                        </div>
+                        <div class="card-body p-3 pt-2">
 
-                                <!-- Kamera ile Okut Butonu -->
-                                <button type="button"
-                                    class="btn btn-link position-absolute end-0 text-primary text-decoration-none me-2"
-                                    id="btnKameraAcAsset" title="Kamera ile Okut">
-                                    <i class="bi bi-qr-code-scan fs-5"></i>
-                                </button>
+                            <!-- Ekipman Arama -->
+                            <div class="mb-4">
+                                <label class="form-label small fw-bold text-muted text-uppercase mb-2">Ekipman
+                                    Ara</label>
+
+                                <div id="searchBoxGroup"
+                                    class="input-group mb-3 shadow-sm rounded-pill overflow-hidden border border-secondary border-opacity-25 bg-body-tertiary">
+                                    <span class="input-group-text bg-transparent border-0 text-muted ps-3 pe-2">
+                                        <i class="bi bi-search"></i>
+                                    </span>
+                                    <input type="text" id="serialSearchInput"
+                                        class="form-control bg-transparent border-0 shadow-none py-2 px-1 text-body"
+                                        placeholder="SN veya Barkod...">
+                                </div>
+
+                                <!-- Karekod ve Sorgula Butonları -->
+                                <div class="d-flex gap-2">
+                                    <button
+                                        class="btn btn-secondary rounded-pill px-3 d-flex align-items-center justify-content-center shadow-sm"
+                                        type="button" id="btnKameraAcAsset" title="Kamera ile Okut">
+                                        <i class="bi bi-qr-code-scan fs-5"></i>
+                                    </button>
+                                    <button class="btn btn-primary w-100 fw-bold rounded-pill shadow-sm" type="button"
+                                        id="btnSearchAsset">
+                                        Sorgula
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Kategori Seçimi -->
+                            <div class="mb-4">
+                                <label class="form-label small fw-bold text-muted text-uppercase mb-2">Kategori</label>
+                                <div id="filtreKategoriContainer" class="d-flex flex-column gap-2"></div>
+                                <input type="hidden" id="filtreKategoriId" value="">
+                            </div>
+
+                            <!-- Temel Filtreler -->
+                            <div class="mb-4">
+                                <label class="form-label small fw-bold text-muted text-uppercase mb-2">Durum</label>
+                                <select id="filtreDurum"
+                                    class="form-select form-select-sm bg-light border-0 rounded-pill px-3 mb-3">
+                                    <option value="">Tümü</option>
+                                    <option value="Available">Kullanılabilir</option>
+                                    <option value="InUse">Kullanımda</option>
+                                    <option value="Maintenance">Bakımda</option>
+                                    <option value="Retired">Kullanımdan Kaldırıldı</option>
+                                </select>
+                            </div>
+
+                            <!-- Dinamik Kategori Özellikleri -->
+                            <div id="dynamicFilterArea" class="d-none">
+                                <hr class="text-muted opacity-25 my-4">
+                                <label class="form-label small fw-bold text-muted text-uppercase mb-3">Kategori
+                                    Özellikleri</label>
+                                <div class="row g-0" id="dynamicFilterContainer">
+                                    <!-- JS ile kural filter inputları buraya dikey olarak gelecek -->
+                                </div>
                             </div>
                         </div>
-                        <div class="col-md-3 d-grid">
-                            <button type="button" class="btn btn-primary btn-lg rounded-pill fw-bold shadow-sm"
-                                id="btnSearchAsset">Sorgula</button>
+                    </div>
+                </div>
+
+                <!-- SAĞ GRİD ALANI -->
+                <div class="col-12 col-md-8 col-lg-9">
+                    <div class="card border-0 shadow-sm rounded-4 h-100">
+                        <div class="card-body p-4">
+                            <div
+                                class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 gap-3">
+                                <div class="d-flex align-items-center gap-3">
+                                    <h5 class="fw-bold mb-0 text-body"><i class="bi bi-grid-fill me-2"></i>Tüm
+                                        Ekipmanlar</h5>
+                                    <button type="button"
+                                        class="btn btn-success btn-sm rounded-pill px-3 py-2 fw-bold shadow-sm d-flex align-items-center"
+                                        id="btnYeniEkipman" data-bs-toggle="modal" data-bs-target="#createAssetModal">
+                                        <i class="bi bi-plus-lg me-2"></i> Yeni Ekipman Kaydet
+                                    </button>
+                                </div>
+                                <div class="d-flex align-items-center">
+                                    <label for="assetGridSort"
+                                        class="form-label mb-0 me-2 small text-muted fw-bold text-nowrap">Sırala:</label>
+                                    <select id="assetGridSort"
+                                        class="form-select form-select-sm rounded-pill bg-light border-0">
+                                        <option value="createdAt_desc">Eklenme (Yeni - Eski)</option>
+                                        <option value="createdAt_asc">Eklenme (Eski - Yeni)</option>
+                                        <option value="productName_asc">İsim (A - Z)</option>
+                                        <option value="productName_desc">İsim (Z - A)</option>
+                                        <option value="status_asc">Duruma Göre</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="row g-4" id="equipmentGridCards">
+                                <!-- JS ile Kartlar Buraya Dolacak -->
+                            </div>
+                            <!-- Grid Sayfalama Alanı -->
+                            <div id="assetsPaginationContainer" class="mt-4"></div>
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
-
-        <!-- ADMİNLER İÇİN GRİD (IZGARA) ALANI -->
-        <div id="adminGridContainer" class="d-none mb-4">
-            <div class="d-flex justify-content-between align-items-center mb-3">
-                <h5 class="fw-bold mb-0 text-secondary"><i class="bi bi-grid-fill me-2"></i>Tüm Ekipmanlar</h5>
-                <div class="d-flex align-items-center">
-                    <label for="assetGridSort"
-                        class="form-label mb-0 me-2 small text-muted fw-bold text-nowrap">Sırala:</label>
-                    <select id="assetGridSort"
-                        class="form-select form-select-sm rounded-pill shadow-sm border-0 bg-white">
-                        <option value="createdAt_desc">Eklenme (Yeni - Eski)</option>
-                        <option value="createdAt_asc">Eklenme (Eski - Yeni)</option>
-                        <option value="productName_asc">İsim (A - Z)</option>
-                        <option value="productName_desc">İsim (Z - A)</option>
-                        <option value="status_asc">Duruma Göre</option>
-                    </select>
-                </div>
-            </div>
-            <div class="row g-4" id="equipmentGridCards">
-                <!-- JS ile Kartlar Buraya Dolacak -->
-            </div>
-            <!-- Grid Sayfalama Alanı -->
-            <div id="assetsPaginationContainer" class="mt-4"></div>
         </div>
 
         <!-- 2. Sonuçların Gösterildiği Alan (Başlangıçta Gizli) -->
@@ -247,13 +295,26 @@
                             <input type="text" id="newAssetSerial" class="form-control"
                                 placeholder="Ekipmanın üzerindeki benzersiz kod...">
                         </div>
-                        <div class="col-12" id="newAssetAttributesContainer"></div>
                     </div>
 
                     <!-- Stok Çıkış Konumu (WMS Entegrasyonu) -->
-                    <h6 class="fw-bold text-danger mb-3"><i class="bi bi-box-arrow-up me-2"></i>2. Çıkış (Kaynak) Konumu
-                    </h6>
-                    <div class="p-3 bg-light border rounded-3 shadow-sm mb-4">
+                    <div id="sourceLocationSection" class="d-none">
+                        <h6 class="fw-bold text-danger mb-3"><i class="bi bi-box-arrow-up me-2"></i>2. Çıkış (Kaynak)
+                            Konumu
+                        </h6>
+
+                        <!-- Mevcut Stoklar Listesi (Tıklanabilir) -->
+                        <div id="mevcutStoklarAlani"
+                            class="mb-4 p-3 bg-white border border-secondary border-opacity-25 rounded-3 shadow-sm">
+                            <h6 class="fw-bold text-secondary mb-2"><i class="bi bi-info-circle me-1"></i>Mevcut Stoklar
+                                ve Konumları (Tıklayarak Seçebilirsiniz)</h6>
+                            <div id="mevcutStoklarListesi" class="list-group list-group-flush border rounded-3">
+                                <!-- Dinamik olarak doldurulacak -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="p-3 bg-light border rounded-3 shadow-sm mb-4 d-none" id="sourceLocationGroup">
                         <div class="row g-3">
                             <div class="col-12">
                                 <label for="newAssetSourceWarehouse" class="form-label text-muted small fw-bold">Depo
@@ -272,13 +333,25 @@
                         </div>
                     </div>
 
+                    <div id="newAssetAttributesContainer"></div>
+
                     <!-- Ek Bilgiler -->
-                    <h6 class="fw-bold text-secondary mb-3"><i class="bi bi-card-text me-2"></i>3. Ek Bilgiler</h6>
-                    <div class="mb-3">
-                        <label for="newAssetNotes" class="form-label small fw-bold text-muted">Ek Notlar
-                            (Opsiyonel)</label>
-                        <textarea id="newAssetNotes" class="form-control" rows="2"
-                            placeholder="Örn: Kutusunda ufak bir ezik var..."></textarea>
+                    <h6 class="fw-bold text-secondary mb-3 mt-4"><i class="bi bi-card-text me-2"></i>3. Ek Bilgiler ve
+                        Atama</h6>
+                    <div class="row g-3 mb-3">
+                        <div class="col-12">
+                            <label for="newAssetAssignedUser" class="form-label small fw-bold text-muted">Kullanıcıya
+                                Ata (Opsiyonel)</label>
+                            <select id="newAssetAssignedUser" class="form-select">
+                                <option value="">Şimdilik boşta kalsın...</option>
+                            </select>
+                        </div>
+                        <div class="col-12">
+                            <label for="newAssetNotes" class="form-label small fw-bold text-muted">Ek Notlar
+                                (Opsiyonel)</label>
+                            <textarea id="newAssetNotes" class="form-control" rows="2"
+                                placeholder="Örn: Kutusunda ufak bir ezik var..."></textarea>
+                        </div>
                     </div>
                 </div>
                 <div class="modal-footer">

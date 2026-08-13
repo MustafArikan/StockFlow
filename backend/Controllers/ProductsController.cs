@@ -10,6 +10,7 @@ using stok_takip.DTOs;
 using stok_takip.Models;
 using System.Security.Claims;
 using ClosedXML.Excel; // Excel kütüphanesi
+using stok_takip.Services;
 
 namespace stok_takip.Controllers;
 
@@ -37,6 +38,7 @@ public class ProductsController : ControllerBase
             .AsNoTracking()
             .Where(p => !p.IsDeleted)
             .Include(p => p.Category)
+            .Include(p => p.Unit)
             .Include(p => p.ProductSuppliers).ThenInclude(ps => ps.Supplier)
             .Skip((pageNumber - 1) * pageSize)
             .Take(pageSize)
@@ -45,15 +47,33 @@ public class ProductsController : ControllerBase
                 Id = p.Id,
                 Name = p.Name,
                 Barcode = p.Barcode,
+                BarcodeType = p.BarcodeType.ToString(),
                 MinStockLevel = p.MinStockLevel,
                 CategoryId = p.CategoryId,
                 CategoryName = p.Category.Name,
+                UnitId = p.UnitId,
+                UnitName = p.Unit.Name,
+                UnitShortCode = p.Unit.ShortCode,
+                UnitAllowsDecimal = p.Unit.AllowsDecimal,
                 StockQuantity = p.StockLevels.Sum(sl => sl.Quantity),
                 AttributesStr = p.Attributes,
                 Price = p.Price,
                 ProductSuppliers = p.ProductSuppliers.Select(ps => new ProductSupplierResponseDto(
                     ps.Id, ps.SupplierId, ps.Supplier.Name, ps.PurchasePrice, ps.SupplierProductCode, ps.LeadTimeDays, ps.IsPreferred
                 )).ToList(),
+                UnitConversions = _context.ProductUnitConversions
+                    .Where(c => c.ProductId == p.Id && !c.IsDeleted)
+                    .Select(c => new ProductUnitConversionDto
+                    {
+                        Id = c.Id,
+                        AlternativeUnitId = c.AlternativeUnitId,
+                        AlternativeUnitName = c.AlternativeUnit.Name,
+                        AlternativeUnitShortCode = c.AlternativeUnit.ShortCode,
+                        Barcode = c.Barcode,
+                        BarcodeType = c.BarcodeType.ToString(),
+                        ConversionFactor = c.ConversionFactor,
+                        IsDefault = c.IsDefault
+                    }).ToList(),
                 CreatedAt = p.CreatedAt
             })
             .ToListAsync();
@@ -63,12 +83,18 @@ public class ProductsController : ControllerBase
             Id = p.Id,
             Name = p.Name,
             Barcode = p.Barcode,
+            BarcodeType = p.BarcodeType,
             MinStockLevel = p.MinStockLevel,
             CategoryId = p.CategoryId,
             CategoryName = p.CategoryName,
+            UnitId = p.UnitId,
+            UnitName = p.UnitName,
+            UnitShortCode = p.UnitShortCode,
+            UnitAllowsDecimal = p.UnitAllowsDecimal,
             StockQuantity = p.StockQuantity,
             Price = p.Price,
             ProductSuppliers = p.ProductSuppliers,
+            UnitConversions = p.UnitConversions,
             CreatedAt = p.CreatedAt,
             Attributes = string.IsNullOrEmpty(p.AttributesStr) ? new List<ProductAttributeDto>() : System.Text.Json.JsonSerializer.Deserialize<List<ProductAttributeDto>>(p.AttributesStr)
         }).ToList();
@@ -95,11 +121,29 @@ public class ProductsController : ControllerBase
                 Id = p.Id,
                 Name = p.Name,
                 Barcode = p.Barcode,
+                BarcodeType = p.BarcodeType.ToString(),
                 MinStockLevel = p.MinStockLevel,
                 CategoryId = p.CategoryId,
                 CategoryName = p.Category.Name,
+                UnitId = p.UnitId,
+                UnitName = p.Unit.Name,
+                UnitShortCode = p.Unit.ShortCode,
+                UnitAllowsDecimal = p.Unit.AllowsDecimal,
                 StockQuantity = p.StockLevels.Sum(sl => sl.Quantity),
                 AttributesStr = p.Attributes,
+                UnitConversions = _context.ProductUnitConversions
+                    .Where(c => c.ProductId == p.Id && !c.IsDeleted)
+                    .Select(c => new ProductUnitConversionDto
+                    {
+                        Id = c.Id,
+                        AlternativeUnitId = c.AlternativeUnitId,
+                        AlternativeUnitName = c.AlternativeUnit.Name,
+                        AlternativeUnitShortCode = c.AlternativeUnit.ShortCode,
+                        Barcode = c.Barcode,
+                        BarcodeType = c.BarcodeType.ToString(),
+                        ConversionFactor = c.ConversionFactor,
+                        IsDefault = c.IsDefault
+                    }).ToList(),
                 CreatedAt = p.CreatedAt
             }).FirstOrDefaultAsync();
 
@@ -111,10 +155,16 @@ public class ProductsController : ControllerBase
             Id = product.Id,
             Name = product.Name,
             Barcode = product.Barcode,
+            BarcodeType = product.BarcodeType,
             MinStockLevel = product.MinStockLevel,
             CategoryId = product.CategoryId,
             CategoryName = product.CategoryName,
+            UnitId = product.UnitId,
+            UnitName = product.UnitName,
+            UnitShortCode = product.UnitShortCode,
+            UnitAllowsDecimal = product.UnitAllowsDecimal,
             StockQuantity = product.StockQuantity,
+            UnitConversions = product.UnitConversions,
             CreatedAt = product.CreatedAt,
             Attributes = string.IsNullOrEmpty(product.AttributesStr)
                 ? new List<ProductAttributeDto>()
@@ -136,6 +186,13 @@ public class ProductsController : ControllerBase
             return BadRequest(new { message = "Bu barkoda sahip bir ürün zaten var." });
         }
 
+        var detectedType = BarcodeTypeDetector.Detect(dto.Barcode);
+        if (detectedType is BarcodeType.Gtin8_Ean8 or BarcodeType.Gtin12_UpcA or BarcodeType.Gtin13_Ean13 or BarcodeType.Gtin14_Itf14)
+        {
+            if (!Gs1CheckDigitCalculator.IsValid(dto.Barcode))
+                return BadRequest(new { message = "Girilen barkodun kontrol hanesi hatalı görünüyor. Barkodu tekrar kontrol edin veya elle taratın." });
+        }
+
         var categoryExists = await _context.Categories.AnyAsync(c => c.Id == dto.CategoryId);
         if (!categoryExists)
             return BadRequest(new { message = "Belirtilen kategori bulunamadı." });
@@ -143,6 +200,13 @@ public class ProductsController : ControllerBase
         var locationExists = await _context.Locations.AnyAsync(l => l.Id == dto.TargetLocationId);
         if (!locationExists)
             return BadRequest(new { message = "Belirtilen raf/lokasyon bulunamadı." });
+
+        var unit = await _context.Units.FirstOrDefaultAsync(u => u.Id == dto.UnitId && u.IsActive && !u.IsDeleted);
+        if (unit == null)
+            return BadRequest(new { message = "Belirtilen birim bulunamadı veya pasif durumda." });
+
+        if (!stok_takip.Services.UnitValidationHelper.IsQuantityValidForUnit(dto.InitialQuantity, unit.AllowsDecimal))
+            return BadRequest(new { message = $"{unit.Name} birimi ondalıklı miktar kabul etmez. Lütfen tam sayı girin." });
 
         if (dto.Attributes != null && dto.Attributes.Any())
         {
@@ -154,8 +218,10 @@ public class ProductsController : ControllerBase
         {
             Name = dto.Name,
             Barcode = dto.Barcode,
+            BarcodeType = detectedType,
             MinStockLevel = dto.MinStockLevel,
             CategoryId = dto.CategoryId,
+            UnitId = dto.UnitId,
             Attributes = dto.Attributes != null ? System.Text.Json.JsonSerializer.Serialize(dto.Attributes) : "[]"
         };
         _context.Products.Add(product);
@@ -166,6 +232,22 @@ public class ProductsController : ControllerBase
         catch (DbUpdateException)
         {
             return Conflict(new { message = "Bu barkoda sahip bir ürün zaten kaydedilmiş olabilir." });
+        }
+
+        // Çevrimleri Ekle (Eğer varsa)
+        if (dto.UnitConversions != null && dto.UnitConversions.Any())
+        {
+            foreach (var conv in dto.UnitConversions)
+            {
+                if (conv.AlternativeUnitId == product.UnitId) continue;
+                _context.ProductUnitConversions.Add(new ProductUnitConversion
+                {
+                    ProductId = product.Id,
+                    AlternativeUnitId = conv.AlternativeUnitId,
+                    ConversionFactor = conv.ConversionFactor,
+                    IsDefault = conv.IsDefault
+                });
+            }
         }
 
         // 🎯 İlk Stoğu Oluştur (StockLevel tablosuna)
@@ -221,8 +303,19 @@ public class ProductsController : ControllerBase
             return BadRequest(new { message = "Bu barkoda sahip bir ürün zaten var." });
         }
 
+        var detectedType = BarcodeTypeDetector.Detect(dto.Barcode);
+        if (detectedType is BarcodeType.Gtin8_Ean8 or BarcodeType.Gtin12_UpcA or BarcodeType.Gtin13_Ean13 or BarcodeType.Gtin14_Itf14)
+        {
+            if (!Gs1CheckDigitCalculator.IsValid(dto.Barcode))
+                return BadRequest(new { message = "Girilen barkodun kontrol hanesi hatalı görünüyor. Barkodu tekrar kontrol edin veya elle taratın." });
+        }
+
         var categoryExists = await _context.Categories.AnyAsync(c => c.Id == dto.CategoryId);
         if (!categoryExists) return BadRequest(new { message = "Belirtilen kategori bulunamadı." });
+
+        var unit = await _context.Units.FirstOrDefaultAsync(u => u.Id == dto.UnitId && u.IsActive && !u.IsDeleted);
+        if (unit == null)
+            return BadRequest(new { message = "Belirtilen birim bulunamadı veya pasif durumda." });
 
         if (dto.Attributes != null && dto.Attributes.Any())
         {
@@ -232,8 +325,10 @@ public class ProductsController : ControllerBase
 
         product.Name = dto.Name;
         product.Barcode = dto.Barcode;
+        product.BarcodeType = detectedType;
         product.MinStockLevel = dto.MinStockLevel;
         product.CategoryId = dto.CategoryId;
+        product.UnitId = dto.UnitId;
         product.Attributes = dto.Attributes != null ? System.Text.Json.JsonSerializer.Serialize(dto.Attributes) : "[]";
 
         await _context.SaveChangesAsync();
@@ -241,13 +336,13 @@ public class ProductsController : ControllerBase
         //  Kritik Stok Kontrolü (Limit güncellendiğinde geriye dönük tarama yapar)
         var totalStock = await _context.StockLevels
             .Where(sl => sl.ProductId == product.Id && !sl.IsDeleted)
-            .SumAsync(sl => (int?)sl.Quantity) ?? 0;
+            .SumAsync(sl => (decimal?)sl.Quantity) ?? 0m;
 
         if (totalStock <= product.MinStockLevel)
         {
             double percentage = product.MinStockLevel > 0 ? ((double)totalStock / product.MinStockLevel) * 100 : 0;
             string severity = "INFO";
-            string msg = $"Bilgi: {product.Name} (Barkod: {product.Barcode}) kritik stok sınırında. (Mevcut: {totalStock})";
+            string msg = $"Bilgi: {product.Name} (Barkod: {product.Barcode}) kritik stok sınırında. (Mevcut: {totalStock:0.###})";
 
             if (totalStock == 0)
             {
@@ -257,17 +352,17 @@ public class ProductsController : ControllerBase
             else if (percentage < 20)
             {
                 severity = "DANGER";
-                msg = $"Çok Kritik: {product.Name} (Barkod: {product.Barcode}) stok seviyesi %20'nin altına indi! (Mevcut: {totalStock})";
+                msg = $"Çok Kritik: {product.Name} (Barkod: {product.Barcode}) stok seviyesi %20'nin altına indi! (Mevcut: {totalStock:0.###})";
             }
             else if (percentage <= 50)
             {
                 severity = "CRITICAL";
-                msg = $"Kritik: {product.Name} (Barkod: {product.Barcode}) stok seviyesi %50'nin altına indi! (Mevcut: {totalStock})";
+                msg = $"Kritik: {product.Name} (Barkod: {product.Barcode}) stok seviyesi %50'nin altına indi! (Mevcut: {totalStock:0.###})";
             }
             else if (percentage <= 80)
             {
                 severity = "WARNING";
-                msg = $"Ön Uyarı: {product.Name} (Barkod: {product.Barcode}) stok seviyesi %80'in altına indi. (Mevcut: {totalStock})";
+                msg = $"Ön Uyarı: {product.Name} (Barkod: {product.Barcode}) stok seviyesi %80'in altına indi. (Mevcut: {totalStock:0.###})";
             }
 
             // Aynı ürün ve aynı zorluk seviyesi için okunmamış bir bildirim zaten varsa spamlama yapma
@@ -532,7 +627,7 @@ public class ProductsController : ControllerBase
         foreach (var rule in rules.Where(r => r.IsRequired))
         {
             var tl = rule.TargetLevel?.ToLower().Trim() ?? "";
-            if (tl == "asset" || tl == "demirbaş" || tl == "demirbas") continue;
+            if (tl == "asset" || tl == "ekipman" || tl == "ekipman") continue;
 
             var exists = attributes.Any(a => a.RuleId == rule.Id && !string.IsNullOrWhiteSpace(a.Value));
             if (!exists) return $"'{rule.AttributeKey}' zorunlu bir alandır, boş bırakılamaz.";

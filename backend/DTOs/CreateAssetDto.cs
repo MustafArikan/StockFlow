@@ -19,4 +19,6 @@ public class CreateAssetDto
 
     [Range(1, int.MaxValue, ErrorMessage = "Geçerli bir raf seçilmelidir.")]
     public int LocationId { get; set; }
+
+    public int? AssignedUserId { get; set; }
 }

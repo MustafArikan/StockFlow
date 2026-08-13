@@ -123,7 +123,7 @@ public class CategoriesController : ControllerBase
             .Where(p => descendantIds.Contains(p.CategoryId) && !p.IsDeleted)
             .Select(p => new {
                 Name = p.Name,
-                Stock = p.StockLevels.Where(sl => !sl.IsDeleted).Sum(sl => (int?)sl.Quantity) ?? 0
+                Stock = p.StockLevels.Where(sl => !sl.IsDeleted).Sum(sl => (decimal?)sl.Quantity) ?? 0m
             })
             .ToListAsync();
 

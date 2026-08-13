@@ -11,101 +11,100 @@ function generateRandomString(length = 8) {
     return result;
 }
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
 
     // 1. Çıkış Yap Butonunu Güvenli Dinle
-    const btnNavbarLogout = document.getElementById('btnNavbarLogout');
-    if (btnNavbarLogout) {
-        btnNavbarLogout.addEventListener("click", (e) => {
+    document.addEventListener("click", (e) => {
+        const btnNavbarLogout = e.target.closest('#btnNavbarLogout');
+        if (btnNavbarLogout) {
             e.preventDefault();
             localStorage.removeItem('token');
             window.location.href = 'login.html';
-        });
-    }
+        }
+    });
 
     // 2. Kullanıcı E-postasını Navbar'a Güvenli Yaz
     const userProfileEl = document.getElementById('userProfile');
     const token = localStorage.getItem('token');
 
-    if (userProfileEl && token) {
+    if (token) {
         try {
-            // Token parçalanırken hata oluşursa sayfa patlamasın diye try-catch içinde tutuyoruz
-            const payload = JSON.parse(atob(token.split('.')[1]));
-            userProfileEl.textContent = payload.email || "Kullanıcı";
-            // Permissions can be string or array
-            let permissions = [];
-            if (payload.Permission) {
-                permissions = Array.isArray(payload.Permission) ? payload.Permission : [payload.Permission];
+            const ctx = await loadAuthContext();
+            
+            if (userProfileEl) {
+                userProfileEl.textContent = ctx.email || "Kullanıcı";
             }
 
             // Kullanıcı Yönetimi Gösterme Mantığı
-            if (payload.role === "superadmin" || permissions.includes("User.View") || permissions.includes("User.Add") || permissions.includes("User.Edit") || permissions.includes("User.Delete")) {
+            if (ctx.isSuperAdmin || ctx.permissions.has("User.View") || ctx.permissions.has("User.Add") || ctx.permissions.has("User.Edit") || ctx.permissions.has("User.Delete")) {
                 const navUsersItem = document.getElementById("navUsersItem");
                 if (navUsersItem) navUsersItem.classList.remove("d-none");
             }
 
             // Rol ve Yetki Yönetimi Gösterme Mantığı
-            if (payload.role === "superadmin" || permissions.includes("Role.View") || permissions.includes("Role.Add") || permissions.includes("Role.Edit") || permissions.includes("Role.Delete")) {
+            if (ctx.isSuperAdmin || ctx.permissions.has("Role.View") || ctx.permissions.has("Role.Add") || ctx.permissions.has("Role.Edit") || ctx.permissions.has("Role.Delete")) {
                 const navRolesItem = document.getElementById("navRolesItem");
                 if (navRolesItem) navRolesItem.classList.remove("d-none");
             }
 
             // Yetki Politikaları Gösterme Mantığı
-            if (payload.role === "superadmin" || permissions.includes("Policy.View") || permissions.includes("Policy.Edit") || permissions.includes("Role.View")) {
+            if (ctx.isSuperAdmin || ctx.permissions.has("Policy.View") || ctx.permissions.has("Policy.Edit") || ctx.permissions.has("Role.View")) {
                 const navPoliciesItem = document.getElementById("navPoliciesItem");
                 if (navPoliciesItem) navPoliciesItem.classList.remove("d-none");
             }
 
             // Kategoriler
-            if (payload.role === "superadmin" || permissions.some(p => p.startsWith("Category."))) {
+            if (ctx.isSuperAdmin || Array.from(ctx.permissions).some(p => p.startsWith("Category."))) {
                 const navItem = document.getElementById("navCategoriesItem");
                 if (navItem) navItem.classList.remove("d-none");
             }
             
             // Ürünler
-            if (payload.role === "superadmin" || permissions.some(p => p.startsWith("Product."))) {
+            if (ctx.isSuperAdmin || Array.from(ctx.permissions).some(p => p.startsWith("Product."))) {
                 const navItem = document.getElementById("navProductsItem");
                 if (navItem) navItem.classList.remove("d-none");
             }
 
             // Stok Hareketleri
-            if (payload.role === "superadmin" || permissions.some(p => p.startsWith("Movement."))) {
+            if (ctx.isSuperAdmin || Array.from(ctx.permissions).some(p => p.startsWith("Movement."))) {
                 const navItem = document.getElementById("navMovementsItem");
                 if (navItem) navItem.classList.remove("d-none");
             }
 
             // Depolar
-            if (payload.role === "superadmin" || permissions.some(p => p.startsWith("Warehouse."))) {
+            if (ctx.isSuperAdmin || Array.from(ctx.permissions).some(p => p.startsWith("Warehouse."))) {
                 const navItem = document.getElementById("navWarehousesItem");
                 if (navItem) navItem.classList.remove("d-none");
             }
 
             // Tedarikçiler
-            if (payload.role === "superadmin" || permissions.some(p => p.startsWith("Supplier."))) {
+            if (ctx.isSuperAdmin || Array.from(ctx.permissions).some(p => p.startsWith("Supplier."))) {
                 const navItem = document.getElementById("navSuppliersItem");
                 if (navItem) navItem.classList.remove("d-none");
             }
 
-            // Demirbaşlar (Assets)
-            if (payload.role === "superadmin" || permissions.some(p => p.startsWith("Asset."))) {
+            // Ekipmanlar (Assets)
+            if (ctx.isSuperAdmin || Array.from(ctx.permissions).some(p => p.startsWith("Asset."))) {
                 const navItem = document.getElementById("navAssetsItem");
                 if (navItem) navItem.classList.remove("d-none");
             }
 
             // Sistem Logları
-            if (payload.role === "superadmin" || permissions.includes("System.AuditLogs")) {
+            if (ctx.isSuperAdmin || ctx.permissions.has("System.AuditLogs")) {
                 const navItem = document.getElementById("navAuditLogsItem");
                 if (navItem) navItem.classList.remove("d-none");
             }
 
             // Barkod Okuyucu
-            if (payload.role === "superadmin" || permissions.includes("Scanner.Use")) {
+            if (ctx.isSuperAdmin || ctx.permissions.has("Scanner.Use")) {
                 const navItem = document.getElementById("navTestScannerItem");
                 if (navItem) navItem.classList.remove("d-none");
             }
         } catch (e) {
-            console.error("Token çözümlenemedi:", e);
-            userProfileEl.textContent = "Kullanıcı";
+            console.error("Yetki yüklenemedi:", e);
+            if (userProfileEl) {
+                userProfileEl.textContent = "Kullanıcı";
+            }
         }
     }
 

@@ -13,18 +13,16 @@
 </head>
 
 <body>
-    <div class="container my-5">
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <div>
-                <h1 class="fw-bold">Kategoriler</h1>
-                <p class="text-muted mb-0">Ürün Kategorilerini Yönetin</p>
-            </div>
-            <button class="btn btn-primary rounded-pill px-4 shadow-sm" data-bs-toggle="modal"
-                data-bs-target="#kategoriModal">+ Yeni Kategori Ekle</button>
-        </div>
-
+    <div class="container-fluid px-0 px-md-1 my-2">
         <div class="card border-0 shadow-sm rounded-3">
             <div class="card-body p-4">
+                
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h6 class="fw-bold mb-0 text-muted">Kategori Listesi</h6>
+                    <button class="btn btn-primary btn-sm rounded-pill px-3 shadow-sm" data-bs-toggle="modal"
+                        data-bs-target="#kategoriModal">+ <span class="d-none d-md-inline">Yeni Kategori Ekle</span></button>
+                </div>
+
                 <div class="mb-4">
                     <input type="text" id="aramaKutusu" class="form-control rounded-pill"
                         placeholder="Kategori Adı veya ID ile Ara...">
@@ -107,7 +105,7 @@
                                             <label class="form-label small fw-bold text-muted">Ait Olduğu Yer</label>
                                             <select class="form-select form-select-sm" id="kuralTargetLevel">
                                                 <option value="Product">Katalog (Ürün)</option>
-                                                <option value="Asset">Demirbaş (Cihaz)</option>
+                                                <option value="Asset">Ekipman (Cihaz)</option>
                                             </select>
                                         </div>
                                         <div class="mb-3">
@@ -137,6 +135,10 @@
                                                     <option value="toggle_switch">Aç-Kapat (Toggle Switch)</option>
                                                     <option value="boolean">Onay Kutusu (Checkbox)</option>
                                                 </optgroup>
+                                                <optgroup label="Tarih & Zaman (Date/Time)">
+                                                    <option value="date">Tarih (Date Picker)</option>
+                                                    <option value="datetime">Tarih & Saat (Datetime Picker)</option>
+                                                </optgroup>
                                             </select>
                                         </div>
                                         <!-- BAĞLAMSAL (INLINE) ÖNİZLEME -->
@@ -159,6 +161,10 @@
                                             <div class="form-check form-switch m-0">
                                                 <input class="form-check-input cursor-pointer" type="checkbox" id="kuralZorunlu">
                                                 <label class="form-check-label small fw-bold text-muted cursor-pointer" for="kuralZorunlu">Zorunlu</label>
+                                            </div>
+                                            <div class="form-check">
+                                                <input class="form-check-input cursor-pointer" type="checkbox" id="kuralIsFeatured">
+                                                <label class="form-check-label small fw-bold text-muted cursor-pointer" for="kuralIsFeatured">Detay Ekranında Öne Çıkar</label>
                                             </div>
                                         </div>
                                     </div>

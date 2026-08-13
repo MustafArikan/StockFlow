@@ -524,17 +524,20 @@ document.querySelector('[data-bs-target="#kategoriModal"]').addEventListener("cl
     document.getElementById("btnKategoriKaydet").innerText = "Ekle ve Kaydet";
 });
 
-if (!hasPermission("Category.Add")) {
-    const btnEkle = document.querySelector('[data-bs-target="#kategoriModal"]');
-    if (btnEkle) btnEkle.classList.add('d-none');
-}
+document.addEventListener("DOMContentLoaded", async () => {
+    await loadAuthContext();
+    if (!hasPermission("Category.Add")) {
+        const btnEkle = document.querySelector('[data-bs-target="#kategoriModal"]');
+        if (btnEkle) btnEkle.classList.add('d-none');
+    }
 
-if (!hasPermission("Category.Edit") && !hasPermission("Category.Delete")) {
-    const islemSutunuBasligi = document.getElementById("islemSutunuBasligi");
-    if (islemSutunuBasligi) islemSutunuBasligi.classList.add('d-none');
-}
+    if (!hasPermission("Category.Edit") && !hasPermission("Category.Delete")) {
+        const islemSutunuBasligi = document.getElementById("islemSutunuBasligi");
+        if (islemSutunuBasligi) islemSutunuBasligi.classList.add('d-none');
+    }
 
-kategorileriYukle();
+    kategorileriYukle();
+});
 // ==========================================
 // DİNAMİK KATEGORİ KURALLARI (EAV) YÖNETİMİ
 // ==========================================
@@ -580,7 +583,7 @@ async function kurallariYukle(categoryId) {
             }
 
             let targetBadge = kural.targetLevel === "Asset" 
-                ? '<span class="badge bg-dark"><i class="bi bi-phone"></i> Demirbaş</span>' 
+                ? '<span class="badge bg-dark"><i class="bi bi-phone"></i> Ekipman</span>' 
                 : '<span class="badge bg-light text-dark border"><i class="bi bi-box"></i> Katalog</span>';
 
             let zorunluBadge = kural.isRequired 
@@ -595,17 +598,23 @@ async function kurallariYukle(categoryId) {
                 } catch(e){}
             }
 
+            const isInherited = kural.categoryId != categoryId;
+
             if (kural.uiComponent === "slider" && (kural.minValue !== null || kural.maxValue !== null)) {
                 opts += `<br><small class="text-muted text-xs">Aralık: ${kural.minValue ?? '*'} - ${kural.maxValue ?? '*'}</small>`;
             }
 
             const tr = document.createElement("tr");
             tr.setAttribute("data-id", kural.id);
+            if (isInherited) {
+                tr.classList.add("bg-light");
+            }
+            
             // Sürüklerken düzgün dursun diye arkaplan verebiliriz ama Sortable ghostClass hallediyor
             tr.innerHTML = `
                 <td class="text-center cursor-grab"><i class="bi bi-grip-vertical text-muted fs-5 handle"></i></td>
                 <td>${targetBadge}</td>
-                <td class="fw-bold text-dark">${escapeHtml(kural.attributeKey)} ${opts}</td>
+                <td class="fw-bold text-dark">${escapeHtml(kural.attributeKey)} ${isInherited ? '<span class="badge bg-secondary ms-1" style="font-size: 0.6rem;">Miras</span>' : ''} ${opts}</td>
                 <td>${tipBadge}</td>
                 <td>${zorunluBadge}</td>
                 <td class="text-end">
@@ -630,11 +639,13 @@ async function kurallariYukle(categoryId) {
                         displayOrder: index
                     }));
 
+                    if (reorderData.length === 0) return;
+
                     try {
                         await apiRequest('/attribute-rules/reorder', 'PUT', reorderData);
                     } catch (e) {
                         console.error(e);
-                        hataGoster("Sıralama kaydedilirken hata oluştu.");
+                        hataGoster(e.message || "Sıralama kaydedilirken hata oluştu.");
                     }
                 }
             });
@@ -929,6 +940,7 @@ document.getElementById("btnKuralEkle").addEventListener("click", async () => {
     const uiSelection = document.getElementById("kuralTip").value;
     const targetLevel = document.getElementById("kuralTargetLevel").value;
     const isRequired = document.getElementById("kuralZorunlu").checked;
+    const isFeatured = document.getElementById("kuralIsFeatured").checked;
     const allowedValues = document.getElementById("kuralSecenekler").value;
     const minVal = document.getElementById("kuralMin").value;
     const maxVal = document.getElementById("kuralMax").value;
@@ -953,6 +965,8 @@ document.getElementById("btnKuralEkle").addEventListener("click", async () => {
         case "color_picker": dataType = "select"; uiComponent = "color_picker"; break;
         case "toggle_switch": dataType = "boolean"; uiComponent = "toggle_switch"; break;
         case "boolean": dataType = "boolean"; uiComponent = "checkbox"; break;
+        case "date": dataType = "date"; uiComponent = "datepicker"; break;
+        case "datetime": dataType = "datetime"; uiComponent = "datetimepicker"; break;
     }
     
     if (!attributeKey) {
@@ -982,6 +996,7 @@ document.getElementById("btnKuralEkle").addEventListener("click", async () => {
         attributeKey: attributeKey,
         dataType: dataType,
         isRequired: isRequired,
+        isFeatured: isFeatured,
         allowedValues: parsedAllowedValues,
         allowedValueList: secenekliTipler.includes(uiComponent) ? allowedValueList : null,
         uiComponent: uiComponent,
@@ -1006,6 +1021,7 @@ document.getElementById("btnKuralEkle").addEventListener("click", async () => {
         document.getElementById("kuralTip").value = "text";
         document.getElementById("kuralTargetLevel").value = "Product";
         document.getElementById("kuralZorunlu").checked = false;
+        document.getElementById("kuralIsFeatured").checked = false;
         document.getElementById("kuralSecenekler").value = "";
         secenekListesiniSifirla(); // Seçenek listesini de temizle
         document.getElementById("kuralMin").value = "";
@@ -1051,6 +1067,10 @@ document.getElementById("kurallarTabloGovdesi").addEventListener("click", async 
                     reverseUi = "boolean";
                 } else if (kural.uiComponent === "textbox") {
                     reverseUi = kural.dataType; // "text", "number", "decimal"
+                } else if (kural.uiComponent === "datepicker") {
+                    reverseUi = "date";
+                } else if (kural.uiComponent === "datetimepicker") {
+                    reverseUi = "datetime";
                 } else {
                     reverseUi = kural.uiComponent; // "dropdown", "radio", "masked_textbox", vb.
                 }
@@ -1058,6 +1078,7 @@ document.getElementById("kurallarTabloGovdesi").addEventListener("click", async 
             
             document.getElementById("kuralTip").value = reverseUi || "text";
             document.getElementById("kuralZorunlu").checked = kural.isRequired;
+            document.getElementById("kuralIsFeatured").checked = kural.isFeatured || false;
             document.getElementById("kuralMin").value = kural.minValue ?? "";
             document.getElementById("kuralMax").value = kural.maxValue ?? "";
             
