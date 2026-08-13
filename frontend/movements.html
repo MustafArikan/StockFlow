@@ -18,17 +18,7 @@
     <!-- Ana içerik alanını oluşturur -->
     <div class="container-fluid px-0 px-md-1 my-2">
 
-        <!-- Sayfa başlığı ve yeni işlem butonunu hizalar -->
-        <div class="d-flex justify-content-between align-items-center mb-4 px-3">
-            <div>
-                <h1 class="fw-bold">Stok Hareketleri</h1>
-                <p class="text-muted mb-0">Ürün giriş ve çıkış kayıtları</p>
-            </div>
-            <button id="btnYeniIslem" class="btn btn-primary rounded-pill px-4 shadow-sm text-nowrap"
-                data-bs-toggle="modal" data-bs-target="#stokIslemModal">
-                + Yeni İşlem Ekle
-            </button>
-        </div>
+
 
         <div class="row g-2">
             <!-- SOL FİLTRE PANELİ -->
@@ -114,6 +104,12 @@
                     <div class="card-body p-3">
                         <div class="d-flex justify-content-between align-items-center mb-4">
                             <h6 class="fw-bold mb-0 text-muted">Hareket Listesi</h6>
+                            <div class="d-flex gap-2 align-items-center">
+                                <button id="btnYeniIslem" class="btn btn-primary btn-sm rounded-pill px-3 shadow-sm text-nowrap"
+                                    data-bs-toggle="modal" data-bs-target="#stokIslemModal">
+                                    + <span class="d-none d-md-inline">Yeni İşlem Ekle</span>
+                                </button>
+                            </div>
                         </div>
 
                         <!-- Stok hareketlerini listeleyen tabloyu tanımlar -->

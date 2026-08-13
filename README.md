@@ -604,24 +604,6 @@ StockFlow/
 
 ---
 
-## Project Status
-
-Actively developed. The application is feature-complete for internal / pre-production use;
-the remaining work is production hardening.
-
-| Area | Status |
-| :--- | :--- |
-| Auth, RBAC, dynamic policies | ✅ Complete |
-| Catalogue, PIM/EAV, bulk import | ✅ Complete |
-| Warehouses, locations, stock movements | ✅ Complete |
-| Suppliers &amp; product–supplier matrix | ✅ Complete |
-| Asset tracking &amp; QR/barcode scanning | ✅ Complete |
-| Dashboard, reports, PDF/Excel export | ✅ Complete |
-| Audit logging &amp; soft delete | ✅ Complete |
-| Monitoring stack (Prometheus/Grafana/Loki) | ✅ Complete |
-
----
-
 ## Contributing
 
 1. Branch from `dev` using the existing convention: `feature/<topic>`, `fix/<topic>`
@@ -640,14 +622,6 @@ dotnet build backend/backend.csproj
 ```bash
 docker compose up -d --build
 ```
-
----
-
-## License
-
-No license file has been added to this repository yet, so all rights are reserved by default.
-If you intend to open the project up, add a `LICENSE` file (MIT and Apache-2.0 are the common
-choices) and update this section.
 
 ---
 

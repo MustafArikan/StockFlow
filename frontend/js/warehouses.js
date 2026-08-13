@@ -1,4 +1,4 @@
-﻿const API_URL = `${CONFIG.API_BASE_URL}/warehouses`;
+const API_URL = `${CONFIG.API_BASE_URL}/warehouses`;
 const token = localStorage.getItem('token');
 
 const userRole = typeof getUserRole === "function" ? getUserRole() : "User";
@@ -121,24 +121,7 @@ const urunView = createDataView({
 // XSS koruması için HTML karakterlerini encode eder
 
 
-function kullaniciBilgisiniDoldur() {
-    try {
-        const payloadBase64 = token.split('.')[1];
-        const decodedPayload = JSON.parse(atob(payloadBase64));
-        const email = decodedPayload.email || decodedPayload["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress"] || "Kullanıcı";
-        const userProfileElem = document.getElementById("userProfile");
-        if(userProfileElem) userProfileElem.innerText = email;
-    } catch (e) {
-        const userProfileElem = document.getElementById("userProfile");
-        if(userProfileElem) userProfileElem.innerText = "Yetkili";
-    }
-}
-
-document.getElementById("btnNavbarLogout")?.addEventListener("click", () => {
-    localStorage.removeItem('token');
-    window.location.href = 'login.html';
-});
-
+// Removed redundant userProfile and logout handlers
 // ============================================================================
 // 1. KATMAN: DEPO İŞLEMLERİ 
 // ============================================================================
@@ -165,12 +148,88 @@ async function yoneticileriYukle() {
     const select = document.getElementById("depoYoneticiId");
     if(!select) return;
     try {
-        const yoneticiler = await apiRequest('/users', 'GET');
+        select.innerHTML = '<option value="">Yöneticiler Yükleniyor...</option>';
+        
+        // 1. Yetkileri (Permissions) Çek ve Depo Yetki ID'lerini Bul
+        const permsRes = await apiRequest('/roles/permissions', 'GET');
+        const permsData = permsRes.data || permsRes || [];
+        
+        let warehousePermIds = new Set();
+        const extractPerms = (list) => {
+            for (const item of list) {
+                if (item.permissions) {
+                    extractPerms(item.permissions);
+                } else {
+                    const sysName = (item.systemName || item.name || "").toLowerCase();
+                    if (sysName.includes("warehouse.edit") || sysName.includes("warehouse.add") || sysName.includes("warehouse.manage")) {
+                        if (item.id) warehousePermIds.add(item.id);
+                    }
+                }
+            }
+        };
+        extractPerms(Array.isArray(permsData) ? permsData : []);
+
+        // 2. Tüm Rolleri Çek ve Depo Yetkisi Olan Rolleri Bul
+        const rolesRes = await apiRequest('/roles', 'GET');
+        const rolesArray = rolesRes.data || rolesRes.items || rolesRes || [];
+        
+        const yetkiliRoleAdlari = ["superadmin", "admin", "admin_super"];
+        const yetkiliRoleIds = new Set();
+
+        for (const role of rolesArray) {
+            const roleName = (role.name || "").toLowerCase();
+            if (yetkiliRoleAdlari.includes(roleName)) {
+                if (role.id) yetkiliRoleIds.add(role.id.toString());
+                continue;
+            }
+            
+            let rPerms = role.permissionIds;
+            
+            // Eğer liste içinde permissionIds gelmemişse, detaya gitmeyi dene
+            if (!rPerms && role.id) {
+                try {
+                    const detailRes = await apiRequest(`/roles/${role.id}`, 'GET');
+                    const detail = detailRes.data || detailRes || {};
+                    rPerms = detail.permissionIds || (detail.permissions ? detail.permissions.map(p => p.id) : []);
+                } catch(e) {}
+            }
+            
+            rPerms = rPerms || [];
+            const hasAccess = rPerms.some(id => warehousePermIds.has(id));
+            if (hasAccess) {
+                if (role.id) yetkiliRoleIds.add(role.id.toString());
+                if (roleName) yetkiliRoleAdlari.push(roleName);
+            }
+        }
+
+        // 3. Kullanıcıları Çek ve Yalnızca Yetkili Roldeki Kullanıcıları Listele
+        const response = await apiRequest('/users?pageNumber=1&pageSize=1000', 'GET');
+        const usersArray = response.items || response.data || response || [];
+        
         select.innerHTML = '<option value="">Yönetici Seçiniz...</option>';
-        yoneticiler.forEach(y => {
-                select.innerHTML += `<option value="${y.id}">${escapeHtml(y.email)}</option>`;
-        });
+        
+        if (usersArray && Array.isArray(usersArray)) {
+            const yetkiliKullanicilar = usersArray.filter(y => {
+                const uRoleId = y.roleId?.toString();
+                const uRoleName = (y.role || "").toLowerCase();
+                return yetkiliRoleIds.has(uRoleId) || yetkiliRoleAdlari.includes(uRoleName);
+            });
+            
+            yetkiliKullanicilar.forEach(y => {
+                const fname = y.firstName || y.FirstName || "";
+                const lname = y.lastName || y.LastName || "";
+                const email = y.email || y.Email || "";
+                const displayName = `${fname} ${lname}`.trim() || email;
+                
+                select.innerHTML += `<option value="${y.id || y.Id}">${escapeHtml(displayName)} (${escapeHtml(y.role || 'Yetkili')})</option>`;
+            });
+            
+            if (yetkiliKullanicilar.length === 0) {
+                select.innerHTML += '<option value="" disabled>Uygun yetkili (Warehouse.Edit vb.) bulunamadı.</option>';
+            }
+        }
     } catch(e) {
+        console.error("Yöneticiler yüklenirken hata:", e);
         select.innerHTML = '<option value="">Yöneticiler Yüklenemedi (Opsiyonel)</option>';
     }
 }
@@ -656,16 +715,27 @@ document.getElementById("btnDepoIciUrunKaydet")?.addEventListener("click", async
 document.getElementById("aramaKutusuDepo")?.addEventListener("input", (e) => depoView.setSearch(e.target.value));
 document.getElementById("siralamaDepo")?.addEventListener("change", (e) => {
     const val = e.target.value;
-    if (val === "URUN_COK" || val === "URUN_AZ") depoView.setSort("productCount");
-    else if (val.includes("TARIH")) depoView.setSort("id");
-    else depoView.setSort("name");
+    if (val === "TARIH_YENI") depoView.setSortState("id", "desc");
+    else if (val === "TARIH_ESKI") depoView.setSortState("id", "asc");
+    else if (val === "Z_A") depoView.setSortState("name", "desc");
+    else depoView.setSortState("name", "asc");
+});
+document.getElementById("btnFiltreleriTemizleDepo")?.addEventListener("click", () => {
+    const aramaKutu = document.getElementById("aramaKutusuDepo");
+    if (aramaKutu) aramaKutu.value = "";
+    const siralamaMenu = document.getElementById("siralamaDepo");
+    if (siralamaMenu) siralamaMenu.value = "TARIH_YENI";
+    
+    depoView.setSearch("");
+    depoView.setSortState("id", "desc");
 });
 document.getElementById("aramaKutusuUrun")?.addEventListener("input", (e) => urunView.setSearch(e.target.value));
 document.getElementById("siralamaUrun")?.addEventListener("change", (e) => {
     const val = e.target.value;
-    if (val === "MIKTAR_AZALAN" || val === "MIKTAR_ARTAN") urunView.setSort("stockQuantity");
-    else if (val === "A_Z") urunView.setSort("name");
-    else urunView.setSort("id");
+    if (val === "MIKTAR_AZALAN") urunView.setSortState("stockQuantity", "desc");
+    else if (val === "MIKTAR_ARTAN") urunView.setSortState("stockQuantity", "asc");
+    else if (val === "A_Z") urunView.setSortState("name", "asc");
+    else urunView.setSortState("id", "desc");
 });
 
 document.getElementById("btnGeriDonDepolara")?.addEventListener("click", () => {
@@ -685,8 +755,8 @@ document.getElementById("btnGeriDonRaflara")?.addEventListener("click", () => {
     if(aktifDepoId) rafView.load(1);
 });
 
-document.addEventListener("DOMContentLoaded", () => {
-    kullaniciBilgisiniDoldur();
+document.addEventListener("DOMContentLoaded", async () => {
+    await loadAuthContext();
     depolariYukle();
 
     // URL'de raf kodu varsa otomatik okutulmuş gibi davran

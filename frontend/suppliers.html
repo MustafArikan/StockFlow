@@ -13,43 +13,73 @@
 </head>
 
 <body>
-       <div class="container my-5">
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <div>
-                <h1 class="fw-bold">Tedarikçiler</h1>
-                <p class="text-muted mb-0">Tedarikçi Firmaları Yönetin</p>
+    <div class="container-fluid px-0 px-md-1 my-3">
+        <div class="row g-2">
+            <!-- SOL PANEL: FİLTRELER -->
+            <div class="col-12 col-md-5 col-lg-4 col-xl-3">
+                <div class="card border-0 shadow-sm rounded-3 h-100">
+                    <div class="card-header bg-white border-bottom-0 pt-3 pb-0 d-flex justify-content-between align-items-center">
+                        <h6 class="fw-bold mb-0"><i class="bi bi-funnel-fill text-primary me-2"></i>Filtreler</h6>
+                        <button type="button" id="btnFiltreleriTemizle" class="btn btn-sm btn-link text-decoration-none text-muted p-0">Temizle</button>
+                    </div>
+                    <div class="card-body p-3 pt-2">
+                        <div class="mb-4">
+                            <label class="form-label small fw-bold text-muted text-uppercase mb-2">Hızlı Ara</label>
+                            <div class="position-relative d-flex align-items-center">
+                                <span class="position-absolute ms-3 text-muted"><i class="bi bi-search"></i></span>
+                                <input type="text" id="aramaKutusu" class="form-control form-control-sm rounded-pill ps-5 pe-5 py-2 bg-light border-0" placeholder="Ad, Kişi, Tel, Vergi No...">
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="form-label small fw-bold text-muted text-uppercase mb-2">Sıralama</label>
+                            <select id="siralamaTedarikci" class="form-select form-select-sm bg-light border-0 rounded-pill px-3">
+                                <option value="TARIH_YENI">Tarih (Yeniden Eskiye)</option>
+                                <option value="TARIH_ESKI">Tarih (Eskiden Yeniye)</option>
+                                <option value="A_Z">Alfabetik (A-Z)</option>
+                                <option value="Z_A">Alfabetik (Z-A)</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
             </div>
-            <button class="btn btn-primary rounded-pill px-4 shadow-sm" data-bs-toggle="modal"
-                data-bs-target="#tedarikciModal">+ Yeni Tedarikçi Ekle</button>
-        </div>
 
-        <div class="card border-0 shadow-sm rounded-3">
-            <div class="card-body p-4">
-                <div class="mb-4">
-                    <input type="text" id="aramaKutusu" class="form-control rounded-pill"
-                        placeholder="Ad, İlgili Kişi, Telefon veya Vergi No ile Ara...">
+            <!-- SAĞ PANEL: LİSTE VE TABLO -->
+            <div class="col-12 col-md-7 col-lg-8 col-xl-9">
+                <div class="card border-0 shadow-sm rounded-3 min-vh-75 h-100">
+                    <div class="card-body p-3">
+                        <div class="d-flex justify-content-between align-items-center mb-4">
+                            <h6 class="fw-bold mb-0 text-muted">Tedarikçi Listesi</h6>
+                            <button class="btn btn-primary rounded-pill px-3 shadow-sm btn-sm fw-bold d-flex align-items-center gap-2"
+                                data-bs-toggle="modal" data-bs-target="#tedarikciModal">
+                                <i class="bi bi-plus-lg"></i> <span class="d-none d-sm-inline">Yeni Ekle</span>
+                            </button>
+                        </div>
+                        
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0 border-top">
+                                <thead>
+                                    <tr class="text-muted small text-uppercase">
+                                        <th id='thId' class="user-select-none sortable-th py-3">Tarih ↕</th>
+                                        <th id="thAd" class="user-select-none sortable-th py-3">Tedarikçi Adı ↕</th>
+                                        <th class="user-select-none py-3">İlgili Kişi</th>
+                                        <th class="user-select-none py-3">Telefon</th>
+                                        <th class="user-select-none py-3">Vergi No</th>
+                                        <th class="text-end py-3" id="islemSutunuBasligi">İşlem</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tedarikciTablosuGovdesi">
+                                    <tr>
+                                        <td colspan="6" class="text-center text-muted py-5">
+                                            <div class="spinner-border spinner-border-sm text-primary" role="status"></div> Yükleniyor...
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div id="paginationContainer" class="mt-4"></div>
+                    </div>
                 </div>
-
-                <div class="table-responsive">
-                    <table class="table table-hover align-middle mb-0">
-                        <thead>
-                            <tr class="text-muted small text-uppercase">
-                                <th id='thId' class="user-select-none sortable-th">Tarih ↕</th>
-                                <th id="thAd" class="user-select-none sortable-th">Tedarikçi Adı ↕</th>
-                                <th class="user-select-none">İlgili Kişi</th>
-                                <th class="user-select-none">Telefon</th>
-                                <th class="user-select-none">Vergi No</th>
-                                <th class="text-end" id="islemSutunuBasligi">İşlem</th>
-                            </tr>
-                        </thead>
-                        <tbody id="tedarikciTablosuGovdesi">
-                            <tr>
-                                <td colspan="6" class="text-center text-muted py-4"> Yükleniyor... </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-                <div id="paginationContainer" class="mt-3"></div>
             </div>
         </div>
     </div>

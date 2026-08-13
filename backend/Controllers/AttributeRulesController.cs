@@ -279,11 +279,6 @@ public class AttributeRulesController : ControllerBase
         var ruleIds = dtos.Select(d => d.Id).ToList();
         var rules = await _context.AttributeRules.Where(r => ruleIds.Contains(r.Id)).ToListAsync();
 
-        if (rules.Select(r => r.CategoryId).Distinct().Count() > 1)
-        {
-            return BadRequest(new { message = "Farklı kategorilere ait kurallar aynı anda sıralanamaz." });
-        }
-
         foreach (var rule in rules)
         {
             var dto = dtos.FirstOrDefault(d => d.Id == rule.Id);

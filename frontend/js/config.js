@@ -10,44 +10,57 @@ const CONFIG = {
     API_BASE_URL: apiBase
 };
 
-// Merkezi Yetki Denetim Sistemi (RBAC)
-// Kullanıcının rolünü JWT token üzerinden güvenli bir şekilde çözer
-function getUserRole() {
-    try {
-        const token = localStorage.getItem('token');
-        if (!token) return "viewer"; // Token yoksa varsayılan en düşük yetki
+// Sayfa boyunca tek seferlik yüklenen, memory'de tutulan yetki bağlamı
+window.__authContext = {
+    loaded: false,
+    role: null,
+    permissions: new Set(),
+    isSuperAdmin: false,
+    email: null,
+    firstName: null,
+    lastName: null,
+    loadingPromise: null
+};
 
-        const payloadBase64 = token.split('.')[1];
-        const payloadDecoded = JSON.parse(atob(payloadBase64));
+async function loadAuthContext() {
+    if (window.__authContext.loaded) return window.__authContext;
 
-        // Sunucudan gelen rol bilgisini farklı claim tiplerine karşı güvenle okur
-        return payloadDecoded["role"] ||
-            payloadDecoded["http://schemas.microsoft.com/ws/2008/06/identity/claims/role"] ||
-            "viewer";
-    } catch (e) {
-        // Token parse edilemezse veya formatı hatalıysa sistemin çökmesini önler, güvenli rol döner
-        return "viewer";
+    if (window.__authContext.loadingPromise) {
+        return window.__authContext.loadingPromise;
     }
+
+    const token = localStorage.getItem('token');
+    if (!token) return window.__authContext;
+
+    window.__authContext.loadingPromise = (async () => {
+        try {
+            const userData = await apiRequest('/auth/me', 'GET');
+            window.__authContext.role = userData.role;
+            window.__authContext.isSuperAdmin = userData.role === 'superadmin';
+            window.__authContext.permissions = new Set(userData.permissions || []);
+            window.__authContext.email = userData.email;
+            window.__authContext.firstName = userData.firstName;
+            window.__authContext.lastName = userData.lastName;
+            window.__authContext.loaded = true;
+        } catch (e) {
+            console.error("Yetki bağlamı yüklenemedi:", e);
+        } finally {
+            window.__authContext.loadingPromise = null;
+        }
+        return window.__authContext;
+    })();
+
+    return window.__authContext.loadingPromise;
 }
 
 function hasPermission(action) {
-    try {
-        const token = localStorage.getItem('token');
-        if (!token) return false;
+    const ctx = window.__authContext;
+    if (ctx.isSuperAdmin) return true;
+    return ctx.permissions.has(action);
+}
 
-        const payload = JSON.parse(atob(token.split('.')[1]));
-        if (payload.role === "superadmin") return true;
-
-        let permissions = [];
-        if (payload.Permission) {
-            permissions = Array.isArray(payload.Permission) ? payload.Permission : [payload.Permission];
-        }
-
-        return permissions.includes(action);
-    } catch (error) {
-        console.error("Yetki kontrolünde hata:", error);
-        return false;
-    }
+function getUserRole() {
+    return window.__authContext.role || "viewer";
 }
 
 // Merkezi Şifre Göster/Gizle İşlemi (Event Delegation / CSP Uyumlu)
@@ -304,14 +317,16 @@ function renderProfessionalLayout() {
     if (menubarApp) menubarApp.textContent = appTitle;
 
     // Sunucuya istek atarak giriş yapan kullanıcının bilgilerini (Ad, Soyad, Rol vb.) alıyoruz
-    apiRequest('/auth/me', 'GET').then(userData => {
+    // loadAuthContext() zaten bu veriyi çektiği için ondan alabiliriz
+    const ctx = window.__authContext;
+    if (ctx.loaded) {
         const userProfileEl = document.getElementById('userProfile');
         if (userProfileEl) {
-            userProfileEl.textContent = `${userData.firstName || ''} ${userData.lastName || ''}`.trim() || userData.email;
+            userProfileEl.textContent = `${ctx.firstName || ''} ${ctx.lastName || ''}`.trim() || ctx.email;
         }
 
         // Kullanıcının rolünü kontrol ediyoruz (Superadmin ise)
-        const role = userData.role || getUserRole();
+        const role = ctx.role;
         if (role === 'superadmin') {
             const navUsersItem = document.getElementById('navUsersItem');
             const navRolesItem = document.getElementById('navRolesItem');
@@ -322,12 +337,10 @@ function renderProfessionalLayout() {
                 navRolesItem.classList.remove('d-none');
             }
         }
-    }).catch((error) => {
-        // İstek başarısız olursa hem konsola hatayı logluyoruz hem de arayüzün çökmesini engellemek için "Hesap" yazdırıyoruz
-        console.error("Layout yüklenirken hata oluştu:", error);
+    } else {
         const userProfileEl = document.getElementById('userProfile');
         if (userProfileEl) userProfileEl.textContent = 'Hesap';
-    });
+    }
 
     // 8. ETKİLEŞİMLER (EVENT LISTENERS)
 
@@ -440,7 +453,10 @@ function tarihFormatla(t) {
 function tarihSaatFormatla(t) {
     return t ? new Date(t).toLocaleString("tr-TR") : "-";
 }
-document.addEventListener('DOMContentLoaded', renderProfessionalLayout);
+document.addEventListener('DOMContentLoaded', async () => {
+    await loadAuthContext();
+    renderProfessionalLayout();
+});
 // Fix Bootstrap 5 Modal aria-hidden focus warnings in Chrome
 document.addEventListener('hide.bs.modal', function () {
     if (document.activeElement) {

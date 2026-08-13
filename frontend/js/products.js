@@ -668,6 +668,7 @@ if (urunRafSelect && btnHedefRafEkle) {
                     <div class="fw-bold text-dark fs-6"><i class="bi bi-building me-1 text-primary"></i>${escapeHtml(whName)}</div>
                     <div class="text-secondary small"><i class="bi bi-box me-1"></i>Raf: <span class="fw-bold text-dark">${escapeHtml(cleanLocCode)}</span>${emptyBadge}</div>
                 </div>
+            </div>
             <div class="d-flex align-items-center justify-content-between w-100 mt-2 mt-md-0 w-md-25">
                 <div class="input-group input-group-sm">
                     <input type="number" class="form-control target-loc-qty border-success text-center fw-bold shadow-sm" placeholder="Miktar" min="0" step="any">
@@ -675,6 +676,7 @@ if (urunRafSelect && btnHedefRafEkle) {
                         <option value="base" data-multiplier="1">Birim</option>
                     </select>
                 </div>
+                <button type="button" class="btn btn-sm btn-outline-danger ms-2"><i class="bi bi-trash"></i></button>
             </div>
         `;
 
@@ -2247,7 +2249,7 @@ function initYeniUrunCamera() {
 // UYGULAMA BAŞLATICI FONKSİYON
 // =========================================================================
 document.addEventListener("DOMContentLoaded", async () => {
-
+    await loadAuthContext();
     // 1. Kamera ve barkod dinleyicilerini aktif et
     initProductSearchCamera();
     initYeniUrunCamera();

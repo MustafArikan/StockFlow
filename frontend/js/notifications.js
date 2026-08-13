@@ -149,32 +149,6 @@ document.getElementById("btnFilterUnread").addEventListener("click", () => {
     loadNotifications();
 });
 
-// Logout handler
-function logout() {
-    localStorage.removeItem("token");
-    window.location.href = "login.html";
-}
-
-// Attach navbar logout listener
-const btnNavbarLogout = document.getElementById("btnNavbarLogout");
-if (btnNavbarLogout) {
-    btnNavbarLogout.addEventListener("click", logout);
-}
-
-// Profil Adını Çekme
-document.addEventListener('DOMContentLoaded', () => {
-    const userProfileEl = document.getElementById('userProfile');
-    if (userProfileEl) {
-        try {
-            const payloadBase64 = token.split('.')[1];
-            const payloadDecoded = JSON.parse(atob(payloadBase64));
-            userProfileEl.textContent = payloadDecoded["email"] || "Kullanıcı";
-        } catch (e) {
-            userProfileEl.textContent = "Kullanıcı";
-        }
-    }
-});
-
 // Initial load
 loadNotifications();
 

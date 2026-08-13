@@ -1,4 +1,4 @@
-﻿// =========================================================================
+// =========================================================================
 // API VE TEMEL DEĞİŞKENLER
 // =========================================================================
 const API_URL = `${CONFIG.API_BASE_URL}/stock/movements`;
@@ -1434,6 +1434,7 @@ async function kullaniciProfiliGoster(userId) {
 // UYGULAMA BAŞLATICI
 // =========================================================================
 document.addEventListener("DOMContentLoaded", async () => {
+    await loadAuthContext();
     initMovementCamera();
     initMovementSearchCamera();
     initPhysicalScannerListener();
