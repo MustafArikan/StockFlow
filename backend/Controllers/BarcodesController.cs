@@ -64,14 +64,20 @@ public class BarcodesController : ControllerBase
             .Include(c => c.AlternativeUnit)
             .FirstOrDefaultAsync(c => c.Barcode == raw && !c.IsDeleted);
         if (conversion != null)
+        {
+            var isPalletUnit = (conversion.AlternativeUnit.Name?.Contains("Palet", StringComparison.OrdinalIgnoreCase) == true)
+                               || (conversion.AlternativeUnit.ShortCode?.Contains("PLT", StringComparison.OrdinalIgnoreCase) == true);
+
             return Ok(new
             {
-                kind = "product_packaging",
+                kind = isPalletUnit ? "product_pallet" : "product_packaging",
                 productId = conversion.ProductId,
                 inputUnitId = conversion.AlternativeUnitId,
                 unitShortCode = conversion.AlternativeUnit.ShortCode,
-                suggestedQuantity = 1
+                suggestedQuantity = 1,
+                barcode = raw
             });
+        }
 
         return NotFound(new { message = "Barkod sistemde tanımlı değil." });
     }

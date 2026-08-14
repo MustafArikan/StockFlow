@@ -227,13 +227,18 @@
                                     </div>
 
                                     <div class="row g-2 align-items-center">
-                                        <div class="col-12 col-md-4">
+                                        <div class="col-12 col-md-3">
                                             <select class="form-select form-select-sm" id="yeniUrunAlternatifBirimId">
-                                                <option value="">Alternatif birim seçiniz...</option>
+                                                <option value="">Alt. birim seçin...</option>
                                             </select>
                                         </div>
-                                        <div class="col-12 col-md-4">
-                                            <input type="number" class="form-control form-control-sm" id="yeniUrunCevrimCarpani" placeholder="Çarpan (1 Alt = Kaç Taban)" min="0.0001" step="any">
+                                        <div class="col-12 col-md-2">
+                                            <input type="number" class="form-control form-control-sm" id="yeniUrunCevrimCarpani" placeholder="Miktar" min="0.0001" step="any">
+                                        </div>
+                                        <div class="col-12 col-md-3">
+                                            <select class="form-select form-select-sm" id="yeniUrunReferansBirimId">
+                                                <option value="base">Taban Birim</option>
+                                            </select>
                                         </div>
                                         <div class="col-12 col-md-2">
                                             <div class="form-check form-switch pt-1">
@@ -277,13 +282,18 @@
                             <div class="bg-light p-3 rounded-3 mt-3 border">
                                 <h6 class="small fw-bold text-secondary mb-3"><i class="bi bi-link-45deg me-1"></i> Yeni Çevrim Ekle</h6>
                                 <div class="row g-2 align-items-center">
-                                    <div class="col-12 col-md-4">
+                                    <div class="col-12 col-md-3">
                                         <select class="form-select form-select-sm" id="duzenleAlternatifBirimSelect">
-                                            <option value="">Birim seçin...</option>
+                                            <option value="">Alt. birim seçin...</option>
                                         </select>
                                     </div>
-                                    <div class="col-12 col-md-4">
-                                        <input type="number" class="form-control form-control-sm" id="duzenleCevrimCarpani" placeholder="Örn: 10" min="0.0001" step="any">
+                                    <div class="col-12 col-md-2">
+                                        <input type="number" class="form-control form-control-sm" id="duzenleCevrimCarpani" placeholder="Miktar" min="0.0001" step="any">
+                                    </div>
+                                    <div class="col-12 col-md-3">
+                                        <select class="form-select form-select-sm" id="duzenleReferansBirimSelect">
+                                            <option value="base">Taban Birim</option>
+                                        </select>
                                     </div>
                                     <div class="col-12 col-md-2 text-center">
                                         <div class="form-check form-switch d-inline-block">

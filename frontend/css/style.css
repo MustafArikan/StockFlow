@@ -4349,3 +4349,22 @@ body.dt-no-windows .dt-desktop-hint {
     border: 2px dashed var(--bs-primary) !important;
     background-color: rgba(var(--bs-primary-rgb), 0.1) !important;
 }
+
+/* Trend Chart Panning Styles */
+#trendWrapper { scrollbar-width: none; -ms-overflow-style: none; 
+    overflow-x: auto;
+    overflow-y: hidden;
+    cursor: grab;
+    scroll-behavior: auto; /* Allow smooth or instant JS scrolling */
+}
+#trendWrapper:active {
+    cursor: grabbing;
+}
+/* Hide scrollbar for cleaner look if desired, but default is fine */
+#trendWrapper::-webkit-scrollbar { display: none; }
+
+.trend-inner {
+    min-width: 1200px; /* Forces chart to be wide enough so it scrolls */
+    height: 100%;
+    padding-bottom: 10px; /* Space for scrollbar */
+}

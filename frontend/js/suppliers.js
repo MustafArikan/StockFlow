@@ -152,7 +152,7 @@ document.getElementById("btnTedarikciKaydet")?.addEventListener("click", async (
         hataGoster("İşlem başarısız: " + hata.message);
     } finally {
         btn.disabled = false;
-        btn.innerText = id ? "Güncelle" : "Ekle ve Kaydet";
+        btn.innerText = id ? "Güncelle" : "Yeni Tedarikçi Ekle";
     }
 });
 
@@ -277,7 +277,7 @@ document.querySelector('[data-bs-target="#tedarikciModal"]')?.addEventListener("
     document.getElementById("tedarikciFormu").reset();
     document.getElementById("tedarikciId").value = "";
     document.getElementById("modalBaslik").innerText = "Yeni Tedarikçi Ekle";
-    document.getElementById("btnTedarikciKaydet").innerText = "Ekle ve Kaydet";
+    document.getElementById("btnTedarikciKaydet").innerText = "Yeni Tedarikçi Ekle";
 });
 
 // PENCEREYE TAŞINAN MODALLAR (kural: js/modal-window.js başındaki açıklama)

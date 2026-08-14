@@ -729,17 +729,25 @@ function yeniUrunCevrimTablosunuGuncelle() {
             <td>1 ${escapeHtml(cevrim.alternativeUnitName.split(' (')[0])} = <span class="fw-bold">${cevrim.conversionFactor}</span> Taban</td>
             <td class="text-center">
                 ${cevrim.isDefault 
-                    ? '<span class="badge bg-success bg-opacity-10 text-success"><i class="bi bi-check-circle-fill"></i></span>' 
-                    : '<span class="badge bg-secondary bg-opacity-10 text-secondary">-</span>'}
+                    ? '<i class="bi bi-check-circle-fill text-success fs-5"></i>' 
+                    : '<i class="bi bi-dash-circle text-muted fs-5"></i>'}
             </td>
             <td class="text-end">
-                <button type="button" class="btn btn-sm btn-outline-danger btn-yeni-urun-cevrim-sil" data-id="${cevrim.alternativeUnitId}">
-                    <i class="bi bi-trash"></i>
+                <button type="button" class="btn btn-sm btn-outline-danger btn-yeni-urun-cevrim-sil px-2 rounded-pill" data-id="${cevrim.alternativeUnitId}">
+                    <i class="bi bi-trash3"></i> Sil
                 </button>
             </td>
         `;
         liste.appendChild(tr);
     });
+
+    const refSelect = document.getElementById("yeniUrunReferansBirimId");
+    if (refSelect) {
+        refSelect.innerHTML = '<option value="base">Taban Birim</option>';
+        yeniUrunCevrimleri.forEach(c => {
+            refSelect.innerHTML += `<option value="${c.alternativeUnitId}">${escapeHtml(c.alternativeUnitName.split(' (')[0])}</option>`;
+        });
+    }
 }
 const urunKategoriSelectForm = document.getElementById('urunKategoriId');
 if (urunKategoriSelectForm) {
@@ -2521,10 +2529,22 @@ document.addEventListener("click", async (e) => {
             return;
         }
         
+        const refUnitId = document.getElementById("yeniUrunReferansBirimId").value;
+        let baseFactor = 1;
+        
+        if (refUnitId !== "base") {
+            const refUnit = yeniUrunCevrimleri.find(c => c.alternativeUnitId == refUnitId);
+            if (refUnit) {
+                baseFactor = refUnit.conversionFactor;
+            }
+        }
+        
+        const calculatedFactor = parseFloat(factor) * parseFloat(baseFactor);
+
         yeniUrunCevrimleri.push({
             alternativeUnitId: altUnitId,
             alternativeUnitName: altUnitName,
-            conversionFactor: factor,
+            conversionFactor: calculatedFactor,
             isDefault: isDefault
         });
         
@@ -2554,10 +2574,22 @@ document.addEventListener("click", async (e) => {
             uyariGoster("Lütfen birim seçin ve çevrim çarpanı girin."); 
             return;
         }
+
+        const refSelect = document.getElementById("duzenleReferansBirimSelect");
+        let baseFactor = 1;
+        if (refSelect && refSelect.options.length > 0) {
+            const selectedOpt = refSelect.options[refSelect.selectedIndex];
+            if (selectedOpt && selectedOpt.dataset.factor) {
+                baseFactor = parseFloat(selectedOpt.dataset.factor);
+            }
+        }
+        
+        const calculatedFactor = parseFloat(factor) * baseFactor;
+
         const veri = {
             productId: parseInt(urunId),
             alternativeUnitId: parseInt(altUnitId),
-            conversionFactor: parseFloat(factor),
+            conversionFactor: calculatedFactor,
             isDefault: isDefault
         };
         try {
@@ -2576,6 +2608,11 @@ document.addEventListener("click", async (e) => {
 
             duzenleBirimCevrimleriYukle(urunId);
             document.getElementById("duzenleAlternatifBirimSelect").value = "";
+            const ekleBtnElement = document.getElementById("btnDuzenleCevrimEkle");
+            ekleBtnElement.innerHTML = '<i class="bi bi-plus-circle me-1"></i> Ekle';
+            ekleBtnElement.classList.remove("btn-warning");
+            ekleBtnElement.classList.add("btn-primary");
+            ekleBtnElement.removeAttribute("data-update-id");
             document.getElementById("duzenleCevrimCarpani").value = "";
             document.getElementById("duzenleCevrimVarsayilan").checked = false;
 
@@ -2591,7 +2628,20 @@ document.addEventListener("click", async (e) => {
         }
     }
 
+    const editCevrimBtn = e.target.closest(".btn-duzenle-cevrim-duzenle");
     const kaldirCevrimBtn = e.target.closest(".btn-duzenle-cevrim-kaldir");
+    if (editCevrimBtn) {
+        const cid = editCevrimBtn.getAttribute("data-cid");
+        document.getElementById("duzenleAlternatifBirimSelect").value = editCevrimBtn.getAttribute("data-unit");
+        document.getElementById("duzenleCevrimCarpani").value = editCevrimBtn.getAttribute("data-factor");
+        
+        const ekleBtn = document.getElementById("btnDuzenleCevrimEkle");
+        ekleBtn.innerHTML = '<i class="bi bi-check2-circle me-1"></i> G&uuml;ncelle';
+        ekleBtn.classList.remove("btn-primary");
+        ekleBtn.classList.add("btn-warning");
+        ekleBtn.setAttribute("data-update-id", cid);
+    }
+    
     if (kaldirCevrimBtn) {
         const urunId = document.getElementById("urunId").value;
         if (!urunId) return;
@@ -2673,8 +2723,8 @@ async function duzenleBirimCevrimleriYukle(productId) {
             const defaultBadge = c.isDefault ? '<span class="badge bg-success">Evet</span>' : '<span class="text-muted">-</span>';
             const urunAdi = document.getElementById('duzenleAd') ? document.getElementById('duzenleAd').value : 'Ürün';
             
-            const barkodGosterimi = c.barcode ? `<div class="small fw-bold text-primary mt-1 d-flex align-items-center">
-                <i class="bi bi-upc-scan me-1"></i> ${escapeHtml(c.barcode)}
+            const barkodGosterimi = c.barcode ? `<div class="small fw-bold text-primary mt-1 d-flex align-items-center btn-print-barcode" style="cursor: pointer;" data-barcode="${escapeHtml(c.barcode)}" data-name="${escapeHtml(urunAdi)} (${escapeHtml(c.alternativeUnitName)})" data-id="${productId}" title="Barkodu Yazdır (Tıkla)">
+                <i class="bi bi-printer me-1"></i> <u>${escapeHtml(c.barcode)}</u>
             </div>` : '';
             
             tablo.innerHTML += `<tr>
@@ -2685,17 +2735,26 @@ async function duzenleBirimCevrimleriYukle(productId) {
                 <td class="text-muted fw-bold">1 ${escapeHtml(c.alternativeUnitShortCode)} = ${c.conversionFactor} Taban Birim</td>
                 <td>${defaultBadge}</td>
                 <td class="text-end">
-                    ${!c.barcode ? `<button type="button" class="btn btn-sm btn-outline-primary rounded-pill btn-duzenle-cevrim-barkod shadow-sm px-2 me-1" data-cid="${c.id}" title="Otomatik ITF-14 Koli Barkodu Üret">
-                        <i class="bi bi-upc-scan"></i> SKU Üret
-                    </button>` : `<button type="button" class="btn btn-sm btn-outline-secondary rounded-pill btn-print-barcode shadow-sm px-2 me-1" data-barcode="${escapeHtml(c.barcode)}" data-name="${escapeHtml(urunAdi)} (${escapeHtml(c.alternativeUnitName)})" data-id="${productId}" title="Bu birimin barkodunu yazdır">
-                        <i class="bi bi-printer"></i> Yazdır
-                    </button>`}
-                    <button type="button" class="btn btn-sm btn-outline-danger rounded-pill btn-duzenle-cevrim-kaldir shadow-sm px-3" data-cid="${c.id}">
-                        <i class="bi bi-trash3 me-1"></i> Kaldır
+                    ${!c.barcode ? `<button type="button" class="btn btn-sm btn-outline-primary rounded-pill btn-duzenle-cevrim-barkod shadow-sm px-2 me-1" data-cid="${c.id}" title="Otomatik Koli/Palet Barkodu Üret">
+                        <i class="bi bi-upc-scan"></i> Barkod Üret
+                    </button>` : ``}
+                    <button type="button" class="btn btn-sm btn-outline-warning rounded-pill btn-duzenle-cevrim-duzenle shadow-sm px-2 me-1" data-cid="${c.id}" data-unit="${c.alternativeUnitId}" data-factor="${c.conversionFactor}" data-isdefault="${c.isDefault}" title="Düzenle">
+                        <i class="bi bi-pencil-square"></i>
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-danger rounded-pill btn-duzenle-cevrim-kaldir shadow-sm px-2" data-cid="${c.id}" title="Kaldır">
+                        <i class="bi bi-trash3"></i>
                     </button>
                 </td>
             </tr>`;
         });
+
+        const refSelect = document.getElementById("duzenleReferansBirimSelect");
+        if (refSelect) {
+            refSelect.innerHTML = '<option value="base" data-factor="1">Taban Birim</option>';
+            liste.forEach(c => {
+                refSelect.innerHTML += `<option value="${c.alternativeUnitId}" data-factor="${c.conversionFactor}">${escapeHtml(c.alternativeUnitName.split(' (')[0])}</option>`;
+            });
+        }
     } catch(hata) {
         tablo.innerHTML = `<tr><td colspan="4" class="text-center text-danger py-4">${escapeHtml(hata.message)}</td></tr>`;
     }
