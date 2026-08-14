@@ -2593,8 +2593,14 @@ document.addEventListener("click", async (e) => {
             isDefault: isDefault
         };
         try {
-            const cevap = await fetch(`${CONFIG.API_BASE_URL}/products/${urunId}/unit-conversions`, {
-                method: "POST",
+            const ekleBtnElement = document.getElementById("btnDuzenleCevrimEkle");
+            const updateId = ekleBtnElement.getAttribute("data-update-id");
+            const fetchUrl = updateId 
+                ? `${CONFIG.API_BASE_URL}/products/${urunId}/unit-conversions/${updateId}`
+                : `${CONFIG.API_BASE_URL}/products/${urunId}/unit-conversions`;
+            const fetchMethod = updateId ? "PUT" : "POST";
+            const cevap = await fetch(fetchUrl, {
+                method: fetchMethod,
                 headers: {
                     "Content-Type": "application/json",
                     "Authorization": `Bearer ${token}`
@@ -2608,7 +2614,6 @@ document.addEventListener("click", async (e) => {
 
             duzenleBirimCevrimleriYukle(urunId);
             document.getElementById("duzenleAlternatifBirimSelect").value = "";
-            const ekleBtnElement = document.getElementById("btnDuzenleCevrimEkle");
             ekleBtnElement.innerHTML = '<i class="bi bi-plus-circle me-1"></i> Ekle';
             ekleBtnElement.classList.remove("btn-warning");
             ekleBtnElement.classList.add("btn-primary");
