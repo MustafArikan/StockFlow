@@ -3050,42 +3050,141 @@ body.dt-maximized #sidebar-right {
         margin-right: var(--dt-gap);
     }
 
+    /* ---------- TEK ÇEKMECE ----------
+       Eskiden iki ray yan yana iki sütundu (124px + 124px = 375px ekranın
+       üçte ikisi) ve sağ ray KAPALIYKEN bile ekranda kalıyordu: kendi
+       genişliği kadar (-100%) kaydırılıyordu ama başlangıç noktası left:124
+       olduğu için tam 0'a oturuyor, pencerenin üstünü örtüyordu.
+       Artık ikisi de left:0'dan başlayan TEK bir çekmecenin üst ve alt
+       bölümü. Kapalıyken -100% ile tamamen ekran dışına çıkarlar. */
     .dt-desktop #sidebar,
     .dt-desktop #sidebar-right {
-        width: 124px;
-        background-color: var(--nb-canvas);
-    }
-
-    .dt-desktop #sidebar {
         left: 0;
-        border-right: var(--nb-bw) solid var(--nb-edge);
-    }
-
-    /* Sağ ray, çekmecenin ikinci sütunu olarak solun hemen yanına gelir */
-    .dt-desktop #sidebar-right {
-        left: 124px;
         right: auto;
-        border-left: var(--nb-bw) solid var(--nb-edge);
-        border-right: var(--nb-bw) solid var(--nb-edge);
+        width: min(72vw, 252px);
+        background-color: var(--nb-canvas);
+        border-right: var(--nb-bw-thick) solid var(--nb-edge);
+        transform: translateX(-100%);
+        z-index: 1500;
     }
 
-    .dt-desktop #sidebar-right,
-    .dt-desktop #sidebar-right.collapsed {
-        transform: translateX(-100%);
+    /* Üst bölüm: günlük operasyon uygulamaları.
+       Yükseklik SABİT DEĞİL, içeriğe göre. Sabit bölüşümde (54vh / 46vh)
+       alt gruptaki 6 öğe ayrılan yere sığmıyor ve sonuncusu ("Bildirimler")
+       ekranın altında kalıyordu. Üst bölüm içeriği kadar yer kaplar, alt
+       bölümün başlangıcı JS ile onun altına hizalanır. */
+    .dt-desktop #sidebar {
+        top: var(--topbar-height);
+        height: auto;
+        max-height: calc(100vh - var(--topbar-height));
+        overflow-y: auto;
+    }
+
+    /* Alt bölüm: sistem ve yetki uygulamaları.
+       --dt-rail-split değerini window-manager.js ölçerek yazar. */
+    .dt-desktop #sidebar-right {
+        top: var(--dt-rail-split, 60vh);
+        height: auto;
+        max-height: calc(100vh - var(--dt-rail-split, 60vh));
+        overflow-y: auto;
+        /* Gruplar arası çizgi kaldırıldı: başlıklar zaten ayrımı gösteriyor */
+        border-top: none;
+        /* Masaüstündeki 14px üst dolgu mobilde iki grup arasında boşluk
+           bırakıyordu; çizgi de kalkınca ortada sebepsiz bir açıklık
+           görünüyordu (ölçüm: 35px). Mobilde sıfırlanır. */
+        padding-top: 0;
+    }
+
+    /* Menü listelerinin dikey dolgusu da daraltılır */
+    .dt-desktop .sidebar-menu {
+        padding-top: 2px !important;
+        padding-bottom: 2px !important;
     }
 
     .dt-desktop #sidebar.show-mobile,
     .dt-desktop #sidebar-right.show-mobile {
         transform: translateX(0);
-    }
-
-    .dt-desktop #sidebar-right.show-mobile {
         box-shadow: var(--nb-sh-xl);
     }
 
-    /* Çekmece içinde etiketler zaten düz zemin üzerinde; kontur korunur */
+    /* ---------- ÇEKMECE ÖĞELERİ ----------
+       MOBİL ÖLÇÜ: 13 uygulama + 2 grup başlığı tek ekrana sığmalı.
+       Karo 30px, satır 44px (dokunma için asgari ölçü), etiket 0.82rem.
+       Önceki ölçülerde (karo 38px, satır 56px) toplam yükseklik ekranı
+       aşıyor ve alttaki öğeler görünmüyordu. */
+    .dt-desktop .desktop-icon.sidebar-link {
+        flex-direction: row;
+        align-items: center;
+        justify-content: flex-start;
+        text-align: left;
+        gap: 10px;
+        padding: 6px 12px;
+        margin: 1px 8px;
+        min-height: 44px;
+    }
+
+    .dt-desktop .desktop-icon .dt-tile {
+        width: 30px;
+        height: 30px;
+        font-size: .88rem;
+        border-radius: var(--nb-r-sm);
+        flex: 0 0 auto;
+    }
+
+    /* Çekmece düz zeminde: etiketin kontur + hap görünümüne gerek yok */
+    .dt-desktop .desktop-icon .dt-label {
+        background-color: transparent;
+        border-color: transparent;
+        padding: 0;
+        font-size: .82rem;
+        white-space: normal;
+        text-align: left;
+    }
+
+    .dt-desktop .desktop-icon.sidebar-link:hover .dt-label,
+    .dt-desktop .desktop-icon.sidebar-link.active .dt-label {
+        background-color: transparent;
+    }
+
+    .dt-desktop .desktop-icon.sidebar-link.active {
+        background-color: var(--nb-surface);
+        border-color: var(--nb-edge);
+    }
+
     .dt-desktop .sidebar-heading {
-        background-color: var(--nb-surface-2);
+        background-color: transparent;
+        border: none;
+        text-align: left;
+        font-size: .6rem !important;
+        margin: 4px 14px 2px !important;
+        padding: 0 !important;
+    }
+
+    /* Çekmece kapatma düğmesi küçültülür */
+    .dt-desktop .dt-close-rail {
+        top: 2px;
+        right: 4px;
+    }
+
+    .dt-desktop .dt-close-rail .bi {
+        font-size: 1rem !important;
+    }
+
+    /* ---------- ÇEKMECE PERDESİ ----------
+       Dışarı dokununca çekmece kapansın; açıkken arka plan pasifleşsin. */
+    .dt-drawer-veil {
+        position: fixed;
+        inset: var(--topbar-height) 0 0 0;
+        z-index: 1400;
+        background-color: rgba(0, 0, 0, .5);
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity .2s ease;
+    }
+
+    body.dt-drawer-open .dt-drawer-veil {
+        opacity: 1;
+        pointer-events: auto;
     }
 
     /* Mobilde sabit duvar kağıdı (background-attachment: fixed) kaydırmayı
@@ -3222,9 +3321,19 @@ body.dt-maximized #sidebar-right {
 }
 
 .dt-tab-close {
+    /* <button> olduğu için tarayıcı varsayılanları sıfırlanır */
+    border: none;
+    background: transparent;
+    padding: 0;
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    /* DİKKAT: Sekmenin dokunma alanını genişleten .dt-tab::after katmanı
+       sekmenin TÜM yüzeyini kaplıyor ve kapatma düğmesinin üstüne biniyordu;
+       çarpıya basınca tıklama sekmeye gidiyor, pencere kapanmıyordu.
+       Kapatma düğmesi kendi katmanına alınıp o örtünün üstüne çıkarılır. */
+    position: relative;
+    z-index: 1;
     width: 18px;
     height: 18px;
     flex: 0 0 auto;
@@ -3621,9 +3730,88 @@ body.dt-no-windows .dt-desktop-hint {
         display: none;
     }
 
-    .dt-wc-min,
-    .dt-wc-max {
+    /* ---------- DOKUNMA HEDEFLERİ ----------
+       Pencere düğmeleri 22px ve aralarında 8px vardı: parmakla isabet zor,
+       yanlışlıkla "kapat"a basmak kolaydı (geri alınamayan işlem).
+       Düğmeler büyütülür, araları açılır ve GÖRÜNMEZ bir dokunma alanıyla
+       hedef ~40px'e çıkarılır — görünüm değişmeden isabet kolaylaşır. */
+    .dt-window-controls {
+        gap: 14px;
+    }
+
+    .dt-wc {
+        position: relative;
+    }
+
+    .dt-wc::after {
+        content: '';
+        position: absolute;
+        inset: -7px;
+    }
+
+    /* Sekmeler de aynı şekilde: görünüm 26px, dokunma alanı bar yüksekliği */
+    .dt-tab {
+        position: relative;
+    }
+
+    .dt-tab::after {
+        content: '';
+        position: absolute;
+        inset: -6px 0;
+    }
+
+    /* ---------- PENCERE DÜĞMELERİ MOBİLDE ----------
+       Üçü de görünür ve üçünün de gerçek bir işi var:
+         küçült  → pencereyi gizler, masaüstü görünür (sekmeden geri gelinir)
+         tam ekran → üst barı gizleyip ekranın tamamını içeriğe verir
+         kapat   → pencereyi kapatır
+       Başlık çubuğu tam ekranda da durur; geri dönüş yolu hep açıktır.
+       Dokunma hedefi için düğmeler büyütülür. */
+    .dt-wc {
+        width: 26px;
+        height: 26px;
+        font-size: .62rem;
+    }
+
+
+    /* SEKMELER MOBİLDE
+       Masaüstü ölçüsü (168px) dar ekranda üst barı dolduruyordu. Sekmeler
+       daraltılır; şerit zaten yatay kayabiliyor. */
+    .dt-tabstrip {
+        gap: 2px;
+    }
+
+    .dt-tab {
+        flex: 0 1 104px;
+        min-width: 62px;
+        max-width: 120px;
+        height: 26px;
+        padding: 0 4px 0 8px;
+        font-size: .68rem;
+        gap: 4px;
+    }
+
+    .dt-tab-close {
+        width: 15px;
+        height: 15px;
+        font-size: .5rem;
+    }
+
+    /* Marka adı ve saat dar ekranda gizli; simge yeter */
+    .dt-desktop .dt-menubar-brand span,
+    .dt-desktop .dt-menubar-app {
+        display: none !important;
+    }
+
+    /* Tam ekran: üst bar gizlenir, pencere ekranın tamamını kaplar */
+    body.dt-immersive .topbar {
         display: none;
+    }
+
+    body.dt-immersive .dt-win,
+    body.dt-immersive .dt-win.maximized {
+        top: 0 !important;
+        height: 100vh !important;
     }
 }
 
@@ -3909,15 +4097,17 @@ body.dt-no-windows .dt-desktop-hint {
         padding: 1.25rem !important;
     }
 
-    /* Mobilde kullanıcı adının gizlenmesini engeller, taşarsa üç nokta yapar */
+    /* MOBİLDE YALNIZCA PROFİL SİMGESİ
+       Kullanıcı adı üst barda yer kaplıyor ve sekmeleri sıkıştırıyordu.
+       Dar ekranda ad gizlenir; kim olduğu zaten profil menüsünde yazıyor. */
     #userProfile {
-        display: inline-block !important;
-        max-width: 120px;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        margin-left: 6px;
-        font-size: 0.8rem;
+        display: none !important;
+    }
+
+    /* Kullanıcı çipi simgeye indirgenir */
+    .dt-desktop .dt-user-chip {
+        padding: 3px;
+        gap: 0;
     }
 
     /* ---------------------------------------------------------------

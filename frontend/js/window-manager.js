@@ -135,9 +135,11 @@
             label.className = 'dt-tab-label';
             label.textContent = w.title;
 
-            const close = document.createElement('span');
+            // <button> kullanılır: <span role="button"> klavyeyle odaklanamıyor,
+            // Tab ile ulaşılamıyor ve Enter/Space çalışmıyordu.
+            const close = document.createElement('button');
+            close.type = 'button';
             close.className = 'dt-tab-close';
-            close.setAttribute('role', 'button');
             close.setAttribute('aria-label', w.title + ' penceresini kapat');
             close.innerHTML = '<i class="bi bi-x-lg" aria-hidden="true"></i>';
             close.addEventListener('click', (e) => { e.stopPropagation(); closeWindow(w.id); });
@@ -330,10 +332,70 @@
     function toggleMaximize(id) {
         const w = windows.find(x => x.id === id);
         if (!w) return;
+
+        // MOBİLDE "TAM EKRAN" NE DEMEK?
+        // Pencere zaten ekranı kaplıyor; kutuyu büyütmenin anlamı yok.
+        // Bunun yerine üst bar gizlenir ve o alan da içeriğe verilir.
+        // Başlık çubuğu görünür kaldığı için geri dönüş yolu hep açıktır.
+        if (isMobile()) {
+            document.body.classList.toggle('dt-immersive');
+            return;
+        }
+
         w.max = !w.max;
         applyGeometry(w);
         focusWindow(id);
         saveSession();
+    }
+
+    // ÇEKMECE PERDESİ
+    // Çekmece açıkken arkaya dokunmak onu kapatır (mobil alışkanlığı).
+    function ensureDrawerVeil() {
+        let veil = document.querySelector('.dt-drawer-veil');
+        if (veil) return veil;
+        veil = document.createElement('div');
+        veil.className = 'dt-drawer-veil';
+        veil.setAttribute('aria-hidden', 'true');
+        veil.addEventListener('click', closeDrawer);
+        document.body.appendChild(veil);
+        return veil;
+    }
+
+    // ÇEKMECE BÖLÜNME NOKTASI
+    // Mobilde iki ray tek çekmecede alt alta durur. Yükseklikleri sabit
+    // oranla bölüşülürse (54vh / 46vh) alttaki gruptaki öğeler sığmıyor ve
+    // sonuncusu ekran dışında kalıyordu. Üst grubun GERÇEK yüksekliği ölçülüp
+    // alt grubun başlangıcı ona hizalanır.
+    function syncRailSplit() {
+        const sol = document.getElementById('sidebar');
+        if (!sol || !isMobile()) {
+            document.documentElement.style.removeProperty('--dt-rail-split');
+            return;
+        }
+        const topbar = document.querySelector('.topbar');
+        const ust = topbar ? topbar.getBoundingClientRect().height : 46;
+        // scrollHeight: kaydırma olmadan içeriğin gerçek yüksekliği
+        const yukseklik = Math.min(sol.scrollHeight, Math.round(window.innerHeight * 0.62));
+        document.documentElement.style.setProperty('--dt-rail-split', (ust + yukseklik) + 'px');
+    }
+
+    function closeDrawer() {
+        document.querySelectorAll('#sidebar, #sidebar-right')
+            .forEach(r => r.classList.remove('show-mobile'));
+        document.body.classList.remove('dt-drawer-open');
+    }
+
+    // Çekmecenin açık/kapalı durumu gövdeye yazılır; perde ona bakar.
+    function watchDrawer() {
+        const sol = document.getElementById('sidebar');
+        if (!sol) return;
+        const guncelle = () => {
+            const acik = sol.classList.contains('show-mobile');
+            document.body.classList.toggle('dt-drawer-open', acik);
+            if (acik) syncRailSplit();   // açılırken güncel ölçüyle hizala
+        };
+        new MutationObserver(guncelle).observe(sol, { attributeFilter: ['class'] });
+        guncelle();
     }
 
     // ------------------------------------------------------------- sürükleme
@@ -477,6 +539,13 @@
                 applyGeometry(w);
             });
             document.body.classList.toggle('dt-wm-mobile', isMobile());
+            // Masaüstü genişliğine dönülürse mobil tam ekran kipi bırakılır,
+            // aksi hâlde üst bar gizli kalırdı.
+            if (!isMobile()) {
+                document.body.classList.remove('dt-immersive');
+                closeDrawer();
+            }
+            syncRailSplit();
             saveSession();
         }, 150);
     });
@@ -487,6 +556,9 @@
         updateEmptyState();
         syncTaskbarHeight();
         interceptIconClicks();
+        ensureDrawerVeil();
+        watchDrawer();
+        syncRailSplit();
         document.body.classList.toggle('dt-wm-mobile', isMobile());
 
         // Kapatılan pencere yeniden açılabilsin diye oturum geri yüklenir
