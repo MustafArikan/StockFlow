@@ -126,7 +126,8 @@ function onScanSuccess(decodedText, decodedResult) {
                         urunDetayiniAc(okunanMetin);
                         return;
                     case 'product_packaging':
-                        window.location.href = `movements.html?productId=${resolveRes.productId}&inputUnitId=${resolveRes.inputUnitId}&qty=1`;
+                        // Tarayıcı ekranı yerinde kalsın: arka arkaya okutmaya devam edilebilir
+                        uygulamaAc(`movements.html?productId=${resolveRes.productId}&inputUnitId=${resolveRes.inputUnitId}&qty=1`, 'Stok Hareketleri');
                         return;
                     case 'product_with_batch':
                         const params = new URLSearchParams({
@@ -135,10 +136,12 @@ function onScanSuccess(decodedText, decodedResult) {
                             expiryDate: resolveRes.expiryDate || '',
                             qty: resolveRes.variableQuantity || ''
                         });
-                        window.location.href = `movements.html?${params.toString()}`;
+                        uygulamaAc(`movements.html?${params.toString()}`, 'Stok Hareketleri');
                         return;
                     case 'pallet':
-                        window.location.href = `pallets.html?sscc=${encodeURIComponent(resolveRes.sscc)}`;
+                        // DİKKAT: pallets.html projede YOK; buraya gidilirse 404 alınırdı.
+                        // Sayfa yazılana kadar kullanıcıya açık bilgi verilir.
+                        hataGoster('Palet ekranı henüz hazır değil. Okunan SSCC: ' + resolveRes.sscc);
                         return;
                 }
             } catch (resolveHatasi) {
@@ -159,7 +162,7 @@ function onScanSuccess(decodedText, decodedResult) {
             // ÖNCE RAF (LOCATION) OLARAK KONTROL ET
             try {
                 await apiRequest(`/locations/by-code/${encodeURIComponent(arananKod)}`, 'GET');
-                window.location.href = `warehouses.html?viewShelfCode=${encodeURIComponent(arananKod)}`;
+                uygulamaAc(`warehouses.html?viewShelfCode=${encodeURIComponent(arananKod)}`, 'Depolar');
                 return;
             } catch (rafHatasi) {}
 

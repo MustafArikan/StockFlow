@@ -13,7 +13,11 @@ const cameraErrorDictionary = {
     "notfound": "Sistemde kullanılabilir bir kamera bulunamadı.",
     "devicesnotfound": "Sistemde kullanılabilir bir kamera bulunamadı.",
     "notreadable": "Kamera şu anda başka bir uygulama tarafından kullanılıyor.",
-    "overconstrained": "Kamera istenen çözünürlüğü desteklemiyor."
+    "overconstrained": "Kamera istenen çözünürlüğü desteklemiyor.",
+    // Güvensiz bağlamda (http://IP) mediaDevices tanımsız olur ve
+    // "cannot read properties of undefined" tipinde bir hata düşer.
+    "undefined": "Kamera yalnızca HTTPS veya localhost üzerinde çalışır. Sunucuya HTTPS eklenmeli.",
+    "secure": "Kamera yalnızca HTTPS veya localhost üzerinde çalışır. Sunucuya HTTPS eklenmeli."
 };
 
 /**
@@ -34,7 +38,40 @@ function translateCameraError(err) {
  * Arayüz modalı açmadan önce bu fonksiyonu çağırarak kameraya erişim olup olmadığını test eder.
  * @returns {Promise<boolean>} İzin varsa true döner, yoksa hata fırlatır.
  */
+// GÜVENLİ BAĞLAM KONTROLÜ
+// Tarayıcılar kamerayı YALNIZCA güvenli bağlamda açar: https:// ya da
+// localhost. Telefondan http://<bilgisayarın-IP'si>:3000 ile bağlanıldığında
+// bağlam güvensiz sayılır ve navigator.mediaDevices HİÇ TANIMLANMAZ.
+//
+// Bu durumda eski kod doğrudan navigator.mediaDevices.getUserMedia(...)
+// çağırıyor, "undefined okunamıyor" tipinde bir TypeError alıyordu. Sözlükte
+// bu hataya karşılık gelen bir anahtar olmadığı için kullanıcıya
+// "donanım hatası oluştu" deniyordu — asıl sebep gizleniyor, telefonda
+// "kamera hiç çalışmıyor" gibi görünüyordu.
+function kameraKullanilabilirMi() {
+    if (!window.isSecureContext) {
+        return {
+            uygun: false,
+            mesaj: 'Kamera yalnızca güvenli bağlantıda (HTTPS) veya localhost üzerinde çalışır. ' +
+                'Şu an ' + window.location.protocol + '//' + window.location.hostname +
+                ' adresindesiniz; tarayıcı bu yüzden kamerayı engelliyor. ' +
+                'Telefondan kullanmak için sunucuya HTTPS eklemeniz gerekir.'
+        };
+    }
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        return {
+            uygun: false,
+            mesaj: 'Bu tarayıcı kamera erişimini desteklemiyor.'
+        };
+    }
+    return { uygun: true };
+}
+
 async function checkCameraPermission() {
+    // Önce bağlamı kontrol et: hata mesajı gerçek sebebi söylesin.
+    const durum = kameraKullanilabilirMi();
+    if (!durum.uygun) throw new Error(durum.mesaj);
+
     try {
         const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
 
@@ -57,6 +94,9 @@ async function checkCameraPermission() {
  * @param {function} onScanFailure - Tarama sırasındaki anlık hatalar için callback
  */
 async function startScanner(elementId, onScanSuccess, onScanFailure) {
+    const kameraDurum = kameraKullanilabilirMi();
+    if (!kameraDurum.uygun) throw new Error(kameraDurum.mesaj);
+
     if (html5QrCode) {
         await stopScanner().catch(console.error);
     }

@@ -192,9 +192,12 @@ async function urunDetayAc(productId, secenekler = {}) {
     detayTedarkciYukle(productId, false);                        
     
     // Modalı her açılışta 1. sekmeye (Temel Bilgiler) sıfırla
-    const carousel = document.getElementById('urunDetayCarousel');
-    const bsCarousel = bootstrap.Carousel.getInstance(carousel) || new bootstrap.Carousel(carousel);
-    bsCarousel.to(0);
+    // Detay her açıldığında ilk sekmeden başlar.
+    // (Eskiden carousel'i 0. adıma sarmak gerekiyordu; artık sekme var.)
+    const ilkSekme = document.querySelector('#urunDetayCarousel .nav-link[data-bs-target="#detaySekmeGenel"]');
+    if (ilkSekme && window.bootstrap && bootstrap.Tab) {
+        bootstrap.Tab.getOrCreateInstance(ilkSekme).show();
+    }
     
     // Modalı göster
     // Pencerede içerik zaten sayfaya monte edilmiş durumda.

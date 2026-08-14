@@ -24,30 +24,50 @@ function buildProductDetailModalHtml() {
                 </div>
                 <div class="modal-body p-0 bg-light">
 
-                    <div id="urunDetayCarousel" class="carousel slide" data-bs-ride="false" data-bs-wrap="false" data-bs-touch="true">
+                    <div id="urunDetayCarousel" class="dt-detay">
 
-                        <div class="bg-white border-bottom py-3 px-4 d-flex justify-content-between align-items-center shadow-sm z-3 position-relative">
-                            <button class="btn btn-sm btn-outline-secondary rounded-pill px-3 fw-bold" type="button" data-bs-target="#urunDetayCarousel" data-bs-slide="prev">
-                                <i class="bi bi-chevron-left me-1"></i> Geri
-                            </button>
+                        <!-- SEKMELER
+                             Önceden 6 adımlı bir carousel'di: bir bilgiye ulaşmak için
+                             Geri/İleri ile sırayla gezmek gerekiyordu. Carousel dar bir
+                             modala sığdırmak için vardı; ekran artık boyutlandırılabilir
+                             bir pencere olduğu için o kısıt yok. 6 adım, konusuna göre
+                             4 sekmede toplandı: kullanıcı aradığına tek dokunuşla gider. -->
+                        <ul class="nav nav-tabs px-3 pt-2 bg-white border-bottom flex-nowrap overflow-auto" role="tablist">
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link active text-nowrap" data-bs-toggle="tab" data-bs-target="#detaySekmeGenel" type="button" role="tab" aria-selected="true">
+                                    <i class="bi bi-info-circle me-1" aria-hidden="true"></i> Genel
+                                </button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link text-nowrap" data-bs-toggle="tab" data-bs-target="#detaySekmeOzellik" type="button" role="tab" aria-selected="false">
+                                    <i class="bi bi-sliders me-1" aria-hidden="true"></i> Özellikler
+                                </button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link text-nowrap" data-bs-toggle="tab" data-bs-target="#detaySekmeTedarikci" type="button" role="tab" aria-selected="false">
+                                    <i class="bi bi-truck me-1" aria-hidden="true"></i> Tedarikçi
+                                </button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link text-nowrap" data-bs-toggle="tab" data-bs-target="#detaySekmeStok" type="button" role="tab" aria-selected="false">
+                                    <i class="bi bi-boxes me-1" aria-hidden="true"></i> Stok Dağılımı
+                                </button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link text-nowrap" data-bs-toggle="tab" data-bs-target="#detaySekmeGecmis" type="button" role="tab" aria-selected="false">
+                                    <i class="bi bi-clock-history me-1" aria-hidden="true"></i> Geçmiş
+                                </button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link text-nowrap" data-bs-toggle="tab" data-bs-target="#detaySekmePaket" type="button" role="tab" aria-selected="false">
+                                    <i class="bi bi-box2 me-1" aria-hidden="true"></i> Paketleme
+                                </button>
+                            </li>
+                        </ul>
 
-                            <div class="carousel-indicators position-static m-0 d-flex gap-2">
-                                <button type="button" data-bs-target="#urunDetayCarousel" data-bs-slide-to="0" class="active bg-primary" aria-current="true" aria-label="Temel Bilgiler"></button>
-                                <button type="button" data-bs-target="#urunDetayCarousel" data-bs-slide-to="1" class="bg-primary" aria-label="Özellikler"></button>
-                                <button type="button" data-bs-target="#urunDetayCarousel" data-bs-slide-to="2" class="bg-primary" aria-label="Tedarikçiler"></button>
-                                <button type="button" data-bs-target="#urunDetayCarousel" data-bs-slide-to="3" class="bg-primary" aria-label="Stok Dağılımı"></button>
-                                <button type="button" data-bs-target="#urunDetayCarousel" data-bs-slide-to="4" class="bg-primary" aria-label="Stok Hareketleri"></button>
-                                <button type="button" data-bs-target="#urunDetayCarousel" data-bs-slide-to="5" class="bg-primary" aria-label="Paketleme Birimleri"></button>
-                            </div>
+                        <div class="tab-content p-4">
 
-                            <button class="btn btn-sm btn-outline-primary rounded-pill px-3 fw-bold" type="button" data-bs-target="#urunDetayCarousel" data-bs-slide="next">
-                                İleri <i class="bi bi-chevron-right ms-1"></i>
-                            </button>
-                        </div>
-
-                        <div class="carousel-inner p-4">
-
-                            <div class="carousel-item active">
+                            <div class="tab-pane fade show active" id="detaySekmeGenel" role="tabpanel">
 
                                 <div class="row mb-4 g-3" id="detayOneCikanNitelikler">
                                     <!-- Dinamik: kategoriye göre "öne çıkan" nitelik kartları buraya basılır -->
@@ -88,7 +108,7 @@ function buildProductDetailModalHtml() {
                                 </div>
                             </div>
 
-                            <div class="carousel-item">
+                            <div class="tab-pane fade" id="detaySekmeOzellik" role="tabpanel">
                                 <h6 class="fw-bold text-primary text-uppercase small mb-4 border-bottom pb-2">
                                     <span class="bg-primary text-white rounded-circle d-inline-flex align-items-center justify-content-center me-2 p-1"><i class="bi bi-list-check"></i></span> Ürün Özellikleri ve Kurallar
                                 </h6>
@@ -103,7 +123,7 @@ function buildProductDetailModalHtml() {
                                 </div>
                             </div>
 
-                            <div class="carousel-item">
+                            <div class="tab-pane fade" id="detaySekmeTedarikci" role="tabpanel">
                                 <h6 class="fw-bold text-primary text-uppercase small mb-4 border-bottom pb-2">
                                     <span class="bg-primary text-white rounded-circle d-inline-flex align-items-center justify-content-center me-2 p-1"><i class="bi bi-truck"></i></span> Tedarikçi Bilgileri
                                 </h6>
@@ -126,7 +146,7 @@ function buildProductDetailModalHtml() {
                                 </div>
                             </div>
 
-                            <div class="carousel-item">
+                            <div class="tab-pane fade" id="detaySekmeStok" role="tabpanel">
                                 <h6 class="fw-bold text-primary text-uppercase small mb-4 border-bottom pb-2">
                                     <span class="bg-primary text-white rounded-circle d-inline-flex align-items-center justify-content-center me-2 p-1"><i class="bi bi-building"></i></span> Depo ve Raf Stok Dağılımı
                                 </h6>
@@ -154,7 +174,7 @@ function buildProductDetailModalHtml() {
                                 </div>
                             </div>
 
-                            <div class="carousel-item">
+                            <div class="tab-pane fade" id="detaySekmeGecmis" role="tabpanel">
                                 <h6 class="fw-bold text-primary text-uppercase small mb-4 border-bottom pb-2">
                                     <span class="bg-primary text-white rounded-circle d-inline-flex align-items-center justify-content-center me-2 p-1"><i class="bi bi-clock-history"></i></span> Stok Hareket Geçmişi
                                 </h6>
@@ -179,7 +199,7 @@ function buildProductDetailModalHtml() {
                                 </div>
                             </div>
 
-                            <div class="carousel-item">
+                            <div class="tab-pane fade" id="detaySekmePaket" role="tabpanel">
                                 <h6 class="fw-bold text-primary text-uppercase small mb-4 border-bottom pb-2">
                                     <span class="bg-primary text-white rounded-circle d-inline-flex align-items-center justify-content-center me-2 p-1"><i class="bi bi-box2-heart"></i></span>
                                     Paketleme Birimleri (Kutu / Koli / Palet)

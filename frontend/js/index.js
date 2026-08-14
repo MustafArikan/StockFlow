@@ -347,7 +347,8 @@ function renderMovementSummaryChart(data) {
                     const index = elements[0].index;
                     const secilenFiltre = filtreKodlari[index];
 
-                    window.location.href = `movements.html?filter=${secilenFiltre}`;
+                    // Panel penceresi yerinde kalsın; hareketler kendi penceresinde açılsın
+                    uygulamaAc(`movements.html?filter=${secilenFiltre}`, 'Stok Hareketleri');
                 }
             },
 
@@ -410,7 +411,7 @@ function renderCategoryChart(data) {
                 if (elements.length > 0) {
                     const index = elements[0].index;
                     const kategoriAdi = gecerliVeri[index].kategoriAdi;
-                    window.location.href = `products.html?search=${encodeURIComponent(kategoriAdi)}`;
+                    uygulamaAc(`products.html?search=${encodeURIComponent(kategoriAdi)}`, 'Ürünler');
                 }
             },
             plugins: {

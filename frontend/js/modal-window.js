@@ -218,10 +218,21 @@
 
         var host = document.querySelector('.dt-window-content') || document.body;
 
-        // Sayfanın geri kalanı (liste, filtreler, diğer modallar) gizlenir.
+        // Sayfanın geri kalanı (liste, filtreler) gizlenir.
         // SİLİNMEZ: sayfa JS'i bu elemanlara erişmeye devam ediyor, kaldırmak
         // null referans hatalarına yol açardı.
-        Array.prototype.forEach.call(host.children, function (c) { c.classList.add('d-none'); });
+        //
+        // DİKKAT — DİĞER MODALLAR GİZLENMEZ:
+        // Bir modal zaten varsayılan olarak görünmezdir (.modal { display:none })
+        // ve yalnızca açılınca görünür. Ona "d-none" eklenirse Bootstrap .show
+        // sınıfını eklese bile d-none'ın !important'ı kazanır ve modal BİR DAHA
+        // AÇILAMAZ. Ürün formundaki "Okut" düğmesi bu yüzden çalışmıyordu:
+        // kamera modali (#scannerModalUrunler) d-none ile kilitlenmişti.
+        Array.prototype.forEach.call(host.children, function (c) {
+            if (c === modal) return;                       // taşınacak modalın kabuğu
+            if (c.classList && c.classList.contains('modal')) return;
+            c.classList.add('d-none');
+        });
 
         var page = document.createElement('div');
         page.className = 'mw-page';

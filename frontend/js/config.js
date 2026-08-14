@@ -105,7 +105,6 @@ document.addEventListener('keydown', function (e) {
     if (!modal) return;
 
     e.preventDefault(); // Form varsa sayfanin yenilenmesini engelle
-    e.preventDefault(); // Form varsa sayfanin yenilenmesini engelle
 
     const kaydetButonu = modal.querySelector('.btn-primary:not(.btn-close), .btn-success:not(.btn-close)');
     if (kaydetButonu && !kaydetButonu.disabled) {
@@ -238,6 +237,54 @@ function isEmbeddedWindow() {
     }
 }
 
+// UYGULAMA AÇ (programatik)
+// Kod içinden başka bir uygulamaya gidilmesi gereken yerler için.
+// Kabuk varsa hedef KENDİ penceresinde açılır, bulunduğun pencere kalır;
+// kabuk yoksa (bağımsız sayfa) eski davranış: normal gezinme.
+function uygulamaAc(url, baslik) {
+    try {
+        const ac = window.parent && window.parent.__wmOpen;
+        if (window.self !== window.top && typeof ac === 'function') {
+            ac(url, baslik || 'StockFlow');
+            return true;
+        }
+    } catch (e) { /* üst belgeye erişilemiyor */ }
+    window.location.href = url;
+    return false;
+}
+
+// PENCERE İÇİ BAĞLANTILAR YENİ PENCERE AÇAR
+//
+// SORUN: Sayfa içeriğindeki bağlantılar (ör. Ana Sayfa'daki "Barkod/QR
+// Okuyucu Aç", özet kartları, grafik tıklamaları) doğrudan başka bir .html
+// adresine gidiyordu. Tek sayfalı düzende doğruydu; pencere düzeninde ise
+// bulunduğun PENCEREYİ başka bir uygulamaya çeviriyor: Ana Sayfa'ya basınca
+// panel kayboluyor, yerine tarayıcı geliyor. Kullanıcı "sayfa gitti" diyor.
+//
+// ÇÖZÜM: Pencere içindeki uygulama bağlantıları yakalanır ve hedef sayfa
+// KENDİ penceresinde açılır. Bulunduğun pencere olduğu gibi kalır.
+// Ctrl/Cmd/orta tık yakalanmaz — ayrı sekmede açmak çalışmaya devam eder.
+function pencereIciBaglantilariYakala() {
+    document.addEventListener('click', (e) => {
+        if (e.defaultPrevented || e.button !== 0) return;
+        if (e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;
+
+        const a = e.target.closest('a[href]');
+        if (!a || a.target === '_blank') return;
+
+        const href = a.getAttribute('href') || '';
+        // Yalnızca yerel uygulama sayfaları: "products.html", "index.html?x=1"
+        if (!/^[\w.-]+\.html(\?|#|$)/i.test(href)) return;
+
+        let ac = null;
+        try { ac = window.parent && window.parent.__wmOpen; } catch (err) { return; }
+        if (typeof ac !== 'function') return;   // kabuk yoksa normal gezinme
+
+        e.preventDefault();
+        ac(href, (a.textContent || '').trim().slice(0, 40) || 'StockFlow');
+    });
+}
+
 // LAYOUT (SIDEBAR & TOPBAR) RENDER MOTORU
 function renderProfessionalLayout() {
     // 1. GÜVENLİK VE KONTROL: Eğer kullanıcı giriş, kayıt veya şifre sıfırlama sayfasındaysa
@@ -286,6 +333,8 @@ function renderProfessionalLayout() {
                 /* üst belgeye erişilemiyorsa sessizce geç */
             }
         }
+
+        pencereIciBaglantilariYakala();
         return;
     }
 

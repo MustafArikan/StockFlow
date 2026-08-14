@@ -2206,70 +2206,68 @@ document.addEventListener("keydown", (e) => {
 // YENİ ÜRÜN BARKOD OKUYUCU ENTEGRASYONU
 // =========================================================================
 function initYeniUrunCamera() {
-    const btnKameraAc = document.getElementById("btnYeniUrunKameraAc");
-    const scannerModalEl = document.getElementById("scannerModalUrunler");
+    const btnKameraAc   = document.getElementById("btnYeniUrunKameraAc");
+    const btnKameraKapat = document.getElementById("btnKameraKapatYeniUrun");
+    const kameraAlani   = document.getElementById("kameraAlaniYeniUrun");
     const urunBarkodInput = document.getElementById("urunBarkod");
 
+    // Kamerayı kapatır ve alanı gizler. Hem "Kapat" düğmesi hem başarılı
+    // okuma hem de hata durumu aynı yolu kullanır — kamera açık unutulmaz.
+    const kamerayiKapat = () => {
+        if (typeof stopScanner === 'function') stopScanner();
+        if (kameraAlani) kameraAlani.classList.add("d-none");
+        if (btnKameraAc) btnKameraAc.disabled = false;
+    };
+
+    btnKameraKapat?.addEventListener("click", kamerayiKapat);
+
     btnKameraAc?.addEventListener('click', async () => {
-        const durumEl = document.getElementById('kameraDurumUrunler');
-
-        if (btnKameraAc) btnKameraAc.disabled = true;
-
-        const scannerModalInstance = bootstrap.Modal.getOrCreateInstance(scannerModalEl);
+        if (btnKameraAc.disabled) return;
+        btnKameraAc.disabled = true;
 
         try {
             if (typeof checkCameraPermission === 'function') {
                 await checkCameraPermission();
             }
 
-            scannerModalInstance.show();
+            // İzin alındı: kamera FORMUN İÇİNDE açılır (Stok Hareketleri ile
+            // aynı kalıp). Ayrı modal açılmaz; kullanıcı formdan kopmaz.
+            if (kameraAlani) kameraAlani.classList.remove("d-none");
 
-            if (durumEl) {
-                durumEl.textContent = "Kamera başlatılıyor...";
-                durumEl.className = "text-center text-muted small mt-3 fw-bold";
-            }
+            let isleniyor = false;
 
-            if (typeof startScanner === 'function') {
-                let isProcessingQR = false;
+            await startScanner("readerYeniUrun", async (okunanMetin) => {
+                if (isleniyor) return;
+                isleniyor = true;
 
-                await startScanner("readerUrunler", async (scannedText) => {
-                    if (isProcessingQR) return;
-                    isProcessingQR = true;
-
-                    try {
-                        let gtinToFill = scannedText;
-                        if (typeof window.parseGs1Barcode === 'function') {
-                            const parsedGs1 = window.parseGs1Barcode(scannedText);
-                            if (parsedGs1.isGs1 && parsedGs1.gtin) {
-                                gtinToFill = parsedGs1.gtin;
-                            }
-                        }
-
-                        if (urunBarkodInput) {
-                            urunBarkodInput.value = gtinToFill;
-                            if (typeof basariToast === 'function') basariToast(`Barkod okundu: ${gtinToFill}`);
-                        }
-
-                        if (typeof stopScanner === 'function') stopScanner();
-                        setTimeout(() => scannerModalInstance.hide(), 200);
-                        
-                    } finally {
-                        setTimeout(() => isProcessingQR = false, 1000);
+                try {
+                    // GS1 barkodlarında asıl ürün kodu (GTIN) ayıklanır
+                    let yazilacak = okunanMetin;
+                    if (typeof window.parseGs1Barcode === 'function') {
+                        const gs1 = window.parseGs1Barcode(okunanMetin);
+                        if (gs1.isGs1 && gs1.gtin) yazilacak = gs1.gtin;
                     }
-                }, (error) => {
-                    // ignore
-                });
-                
-                if (durumEl) {
-                    durumEl.textContent = "Karekod veya Barkod aranıyor, kameraya gösterin...";
+
+                    if (urunBarkodInput) {
+                        urunBarkodInput.value = yazilacak;
+                        // Barkod alanına bağlı doğrulama/dinleyiciler tetiklensin
+                        urunBarkodInput.dispatchEvent(new Event('input', { bubbles: true }));
+                        urunBarkodInput.dispatchEvent(new Event('change', { bubbles: true }));
+                        if (typeof basariToast === 'function') {
+                            basariToast(`Barkod okundu: ${yazilacak}`);
+                        }
+                    }
+
+                    kamerayiKapat();
+                } finally {
+                    setTimeout(() => { isleniyor = false; }, 1000);
                 }
-            }
+            }, () => { /* anlık okuma hataları yok sayılır */ });
+
         } catch (error) {
-            scannerModalInstance.hide();
-            const hataMetni = error?.message ? error.message : "Kameraya erişilemedi veya izin reddedildi.";
+            kamerayiKapat();
+            const hataMetni = error?.message || "Kameraya erişilemedi veya izin reddedildi.";
             if (typeof uyariGoster === 'function') uyariGoster(hataMetni);
-        } finally {
-            if (btnKameraAc) btnKameraAc.disabled = false;
         }
     });
 }
