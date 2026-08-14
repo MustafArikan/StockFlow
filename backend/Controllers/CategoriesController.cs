@@ -70,7 +70,7 @@ public class CategoriesController : ControllerBase
 
         if (mevcut != null)
         {
-            return BadRequest(new { message = "Bu isimde bir kateori zaten var." });
+            return BadRequest(new { message = "Bu isimde bir kategori zaten var." });
         }
         
         if (dto.ParentId.HasValue)
