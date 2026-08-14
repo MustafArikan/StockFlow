@@ -62,7 +62,7 @@ public class PalletShipmentsController : ControllerBase
         await _context.SaveChangesAsync();
         return Ok(new { message = "Palet içeriğine eklendi." });
     }
-    [RequirePermission(Policies.RoleViewOnly)]
+    [RequirePermission(Policies.RequireProductRead)]
     [HttpGet]
     public async Task<IActionResult> GetList([FromQuery] int page = 1, [FromQuery] int pageSize = 50, [FromQuery] string search = "")
     {
@@ -91,7 +91,7 @@ public class PalletShipmentsController : ControllerBase
         return Ok(new { items, totalCount, page, pageSize, totalPages = (int)Math.Ceiling(totalCount / (double)pageSize) });
     }
 
-    [RequirePermission(Policies.RoleViewOnly)]
+    [RequirePermission(Policies.RequireProductRead)]
     [HttpGet("by-sscc/{sscc}")]
     public async Task<IActionResult> GetBySscc(string sscc)
     {
@@ -123,7 +123,7 @@ public class PalletShipmentsController : ControllerBase
         });
     }
 
-    [RequirePermission(Policies.RoleViewOnly)]
+    [RequirePermission(Policies.RequireProductRead)]
     [HttpGet("by-barcode/{barcode}")]
     public async Task<IActionResult> GetByBarcode(string barcode)
     {

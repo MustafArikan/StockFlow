@@ -1,35 +1,40 @@
 document.addEventListener("DOMContentLoaded", async () => {
     // 1. DataViewEngine Kurulumu (Listeleme için)
-    const palletView = new PaginationList({
-        apiEndpoint: '/pallets',
-        tableBodyId: "paletTablosuGovdesi",
+    const palletView = createDataView({
+        containerId: "paletTablosuGovdesi",
         paginationContainerId: "paginationContainer",
+        mode: 'table',
         emptyColspan: 4,
         emptyMessage: "Kayıtlı palet bulunamadı.",
-        searchFields: ['sscc', 'description'],
-        defaultSortKey: 'createdAt',
-        defaultSortDir: 'desc'
+        pageSize: 10,
+        fetchPage: async (page, size) => {
+            const searchQuery = document.getElementById("aramaKutusu")?.value || "";
+            const responseData = await apiRequest(`/pallets?page=${page}&pageSize=${size}&search=${encodeURIComponent(searchQuery)}`, 'GET');
+            return {
+                items: responseData.items || [],
+                totalItems: responseData.totalCount || 0
+            };
+        },
+        renderRow: (pallet) => {
+            const date = new Date(pallet.createdAt).toLocaleDateString('tr-TR');
+            return `
+                <tr style="cursor: pointer" onclick="openPalletDetails('${pallet.sscc}', false)">
+                    <td class="fw-semibold text-primary"><i class="bi bi-upc-scan me-2"></i>${escapeHtml(pallet.sscc || '-')}</td>
+                    <td>${escapeHtml(pallet.warehouse || '-')}</td>
+                    <td>${escapeHtml(pallet.description || '-')}</td>
+                    <td class="text-muted small">${date}</td>
+                </tr>
+            `;
+        }
     });
-
-    palletView.renderRow = (pallet) => {
-        const date = new Date(pallet.createdAt).toLocaleDateString('tr-TR');
-        return `
-            <tr style="cursor: pointer" onclick="openPalletDetails('${pallet.sscc}', false)">
-                <td class="fw-semibold text-primary"><i class="bi bi-upc-scan me-2"></i>${escapeHtml(pallet.sscc || '-')}</td>
-                <td>${escapeHtml(pallet.warehouse || '-')}</td>
-                <td>${escapeHtml(pallet.description || '-')}</td>
-                <td class="text-muted small">${date}</td>
-            </tr>
-        `;
-    };
 
     // Arama kutusu bağlantısı
     document.getElementById("aramaKutusu")?.addEventListener("input", (e) => {
-        palletView.setSearch(e.target.value);
+        palletView.load(1);
     });
     document.getElementById("btnFiltreleriTemizle")?.addEventListener("click", () => {
         document.getElementById("aramaKutusu").value = "";
-        palletView.setSearch("");
+        palletView.load(1);
     });
 
     // PENCEREYE TAŞINAN MODALLAR KAYDI
