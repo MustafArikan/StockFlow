@@ -56,14 +56,12 @@
         return { top, left: 0, w: window.innerWidth, h: window.innerHeight - top };
     }
 
-    // Yeni pencereler üst üste binmesin diye kademeli açılır
     function cascadePos(i) {
         const vp = viewport();
-        const w = Math.min(1080, Math.round(vp.w * 0.72));
-        const h = Math.min(720, Math.round(vp.h * 0.78));
-        const step = 28;
-        const x = clamp(vp.w * 0.5 - w / 2 + (i % 6) * step - 70, EDGE_PAD, Math.max(EDGE_PAD, vp.w - w - EDGE_PAD));
-        const y = clamp(vp.top + 16 + (i % 6) * step, vp.top + EDGE_PAD, Math.max(vp.top + EDGE_PAD, vp.h - 120));
+        const w = Math.min(1280, Math.round(vp.w * 0.80));
+        const h = vp.h - (EDGE_PAD * 2); // Top bar'ın hemen altından en alta kadar
+        const x = (vp.w - w) / 2; // Tam ortala
+        const y = vp.top + EDGE_PAD; // Top bar'ın hemen altı
         return { x: Math.round(x), y: Math.round(y), w, h };
     }
 

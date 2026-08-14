@@ -1229,7 +1229,7 @@ function buildAssetCardHtml(asset) {
                     </div>
                     <h6 class="fw-bold mb-1 text-truncate" title="${escapeHtml(asset.productName)}">${escapeHtml(asset.productName)}</h6>
                     <div class="mb-3">
-                        <span class="badge bg-dark rounded-pill fw-normal asset-sn-badge">SN: ${escapeHtml(asset.serialNumber)}</span>
+                        <span class="badge bg-dark rounded-pill fw-normal asset-sn-badge d-inline-block text-truncate" style="max-width: 100%;" title="${escapeHtml(asset.serialNumber)}">SN: ${escapeHtml(asset.serialNumber)}</span>
                     </div>                    
                     
                     <div class="d-flex flex-column align-items-center justify-content-center border-top pt-3 mt-auto gap-2">                        

@@ -705,10 +705,7 @@ if (urunRafSelect && btnHedefRafEkle) {
 // =========================================================================
 // ÜRÜN EKLE/DÜZENLE MODALI İÇİN DİNAMİK KURALLAR (PIM) RENDER MOTORU
 // =========================================================================
-// Kategori seçildiğinde dinamik özellikleri yükle
-document.getElementById('urunKategoriId').addEventListener('change', async function() {
-    await loadCategoryRulesForProduct(this.value);
-});
+// (Eski loadCategoryRulesForProduct çağrısı silindi, yenisi aşağıda urunKategoriSelectForm ile dinleniyor)
 
 function yeniUrunCevrimTablosunuGuncelle() {
     const kapsayici = document.getElementById("yeniUrunCevrimTablosuKapsayici");
