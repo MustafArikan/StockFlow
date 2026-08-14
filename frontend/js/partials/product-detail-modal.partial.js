@@ -32,7 +32,7 @@ function buildProductDetailModalHtml() {
                              modala sığdırmak için vardı; ekran artık boyutlandırılabilir
                              bir pencere olduğu için o kısıt yok. 6 adım, konusuna göre
                              4 sekmede toplandı: kullanıcı aradığına tek dokunuşla gider. -->
-                        <ul class="nav nav-tabs px-3 pt-2 bg-white border-bottom flex-nowrap overflow-auto" role="tablist">
+                        <ul class="nav nav-tabs px-3 pt-2 bg-white border-bottom flex-nowrap overflow-x-auto overflow-y-hidden" role="tablist" style="scrollbar-width: none;">
                             <li class="nav-item" role="presentation">
                                 <button class="nav-link active text-nowrap" data-bs-toggle="tab" data-bs-target="#detaySekmeGenel" type="button" role="tab" aria-selected="true">
                                     <i class="bi bi-info-circle me-1" aria-hidden="true"></i> Genel
@@ -231,6 +231,46 @@ function ensureProductDetailModal() {
     if (!modal) return false;
 
     document.body.appendChild(modal);
+
+    // Sekmeler arası mobilde (ve bilgisayarda fare ile) elle kaydırma desteği
+    let pointerstartX = 0;
+    let pointerendX = 0;
+    const tabContainer = modal.querySelector('.tab-content');
+    
+    if (tabContainer) {
+        tabContainer.addEventListener('pointerdown', e => {
+            pointerstartX = e.clientX;
+        }, {passive: true});
+
+        tabContainer.addEventListener('pointerup', e => {
+            pointerendX = e.clientX;
+            const threshold = 50; // minimum kaydırma mesafesi
+            const swipeLeft = pointerstartX - pointerendX > threshold;
+            const swipeRight = pointerendX - pointerstartX > threshold;
+            
+            if (swipeLeft || swipeRight) {
+                const tabs = Array.from(modal.querySelectorAll('.nav-tabs .nav-link'));
+                const activeTab = modal.querySelector('.nav-tabs .nav-link.active');
+                if (!activeTab || tabs.length === 0) return;
+                
+                const activeIndex = tabs.indexOf(activeTab);
+                let nextIndex = activeIndex;
+                
+                if (swipeLeft) { // Sola kaydırma -> sonraki sekme
+                    nextIndex = Math.min(activeIndex + 1, tabs.length - 1);
+                } else if (swipeRight) { // Sağa kaydırma -> önceki sekme
+                    nextIndex = Math.max(activeIndex - 1, 0);
+                }
+                
+                if (nextIndex !== activeIndex) {
+                    const tabInst = bootstrap.Tab.getOrCreateInstance(tabs[nextIndex]);
+                    tabInst.show();
+                    tabs[nextIndex].scrollIntoView({behavior: "smooth", block: "nearest", inline: "center"});
+                }
+            }
+        }, {passive: true});
+    }
+
     return true;
 }
 

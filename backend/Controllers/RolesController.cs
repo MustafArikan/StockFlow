@@ -170,6 +170,21 @@ public class RolesController : ControllerBase
 
         if (dto.PermissionIds != null && dto.PermissionIds.Any())
         {
+            if (!User.IsInRole("superadmin"))
+            {
+                var currentUserId = GetCurrentUserId();
+                var currentUser = await _context.Users
+                    .Include(u => u.Role)
+                    .ThenInclude(r => r.RolePermissions)
+                    .FirstOrDefaultAsync(u => u.Id == currentUserId);
+                
+                var currentUserPerms = currentUser?.Role?.RolePermissions.Select(rp => rp.PermissionId).ToList() ?? new List<int>();
+                if (dto.PermissionIds.Except(currentUserPerms).Any())
+                {
+                    return Forbid();
+                }
+            }
+
             var validPermissions = await _context.AppPermissions
                 .Where(p => dto.PermissionIds.Contains(p.Id))
                 .Select(p => p.Id)
@@ -231,6 +246,21 @@ public class RolesController : ControllerBase
 
         if (dto.PermissionIds != null)
         {
+            if (!User.IsInRole("superadmin"))
+            {
+                var currentUserId = GetCurrentUserId();
+                var currentUser = await _context.Users
+                    .Include(u => u.Role)
+                    .ThenInclude(r => r.RolePermissions)
+                    .FirstOrDefaultAsync(u => u.Id == currentUserId);
+                
+                var currentUserPerms = currentUser?.Role?.RolePermissions.Select(rp => rp.PermissionId).ToList() ?? new List<int>();
+                if (dto.PermissionIds.Except(currentUserPerms).Any())
+                {
+                    return Forbid();
+                }
+            }
+
             var existingPermissionIds = role.RolePermissions.Select(rp => rp.PermissionId).ToList();
             
             var permissionsToRemove = role.RolePermissions.Where(rp => !dto.PermissionIds.Contains(rp.PermissionId)).ToList();

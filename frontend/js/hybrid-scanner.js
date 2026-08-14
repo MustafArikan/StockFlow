@@ -10,6 +10,29 @@ function urunDetayiniAc(barkod) {
     }
     window.location.href = `products.html?viewProductBarcode=${encodeURIComponent(barkod)}`;
 }
+
+function urunDetayiniAcId(productId) {
+    if (window.ModalWindow &&
+        ModalWindow.open('urunDetayModal', { id: productId }, 'Ürün Detayı', { page: 'products.html' })) {
+        return;
+    }
+    window.location.href = `products.html?viewProductId=${encodeURIComponent(productId)}`;
+}
+
+function resetScannerUI(okunanMetin) {
+    const resultText = document.getElementById('result-text');
+    const btnStart = document.getElementById("btnStartScanner");
+    
+    if (resultText) {
+        resultText.textContent = okunanMetin || '-';
+        resultText.classList.remove('text-primary', 'text-danger');
+        resultText.classList.add('text-success');
+    }
+    if (btnStart) {
+        btnStart.disabled = false;
+        btnStart.innerHTML = `Yeni Okuma / Kamerayı Başlat`;
+    }
+}
 // ==========================================
 // HİBRİT TARAYICI PANELİ SCRİPTİ
 // ==========================================
@@ -124,24 +147,23 @@ function onScanSuccess(decodedText, decodedResult) {
                 switch (resolveRes.kind) {
                     case 'product':
                         urunDetayiniAc(okunanMetin);
+                        resetScannerUI(okunanMetin);
                         return;
                     case 'product_packaging':
-                        // Tarayıcı ekranı yerinde kalsın: arka arkaya okutmaya devam edilebilir
-                        uygulamaAc(`movements.html?productId=${resolveRes.productId}&inputUnitId=${resolveRes.inputUnitId}&qty=1`, 'Stok Hareketleri');
+                        urunDetayiniAcId(resolveRes.productId);
+                        resetScannerUI(okunanMetin);
                         return;
                     case 'product_with_batch':
-                        const params = new URLSearchParams({
-                            productId: resolveRes.productId,
-                            lotNumber: resolveRes.lotNumber || '',
-                            expiryDate: resolveRes.expiryDate || '',
-                            qty: resolveRes.variableQuantity || ''
-                        });
-                        uygulamaAc(`movements.html?${params.toString()}`, 'Stok Hareketleri');
+                        if (typeof window.urunDuzenle === 'function') { window.urunDuzenle(resolveRes.productId); } else if (typeof window.urunDetayiniAcId === 'function') { window.urunDetayiniAcId(resolveRes.productId); } else { uygulamaAc(`products.html?modal=urunModal&id=${resolveRes.productId}`, 'Ürün Detayı'); }
+                        resetScannerUI(okunanMetin);
+                        return;
+                    case 'product_pallet':
+                        uygulamaAc(`pallets.html?modal=paletDetayModal&barcode=${encodeURIComponent(resolveRes.barcode)}`, 'Palet Detayı');
+                        resetScannerUI(okunanMetin);
                         return;
                     case 'pallet':
-                        // DİKKAT: pallets.html projede YOK; buraya gidilirse 404 alınırdı.
-                        // Sayfa yazılana kadar kullanıcıya açık bilgi verilir.
-                        hataGoster('Palet ekranı henüz hazır değil. Okunan SSCC: ' + resolveRes.sscc);
+                        uygulamaAc(`pallets.html?modal=paletDetayModal&sscc=${encodeURIComponent(resolveRes.sscc)}`, 'Palet Detayı');
+                        resetScannerUI(okunanMetin);
                         return;
                 }
             } catch (resolveHatasi) {
@@ -163,6 +185,7 @@ function onScanSuccess(decodedText, decodedResult) {
             try {
                 await apiRequest(`/locations/by-code/${encodeURIComponent(arananKod)}`, 'GET');
                 uygulamaAc(`warehouses.html?viewShelfCode=${encodeURIComponent(arananKod)}`, 'Depolar');
+                resetScannerUI(okunanMetin);
                 return;
             } catch (rafHatasi) {}
 
@@ -170,6 +193,7 @@ function onScanSuccess(decodedText, decodedResult) {
             try {
                 await apiRequest(`/products/by-barcode/${encodeURIComponent(arananKod)}`, 'GET');
                 urunDetayiniAc(arananKod);
+                resetScannerUI(okunanMetin);
                 return;
             } catch (urunHatasi) {}
 

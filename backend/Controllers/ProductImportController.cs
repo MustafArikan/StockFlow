@@ -36,6 +36,7 @@ namespace stok_takip.Controllers
         [HttpPost("session")]
         [RequirePermission(Policies.RequireProductWrite)]
         [EnableRateLimiting(Policies.RequireProductWrite)]
+        [RequestSizeLimit(10_485_760)]
         public async Task<IActionResult> CreateImportSession(IFormFile file)
         {
             const long MaxFileSizeBytes = 10 * 1024 * 1024;
@@ -154,10 +155,8 @@ namespace stok_takip.Controllers
             new { group = "Stok & Fiyat", fields = new object[] {
                 new { key = "MinStockLevel", label = "Kritik Stok Seviyesi", required = false, type = "number" },
                 new { key = "InitialQuantity", label = "Başlangıç Stok Adedi", required = false, type = "number" },
-                // Cost ve Price alanları şimdilik kaldırıldı veya yorum satırı yapıldı, çünkü Product modelinde yoksa hata verebilir.
-                // Eğer Product modelinizde Cost ve Price varsa, bunları açabilirsiniz.
-                // new { key = "Cost", label = "Maliyet Fiyatı", required = false, type = "decimal" },
-                // new { key = "Price", label = "Çıkış Fiyatı", required = false, type = "decimal" },
+                new { key = "Cost", label = "Maliyet Fiyatı", required = false, type = "decimal" },
+                new { key = "Price", label = "Çıkış Fiyatı", required = false, type = "decimal" },
             }}
         };
 
@@ -244,6 +243,9 @@ namespace stok_takip.Controllers
                     var minStockLevelStr = GetMapped("MinStockLevel");
                     var initialQuantityStr = GetMapped("InitialQuantity");
 
+                    var costStr = GetMapped("Cost");
+                    var priceStr = GetMapped("Price");
+
                     if (string.IsNullOrEmpty(name)) rowErrors.Add("Ürün adı boş.");
                     else if (name.Length > 100 || name.Length < 2) rowErrors.Add("Ürün adı 2-100 karakter olmalıdır.");
 
@@ -260,6 +262,14 @@ namespace stok_takip.Controllers
                     decimal initialQuantity = 0m;
                     if (!string.IsNullOrEmpty(initialQuantityStr) && !decimal.TryParse(initialQuantityStr, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out initialQuantity))
                         rowErrors.Add("Başlangıç stok adedi geçerli bir sayı olmalıdır.");
+
+                    decimal cost = 0m;
+                    if (!string.IsNullOrEmpty(costStr) && !decimal.TryParse(costStr, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out cost))
+                        rowErrors.Add("Maliyet fiyatı geçerli bir sayı olmalıdır.");
+
+                    decimal price = 0m;
+                    if (!string.IsNullOrEmpty(priceStr) && !decimal.TryParse(priceStr, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out price))
+                        rowErrors.Add("Çıkış fiyatı geçerli bir sayı olmalıdır.");
 
                     var resolvedCategoryName = rawCategory;
                     if (dto.ValueMappings.TryGetValue("CategoryName", out var catMap) &&
@@ -314,6 +324,8 @@ namespace stok_takip.Controllers
                             Barcode = barcode,
                             CategoryId = categoryId,
                             MinStockLevel = minStockLevel,
+                            Cost = cost,
+                            Price = price,
                             Attributes = JsonSerializer.Serialize(productAttributes)
                         };
                         newProducts.Add((product, initialQuantity));

@@ -212,7 +212,8 @@ function renderTrendChart(data) {
     const cikisData = [];
     const transferData = [];
 
-    for (let i = 29; i >= 0; i--) {
+    const numDays = 90;
+    for (let i = numDays - 1; i >= 0; i--) {
         const d = new Date();
         d.setDate(d.getDate() - i);
         const dayMonthStr = d.toLocaleDateString('tr-TR', { day: '2-digit', month: '2-digit' });
@@ -231,6 +232,12 @@ function renderTrendChart(data) {
     if (trendChartInstance) trendChartInstance.destroy();
 
     const ctx2d = ctx.getContext('2d');
+    
+    // Dynamically adjust inner container width based on days so they don't squish
+    const innerWrapper = document.querySelector('.trend-inner');
+    if (innerWrapper) {
+        innerWrapper.style.minWidth = (numDays * 30) + 'px'; // 30px per day
+    }
 
     const moveColors = getMovementColors();
 
@@ -364,6 +371,12 @@ function renderMovementSummaryChart(data) {
             }
         }
     });
+
+    // Grafiğin en sağından (en güncel tarih) başlamasını sağla
+    setTimeout(() => {
+        const slider = document.getElementById('trendWrapper');
+        if (slider) slider.scrollLeft = slider.scrollWidth;
+    }, 100);
 }
 
 function renderCategoryChart(data) {
@@ -703,3 +716,33 @@ async function exportDashboardAsExcel() {
         btn.innerHTML = originalText;
     }
 }
+// --- Drag to Scroll for Trend Chart ---
+document.addEventListener('DOMContentLoaded', () => {
+    const slider = document.getElementById('trendWrapper');
+    if (!slider) return;
+    let isDown = false;
+    let startX;
+    let scrollLeft;
+
+    slider.addEventListener('mousedown', (e) => {
+        isDown = true;
+        slider.classList.add('active');
+        startX = e.pageX - slider.offsetLeft;
+        scrollLeft = slider.scrollLeft;
+    });
+    slider.addEventListener('mouseleave', () => {
+        isDown = false;
+        slider.classList.remove('active');
+    });
+    slider.addEventListener('mouseup', () => {
+        isDown = false;
+        slider.classList.remove('active');
+    });
+    slider.addEventListener('mousemove', (e) => {
+        if (!isDown) return;
+        e.preventDefault();
+        const x = e.pageX - slider.offsetLeft;
+        const walk = (x - startX) * 1.5; // Scroll-fast factor
+        slider.scrollLeft = scrollLeft - walk;
+    });
+});

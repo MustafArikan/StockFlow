@@ -62,4 +62,95 @@ public class PalletShipmentsController : ControllerBase
         await _context.SaveChangesAsync();
         return Ok(new { message = "Palet içeriğine eklendi." });
     }
+    [RequirePermission(Policies.RoleViewOnly)]
+    [HttpGet]
+    public async Task<IActionResult> GetList([FromQuery] int page = 1, [FromQuery] int pageSize = 50, [FromQuery] string search = "")
+    {
+        var query = _context.PalletShipments.AsQueryable();
+        if (!string.IsNullOrEmpty(search))
+        {
+            query = query.Where(p => p.Sscc.Contains(search) || (p.Description != null && p.Description.Contains(search)));
+        }
+
+        var totalCount = await query.CountAsync();
+        var items = await query
+            .Include(p => p.SourceWarehouse)
+            .OrderByDescending(p => p.CreatedAt)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .Select(p => new
+            {
+                p.Id,
+                p.Sscc,
+                p.Description,
+                Warehouse = p.SourceWarehouse != null ? p.SourceWarehouse.Name : "-",
+                p.CreatedAt
+            })
+            .ToListAsync();
+
+        return Ok(new { items, totalCount, page, pageSize, totalPages = (int)Math.Ceiling(totalCount / (double)pageSize) });
+    }
+
+    [RequirePermission(Policies.RoleViewOnly)]
+    [HttpGet("by-sscc/{sscc}")]
+    public async Task<IActionResult> GetBySscc(string sscc)
+    {
+        var pallet = await _context.PalletShipments
+            .Include(p => p.Contents)
+                .ThenInclude(c => c.Product)
+            .Include(p => p.Contents)
+                .ThenInclude(c => c.Batch)
+            .Include(p => p.SourceWarehouse)
+            .FirstOrDefaultAsync(p => p.Sscc == sscc);
+
+        if (pallet == null) return NotFound(new { message = "Palet bulunamadı." });
+
+        return Ok(new
+        {
+            pallet.Id,
+            pallet.Sscc,
+            pallet.Description,
+            Warehouse = pallet.SourceWarehouse?.Name,
+            Contents = pallet.Contents.Select(c => new
+            {
+                c.Id,
+                ProductId = c.ProductId,
+                ProductName = c.Product.Name,
+                ProductCode = c.Product.Barcode,
+                BatchNumber = c.Batch?.LotNumber,
+                c.Quantity
+            })
+        });
+    }
+
+    [RequirePermission(Policies.RoleViewOnly)]
+    [HttpGet("by-barcode/{barcode}")]
+    public async Task<IActionResult> GetByBarcode(string barcode)
+    {
+        var conversion = await _context.ProductUnitConversions
+            .Include(c => c.Product)
+            .Include(c => c.AlternativeUnit)
+            .FirstOrDefaultAsync(c => c.Barcode == barcode && !c.IsDeleted);
+
+        if (conversion == null) return NotFound(new { message = "Palet barkodu bulunamadı." });
+
+        return Ok(new
+        {
+            Id = 0,
+            Sscc = conversion.Barcode,
+            Description = $"Ürün Paketleme ({conversion.AlternativeUnit.Name})",
+            Warehouse = "Genel Ürün",
+            Contents = new[]
+            {
+                new {
+                    Id = 0,
+                    ProductId = conversion.ProductId,
+                    ProductName = conversion.Product.Name,
+                    ProductCode = conversion.Product.Barcode,
+                    BatchNumber = "-",
+                    Quantity = conversion.ConversionFactor
+                }
+            }
+        });
+    }
 }

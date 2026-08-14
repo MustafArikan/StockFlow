@@ -2874,6 +2874,10 @@ body.dt-desktop {
     align-items: center;
     gap: 8px;
     flex: 0 0 auto;
+    height: 100%;
+    padding: 0 8px 0 16px;
+    margin-right: -8px;
+    cursor: default;
 }
 
 .dt-wc {
@@ -4327,4 +4331,40 @@ body.dt-no-windows .dt-desktop-hint {
     .dt-wc:hover {
         transform: none !important;
     }
+}
+
+
+/* Hide scrollbar for scrollable nav-tabs */
+.nav-tabs.overflow-x-auto::-webkit-scrollbar {
+    display: none;
+}
+
+
+/* Taskbar Drag and Drop Styles */
+.dt-dragging-tab {
+    opacity: 0.5 !important;
+    cursor: grabbing !important;
+}
+.dt-drag-placeholder {
+    border: 2px dashed var(--bs-primary) !important;
+    background-color: rgba(var(--bs-primary-rgb), 0.1) !important;
+}
+
+/* Trend Chart Panning Styles */
+#trendWrapper { scrollbar-width: none; -ms-overflow-style: none; 
+    overflow-x: auto;
+    overflow-y: hidden;
+    cursor: grab;
+    scroll-behavior: auto; /* Allow smooth or instant JS scrolling */
+}
+#trendWrapper:active {
+    cursor: grabbing;
+}
+/* Hide scrollbar for cleaner look if desired, but default is fine */
+#trendWrapper::-webkit-scrollbar { display: none; }
+
+.trend-inner {
+    min-width: 1200px; /* Forces chart to be wide enough so it scrolls */
+    height: 100%;
+    padding-bottom: 10px; /* Space for scrollbar */
 }

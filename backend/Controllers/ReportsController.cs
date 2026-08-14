@@ -96,10 +96,10 @@ namespace stok_takip.Controllers
                     query = query.Where(m => m.ProductId == productId.Value);
                 }
 
-                var thirtyDaysAgo = DateTime.UtcNow.AddDays(-30); 
+                var ninetyDaysAgo = DateTime.UtcNow.AddDays(-90); 
 
                 var trend = await query
-                    .Where(m => m.CreatedAt >= thirtyDaysAgo)
+                    .Where(m => m.CreatedAt >= ninetyDaysAgo)
                     .GroupBy(m => m.CreatedAt.Date)
                     .Select(g => new
                     {

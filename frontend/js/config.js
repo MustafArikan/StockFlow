@@ -137,6 +137,7 @@ async function apiRequest(endpoint, method = 'GET', bodyData = null) {
     if (response.status === 401) {
         // Token gecersiz veya suresi dolmus, kullaniciyi cikis yapmaya zorla
         localStorage.removeItem('token');
+        localStorage.removeItem('wmSession');
         window.location.href = '/login.html';
         throw new Error('Oturum suresi doldu veya yetkisiz erisim. Lutfen tekrar giris yapin.');
     }

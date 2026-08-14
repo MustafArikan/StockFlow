@@ -89,7 +89,7 @@ public async Task<IActionResult> Register([FromBody] RegisterDto dto)
                     <p>Bu kod 10 dakika boyunca geçerlidir.</p>
                 </div>";
 
-        await _emailService.SendEmailAsync(newUser.Email, emailSubject, emailBody);
+        try { await _emailService.SendEmailAsync(newUser.Email, emailSubject, emailBody); } catch { /* SMTP error ignored */ }
 
         return Ok(new { message = "If the information is valid, please check your email for further instructions." });
     }
@@ -325,7 +325,7 @@ public async Task<IActionResult> GetMe()
                     <h1 style='color: #2563eb; letter-spacing: 5px;'>{verificationCode}</h1>
                     <p>Bu kod 10 dakika boyunca geçerlidir.</p>
                 </div>";
-            await _emailService.SendEmailAsync(user.Email, emailSubject, emailBody);
+            try { await _emailService.SendEmailAsync(user.Email, emailSubject, emailBody); } catch { /* SMTP error ignored */ }
         }
 
         user.FirstName = dto.FirstName;
@@ -446,7 +446,7 @@ public async Task<IActionResult> Logout()
                     <p>Bu kod 10 dakika boyunca geçerlidir.</p>
                 </div>";
 
-        await _emailService.SendEmailAsync(user.Email, subject, body);
+        try { await _emailService.SendEmailAsync(user.Email, subject, body); } catch { /* SMTP error ignored */ }
 
         return Ok(new {message = "Eğer e-posta adresiniz sistemde kayıtlıysa, şifre sıfırlama talimatları gönderilecektir."});
     }
@@ -585,7 +585,7 @@ public async Task<IActionResult> Logout()
                     <p style='font-weight: bold;'>Eğer bu işlemi siz yapmadıysanız, hesabınız tehlikede olabilir. Lütfen derhal sistem yöneticiniz ile iletişime geçin!</p>
                 </div>";
 
-        await _emailService.SendEmailAsync(user.Email, subject, body);
+        try { await _emailService.SendEmailAsync(user.Email, subject, body); } catch { /* SMTP error ignored */ }
 
         return Ok(new { message = "Şifreniz başarıyla güncellendi." });
     }
