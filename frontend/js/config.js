@@ -105,7 +105,6 @@ document.addEventListener('keydown', function (e) {
     if (!modal) return;
 
     e.preventDefault(); // Form varsa sayfanin yenilenmesini engelle
-    e.preventDefault(); // Form varsa sayfanin yenilenmesini engelle
 
     const kaydetButonu = modal.querySelector('.btn-primary:not(.btn-close), .btn-success:not(.btn-close)');
     if (kaydetButonu && !kaydetButonu.disabled) {
@@ -138,6 +137,7 @@ async function apiRequest(endpoint, method = 'GET', bodyData = null) {
     if (response.status === 401) {
         // Token gecersiz veya suresi dolmus, kullaniciyi cikis yapmaya zorla
         localStorage.removeItem('token');
+        localStorage.removeItem('wmSession');
         window.location.href = '/login.html';
         throw new Error('Oturum suresi doldu veya yetkisiz erisim. Lutfen tekrar giris yapin.');
     }
@@ -225,6 +225,67 @@ if (typeof $ !== 'undefined') {
     });
 }
 
+// Sayfa, masaüstü kabuğundaki bir pencerenin İÇERİĞİ olarak mı yükleniyor?
+// (window-manager.js her pencereyi bir iframe ile açar.)
+// Gömülü çalışırken kabuk BİR DAHA kurulmaz: duvar kağıdı, ikon rayları, menü
+// çubuğu ve pencere çerçevesi zaten dışarıda, üst belgede duruyor.
+function isEmbeddedWindow() {
+    try {
+        return window.self !== window.top;
+    } catch (e) {
+        // Farklı origin'e gömülmüşsek erişim hatası alırız; yine de gömülüyüz.
+        return true;
+    }
+}
+
+// UYGULAMA AÇ (programatik)
+// Kod içinden başka bir uygulamaya gidilmesi gereken yerler için.
+// Kabuk varsa hedef KENDİ penceresinde açılır, bulunduğun pencere kalır;
+// kabuk yoksa (bağımsız sayfa) eski davranış: normal gezinme.
+function uygulamaAc(url, baslik) {
+    try {
+        const ac = window.parent && window.parent.__wmOpen;
+        if (window.self !== window.top && typeof ac === 'function') {
+            ac(url, baslik || 'StockFlow');
+            return true;
+        }
+    } catch (e) { /* üst belgeye erişilemiyor */ }
+    window.location.href = url;
+    return false;
+}
+
+// PENCERE İÇİ BAĞLANTILAR YENİ PENCERE AÇAR
+//
+// SORUN: Sayfa içeriğindeki bağlantılar (ör. Ana Sayfa'daki "Barkod/QR
+// Okuyucu Aç", özet kartları, grafik tıklamaları) doğrudan başka bir .html
+// adresine gidiyordu. Tek sayfalı düzende doğruydu; pencere düzeninde ise
+// bulunduğun PENCEREYİ başka bir uygulamaya çeviriyor: Ana Sayfa'ya basınca
+// panel kayboluyor, yerine tarayıcı geliyor. Kullanıcı "sayfa gitti" diyor.
+//
+// ÇÖZÜM: Pencere içindeki uygulama bağlantıları yakalanır ve hedef sayfa
+// KENDİ penceresinde açılır. Bulunduğun pencere olduğu gibi kalır.
+// Ctrl/Cmd/orta tık yakalanmaz — ayrı sekmede açmak çalışmaya devam eder.
+function pencereIciBaglantilariYakala() {
+    document.addEventListener('click', (e) => {
+        if (e.defaultPrevented || e.button !== 0) return;
+        if (e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;
+
+        const a = e.target.closest('a[href]');
+        if (!a || a.target === '_blank') return;
+
+        const href = a.getAttribute('href') || '';
+        // Yalnızca yerel uygulama sayfaları: "products.html", "index.html?x=1"
+        if (!/^[\w.-]+\.html(\?|#|$)/i.test(href)) return;
+
+        let ac = null;
+        try { ac = window.parent && window.parent.__wmOpen; } catch (err) { return; }
+        if (typeof ac !== 'function') return;   // kabuk yoksa normal gezinme
+
+        e.preventDefault();
+        ac(href, (a.textContent || '').trim().slice(0, 40) || 'StockFlow');
+    });
+}
+
 // LAYOUT (SIDEBAR & TOPBAR) RENDER MOTORU
 function renderProfessionalLayout() {
     // 1. GÜVENLİK VE KONTROL: Eğer kullanıcı giriş, kayıt veya şifre sıfırlama sayfasındaysa
@@ -247,6 +308,35 @@ function renderProfessionalLayout() {
 
     while (document.body.firstChild) {
         contentContainer.appendChild(document.body.firstChild);
+    }
+
+    // 3b. GÖMÜLÜ MOD: Yalnızca içerik render edilir, kabuk kurulmaz.
+    // Sayfa doğrudan adresten açıldığında (standalone) bu blok çalışmaz ve
+    // eski davranış birebir korunur.
+    if (isEmbeddedWindow()) {
+        document.body.classList.add('dt-embedded');
+        document.body.appendChild(contentContainer);
+
+        // Pencere başlığını üst belgeye bildir: başlık çubuğunda ve sekme
+        // şeridinde bu yazacak.
+        // İSTİSNA: Sayfa bir form penceresiyse ("?modal=...") başlığı
+        // js/modal-window.js modalın kendi başlığından bildirir ("Ürün
+        // Düzenle" gibi). Burada sayfa adını yazarsak onun üstüne biner —
+        // bu blok loadAuthContext beklediği için SONRA çalışır ve kazanır.
+        const formPenceresi = new URLSearchParams(window.location.search).has('modal');
+        if (!formPenceresi) {
+            const embeddedTitle = (document.title || 'StockFlow').split(/[-–|]/)[0].trim() || 'StockFlow';
+            try {
+                if (window.parent && typeof window.parent.__wmReportTitle === 'function') {
+                    window.parent.__wmReportTitle(window.frameElement, embeddedTitle);
+                }
+            } catch (e) {
+                /* üst belgeye erişilemiyorsa sessizce geç */
+            }
+        }
+
+        pencereIciBaglantilariYakala();
+        return;
     }
 
     // Masaüstü modunu açar (duvar kağıdı, pencere gölgesi vb. bu sınıfa bağlıdır)
@@ -396,10 +486,19 @@ function renderProfessionalLayout() {
         masaustuIpucu.textContent = 'Açmak için bir uygulama seçin';
         document.body.appendChild(masaustuIpucu);
 
-        // Masaüstüne çift tıklamak ana sayfayı açar
+        // PENCERE YÖNETİCİSİ
+        // Kabuk (menü çubuğu + ikon rayları) kurulduktan SONRA başlatılır:
+        // ikon tıklamalarını yakalayıp pencere açması için rayların DOM'da
+        // olması gerekir. Ayrıca önceki oturumda açık kalan pencereleri
+        // konum ve boyutlarıyla geri yükler.
+        if (window.WindowManager) {
+            window.WindowManager.init();
+        }
+
+        // Masaüstüne çift tıklamak ana sayfayı pencerede açar
         document.addEventListener('dblclick', (e) => {
-            if (e.target.closest('#sidebar, #sidebar-right, .topbar')) return;
-            window.location.href = 'index.html';
+            if (e.target.closest('#sidebar, #sidebar-right, .topbar, .dt-taskbar, .dt-win')) return;
+            if (window.WindowManager) window.WindowManager.open('index.html', 'Ana Sayfa');
         });
     }
 

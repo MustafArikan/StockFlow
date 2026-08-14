@@ -1099,6 +1099,12 @@ async function submitCreateAsset() {
         const res = await apiRequest('/assets', 'POST', body);
         basariToast("Harika! Yeni Ekipman başarıyla sisteme kaydedildi.");
 
+        // Form penceresinde: liste pencerelerine haber ver ve kapan.
+        if (window.ModalWindow && ModalWindow.isFormWindow) {
+            ModalWindow.done('assets');
+            return;
+        }
+
         // Modalı kapatır
         const modalInstance = bootstrap.Modal.getInstance(document.getElementById('createAssetModal'));
         if (modalInstance) modalInstance.hide();
@@ -1223,7 +1229,7 @@ function buildAssetCardHtml(asset) {
                     </div>
                     <h6 class="fw-bold mb-1 text-truncate" title="${escapeHtml(asset.productName)}">${escapeHtml(asset.productName)}</h6>
                     <div class="mb-3">
-                        <span class="badge bg-dark rounded-pill fw-normal asset-sn-badge">SN: ${escapeHtml(asset.serialNumber)}</span>
+                        <span class="badge bg-dark rounded-pill fw-normal asset-sn-badge d-inline-block text-truncate" style="max-width: 100%;" title="${escapeHtml(asset.serialNumber)}">SN: ${escapeHtml(asset.serialNumber)}</span>
                     </div>                    
                     
                     <div class="d-flex flex-column align-items-center justify-content-center border-top pt-3 mt-auto gap-2">                        
@@ -1332,157 +1338,141 @@ function buildCategoryCascader(containerId, hiddenInputId, selectedCategoryId = 
         updateExpandedCategories(finalizedCategoryId);
     }
 
-    container.innerHTML = "";
+    container.innerHTML = '';
 
-    const dropdownDiv = document.createElement("div");
-    dropdownDiv.className = "dropdown w-100";
+    const dropdownDiv = document.createElement('div');
+    dropdownDiv.className = 'dropdown w-100';
 
-    const button = document.createElement("button");
-    let btnClasses = isFilter ? "btn form-control rounded-pill text-start bg-white border d-flex justify-content-between align-items-center" : "btn form-control text-start bg-white border d-flex justify-content-between align-items-center";
+    const button = document.createElement('button');
+    let btnClasses = isFilter ? 'btn form-control form-select-sm rounded-pill text-start bg-light border-0 px-3 d-flex justify-content-between align-items-center' : 'btn form-control text-start bg-white border d-flex justify-content-between align-items-center';
     button.className = btnClasses;
-    button.type = "button";
-    button.dataset.bsToggle = "dropdown";
-    button.dataset.bsAutoClose = "outside";
+    button.type = 'button';
+    button.dataset.bsToggle = 'dropdown';
+    button.dataset.bsAutoClose = 'outside';
 
-    const spanText = document.createElement("span");
-    spanText.className = "text-truncate pe-2";
+    const spanText = document.createElement('span');
+    spanText.className = 'text-truncate pe-2';
 
-    const caretIcon = document.createElement("i");
-    caretIcon.className = "bi bi-chevron-down text-muted";
-    caretIcon.style.fontSize = "0.8rem";
+    const caretIcon = document.createElement('i');
+    caretIcon.className = 'bi bi-chevron-down text-muted';
+    caretIcon.style.fontSize = '0.8rem';
 
     button.appendChild(spanText);
     button.appendChild(caretIcon);
 
-    const menu = document.createElement("ul");
-    menu.className = "dropdown-menu w-100 shadow-sm scrollable-dropdown";
+    const menu = document.createElement('ul');
+    menu.className = 'dropdown-menu w-100 shadow-sm';
+    menu.style.maxHeight = '300px';
+    menu.style.overflowY = 'auto';
 
     dropdownDiv.appendChild(button);
     dropdownDiv.appendChild(menu);
     container.appendChild(dropdownDiv);
 
-    function updateButtonText() {
-        if (!finalizedCategoryId) {
-            spanText.innerHTML = `<span class="text-muted">Kategori Seçin</span>`;
-            hiddenInput.value = "";
-            hiddenInput.dispatchEvent(new Event("change"));
-            return;
+    hiddenInput.value = finalizedCategoryId || '';
+
+    function renderOptions() {
+        menu.innerHTML = '';
+
+        if (finalizedCategoryId) {
+            const cat = window.tumKategoriler.find(k => k.id == finalizedCategoryId);
+            spanText.textContent = cat ? cat.name : (isFilter ? 'Tüm Kategoriler' : 'Kategori Seçin...');
+        } else {
+            spanText.textContent = isFilter ? 'Tüm Kategoriler' : 'Kategori Seçin...';
         }
-        const cat = window.tumKategoriler.find(k => k.id == finalizedCategoryId);
-        if (cat) {
-            spanText.textContent = cat.name;
-            hiddenInput.value = cat.id;
-            hiddenInput.dispatchEvent(new Event("change"));
-        }
-    }
 
-    function renderLevel(parentId, parentUl, level) {
-        const children = window.tumKategoriler.filter(k => k.parentId == parentId);
-        if (children.length === 0) return;
-
-        children.forEach(c => {
-            const hasChildren = window.tumKategoriler.some(k => k.parentId == c.id);
-            const isExpanded = expandedCategories.has(c.id);
-            const isSelected = finalizedCategoryId == c.id;
-
-            const li = document.createElement("li");
-            li.className = "px-2 py-1";
-
-            const itemDiv = document.createElement("div");
-            itemDiv.className = "d-flex align-items-center justify-content-between rounded p-2 custom-dropdown-item";
-            if (isSelected) {
-                itemDiv.classList.add("bg-primary", "bg-opacity-10", "text-primary", "fw-bold");
-            } else {
-                itemDiv.classList.add("cursor-pointer");
-            }
-            if (level > 0) itemDiv.classList.add(`ms-${Math.min(level, 5)}`);
-
-            const leftDiv = document.createElement("div");
-            leftDiv.className = "d-flex align-items-center flex-grow-1";
-
-            if (hasChildren) {
-                const toggleBtn = document.createElement("span");
-                toggleBtn.className = "me-2 text-muted cursor-pointer";
-                toggleBtn.innerHTML = isExpanded ? `<i class="bi bi-dash-square"></i>` : `<i class="bi bi-plus-square"></i>`;
-                toggleBtn.onclick = (e) => {
-                    e.stopPropagation();
-                    if (expandedCategories.has(c.id)) {
-                        expandedCategories.delete(c.id);
-                    } else {
-                        updateExpandedCategories(c.id);
-                    }
-                    renderMenu();
-                };
-                leftDiv.appendChild(toggleBtn);
-            } else {
-                const spacer = document.createElement("span");
-                spacer.style.width = "20px";
-                spacer.className = "d-inline-block me-2";
-                leftDiv.appendChild(spacer);
-            }
-
-            const nameSpan = document.createElement("span");
-            nameSpan.textContent = c.name;
-            leftDiv.appendChild(nameSpan);
-
-            itemDiv.appendChild(leftDiv);
-
-            if (isSelected) {
-                const checkIcon = document.createElement("i");
-                checkIcon.className = "bi bi-check2 text-primary fs-5";
-                itemDiv.appendChild(checkIcon);
-            }
-
-            itemDiv.onclick = (e) => {
-                e.stopPropagation();
-                finalizedCategoryId = c.id;
-                updateExpandedCategories(c.id);
-                renderMenu();
-                updateButtonText();
-                const bsDropdown = bootstrap.Dropdown.getInstance(button);
-                if (bsDropdown) bsDropdown.hide();
-            };
-
-            li.appendChild(itemDiv);
-            parentUl.appendChild(li);
-
-            if (hasChildren && isExpanded) {
-                const subUl = document.createElement("ul");
-                subUl.className = "list-unstyled mb-0";
-                renderLevel(c.id, subUl, level + 1);
-                li.appendChild(subUl);
-            }
-        });
-    }
-
-    function renderMenu() {
-        menu.innerHTML = "";
-        if (isFilter) {
-            const allLi = document.createElement("li");
-            allLi.className = "px-2 py-1 border-bottom";
-            const allDiv = document.createElement("div");
-            allDiv.className = "d-flex align-items-center p-2 rounded custom-dropdown-item";
-            if (!finalizedCategoryId) {
-                allDiv.classList.add("bg-primary", "bg-opacity-10", "text-primary", "fw-bold");
-            } else {
-                allDiv.classList.add("cursor-pointer");
-            }
-            allDiv.innerHTML = `<span class="ms-4">Tümü</span>`;
-            allDiv.onclick = (e) => {
-                e.stopPropagation();
+        const clearLi = document.createElement('li');
+        const clearA = document.createElement('a');
+        clearA.className = 'dropdown-item text-muted fst-italic border-bottom mb-1 pb-2';
+        clearA.href = '#';
+        if (finalizedCategoryId) {
+            clearA.innerHTML = '<i class="bi bi-x-circle me-1"></i> Temizle / Başa Dön';
+            clearA.addEventListener('click', (e) => {
+                e.preventDefault();
                 finalizedCategoryId = null;
                 expandedCategories.clear();
-                renderMenu();
-                updateButtonText();
-                const bsDropdown = bootstrap.Dropdown.getInstance(button);
-                if (bsDropdown) bsDropdown.hide();
-            };
-            allLi.appendChild(allDiv);
-            menu.appendChild(allLi);
+                hiddenInput.value = '';
+                hiddenInput.dispatchEvent(new Event('change'));
+                renderOptions();
+            });
+        } else {
+            clearA.textContent = isFilter ? 'Tüm Kategoriler (Seçili)' : 'Kategori Seçin...';
+            clearA.classList.add('disabled');
         }
-        renderLevel(null, menu, 0);
-    }
+        clearLi.appendChild(clearA);
+        menu.appendChild(clearLi);
 
-    renderMenu();
-    updateButtonText();
+        function buildTree(parentId, level) {
+            const children = window.tumKategoriler.filter(k => k.parentId == parentId);
+
+            children.forEach(c => {
+                const isInPath = expandedCategories.has(c.id);
+                const isChildOfFinal = (c.parentId === finalizedCategoryId);
+                const isRootWhenEmpty = (finalizedCategoryId === null && c.parentId === null);
+
+                if (!isInPath && !isChildOfFinal && !isRootWhenEmpty) {
+                    return;
+                }
+
+                const hasChildren = window.tumKategoriler.some(k => k.parentId == c.id);
+
+                const li = document.createElement('li');
+                const a = document.createElement('a');
+                a.className = 'dropdown-item';
+                if (finalizedCategoryId === c.id) {
+                    a.classList.add('active');
+                }
+                a.href = '#';
+
+                const prefix = '\u00A0\u00A0\u00A0'.repeat(level);
+
+                if (hasChildren) {
+                    a.innerHTML = prefix + (isInPath ? '▾ ' : '▸ ') + escapeHtml(c.name);
+                    a.classList.add('fw-bold');
+                } else {
+                    a.innerHTML = prefix + '• ' + escapeHtml(c.name);
+                }
+
+                a.addEventListener('click', (e) => {
+                    e.preventDefault();
+
+                    finalizedCategoryId = c.id;
+                    updateExpandedCategories(c.id);
+                    hiddenInput.value = c.id;
+                    hiddenInput.dispatchEvent(new Event('change'));
+
+                    renderOptions();
+
+                    if (!hasChildren) {
+                        const dropdownInstance = bootstrap.Dropdown.getInstance(button) || new bootstrap.Dropdown(button);
+                        dropdownInstance.hide();
+                    }
+                });
+
+                li.appendChild(a);
+                menu.appendChild(li);
+
+                if (isInPath) {
+                    buildTree(c.id, level + 1);
+                }
+            });
+        }
+
+        buildTree(null, 0);
+    }
+    renderOptions();
+}
+
+// PENCEREYE TAŞINAN MODAL (kural: js/modal-window.js başındaki açıklama)
+//   createAssetModal → yeni ekipman kaydı, çok alanlı form → pencere
+//
+// Diğerleri MODAL kalır — hepsi tek amaçlı, birkaç alanlık işlemler:
+//   assignAssetModal (ata) · returnAssetModal (teslim al) · breakdownModal
+//   (arıza bildir) · resolveModal (arıza çöz) · maintenanceModal (bakım) ·
+//   deleteAssetModal (sil) · scannerModalAsset (kamera)
+if (window.ModalWindow) {
+    ModalWindow.register({ createAssetModal: 'Yeni Ekipman' });
+    ModalWindow.onChanged('assets', () => {
+        if (typeof loadGridCards === 'function') loadGridCards(1);
+    });
 }

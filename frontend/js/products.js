@@ -426,7 +426,7 @@ function buildCategoryCascader(containerId, hiddenInputId, selectedCategoryId = 
     dropdownDiv.className = 'dropdown w-100';
 
     const button = document.createElement('button');
-    let btnClasses = isFilter ? 'btn form-control rounded-pill text-start bg-white border d-flex justify-content-between align-items-center' : 'btn form-control text-start bg-white border d-flex justify-content-between align-items-center';
+    let btnClasses = isFilter ? 'btn form-control form-select-sm rounded-pill text-start bg-light border-0 px-3 d-flex justify-content-between align-items-center' : 'btn form-control text-start bg-white border d-flex justify-content-between align-items-center';
     button.className = btnClasses;
     button.type = 'button';
     button.dataset.bsToggle = 'dropdown';
@@ -705,10 +705,7 @@ if (urunRafSelect && btnHedefRafEkle) {
 // =========================================================================
 // ÜRÜN EKLE/DÜZENLE MODALI İÇİN DİNAMİK KURALLAR (PIM) RENDER MOTORU
 // =========================================================================
-// Kategori seçildiğinde dinamik özellikleri yükle
-document.getElementById('urunKategoriId').addEventListener('change', async function() {
-    await loadCategoryRulesForProduct(this.value);
-});
+// (Eski loadCategoryRulesForProduct çağrısı silindi, yenisi aşağıda urunKategoriSelectForm ile dinleniyor)
 
 function yeniUrunCevrimTablosunuGuncelle() {
     const kapsayici = document.getElementById("yeniUrunCevrimTablosuKapsayici");
@@ -732,17 +729,25 @@ function yeniUrunCevrimTablosunuGuncelle() {
             <td>1 ${escapeHtml(cevrim.alternativeUnitName.split(' (')[0])} = <span class="fw-bold">${cevrim.conversionFactor}</span> Taban</td>
             <td class="text-center">
                 ${cevrim.isDefault 
-                    ? '<span class="badge bg-success bg-opacity-10 text-success"><i class="bi bi-check-circle-fill"></i></span>' 
-                    : '<span class="badge bg-secondary bg-opacity-10 text-secondary">-</span>'}
+                    ? '<i class="bi bi-check-circle-fill text-success fs-5"></i>' 
+                    : '<i class="bi bi-dash-circle text-muted fs-5"></i>'}
             </td>
             <td class="text-end">
-                <button type="button" class="btn btn-sm btn-outline-danger btn-yeni-urun-cevrim-sil" data-id="${cevrim.alternativeUnitId}">
-                    <i class="bi bi-trash"></i>
+                <button type="button" class="btn btn-sm btn-outline-danger btn-yeni-urun-cevrim-sil px-2 rounded-pill" data-id="${cevrim.alternativeUnitId}">
+                    <i class="bi bi-trash3"></i> Sil
                 </button>
             </td>
         `;
         liste.appendChild(tr);
     });
+
+    const refSelect = document.getElementById("yeniUrunReferansBirimId");
+    if (refSelect) {
+        refSelect.innerHTML = '<option value="base">Taban Birim</option>';
+        yeniUrunCevrimleri.forEach(c => {
+            refSelect.innerHTML += `<option value="${c.alternativeUnitId}">${escapeHtml(c.alternativeUnitName.split(' (')[0])}</option>`;
+        });
+    }
 }
 const urunKategoriSelectForm = document.getElementById('urunKategoriId');
 if (urunKategoriSelectForm) {
@@ -1128,13 +1133,22 @@ if (btnUrunKaydetEl) {
                 }
             }
 
+            basariToast(id ? "Ürün güncellendi" : "Ürün eklendi");
+
+            // FORM PENCERESİ: kaydetme bitti → açık liste pencerelerine haber
+            // ver ve bu pencereyi kapat. Listeyi burada tazelemeye çalışmak
+            // anlamsız; bu pencerede liste yok.
+            if (window.ModalWindow && ModalWindow.isFormWindow) {
+                ModalWindow.done('products');
+                return;
+            }
+
             const modalElement = document.getElementById("urunModal");
             const modalInstance = bootstrap.Modal.getOrCreateInstance(modalElement);
             if (modalInstance) modalInstance.hide();
 
             document.getElementById("urunFormu").reset();
             document.getElementById("urunId").value = "";
-            basariToast(id ? "Ürün güncellendi" : "Ürün eklendi");
 
             aktifArama = "";
             window.history.pushState({}, document.title, window.location.pathname);
@@ -1273,9 +1287,14 @@ function urunDuzenle(id) {
         document.getElementById('skuGenerationArea')?.classList.remove('d-none');
     }, 500);
 
-    const modalElement = document.getElementById("urunModal");
-    const modalInstance = bootstrap.Modal.getOrCreateInstance(modalElement);
-    modalInstance.show();
+    // Form penceresindeysek modal zaten sayfaya monte edilmiş durumda;
+    // ayrıca "göster" demeye gerek yok. Liste penceresindeysek bu fonksiyona
+    // hiç girilmez (düzenle düğmesi doğrudan pencere açar).
+    if (!(window.ModalWindow && ModalWindow.isFormWindow)) {
+        const modalElement = document.getElementById("urunModal");
+        const modalInstance = bootstrap.Modal.getOrCreateInstance(modalElement);
+        modalInstance.show();
+    }
 }
 
 if (tabloGovdesi) {
@@ -1288,18 +1307,28 @@ if (tabloGovdesi) {
         if (btnPrint) {
             openBarcodePrintModal(btnPrint.getAttribute("data-barcode"), btnPrint.getAttribute("data-name"), btnPrint.getAttribute("data-id"));
         } else if (btnIncele) {
-            urunDetayAc(parseInt(btnIncele.getAttribute("data-id")), { tedarikciYonetimi: hasPermission("Supplier.Edit") });
+            urunDetayGoster(parseInt(btnIncele.getAttribute("data-id")), { tedarikciYonetimi: hasPermission("Supplier.Edit") });
         } else if (btnDuzenle) {
-            urunDuzenle(parseInt(btnDuzenle.getAttribute("data-id")));
+            const duzenleId = parseInt(btnDuzenle.getAttribute("data-id"));
+            // Liste penceresinde düzenleme ayrı bir PENCEREDE açılır; böylece
+            // liste açık kalır ve iki kayıt yan yana karşılaştırılabilir.
+            if (window.ModalWindow &&
+                ModalWindow.open("urunModal", { id: duzenleId }, "Ürün Düzenle")) {
+                return;
+            }
+            urunDuzenle(duzenleId);
         } else if (btnSil) {
             urunSil(parseInt(btnSil.getAttribute("data-id")));
         }
     });
 }
 
-const btnYeniUrunModal = document.querySelector('[data-bs-target="#urunModal"]');
-if (btnYeniUrunModal) {
-    btnYeniUrunModal.addEventListener("click", () => {
+// Boş ürün formunu hazırlar.
+// Eskiden yalnızca "Yeni Ürün Ekle" düğmesinin tıklama dinleyicisi içindeydi;
+// form penceresi de aynı hazırlığı yapması gerektiği için ayrı fonksiyona
+// alındı. Düğme artık bu fonksiyonu çağırıyor, davranış birebir aynı.
+function yeniUrunFormuHazirla() {
+    {
         document.getElementById("urunFormu").reset();
         document.getElementById("urunId").value = "";
         document.getElementById("modalBaslik").innerText = "Yeni Ürün Ekle";
@@ -1350,7 +1379,12 @@ if (btnYeniUrunModal) {
         }
 
         document.getElementById("btnUrunKaydet").innerText = "Ekle ve Kaydet";
-    });
+    }
+}
+
+const btnYeniUrunModal = document.querySelector('[data-bs-target="#urunModal"]');
+if (btnYeniUrunModal) {
+    btnYeniUrunModal.addEventListener("click", yeniUrunFormuHazirla);
 }
 
 async function dropdownDepolariYukle() {
@@ -2094,7 +2128,7 @@ function initProductSearchCamera() {
                             setTimeout(() => scannerModalInstance.hide(), 400);
 
                             setTimeout(() => {
-                                urunDetayAc(bulunanUrun.id, { tedarikciYonetimi: hasPermission("Supplier.Edit") });
+                                urunDetayGoster(bulunanUrun.id, { tedarikciYonetimi: hasPermission("Supplier.Edit") });
                             }, 800);
                         } else {
                             stopScanner();
@@ -2155,7 +2189,7 @@ document.addEventListener("keydown", (e) => {
             }
             const p = tumUrunler.find(u => (u.barcode || "").toLowerCase() === gtinToSearch.toLowerCase() || (u.barcode || "").toLowerCase() === scannerBuffer.toLowerCase());
             if (p && typeof urunDetayAc === 'function') {
-                urunDetayAc(p.id, { tedarikciYonetimi: hasPermission("Supplier.Edit") });
+                urunDetayGoster(p.id, { tedarikciYonetimi: hasPermission("Supplier.Edit") });
                 if (typeof basariToast === 'function') basariToast(`"${scannerBuffer}" barkodlu ürün okundu.`);
             } else {
                 if (typeof hataGoster === 'function') hataGoster(`"${scannerBuffer}" kodlu ürün bulunamadı.`);
@@ -2177,70 +2211,68 @@ document.addEventListener("keydown", (e) => {
 // YENİ ÜRÜN BARKOD OKUYUCU ENTEGRASYONU
 // =========================================================================
 function initYeniUrunCamera() {
-    const btnKameraAc = document.getElementById("btnYeniUrunKameraAc");
-    const scannerModalEl = document.getElementById("scannerModalUrunler");
+    const btnKameraAc   = document.getElementById("btnYeniUrunKameraAc");
+    const btnKameraKapat = document.getElementById("btnKameraKapatYeniUrun");
+    const kameraAlani   = document.getElementById("kameraAlaniYeniUrun");
     const urunBarkodInput = document.getElementById("urunBarkod");
 
+    // Kamerayı kapatır ve alanı gizler. Hem "Kapat" düğmesi hem başarılı
+    // okuma hem de hata durumu aynı yolu kullanır — kamera açık unutulmaz.
+    const kamerayiKapat = () => {
+        if (typeof stopScanner === 'function') stopScanner();
+        if (kameraAlani) kameraAlani.classList.add("d-none");
+        if (btnKameraAc) btnKameraAc.disabled = false;
+    };
+
+    btnKameraKapat?.addEventListener("click", kamerayiKapat);
+
     btnKameraAc?.addEventListener('click', async () => {
-        const durumEl = document.getElementById('kameraDurumUrunler');
-
-        if (btnKameraAc) btnKameraAc.disabled = true;
-
-        const scannerModalInstance = bootstrap.Modal.getOrCreateInstance(scannerModalEl);
+        if (btnKameraAc.disabled) return;
+        btnKameraAc.disabled = true;
 
         try {
             if (typeof checkCameraPermission === 'function') {
                 await checkCameraPermission();
             }
 
-            scannerModalInstance.show();
+            // İzin alındı: kamera FORMUN İÇİNDE açılır (Stok Hareketleri ile
+            // aynı kalıp). Ayrı modal açılmaz; kullanıcı formdan kopmaz.
+            if (kameraAlani) kameraAlani.classList.remove("d-none");
 
-            if (durumEl) {
-                durumEl.textContent = "Kamera başlatılıyor...";
-                durumEl.className = "text-center text-muted small mt-3 fw-bold";
-            }
+            let isleniyor = false;
 
-            if (typeof startScanner === 'function') {
-                let isProcessingQR = false;
+            await startScanner("readerYeniUrun", async (okunanMetin) => {
+                if (isleniyor) return;
+                isleniyor = true;
 
-                await startScanner("readerUrunler", async (scannedText) => {
-                    if (isProcessingQR) return;
-                    isProcessingQR = true;
-
-                    try {
-                        let gtinToFill = scannedText;
-                        if (typeof window.parseGs1Barcode === 'function') {
-                            const parsedGs1 = window.parseGs1Barcode(scannedText);
-                            if (parsedGs1.isGs1 && parsedGs1.gtin) {
-                                gtinToFill = parsedGs1.gtin;
-                            }
-                        }
-
-                        if (urunBarkodInput) {
-                            urunBarkodInput.value = gtinToFill;
-                            if (typeof basariToast === 'function') basariToast(`Barkod okundu: ${gtinToFill}`);
-                        }
-
-                        if (typeof stopScanner === 'function') stopScanner();
-                        setTimeout(() => scannerModalInstance.hide(), 200);
-                        
-                    } finally {
-                        setTimeout(() => isProcessingQR = false, 1000);
+                try {
+                    // GS1 barkodlarında asıl ürün kodu (GTIN) ayıklanır
+                    let yazilacak = okunanMetin;
+                    if (typeof window.parseGs1Barcode === 'function') {
+                        const gs1 = window.parseGs1Barcode(okunanMetin);
+                        if (gs1.isGs1 && gs1.gtin) yazilacak = gs1.gtin;
                     }
-                }, (error) => {
-                    // ignore
-                });
-                
-                if (durumEl) {
-                    durumEl.textContent = "Karekod veya Barkod aranıyor, kameraya gösterin...";
+
+                    if (urunBarkodInput) {
+                        urunBarkodInput.value = yazilacak;
+                        // Barkod alanına bağlı doğrulama/dinleyiciler tetiklensin
+                        urunBarkodInput.dispatchEvent(new Event('input', { bubbles: true }));
+                        urunBarkodInput.dispatchEvent(new Event('change', { bubbles: true }));
+                        if (typeof basariToast === 'function') {
+                            basariToast(`Barkod okundu: ${yazilacak}`);
+                        }
+                    }
+
+                    kamerayiKapat();
+                } finally {
+                    setTimeout(() => { isleniyor = false; }, 1000);
                 }
-            }
+            }, () => { /* anlık okuma hataları yok sayılır */ });
+
         } catch (error) {
-            scannerModalInstance.hide();
-            const hataMetni = error?.message ? error.message : "Kameraya erişilemedi veya izin reddedildi.";
+            kamerayiKapat();
+            const hataMetni = error?.message || "Kameraya erişilemedi veya izin reddedildi.";
             if (typeof uyariGoster === 'function') uyariGoster(hataMetni);
-        } finally {
-            if (btnKameraAc) btnKameraAc.disabled = false;
         }
     });
 }
@@ -2248,8 +2280,55 @@ function initYeniUrunCamera() {
 // =========================================================================
 // UYGULAMA BAŞLATICI FONKSİYON
 // =========================================================================
+// PENCEREYE TAŞINACAK MODALLAR
+// Kural (bkz. js/modal-window.js başındaki açıklama): içinde kaydırma,
+// adımlar veya çok alanlı veri girişi olan modallar PENCERE olur; tek amaçlı,
+// bak-kapat türü küçük kutular MODAL kalır.
+//   urunModal          → uzun, bölümlü form, kaydırmalı  → pencere
+//   importWizardModal  → çok adımlı sihirbaz             → pencere
+//   barcodePrintModal  → tek barkod göster/yazdır        → modal kalır
+//   scannerModalUrunler→ anlık kamera görüntüsü          → modal kalır
+if (window.ModalWindow) {
+    ModalWindow.register({
+        urunModal: 'Ürün Formu',
+        importWizardModal: 'Excel İçe Aktarma'
+    });
+}
+
 document.addEventListener("DOMContentLoaded", async () => {
     await loadAuthContext();
+
+    // FORM PENCERESİ: sayfa "?modal=urunModal" ile açıldı.
+    // Liste, filtreler ve dışa aktarma yüklenmez — bu pencerede yalnızca form
+    // var. Böylece parametreli kipin maliyeti (gereksiz liste isteği) kalkar.
+    const formPenceresi = window.ModalWindow && ModalWindow.isFormWindow;
+
+    if (formPenceresi) {
+        initYeniUrunCamera();
+        // Form açılır listeleri (depo / kategori) yine gerekli
+        await dropdownDepolariYukle();
+        await dropdownKategorileriniYukle();
+
+        const duzenlenecekId = new URLSearchParams(window.location.search).get('id');
+        if (duzenlenecekId) {
+            // DİKKAT: urunDuzenle() ürünü BELLEKTEKİ listeden (tumUrunler)
+            // arar ve bulamazsa hiçbir şey yapmadan çıkar. Form penceresinde
+            // liste hiç yüklenmediği için o liste boştur — düzenleme formu
+            // boş "Yeni Ürün Ekle" hâlinde kalırdı. Bu yüzden kaydı tek
+            // başına sunucudan çekip listeye koyuyoruz.
+            try {
+                const urun = await apiRequest(`/products/${duzenlenecekId}`, 'GET');
+                tumUrunler = [urun];
+                urunDuzenle(parseInt(duzenlenecekId));
+            } catch (hata) {
+                hataGoster('Ürün bilgisi alınamadı: ' + hata.message);
+            }
+        } else {
+            yeniUrunFormuHazirla();
+        }
+        return;
+    }
+
     // 1. Kamera ve barkod dinleyicilerini aktif et
     initProductSearchCamera();
     initYeniUrunCamera();
@@ -2265,7 +2344,12 @@ document.addEventListener("DOMContentLoaded", async () => {
     document.getElementById('btnExportPdf')?.addEventListener('click', exportProductsToPDF);
     document.getElementById('btnExportCsv')?.addEventListener('click', exportProductsToCSV);
 
-    // 4. TEMEL VERİLERİ SIRAYLA VE GÜVENLE YÜKLE 
+    // Başka bir pencerede ürün eklenip güncellendiğinde liste kendini tazeler
+    if (window.ModalWindow) {
+        ModalWindow.onChanged('products', () => urunleriYukle(currentPage));
+    }
+
+    // 4. TEMEL VERİLERİ SIRAYLA VE GÜVENLE YÜKLE
     await dropdownDepolariYukle();
     await dropdownKategorileriniYukle();
     await urunleriYukle(currentPage);
@@ -2283,7 +2367,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     const viewProductId = urlParams.get('viewProductId');
     if (viewProductId && typeof urunDetayAc === 'function') {
-        await urunDetayAc(parseInt(viewProductId), { tedarikciYonetimi: hasPermission("Supplier.Edit") });
+        await urunDetayGoster(parseInt(viewProductId), { tedarikciYonetimi: hasPermission("Supplier.Edit") });
         window.history.replaceState({}, document.title, window.location.pathname);
     }
 
@@ -2291,7 +2375,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (viewProductBarcode && typeof urunDetayAc === 'function') {
         const p = tumUrunler.find(u => (u.barcode || "").toLowerCase() === viewProductBarcode.toLowerCase());
         if (p) {
-            urunDetayAc(p.id, { tedarikciYonetimi: hasPermission("Supplier.Edit") });
+            urunDetayGoster(p.id, { tedarikciYonetimi: hasPermission("Supplier.Edit") });
             window.history.replaceState({}, document.title, window.location.pathname);
         }
     }
@@ -2445,10 +2529,22 @@ document.addEventListener("click", async (e) => {
             return;
         }
         
+        const refUnitId = document.getElementById("yeniUrunReferansBirimId").value;
+        let baseFactor = 1;
+        
+        if (refUnitId !== "base") {
+            const refUnit = yeniUrunCevrimleri.find(c => c.alternativeUnitId == refUnitId);
+            if (refUnit) {
+                baseFactor = refUnit.conversionFactor;
+            }
+        }
+        
+        const calculatedFactor = parseFloat(factor) * parseFloat(baseFactor);
+
         yeniUrunCevrimleri.push({
             alternativeUnitId: altUnitId,
             alternativeUnitName: altUnitName,
-            conversionFactor: factor,
+            conversionFactor: calculatedFactor,
             isDefault: isDefault
         });
         
@@ -2478,15 +2574,33 @@ document.addEventListener("click", async (e) => {
             uyariGoster("Lütfen birim seçin ve çevrim çarpanı girin."); 
             return;
         }
+
+        const refSelect = document.getElementById("duzenleReferansBirimSelect");
+        let baseFactor = 1;
+        if (refSelect && refSelect.options.length > 0) {
+            const selectedOpt = refSelect.options[refSelect.selectedIndex];
+            if (selectedOpt && selectedOpt.dataset.factor) {
+                baseFactor = parseFloat(selectedOpt.dataset.factor);
+            }
+        }
+        
+        const calculatedFactor = parseFloat(factor) * baseFactor;
+
         const veri = {
             productId: parseInt(urunId),
             alternativeUnitId: parseInt(altUnitId),
-            conversionFactor: parseFloat(factor),
+            conversionFactor: calculatedFactor,
             isDefault: isDefault
         };
         try {
-            const cevap = await fetch(`${CONFIG.API_BASE_URL}/products/${urunId}/unit-conversions`, {
-                method: "POST",
+            const ekleBtnElement = document.getElementById("btnDuzenleCevrimEkle");
+            const updateId = ekleBtnElement.getAttribute("data-update-id");
+            const fetchUrl = updateId 
+                ? `${CONFIG.API_BASE_URL}/products/${urunId}/unit-conversions/${updateId}`
+                : `${CONFIG.API_BASE_URL}/products/${urunId}/unit-conversions`;
+            const fetchMethod = updateId ? "PUT" : "POST";
+            const cevap = await fetch(fetchUrl, {
+                method: fetchMethod,
                 headers: {
                     "Content-Type": "application/json",
                     "Authorization": `Bearer ${token}`
@@ -2500,6 +2614,10 @@ document.addEventListener("click", async (e) => {
 
             duzenleBirimCevrimleriYukle(urunId);
             document.getElementById("duzenleAlternatifBirimSelect").value = "";
+            ekleBtnElement.innerHTML = '<i class="bi bi-plus-circle me-1"></i> Ekle';
+            ekleBtnElement.classList.remove("btn-warning");
+            ekleBtnElement.classList.add("btn-primary");
+            ekleBtnElement.removeAttribute("data-update-id");
             document.getElementById("duzenleCevrimCarpani").value = "";
             document.getElementById("duzenleCevrimVarsayilan").checked = false;
 
@@ -2515,7 +2633,20 @@ document.addEventListener("click", async (e) => {
         }
     }
 
+    const editCevrimBtn = e.target.closest(".btn-duzenle-cevrim-duzenle");
     const kaldirCevrimBtn = e.target.closest(".btn-duzenle-cevrim-kaldir");
+    if (editCevrimBtn) {
+        const cid = editCevrimBtn.getAttribute("data-cid");
+        document.getElementById("duzenleAlternatifBirimSelect").value = editCevrimBtn.getAttribute("data-unit");
+        document.getElementById("duzenleCevrimCarpani").value = editCevrimBtn.getAttribute("data-factor");
+        
+        const ekleBtn = document.getElementById("btnDuzenleCevrimEkle");
+        ekleBtn.innerHTML = '<i class="bi bi-check2-circle me-1"></i> G&uuml;ncelle';
+        ekleBtn.classList.remove("btn-primary");
+        ekleBtn.classList.add("btn-warning");
+        ekleBtn.setAttribute("data-update-id", cid);
+    }
+    
     if (kaldirCevrimBtn) {
         const urunId = document.getElementById("urunId").value;
         if (!urunId) return;
@@ -2597,8 +2728,8 @@ async function duzenleBirimCevrimleriYukle(productId) {
             const defaultBadge = c.isDefault ? '<span class="badge bg-success">Evet</span>' : '<span class="text-muted">-</span>';
             const urunAdi = document.getElementById('duzenleAd') ? document.getElementById('duzenleAd').value : 'Ürün';
             
-            const barkodGosterimi = c.barcode ? `<div class="small fw-bold text-primary mt-1 d-flex align-items-center">
-                <i class="bi bi-upc-scan me-1"></i> ${escapeHtml(c.barcode)}
+            const barkodGosterimi = c.barcode ? `<div class="small fw-bold text-primary mt-1 d-flex align-items-center btn-print-barcode" style="cursor: pointer;" data-barcode="${escapeHtml(c.barcode)}" data-name="${escapeHtml(urunAdi)} (${escapeHtml(c.alternativeUnitName)})" data-id="${productId}" title="Barkodu Yazdır (Tıkla)">
+                <i class="bi bi-printer me-1"></i> <u>${escapeHtml(c.barcode)}</u>
             </div>` : '';
             
             tablo.innerHTML += `<tr>
@@ -2609,17 +2740,26 @@ async function duzenleBirimCevrimleriYukle(productId) {
                 <td class="text-muted fw-bold">1 ${escapeHtml(c.alternativeUnitShortCode)} = ${c.conversionFactor} Taban Birim</td>
                 <td>${defaultBadge}</td>
                 <td class="text-end">
-                    ${!c.barcode ? `<button type="button" class="btn btn-sm btn-outline-primary rounded-pill btn-duzenle-cevrim-barkod shadow-sm px-2 me-1" data-cid="${c.id}" title="Otomatik ITF-14 Koli Barkodu Üret">
-                        <i class="bi bi-upc-scan"></i> SKU Üret
-                    </button>` : `<button type="button" class="btn btn-sm btn-outline-secondary rounded-pill btn-print-barcode shadow-sm px-2 me-1" data-barcode="${escapeHtml(c.barcode)}" data-name="${escapeHtml(urunAdi)} (${escapeHtml(c.alternativeUnitName)})" data-id="${productId}" title="Bu birimin barkodunu yazdır">
-                        <i class="bi bi-printer"></i> Yazdır
-                    </button>`}
-                    <button type="button" class="btn btn-sm btn-outline-danger rounded-pill btn-duzenle-cevrim-kaldir shadow-sm px-3" data-cid="${c.id}">
-                        <i class="bi bi-trash3 me-1"></i> Kaldır
+                    ${!c.barcode ? `<button type="button" class="btn btn-sm btn-outline-primary rounded-pill btn-duzenle-cevrim-barkod shadow-sm px-2 me-1" data-cid="${c.id}" title="Otomatik Koli/Palet Barkodu Üret">
+                        <i class="bi bi-upc-scan"></i> Barkod Üret
+                    </button>` : ``}
+                    <button type="button" class="btn btn-sm btn-outline-warning rounded-pill btn-duzenle-cevrim-duzenle shadow-sm px-2 me-1" data-cid="${c.id}" data-unit="${c.alternativeUnitId}" data-factor="${c.conversionFactor}" data-isdefault="${c.isDefault}" title="Düzenle">
+                        <i class="bi bi-pencil-square"></i>
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-danger rounded-pill btn-duzenle-cevrim-kaldir shadow-sm px-2" data-cid="${c.id}" title="Kaldır">
+                        <i class="bi bi-trash3"></i>
                     </button>
                 </td>
             </tr>`;
         });
+
+        const refSelect = document.getElementById("duzenleReferansBirimSelect");
+        if (refSelect) {
+            refSelect.innerHTML = '<option value="base" data-factor="1">Taban Birim</option>';
+            liste.forEach(c => {
+                refSelect.innerHTML += `<option value="${c.alternativeUnitId}" data-factor="${c.conversionFactor}">${escapeHtml(c.alternativeUnitName.split(' (')[0])}</option>`;
+            });
+        }
     } catch(hata) {
         tablo.innerHTML = `<tr><td colspan="4" class="text-center text-danger py-4">${escapeHtml(hata.message)}</td></tr>`;
     }

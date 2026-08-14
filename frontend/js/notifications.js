@@ -32,14 +32,17 @@ async function loadNotifications() {
         const notifications = await apiRequest(endpoint, 'GET');
         renderNotifications(notifications);
     } catch (error) {
-        document.getElementById("notificationList").innerHTML = 
-            `<div class="alert alert-danger">Hata: ${error.message}</div>`;
+        const listContainer = document.getElementById("notificationList");
+        if (listContainer) {
+            listContainer.innerHTML = `<div class="alert alert-danger">Hata: ${error.message}</div>`;
+        }
     }
 }
 
 // 4. RENDERING NOTIFICATIONS (High-Performance DOM Management)
 function renderNotifications(notificationsList) {
     const listContainer = document.getElementById("notificationList");
+    if (!listContainer) return;
     
     if (notificationsList.length === 0) {
         listContainer.innerHTML = `<div class="text-center py-4 text-muted">Kayıtlı bildirim bulunamadı.</div>`;
@@ -102,13 +105,16 @@ function renderNotifications(notificationsList) {
 }
 
 // Olay Delege Etme (Event Delegation)
-document.getElementById("notificationList").addEventListener("click", (e) => {
-    const btnRead = e.target.closest(".btn-read");
-    if (btnRead && !btnRead.disabled) {
-        const id = parseInt(btnRead.getAttribute("data-id"));
-        markNotificationAsRead(id);
-    }
-});
+const notificationListEl = document.getElementById("notificationList");
+if (notificationListEl) {
+    notificationListEl.addEventListener("click", (e) => {
+        const btnRead = e.target.closest(".btn-read");
+        if (btnRead && !btnRead.disabled) {
+            const id = parseInt(btnRead.getAttribute("data-id"));
+            markNotificationAsRead(id);
+        }
+    });
+}
 
 // 5. MARK SINGLE NOTIFICATION AS READ
 async function markNotificationAsRead(id) {
@@ -133,16 +139,16 @@ async function markAllNotificationsAsRead() {
 }
 
 // 7. EVENT LISTENERS
-document.getElementById("btnMarkAllAsRead").addEventListener("click", markAllNotificationsAsRead);
+document.getElementById("btnMarkAllAsRead")?.addEventListener("click", markAllNotificationsAsRead);
 
-document.getElementById("btnFilterAll").addEventListener("click", () => {
+document.getElementById("btnFilterAll")?.addEventListener("click", () => {
     filterOnlyUnread = false;
     document.getElementById("btnFilterAll").className = "btn btn-primary btn-sm rounded-pill px-3";
     document.getElementById("btnFilterUnread").className = "btn btn-outline-secondary btn-sm rounded-pill px-3";
     loadNotifications();
 });
 
-document.getElementById("btnFilterUnread").addEventListener("click", () => {
+document.getElementById("btnFilterUnread")?.addEventListener("click", () => {
     filterOnlyUnread = true;
     document.getElementById("btnFilterAll").className = "btn btn-outline-secondary btn-sm rounded-pill px-3";
     document.getElementById("btnFilterUnread").className = "btn btn-primary btn-sm rounded-pill px-3";

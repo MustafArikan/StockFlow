@@ -19,6 +19,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (btnNavbarLogout) {
             e.preventDefault();
             localStorage.removeItem('token');
+            localStorage.removeItem('wmSession');
             window.location.href = 'login.html';
         }
     });

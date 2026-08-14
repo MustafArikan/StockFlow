@@ -192,12 +192,18 @@ async function urunDetayAc(productId, secenekler = {}) {
     detayTedarkciYukle(productId, false);                        
     
     // Modalı her açılışta 1. sekmeye (Temel Bilgiler) sıfırla
-    const carousel = document.getElementById('urunDetayCarousel');
-    const bsCarousel = bootstrap.Carousel.getInstance(carousel) || new bootstrap.Carousel(carousel);
-    bsCarousel.to(0);
+    // Detay her açıldığında ilk sekmeden başlar.
+    // (Eskiden carousel'i 0. adıma sarmak gerekiyordu; artık sekme var.)
+    const ilkSekme = document.querySelector('#urunDetayCarousel .nav-link[data-bs-target="#detaySekmeGenel"]');
+    if (ilkSekme && window.bootstrap && bootstrap.Tab) {
+        bootstrap.Tab.getOrCreateInstance(ilkSekme).show();
+    }
     
     // Modalı göster
-    new bootstrap.Modal(document.getElementById("urunDetayModal")).show();
+    // Pencerede içerik zaten sayfaya monte edilmiş durumda.
+    if (!(window.ModalWindow && ModalWindow.isFormWindow)) {
+        new bootstrap.Modal(document.getElementById("urunDetayModal")).show();
+    }
 }
 
 async function detayTedarkciYukle(productId, yonetim = false) {
@@ -323,4 +329,57 @@ async function paketlemeDetayAc(productId, conversionId) {
 if (typeof window !== 'undefined') {
     window.paketlemeDetayAc = paketlemeDetayAc;
 }
-
+
+
+
+// ÜRÜN DETAYI — PENCERE
+// Detay ekranı çok adımlı bir carousel (Geri / İleri, sayfalama noktaları) ve
+// kaydırmalı içerik taşıyor; kurala göre modal değil PENCERE olmalı.
+// Bu dosya modalın sahibi olduğu için kayıt ve pencere açılışı burada duruyor;
+// modalı kullanan her sayfa (ürünler, tedarikçiler, hareketler) otomatik
+// olarak aynı davranışı alıyor.
+if (window.ModalWindow) {
+    ModalWindow.register({ urunDetayModal: 'Ürün Detayı' });
+
+    ModalWindow.formBoot({
+        modal: 'urunDetayModal',
+        // Detay penceresi ürünü ya id ile ya da BARKOD ile açılır.
+        // Barkodla açılış stok hareketleri ekranından geliyor: orada elde
+        // yalnızca barkod var, ürün id'si yok.
+        create: async (p) => detayPenceresiniAc(p),
+        edit: async (id, p) => detayPenceresiniAc(p)
+    });
+}
+
+async function detayPenceresiniAc(p) {
+    if (typeof ensureProductDetailModal === 'function') ensureProductDetailModal();
+
+    let productId = p.id;
+
+    if (!productId && p.barcode) {
+        try {
+            const urun = await apiRequest(`/products/by-barcode/${encodeURIComponent(p.barcode)}`, 'GET');
+            productId = urun && (urun.id || urun.Id);
+        } catch (e) {
+            hataGoster('Bu barkoda ait ürün bulunamadı: ' + p.barcode);
+            return;
+        }
+    }
+
+    if (!productId) { hataGoster('Ürün bilgisi eksik.'); return; }
+    urunDetayAc(parseInt(productId), { tedarikciYonetimi: typeof hasPermission === 'function' && hasPermission('Supplier.Edit') });
+}
+
+// Detayı PENCEREDE açar; kabuk yoksa eski modal davranışına düşer.
+// Sayfalar urunDetayAc yerine bunu çağırır.
+function urunDetayGoster(productId, secenekler) {
+    if (window.ModalWindow &&
+        ModalWindow.open('urunDetayModal', { id: productId }, 'Ürün Detayı')) {
+        return;
+    }
+    urunDetayAc(productId, secenekler || {});
+}
+
+if (typeof window !== 'undefined') {
+    window.urunDetayGoster = urunDetayGoster;
+}

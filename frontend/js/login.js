@@ -39,7 +39,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
             if (data.token) {
                 localStorage.setItem("token", data.token);
-                window.location.href = "index.html";
+                // Uygulamanın girişi masaüstü kabuğudur; Ana Sayfa orada bir
+                // pencere olarak açılır. (Doğrudan index.html'e gidilseydi
+                // kullanıcı eski tek pencere düzeninde kalırdı.)
+                window.location.href = "desktop.html?open=index.html";
             } else {
                 throw new Error("Sunucudan giriş anahtarı (token) alınamadı.");
             }
