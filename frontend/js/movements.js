@@ -78,10 +78,17 @@ const hareketView = createDataView({
         }
 
         // Tıklanabilir Ürün Detay Linki
+        // BARKOD → ÜRÜN DETAYI
+        // Eskiden bu bağlantı "products.html?viewProductBarcode=..." adresine
+        // gidiyordu; tek sayfalı düzende tek yol buydu. Pencere düzeninde ise
+        // Stok Hareketleri penceresini komple Ürünler'e çeviriyor, kullanıcı
+        // baktığı listeyi kaybediyordu. Artık detay KENDİ PENCERESİNDE açılır.
+        // href korunuyor: Ctrl+tık / orta tık ile ayrı sekmede açmak çalışsın.
         let pCodeHtml = (pCode && pCode !== '-')
-            ? `<a href="products.html?viewProductBarcode=${encodeURIComponent(pCode)}" 
-                  class="btn btn-sm btn-outline-secondary rounded-pill d-inline-flex align-items-center shadow-sm text-decoration-none cursor-pointer" 
-                  title="Tıklayarak ürün detayına git">                
+            ? `<a href="products.html?modal=urunDetayModal&barcode=${encodeURIComponent(pCode)}"
+                  class="btn btn-sm btn-outline-secondary rounded-pill d-inline-flex align-items-center shadow-sm text-decoration-none cursor-pointer btn-urun-detay"
+                  data-barcode="${escapeHtml(pCode)}"
+                  title="Ürün detayını ayrı pencerede aç">
                   <span class="fw-bold">${escapeHtml(pCode)}</span>
                </a>`
             : `<span class="text-muted">-</span>`;
@@ -1199,12 +1206,23 @@ if (stokIslemFormu) {
                 formGruplariniGizle();
             }
 
+            basariToast("Stok hareketi kaydedildi");
+
+            // Form penceresinde: liste pencerelerine haber ver ve kapan.
+            // Stok hareketi ürün ve depo stoklarını da değiştirdiği için
+            // o listeler de tazelensin diye ayrıca duyurulur.
+            if (window.ModalWindow && ModalWindow.isFormWindow) {
+                ModalWindow.notifyChanged('products');
+                ModalWindow.notifyChanged('warehouses');
+                ModalWindow.done('movements');
+                return;
+            }
+
             const modalElement = document.getElementById("stokIslemModal");
             const modalInstance = bootstrap.Modal.getInstance(modalElement);
             if (modalInstance) modalInstance.hide();
 
             hareketView.refresh();
-            basariToast("Stok hareketi kaydedildi");
             kaydetButonu.innerText = orjinalMetin;
         } catch (hata) {
             hataGoster("Hata: " + hata.message);
@@ -1439,6 +1457,16 @@ document.addEventListener("DOMContentLoaded", async () => {
     initMovementSearchCamera();
     initPhysicalScannerListener();
 
+    // FORM PENCERESİ: hareket listesi yüklenmez, yalnızca işlem formu kurulur.
+    // Formun açılır listeleri (tedarikçi / ürün) yine gerekli.
+    if (window.ModalWindow && ModalWindow.isFormWindow) {
+        await dropdownTedarikcileriYukle();
+        await dropdownUrunleriYukle();
+        return;
+    }
+
+    if (window.ModalWindow) ModalWindow.onChanged('movements', () => hareketView.refresh());
+
     // Yetkiye göre buton/kolon gizleme. Kullanıcının yetkilerini kontrol et, yetkisi yoksa "Yeni İşlem" butonunu gizle
     if (typeof hasPermission === "function" && !hasPermission("Movement.Inbound") && !hasPermission("Movement.Outbound") && !hasPermission("Movement.Transfer")) {
         const btnYeniIslem = document.getElementById("btnYeniIslem");
@@ -1503,4 +1531,29 @@ document.addEventListener("DOMContentLoaded", async () => {
             }, 500); // Modal açılış animasyonu için kısa gecikme
         }
     }
+});
+
+
+// PENCEREYE TAŞINAN MODAL (kural: js/modal-window.js başındaki açıklama)
+//   stokIslemModal → giriş/çıkış/transfer formu, depo+raf+miktar → pencere
+// scannerModalHareketler (kamera) ve userProfileModal (bak-kapat) MODAL kalır.
+if (window.ModalWindow) {
+    ModalWindow.register({ stokIslemModal: 'Yeni Stok İşlemi' });
+}
+
+
+// Barkod düğmesi: düz sol tık detayı ayrı pencerede açar.
+// Ctrl/Cmd/orta tık yakalanmaz — tarayıcı alışkanlığı (yeni sekme) korunur.
+document.addEventListener('click', (e) => {
+    const link = e.target.closest('.btn-urun-detay');
+    if (!link) return;
+    if (e.ctrlKey || e.metaKey || e.shiftKey || e.altKey || e.button !== 0) return;
+    if (!(window.ModalWindow)) return;
+
+    const barkod = link.getAttribute('data-barcode');
+    if (!barkod) return;
+    e.preventDefault();
+    // Detay modalı ve onu dolduran kod products.html'de yaşıyor;
+    // pencere o sayfada açılır (bkz. ModalWindow.open → opts.page).
+    ModalWindow.open('urunDetayModal', { barcode: barkod }, 'Ürün Detayı', { page: 'products.html' });
 });

@@ -225,6 +225,19 @@ if (typeof $ !== 'undefined') {
     });
 }
 
+// Sayfa, masaüstü kabuğundaki bir pencerenin İÇERİĞİ olarak mı yükleniyor?
+// (window-manager.js her pencereyi bir iframe ile açar.)
+// Gömülü çalışırken kabuk BİR DAHA kurulmaz: duvar kağıdı, ikon rayları, menü
+// çubuğu ve pencere çerçevesi zaten dışarıda, üst belgede duruyor.
+function isEmbeddedWindow() {
+    try {
+        return window.self !== window.top;
+    } catch (e) {
+        // Farklı origin'e gömülmüşsek erişim hatası alırız; yine de gömülüyüz.
+        return true;
+    }
+}
+
 // LAYOUT (SIDEBAR & TOPBAR) RENDER MOTORU
 function renderProfessionalLayout() {
     // 1. GÜVENLİK VE KONTROL: Eğer kullanıcı giriş, kayıt veya şifre sıfırlama sayfasındaysa
@@ -247,6 +260,33 @@ function renderProfessionalLayout() {
 
     while (document.body.firstChild) {
         contentContainer.appendChild(document.body.firstChild);
+    }
+
+    // 3b. GÖMÜLÜ MOD: Yalnızca içerik render edilir, kabuk kurulmaz.
+    // Sayfa doğrudan adresten açıldığında (standalone) bu blok çalışmaz ve
+    // eski davranış birebir korunur.
+    if (isEmbeddedWindow()) {
+        document.body.classList.add('dt-embedded');
+        document.body.appendChild(contentContainer);
+
+        // Pencere başlığını üst belgeye bildir: başlık çubuğunda ve sekme
+        // şeridinde bu yazacak.
+        // İSTİSNA: Sayfa bir form penceresiyse ("?modal=...") başlığı
+        // js/modal-window.js modalın kendi başlığından bildirir ("Ürün
+        // Düzenle" gibi). Burada sayfa adını yazarsak onun üstüne biner —
+        // bu blok loadAuthContext beklediği için SONRA çalışır ve kazanır.
+        const formPenceresi = new URLSearchParams(window.location.search).has('modal');
+        if (!formPenceresi) {
+            const embeddedTitle = (document.title || 'StockFlow').split(/[-–|]/)[0].trim() || 'StockFlow';
+            try {
+                if (window.parent && typeof window.parent.__wmReportTitle === 'function') {
+                    window.parent.__wmReportTitle(window.frameElement, embeddedTitle);
+                }
+            } catch (e) {
+                /* üst belgeye erişilemiyorsa sessizce geç */
+            }
+        }
+        return;
     }
 
     // Masaüstü modunu açar (duvar kağıdı, pencere gölgesi vb. bu sınıfa bağlıdır)
@@ -396,10 +436,19 @@ function renderProfessionalLayout() {
         masaustuIpucu.textContent = 'Açmak için bir uygulama seçin';
         document.body.appendChild(masaustuIpucu);
 
-        // Masaüstüne çift tıklamak ana sayfayı açar
+        // PENCERE YÖNETİCİSİ
+        // Kabuk (menü çubuğu + ikon rayları) kurulduktan SONRA başlatılır:
+        // ikon tıklamalarını yakalayıp pencere açması için rayların DOM'da
+        // olması gerekir. Ayrıca önceki oturumda açık kalan pencereleri
+        // konum ve boyutlarıyla geri yükler.
+        if (window.WindowManager) {
+            window.WindowManager.init();
+        }
+
+        // Masaüstüne çift tıklamak ana sayfayı pencerede açar
         document.addEventListener('dblclick', (e) => {
-            if (e.target.closest('#sidebar, #sidebar-right, .topbar')) return;
-            window.location.href = 'index.html';
+            if (e.target.closest('#sidebar, #sidebar-right, .topbar, .dt-taskbar, .dt-win')) return;
+            if (window.WindowManager) window.WindowManager.open('index.html', 'Ana Sayfa');
         });
     }
 

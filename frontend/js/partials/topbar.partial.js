@@ -6,7 +6,7 @@
 // kullanıldığı için birebir korunmuştur.
 function buildTopbarHtml() {
     return `
-        <div class="d-flex align-items-center gap-2">
+        <div class="d-flex align-items-center gap-2 dt-menubar-left">
             <button class="btn dt-menu-btn" id="btnToggleSidebar" title="Masaüstü ikonlarını göster/gizle">
                 <i class="bi bi-grid-3x3-gap-fill"></i>
             </button>
@@ -17,7 +17,14 @@ function buildTopbarHtml() {
             <span class="dt-menubar-app d-none d-lg-block" id="dtMenubarApp"></span>
         </div>
 
-        <div class="d-flex align-items-center gap-2 gap-md-3">
+        <!-- AÇIK PENCERE SEKMELERİ
+             Menü çubuğunun ORTASINDA durur. Ayrı bir şerit olarak eklenmez:
+             ikinci bir bar hem dikey yer yiyor hem de ikon raylarının en
+             üstteki ikonlarını (Ana Sayfa / Kullanıcılar) örtüyordu.
+             İçeriği js/window-manager.js doldurur. -->
+        <div class="dt-tabstrip" id="dtTaskbar" role="tablist" aria-label="Açık pencereler"></div>
+
+        <div class="d-flex align-items-center gap-2 gap-md-3 dt-menubar-right">
             <span class="dt-clock d-none d-md-flex" id="dtClock" aria-live="off"></span>
 
             <button id="layoutThemeToggleBtn" class="btn dt-menu-btn" title="Temayı Değiştir"></button>

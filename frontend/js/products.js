@@ -1128,13 +1128,22 @@ if (btnUrunKaydetEl) {
                 }
             }
 
+            basariToast(id ? "Ürün güncellendi" : "Ürün eklendi");
+
+            // FORM PENCERESİ: kaydetme bitti → açık liste pencerelerine haber
+            // ver ve bu pencereyi kapat. Listeyi burada tazelemeye çalışmak
+            // anlamsız; bu pencerede liste yok.
+            if (window.ModalWindow && ModalWindow.isFormWindow) {
+                ModalWindow.done('products');
+                return;
+            }
+
             const modalElement = document.getElementById("urunModal");
             const modalInstance = bootstrap.Modal.getOrCreateInstance(modalElement);
             if (modalInstance) modalInstance.hide();
 
             document.getElementById("urunFormu").reset();
             document.getElementById("urunId").value = "";
-            basariToast(id ? "Ürün güncellendi" : "Ürün eklendi");
 
             aktifArama = "";
             window.history.pushState({}, document.title, window.location.pathname);
@@ -1273,9 +1282,14 @@ function urunDuzenle(id) {
         document.getElementById('skuGenerationArea')?.classList.remove('d-none');
     }, 500);
 
-    const modalElement = document.getElementById("urunModal");
-    const modalInstance = bootstrap.Modal.getOrCreateInstance(modalElement);
-    modalInstance.show();
+    // Form penceresindeysek modal zaten sayfaya monte edilmiş durumda;
+    // ayrıca "göster" demeye gerek yok. Liste penceresindeysek bu fonksiyona
+    // hiç girilmez (düzenle düğmesi doğrudan pencere açar).
+    if (!(window.ModalWindow && ModalWindow.isFormWindow)) {
+        const modalElement = document.getElementById("urunModal");
+        const modalInstance = bootstrap.Modal.getOrCreateInstance(modalElement);
+        modalInstance.show();
+    }
 }
 
 if (tabloGovdesi) {
@@ -1288,18 +1302,28 @@ if (tabloGovdesi) {
         if (btnPrint) {
             openBarcodePrintModal(btnPrint.getAttribute("data-barcode"), btnPrint.getAttribute("data-name"), btnPrint.getAttribute("data-id"));
         } else if (btnIncele) {
-            urunDetayAc(parseInt(btnIncele.getAttribute("data-id")), { tedarikciYonetimi: hasPermission("Supplier.Edit") });
+            urunDetayGoster(parseInt(btnIncele.getAttribute("data-id")), { tedarikciYonetimi: hasPermission("Supplier.Edit") });
         } else if (btnDuzenle) {
-            urunDuzenle(parseInt(btnDuzenle.getAttribute("data-id")));
+            const duzenleId = parseInt(btnDuzenle.getAttribute("data-id"));
+            // Liste penceresinde düzenleme ayrı bir PENCEREDE açılır; böylece
+            // liste açık kalır ve iki kayıt yan yana karşılaştırılabilir.
+            if (window.ModalWindow &&
+                ModalWindow.open("urunModal", { id: duzenleId }, "Ürün Düzenle")) {
+                return;
+            }
+            urunDuzenle(duzenleId);
         } else if (btnSil) {
             urunSil(parseInt(btnSil.getAttribute("data-id")));
         }
     });
 }
 
-const btnYeniUrunModal = document.querySelector('[data-bs-target="#urunModal"]');
-if (btnYeniUrunModal) {
-    btnYeniUrunModal.addEventListener("click", () => {
+// Boş ürün formunu hazırlar.
+// Eskiden yalnızca "Yeni Ürün Ekle" düğmesinin tıklama dinleyicisi içindeydi;
+// form penceresi de aynı hazırlığı yapması gerektiği için ayrı fonksiyona
+// alındı. Düğme artık bu fonksiyonu çağırıyor, davranış birebir aynı.
+function yeniUrunFormuHazirla() {
+    {
         document.getElementById("urunFormu").reset();
         document.getElementById("urunId").value = "";
         document.getElementById("modalBaslik").innerText = "Yeni Ürün Ekle";
@@ -1350,7 +1374,12 @@ if (btnYeniUrunModal) {
         }
 
         document.getElementById("btnUrunKaydet").innerText = "Ekle ve Kaydet";
-    });
+    }
+}
+
+const btnYeniUrunModal = document.querySelector('[data-bs-target="#urunModal"]');
+if (btnYeniUrunModal) {
+    btnYeniUrunModal.addEventListener("click", yeniUrunFormuHazirla);
 }
 
 async function dropdownDepolariYukle() {
@@ -2094,7 +2123,7 @@ function initProductSearchCamera() {
                             setTimeout(() => scannerModalInstance.hide(), 400);
 
                             setTimeout(() => {
-                                urunDetayAc(bulunanUrun.id, { tedarikciYonetimi: hasPermission("Supplier.Edit") });
+                                urunDetayGoster(bulunanUrun.id, { tedarikciYonetimi: hasPermission("Supplier.Edit") });
                             }, 800);
                         } else {
                             stopScanner();
@@ -2155,7 +2184,7 @@ document.addEventListener("keydown", (e) => {
             }
             const p = tumUrunler.find(u => (u.barcode || "").toLowerCase() === gtinToSearch.toLowerCase() || (u.barcode || "").toLowerCase() === scannerBuffer.toLowerCase());
             if (p && typeof urunDetayAc === 'function') {
-                urunDetayAc(p.id, { tedarikciYonetimi: hasPermission("Supplier.Edit") });
+                urunDetayGoster(p.id, { tedarikciYonetimi: hasPermission("Supplier.Edit") });
                 if (typeof basariToast === 'function') basariToast(`"${scannerBuffer}" barkodlu ürün okundu.`);
             } else {
                 if (typeof hataGoster === 'function') hataGoster(`"${scannerBuffer}" kodlu ürün bulunamadı.`);
@@ -2248,8 +2277,55 @@ function initYeniUrunCamera() {
 // =========================================================================
 // UYGULAMA BAŞLATICI FONKSİYON
 // =========================================================================
+// PENCEREYE TAŞINACAK MODALLAR
+// Kural (bkz. js/modal-window.js başındaki açıklama): içinde kaydırma,
+// adımlar veya çok alanlı veri girişi olan modallar PENCERE olur; tek amaçlı,
+// bak-kapat türü küçük kutular MODAL kalır.
+//   urunModal          → uzun, bölümlü form, kaydırmalı  → pencere
+//   importWizardModal  → çok adımlı sihirbaz             → pencere
+//   barcodePrintModal  → tek barkod göster/yazdır        → modal kalır
+//   scannerModalUrunler→ anlık kamera görüntüsü          → modal kalır
+if (window.ModalWindow) {
+    ModalWindow.register({
+        urunModal: 'Ürün Formu',
+        importWizardModal: 'Excel İçe Aktarma'
+    });
+}
+
 document.addEventListener("DOMContentLoaded", async () => {
     await loadAuthContext();
+
+    // FORM PENCERESİ: sayfa "?modal=urunModal" ile açıldı.
+    // Liste, filtreler ve dışa aktarma yüklenmez — bu pencerede yalnızca form
+    // var. Böylece parametreli kipin maliyeti (gereksiz liste isteği) kalkar.
+    const formPenceresi = window.ModalWindow && ModalWindow.isFormWindow;
+
+    if (formPenceresi) {
+        initYeniUrunCamera();
+        // Form açılır listeleri (depo / kategori) yine gerekli
+        await dropdownDepolariYukle();
+        await dropdownKategorileriniYukle();
+
+        const duzenlenecekId = new URLSearchParams(window.location.search).get('id');
+        if (duzenlenecekId) {
+            // DİKKAT: urunDuzenle() ürünü BELLEKTEKİ listeden (tumUrunler)
+            // arar ve bulamazsa hiçbir şey yapmadan çıkar. Form penceresinde
+            // liste hiç yüklenmediği için o liste boştur — düzenleme formu
+            // boş "Yeni Ürün Ekle" hâlinde kalırdı. Bu yüzden kaydı tek
+            // başına sunucudan çekip listeye koyuyoruz.
+            try {
+                const urun = await apiRequest(`/products/${duzenlenecekId}`, 'GET');
+                tumUrunler = [urun];
+                urunDuzenle(parseInt(duzenlenecekId));
+            } catch (hata) {
+                hataGoster('Ürün bilgisi alınamadı: ' + hata.message);
+            }
+        } else {
+            yeniUrunFormuHazirla();
+        }
+        return;
+    }
+
     // 1. Kamera ve barkod dinleyicilerini aktif et
     initProductSearchCamera();
     initYeniUrunCamera();
@@ -2265,7 +2341,12 @@ document.addEventListener("DOMContentLoaded", async () => {
     document.getElementById('btnExportPdf')?.addEventListener('click', exportProductsToPDF);
     document.getElementById('btnExportCsv')?.addEventListener('click', exportProductsToCSV);
 
-    // 4. TEMEL VERİLERİ SIRAYLA VE GÜVENLE YÜKLE 
+    // Başka bir pencerede ürün eklenip güncellendiğinde liste kendini tazeler
+    if (window.ModalWindow) {
+        ModalWindow.onChanged('products', () => urunleriYukle(currentPage));
+    }
+
+    // 4. TEMEL VERİLERİ SIRAYLA VE GÜVENLE YÜKLE
     await dropdownDepolariYukle();
     await dropdownKategorileriniYukle();
     await urunleriYukle(currentPage);
@@ -2283,7 +2364,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     const viewProductId = urlParams.get('viewProductId');
     if (viewProductId && typeof urunDetayAc === 'function') {
-        await urunDetayAc(parseInt(viewProductId), { tedarikciYonetimi: hasPermission("Supplier.Edit") });
+        await urunDetayGoster(parseInt(viewProductId), { tedarikciYonetimi: hasPermission("Supplier.Edit") });
         window.history.replaceState({}, document.title, window.location.pathname);
     }
 
@@ -2291,7 +2372,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (viewProductBarcode && typeof urunDetayAc === 'function') {
         const p = tumUrunler.find(u => (u.barcode || "").toLowerCase() === viewProductBarcode.toLowerCase());
         if (p) {
-            urunDetayAc(p.id, { tedarikciYonetimi: hasPermission("Supplier.Edit") });
+            urunDetayGoster(p.id, { tedarikciYonetimi: hasPermission("Supplier.Edit") });
             window.history.replaceState({}, document.title, window.location.pathname);
         }
     }
