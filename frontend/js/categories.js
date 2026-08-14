@@ -873,7 +873,7 @@ document.getElementById("btnSecenekEkle").addEventListener("click", async () => 
                     showCancelButton: true,
                     confirmButtonText: 'Evet, Ekle',
                     cancelButtonText: 'Hayır, Yeni Ekle',
-                    target: document.getElementById('kurallarModal')
+                    target: (window.ModalWindow && ModalWindow.isFormWindow) ? document.body : document.getElementById('kurallarModal')
                 });
 
                 if (onay.isConfirmed) {
@@ -893,7 +893,7 @@ document.getElementById("btnSecenekEkle").addEventListener("click", async () => 
                 showCancelButton: true,
                 confirmButtonText: 'Ekle',
                 cancelButtonText: 'İptal',
-                target: document.getElementById('kurallarModal'),
+                target: (window.ModalWindow && ModalWindow.isFormWindow) ? document.body : document.getElementById('kurallarModal'),
                 inputValidator: (value) => {
                     if (!value || !gecerliHexMi(value)) {
                         return 'Geçerli bir hex kod giriniz (# ile başlayabilir)';
