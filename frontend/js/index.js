@@ -69,12 +69,89 @@ let lastMovementData = null;
 let allProductsForExcel = [];
 let currentTrendProduct = null;
 
+// GRAFİK RENKLERİ
+// Renkler doğrudan style.css içindeki tasarım jetonlarından okunur. Böylece
+// tema değiştiğinde ya da palet güncellendiğinde grafikler kendiliğinden uyum
+// sağlar; hiçbir renk iki ayrı yerde tanımlı kalmaz.
+function cssVar(name, fallback) {
+    const value = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+    return value || fallback;
+}
+
+function isDarkTheme() {
+    return document.documentElement.getAttribute('data-theme') === 'dark';
+}
+
+// Jetonlar HEX olarak tanımlıdır; sayısal ve saydam sürümlerini üretir.
+function hexToRgb(hex, fallback) {
+    const match = /^#?([0-9a-f]{6})$/i.exec(String(hex).trim());
+    if (!match) return fallback;
+    const n = parseInt(match[1], 16);
+    return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+}
+
+function withAlpha(hex, alpha) {
+    const rgb = hexToRgb(hex, null);
+    if (!rgb) return hex;
+    return `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, ${alpha})`;
+}
+
 function getChartTextColor() {
-    return document.documentElement.getAttribute('data-theme') === 'dark' ? '#ececec' : '#1a1d23';
+    return cssVar('--nb-text', isDarkTheme() ? '#f2f3f0' : '#151515');
 }
 
 function getChartGridColor() {
-    return document.documentElement.getAttribute('data-theme') === 'dark' ? '#40424c' : '#d8dce2';
+    return cssVar('--nb-edge-soft', isDarkTheme() ? '#3c414f' : '#d3d4cb');
+}
+
+function getChartSurfaceColor() {
+    return cssVar('--nb-surface', isDarkTheme() ? '#22252e' : '#ffffff');
+}
+
+function getChartEdgeColor() {
+    return cssVar('--nb-edge', isDarkTheme() ? '#767c8c' : '#151515');
+}
+
+// Hareket tipleri TÜM grafiklerde aynı rengi taşır: giriş / çıkış / transfer.
+// DİKKAT: Marka jetonları (--nb-orange vb.) değil, GRAFİĞE ÖZEL jetonlar
+// okunur. Koyu temada bunların açık sürümleri devreye girer; aksi hâlde
+// koyu kart yüzeyinde seriler birbirine ve zemine karışır.
+function getMovementColors() {
+    return {
+        giris: cssVar('--nb-chart-teal', '#10a294'),
+        cikis: cssVar('--nb-chart-red', '#db3707'),
+        transfer: cssVar('--nb-chart-blue', '#1d4aff')
+    };
+}
+
+// Kategori dağılımı gibi seri sayısı önceden bilinmeyen grafikler için palet.
+function getCategoricalPalette() {
+    return [
+        cssVar('--nb-chart-orange', '#f54e00'),
+        cssVar('--nb-chart-blue', '#1d4aff'),
+        cssVar('--nb-chart-teal', '#10a294'),
+        cssVar('--nb-chart-purple', '#b62ad9'),
+        cssVar('--nb-chart-yellow', '#f9bd2b'),
+        cssVar('--nb-chart-red', '#db3707'),
+        '#7c8798', '#c85ce8', '#3fbfae', '#7f9dff', '#ff8a52', '#e0b64a'
+    ];
+}
+
+// Konturlu, sert köşeli ipucu balonu — arayüzün geri kalanıyla aynı dil.
+function getChartTooltipStyle() {
+    return {
+        backgroundColor: getChartSurfaceColor(),
+        titleColor: getChartTextColor(),
+        bodyColor: getChartTextColor(),
+        borderColor: getChartEdgeColor(),
+        borderWidth: 2,
+        cornerRadius: 4,
+        padding: 12,
+        titleFont: { size: 14, family: "'Inter', sans-serif", weight: '700' },
+        bodyFont: { size: 13, family: "'Inter', sans-serif" },
+        boxPadding: 6,
+        usePointStyle: true
+    };
 }
 
 async function loadCharts() {
@@ -129,7 +206,6 @@ function renderTrendChart(data) {
 
     const textColor = getChartTextColor();
     const gridColor = getChartGridColor();
-    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
 
     const labels = [];
     const girisData = [];
@@ -156,17 +232,18 @@ function renderTrendChart(data) {
 
     const ctx2d = ctx.getContext('2d');
 
-    const gradientGiris = ctx2d.createLinearGradient(0, 0, 0, 450);
-    gradientGiris.addColorStop(0, 'rgba(25, 135, 84, 0.4)');
-    gradientGiris.addColorStop(1, 'rgba(25, 135, 84, 0.0)');
+    const moveColors = getMovementColors();
 
-    const gradientCikis = ctx2d.createLinearGradient(0, 0, 0, 450);
-    gradientCikis.addColorStop(0, 'rgba(220, 53, 69, 0.4)');
-    gradientCikis.addColorStop(1, 'rgba(220, 53, 69, 0.0)');
+    const makeFill = (color) => {
+        const gradient = ctx2d.createLinearGradient(0, 0, 0, 450);
+        gradient.addColorStop(0, withAlpha(color, 0.35));
+        gradient.addColorStop(1, withAlpha(color, 0.0));
+        return gradient;
+    };
 
-    const gradientTransfer = ctx2d.createLinearGradient(0, 0, 0, 450);
-    gradientTransfer.addColorStop(0, 'rgba(13, 202, 240, 0.4)');
-    gradientTransfer.addColorStop(1, 'rgba(13, 202, 240, 0.0)');
+    const gradientGiris = makeFill(moveColors.giris);
+    const gradientCikis = makeFill(moveColors.cikis);
+    const gradientTransfer = makeFill(moveColors.transfer);
 
     trendChartInstance = new Chart(ctx, {
         type: 'line',
@@ -176,38 +253,38 @@ function renderTrendChart(data) {
                 {
                     label: ' Stok Girişi',
                     data: girisData,
-                    borderColor: '#198754',
+                    borderColor: moveColors.giris,
                     backgroundColor: gradientGiris,
-                    borderWidth: 2.5,
+                    borderWidth: 3,
                     tension: 0.4,
                     fill: true,
                     pointRadius: 0,
                     pointHoverRadius: 6,
-                    pointBackgroundColor: '#198754'
+                    pointBackgroundColor: moveColors.giris
                 },
                 {
                     label: ' Stok Çıkışı',
                     data: cikisData,
-                    borderColor: '#dc3545',
+                    borderColor: moveColors.cikis,
                     backgroundColor: gradientCikis,
-                    borderWidth: 2.5,
+                    borderWidth: 3,
                     tension: 0.4,
                     fill: true,
                     pointRadius: 0,
                     pointHoverRadius: 6,
-                    pointBackgroundColor: '#dc3545'
+                    pointBackgroundColor: moveColors.cikis
                 },
                 {
                     label: ' Transfer',
                     data: transferData,
-                    borderColor: '#0dcaf0',
+                    borderColor: moveColors.transfer,
                     backgroundColor: gradientTransfer,
-                    borderWidth: 2.5,
+                    borderWidth: 3,
                     tension: 0.4,
                     fill: true,
                     pointRadius: 0,
                     pointHoverRadius: 6,
-                    pointBackgroundColor: '#0dcaf0'
+                    pointBackgroundColor: moveColors.transfer
                 }
             ]
         },
@@ -220,15 +297,7 @@ function renderTrendChart(data) {
                     position: 'top', align: 'end',
                     labels: { color: textColor, padding: 25, usePointStyle: true, boxWidth: 8, font: { family: "'Inter', sans-serif", weight: '600' } }
                 },
-                tooltip: {
-                    backgroundColor: isDark ? 'rgba(30, 31, 36, 0.95)' : 'rgba(255, 255, 255, 0.95)',
-                    titleColor: isDark ? '#fff' : '#000',
-                    bodyColor: isDark ? '#ccc' : '#444',
-                    borderColor: gridColor, borderWidth: 1, padding: 12,
-                    titleFont: { size: 14, family: "'Inter', sans-serif" },
-                    bodyFont: { size: 13, family: "'Inter', sans-serif" },
-                    boxPadding: 6, usePointStyle: true
-                }
+                tooltip: getChartTooltipStyle()
             },
             scales: {
                 x: { ticks: { color: textColor, maxRotation: 45, minRotation: 0, font: { family: "'Inter', sans-serif" } }, grid: { display: false } },
@@ -244,7 +313,7 @@ function renderMovementSummaryChart(data) {
     if (!ctx || typeof Chart === 'undefined') return;
 
     const textColor = getChartTextColor();
-    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    const moveColors = getMovementColors();
 
     if (movementSummaryChartInstance) movementSummaryChartInstance.destroy();
 
@@ -260,9 +329,9 @@ function renderMovementSummaryChart(data) {
             labels: ['Stok Girişi', 'Stok Çıkışı', 'Transfer'],
             datasets: [{
                 data: [giris, cikis, transfer],
-                backgroundColor: ['#198754', '#dc3545', '#0dcaf0'],
+                backgroundColor: [moveColors.giris, moveColors.cikis, moveColors.transfer],
                 borderWidth: 2,
-                borderColor: isDark ? '#262730' : '#ffffff',
+                borderColor: getChartEdgeColor(),
                 hoverOffset: 6
             }]
         },
@@ -284,17 +353,13 @@ function renderMovementSummaryChart(data) {
 
             plugins: {
                 legend: { position: 'bottom', labels: { color: textColor, padding: 15 } },
-                tooltip: {
-                    backgroundColor: isDark ? 'rgba(30, 31, 36, 0.95)' : 'rgba(255, 255, 255, 0.95)',
-                    titleColor: isDark ? '#fff' : '#000',
-                    bodyColor: isDark ? '#ccc' : '#444',
-                    borderWidth: 1, padding: 12, usePointStyle: true,
+                tooltip: Object.assign(getChartTooltipStyle(), {
                     callbacks: {
                         afterLabel: function (context) {
                             return ' (Filtrelemek için tıkla)';
                         }
                     }
-                }
+                })
             }
         }
     });
@@ -305,16 +370,11 @@ function renderCategoryChart(data) {
     if (!ctx || typeof Chart === 'undefined') return;
 
     const textColor = getChartTextColor();
-    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
 
     const gecerliVeri = data.filter(d => d.toplamStok > 0);
 
     const generateColors = (count) => {
-        const palette = [
-            '#0d6efd', '#fd7e14', '#198754', '#6f42c1',
-            '#d63384', '#20c997', '#ffc107', '#0dcaf0',
-            '#6c757d', '#6610f2', '#e83e8c', '#17a2b8'
-        ];
+        const palette = getCategoricalPalette();
         const bg = [];
         for (let i = 0; i < count; i++) {
             bg.push(palette[i % palette.length]);
@@ -334,7 +394,7 @@ function renderCategoryChart(data) {
                 data: gecerliVeri.map(d => d.toplamStok),
                 backgroundColor: generateColors(gecerliVeri.length),
                 borderWidth: 2,
-                borderColor: isDark ? '#262730' : '#ffffff',
+                borderColor: getChartEdgeColor(),
                 hoverOffset: 6
             }]
         },
@@ -364,17 +424,13 @@ function renderCategoryChart(data) {
                         font: { family: "'Inter', sans-serif", size: 12 }
                     }
                 },
-                tooltip: {
-                    backgroundColor: isDark ? 'rgba(30, 31, 36, 0.95)' : 'rgba(255, 255, 255, 0.95)',
-                    titleColor: isDark ? '#fff' : '#000',
-                    bodyColor: isDark ? '#ccc' : '#444',
-                    borderWidth: 1, padding: 12, usePointStyle: true,
+                tooltip: Object.assign(getChartTooltipStyle(), {
                     callbacks: {
                         afterLabel: function (context) {
                             return ' (Filtrelemek için tıkla)';
                         }
                     }
-                }
+                })
             }
         }
     });
@@ -389,6 +445,7 @@ function renderTopProductsChart(data) {
         const ctx = canvas.getContext('2d');
         const textColor = getChartTextColor();
         const gridColor = getChartGridColor();
+        const moveColors = getMovementColors();
 
         if (topProductsChartInstance) {
             topProductsChartInstance.destroy();
@@ -405,7 +462,7 @@ function renderTopProductsChart(data) {
                     {
                         label: ' Stok Girişi',
                         data: safeData.map(d => d.girisMiktari || d.GirisMiktari || 0),
-                        backgroundColor: '#198754',
+                        backgroundColor: moveColors.giris,
                         barPercentage: 0.65,
                         categoryPercentage: 0.85,
                         maxBarThickness: 40,
@@ -414,7 +471,7 @@ function renderTopProductsChart(data) {
                     {
                         label: ' Stok Çıkışı',
                         data: safeData.map(d => d.cikisMiktari || d.CikisMiktari || 0),
-                        backgroundColor: '#dc3545',
+                        backgroundColor: moveColors.cikis,
                         barPercentage: 0.65,
                         categoryPercentage: 0.85,
                         maxBarThickness: 40,
@@ -423,7 +480,7 @@ function renderTopProductsChart(data) {
                     {
                         label: ' Transfer',
                         data: safeData.map(d => d.transferMiktari || d.TransferMiktari || 0),
-                        backgroundColor: '#0dcaf0',
+                        backgroundColor: moveColors.transfer,
                         barPercentage: 0.65,
                         categoryPercentage: 0.85,
                         maxBarThickness: 40,
@@ -444,19 +501,18 @@ function renderTopProductsChart(data) {
                         position: 'top',
                         labels: { color: textColor, padding: 25, usePointStyle: true, font: { size: 12, family: "'Inter', sans-serif" } }
                     },
-                    tooltip: {
+                    tooltip: Object.assign(getChartTooltipStyle(), {
                         mode: 'y',
                         intersect: true,
-                        padding: 12,
                         callbacks: {
                             footer: function (items) {
                                 let total = items.reduce((sum, item) => sum + item.raw, 0);
                                 return '\nToplam Hareket: ' + total + ' Adet';
                             }
                         },
-                        footerColor: '#ffc107',
+                        footerColor: getChartTextColor(),
                         footerFont: { weight: 'bold', size: 13, family: "'Inter', sans-serif" }
-                    }
+                    })
                 },
                 scales: {
                     x: {
@@ -511,8 +567,11 @@ async function exportDashboardAsPdf() {
         tempHeader.appendChild(dateEl);
         target.insertBefore(tempHeader, target.firstChild);
 
+        // Koyu temada rapor zemini arayüzün zeminiyle aynı jetondan gelir.
+        const pdfBgHex = isDark ? cssVar('--nb-canvas', '#16181f') : '#ffffff';
+
         const sourceCanvas = await html2canvas(target, {
-            backgroundColor: isDark ? '#1c1d21' : '#ffffff',
+            backgroundColor: pdfBgHex,
             scale: 2
         });
 
@@ -546,7 +605,8 @@ async function exportDashboardAsPdf() {
             if (pageIndex > 0) pdf.addPage();
 
             if (isDark) {
-                pdf.setFillColor(28, 29, 33);
+                const bg = hexToRgb(pdfBgHex, [22, 24, 31]);
+                pdf.setFillColor(bg[0], bg[1], bg[2]);
                 pdf.rect(0, 0, pageWidth, pageHeight, 'F');
             }
 

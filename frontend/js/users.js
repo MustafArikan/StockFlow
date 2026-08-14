@@ -65,7 +65,15 @@ document.addEventListener("DOMContentLoaded", async () => {
 
         const btnLog = e.target.closest(".btn-loglar");
         if (btnLog) {
-            kullaniciGecmisiniGoster(btnLog.getAttribute("data-id"), btnLog.getAttribute("data-ad"));
+            {
+                const uid = btnLog.getAttribute("data-id");
+                const uad = btnLog.getAttribute("data-ad");
+                // İşlem geçmişi ayrı PENCEREDE açılır; liste açık kalır.
+                if (!(window.ModalWindow &&
+                      ModalWindow.open("kullaniciGecmisModal", { id: uid, ad: uad }, "İşlem Geçmişi"))) {
+                    kullaniciGecmisiniGoster(uid, uad);
+                }
+            }
             return;
         }
     });
@@ -297,10 +305,17 @@ async function kullaniciKaydet(e) {
             throw new Error(errorMsg);
         }
 
+        Swal.fire('Başarılı', data.message, 'success');
+
+        // Form penceresinde: liste pencerelerine haber ver ve kapan.
+        if (window.ModalWindow && ModalWindow.isFormWindow) {
+            ModalWindow.done('users');
+            return;
+        }
+
         const modal = bootstrap.Modal.getInstance(document.getElementById('kullaniciModal'));
         if(modal) modal.hide();
 
-        Swal.fire('Başarılı', data.message, 'success');
         kullanicilariGetir();
     } catch (error) {
         Swal.fire('Hata', error.message, 'error');
@@ -346,8 +361,10 @@ async function kullaniciGecmisiniGoster(id, adSoyad) {
     document.getElementById("gecmisKullaniciAdSoyad").innerText = adSoyad;
     document.getElementById("gecmisTabloGovdesi").innerHTML = `<tr><td colspan="6" class="text-center">Loglar yükleniyor...</td></tr>`;
     
-    const modal = new bootstrap.Modal(document.getElementById('kullaniciGecmisModal'));
-    modal.show();
+    // Pencerede içerik zaten sayfaya monte edilmiş durumda.
+    if (!(window.ModalWindow && ModalWindow.isFormWindow)) {
+        new bootstrap.Modal(document.getElementById('kullaniciGecmisModal')).show();
+    }
 
     try {
         const response = await fetch(`${CONFIG.API_BASE_URL}/audit-logs/user/${id}`, {
@@ -395,3 +412,35 @@ async function kullaniciGecmisiniGoster(id, adSoyad) {
 
 // XSS Koruması için basit HTML Escape fonksiyonu
 
+
+
+// PENCEREYE TAŞINAN MODALLAR (kural: js/modal-window.js başındaki açıklama)
+//   kullaniciModal       → 6 alanlı ekle/düzenle formu          → pencere
+//   kullaniciGecmisModal → işlem geçmişi listesi, kaydırmalı    → pencere
+//
+// NOT: kullaniciDuzenle() kaydı zaten sunucudan çekiyor (diğer sayfalardaki
+// "bellekteki listeden ara" sorunu burada yok), bu yüzden edit geri çağrısı
+// doğrudan onu çağırıyor.
+
+if (window.ModalWindow) {
+    ModalWindow.register({
+        kullaniciModal: 'Kullanıcı Formu',
+        kullaniciGecmisModal: 'İşlem Geçmişi'
+    });
+
+    // İşlem geçmişi penceresi: kullanıcı bağlamı adresten gelir.
+    ModalWindow.formBoot({
+        modal: 'kullaniciGecmisModal',
+        edit: (id, p) => kullaniciGecmisiniGoster(id, p.ad || '')
+    });
+
+    ModalWindow.formBoot({
+        modal: 'kullaniciModal',
+        edit: (id) => kullaniciDuzenle(parseInt(id)),
+        create: () => kullaniciModalSifirla()
+    });
+
+    ModalWindow.onChanged('users', () => {
+        if (typeof kullanicilariGetir === 'function') kullanicilariGetir();
+    });
+}

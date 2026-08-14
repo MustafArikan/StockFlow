@@ -140,7 +140,10 @@ function detayGoster(log) {
     }
 
     document.getElementById('logDetailBody').innerHTML = html;
-    bootstrap.Modal.getOrCreateInstance(document.getElementById('logDetailModal')).show();
+    // Pencerede içerik zaten sayfaya monte edilmiş durumda.
+    if (!(window.ModalWindow && ModalWindow.isFormWindow)) {
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('logDetailModal')).show();
+    }
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -154,7 +157,14 @@ document.addEventListener('DOMContentLoaded', () => {
             if (detailBtn) {
                 const index = parseInt(detailBtn.getAttribute('data-log-index'), 10);
                 if (!isNaN(index) && logsData[index]) {
-                    detayGoster(logsData[index]);
+                    const log = logsData[index];
+                    // Log detayı ayrı PENCEREDE açılır. Kayıt adres satırına
+                    // sığmayacak kadar büyük (eski/yeni değerlerin JSON dökümü)
+                    // olduğu için nesne payload ile taşınır.
+                    if (!(window.ModalWindow &&
+                          ModalWindow.open("logDetailModal", {}, "Log Detayı", { payload: log }))) {
+                        detayGoster(log);
+                    }
                 }
                 return;
             }
@@ -174,3 +184,29 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 
+
+
+// PENCEREYE TAŞINAN MODAL (kural: js/modal-window.js başındaki açıklama)
+//   logDetailModal → uzun log detayı (JSON/değişiklik dökümü), kaydırmalı
+// userProfileModal (bak-kapat) MODAL kalır.
+
+// PENCEREYE TAŞINAN MODAL (kural: js/modal-window.js başındaki açıklama)
+//   logDetailModal → uzun log detayı (JSON dökümü), kaydırmalı → pencere
+// userProfileModal (bak-kapat) MODAL kalır.
+//
+// NOT: Backend'de "GET /audit-logs/{id}" yok ve detay bellekteki diziden
+// index ile alınıyor; pencerede kaydı yeniden çekmek mümkün değil. Bu yüzden
+// log nesnesi payload (sessionStorage) ile taşınıyor.
+if (window.ModalWindow) {
+    ModalWindow.register({ logDetailModal: 'Log Detayı' });
+
+    ModalWindow.formBoot({
+        modal: 'logDetailModal',
+        create: () => {
+            const log = ModalWindow.payload();
+            if (log) detayGoster(log);
+            else document.getElementById('logDetailBody').innerHTML =
+                '<p class="text-muted mb-0">Log detayı bulunamadı. Pencereyi kapatıp tekrar deneyin.</p>';
+        }
+    });
+}

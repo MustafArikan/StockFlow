@@ -252,13 +252,19 @@ document.getElementById("btnDepoKaydet")?.addEventListener("click", async () => 
         btnKaydet.innerText = "Kaydediliyor...";
 
         await apiRequest(adres, metod, depoVerisi);
+        basariToast(id ? "Depo güncellendi" : "Depo eklendi");
+
+        // Form penceresinde: liste pencerelerine haber ver ve kapan.
+        if (window.ModalWindow && ModalWindow.isFormWindow) {
+            ModalWindow.done('warehouses');
+            return;
+        }
 
         bootstrap.Modal.getInstance(document.getElementById("depoModal"))?.hide();
         document.getElementById("depoFormu").reset();
         document.getElementById("depoId").value = "";
-        
+
         depolariYukle();
-        basariToast(id ? "Depo güncellendi" : "Depo eklendi");
         btnKaydet.disabled = false;
         btnKaydet.innerText = id ? "Güncelle" : "Ekle ve Kaydet";
     } catch (hata) {
@@ -453,7 +459,10 @@ async function stokGecmisiniAc(productId, productName) {
         if(document.getElementById("siralaGecmis")) document.getElementById("siralaGecmis").value = "YENIDEN_ESKIYE";
         
         gecmisTablosunuGuncelle();
-        bootstrap.Modal.getOrCreateInstance(document.getElementById("stokGecmisiModal")).show();
+        // Pencerede içerik zaten sayfaya monte edilmiş durumda.
+        if (!(window.ModalWindow && ModalWindow.isFormWindow)) {
+            bootstrap.Modal.getOrCreateInstance(document.getElementById("stokGecmisiModal")).show();
+        }
     } catch (hata) {
         hataGoster ("Ürün geçmişi yüklenirken hata oluştu.");
     }
@@ -526,42 +535,54 @@ function modalIcinSifirla() {
     if (sabitDepoGirdisi) sabitDepoGirdisi.value = depoIsmi;
 }
 
-// 1. Durum: Depo Ekranından (+ Yeni Ürün Girişi) Butonuna Basıldığında
-document.getElementById("btnDepoyaUrunEkleModalAc")?.addEventListener("click", async () => {
+// DEPOYA ÜRÜN GİRİŞİ EKRANINI HAZIRLAR
+// İki giriş noktası var: depo ekranından (raf serbest) ve raf ekranından
+// (raf seçili ve kilitli). Aradaki tek fark raf kutusunun durumu.
+//
+// Ekran ayrı bir PENCEREDE açıldığı için depo/raf bilgisi sayfa değişkenleri
+// (aktifDepoId / aktifRafId) üzerinden taşınamaz — o değişkenler yeni pencerede
+// boştur. Bu yüzden bağlam adres satırından gelir ve burada geri kurulur.
+async function depoIciUrunEkranHazirla(depoId, rafId) {
+    aktifDepoId = depoId || aktifDepoId;
+    if (rafId) aktifRafId = rafId;
     if (!aktifDepoId) return uyariGoster("Lütfen önce bir depo seçin.");
-    
+
     modalIcinSifirla();
     await depoIciKategorileriYukle();
     await depoIciRaflariYukle(aktifDepoId);
 
-    // Raf Seçim Kutusunu Özgür Bırak
     const rafSelect = document.getElementById("depoIciUrunRafId");
     if (rafSelect) {
-        rafSelect.disabled = false;
-        rafSelect.value = "";
+        if (rafId) {
+            // Raf ekranından gelindi: raf sabit, kullanıcı değiştiremesin
+            rafSelect.value = rafId;
+            rafSelect.disabled = true;
+        } else {
+            rafSelect.disabled = false;
+            rafSelect.value = "";
+        }
     }
 
+    // Pencerede içerik zaten sayfaya monte edilmiş durumda.
+    if (window.ModalWindow && ModalWindow.isFormWindow) return;
     const modalElement = document.getElementById("depoIciUrunModal");
     if (modalElement) bootstrap.Modal.getOrCreateInstance(modalElement).show();
+}
+
+// 1. Durum: Depo Ekranından (+ Yeni Ürün Girişi)
+document.getElementById("btnDepoyaUrunEkleModalAc")?.addEventListener("click", () => {
+    if (!aktifDepoId) return uyariGoster("Lütfen önce bir depo seçin.");
+    if (window.ModalWindow &&
+        ModalWindow.open("depoIciUrunModal", { depoId: aktifDepoId }, "Depoya Ürün Girişi")) return;
+    depoIciUrunEkranHazirla(aktifDepoId, null);
 });
 
-// 2. Durum: Raf Ekranından (+ Bu Rafa Ürün Ekle) Butonuna Basıldığında
-document.getElementById("btnRafaUrunEkleModalAc")?.addEventListener("click", async () => {
+// 2. Durum: Raf Ekranından (+ Bu Rafa Ürün Ekle)
+document.getElementById("btnRafaUrunEkleModalAc")?.addEventListener("click", () => {
     if (!aktifDepoId || !aktifRafId) return uyariGoster("Hata: Raf seçimi bulunamadı!");
-    
-    modalIcinSifirla();
-    await depoIciKategorileriYukle();
-    await depoIciRaflariYukle(aktifDepoId);
-
-    // Raf Seçim Kutusunu Otomatik Seç ve KİLİTLE!
-    const rafSelect = document.getElementById("depoIciUrunRafId");
-    if (rafSelect) {
-        rafSelect.value = aktifRafId;
-        rafSelect.disabled = true; // Kullanıcı bu ekranda rafı değiştiremesin
-    }
-
-    const modalElement = document.getElementById("depoIciUrunModal");
-    if (modalElement) bootstrap.Modal.getOrCreateInstance(modalElement).show();
+    if (window.ModalWindow &&
+        ModalWindow.open("depoIciUrunModal", { depoId: aktifDepoId, rafId: aktifRafId }, "Rafa Ürün Girişi")) return;
+    depoIciUrunEkranHazirla(aktifDepoId, aktifRafId);
 });
 
 async function depoIciKategorileriYukle() {
@@ -696,6 +717,11 @@ document.getElementById("btnDepoIciUrunKaydet")?.addEventListener("click", async
     try {
         await apiRequest('/products', 'POST', urunPayload);
 
+        if (window.ModalWindow && ModalWindow.isFormWindow) {
+            ModalWindow.notifyChanged('products');
+            ModalWindow.done('warehouses');
+            return;
+        }
         bootstrap.Modal.getInstance(document.getElementById("depoIciUrunModal"))?.hide();
         basariToast("Ürün başarıyla tanımlandı ve stok işlendi!");
         
@@ -755,8 +781,62 @@ document.getElementById("btnGeriDonRaflara")?.addEventListener("click", () => {
     if(aktifDepoId) rafView.load(1);
 });
 
+// PENCEREYE TAŞINAN MODALLAR (kural: js/modal-window.js başındaki açıklama)
+//   depoModal        → depo ekle/düzenle formu              → pencere
+//   depoIciUrunModal → depoya ürün girişi, çok alanlı       → pencere
+//   stokGecmisiModal → stok geçmişi listesi, kaydırmalı     → pencere
+// rafEkleModal (3 alan) ve barcodePrintModal (göster-yazdır) MODAL kalır.
+
+if (window.ModalWindow) {
+    ModalWindow.register({
+        depoModal: 'Depo Formu',
+        depoIciUrunModal: 'Depoya Ürün Girişi',
+        stokGecmisiModal: 'Stok Geçmişi'
+    });
+
+    // Düzenleme penceresi kaydı sunucudan çeker: depoDuzenle() kaydı
+    // bellekteki listeden arıyor, form penceresinde o liste boş olurdu.
+    // Depoya ürün girişi penceresi: depo/raf bağlamı adresten gelir.
+    ModalWindow.formBoot({
+        modal: 'depoIciUrunModal',
+        create: (p) => depoIciUrunEkranHazirla(p.depoId, p.rafId || null),
+        edit: (id, p) => depoIciUrunEkranHazirla(p.depoId, p.rafId || null)
+    });
+
+    // Stok geçmişi penceresi: ürün bağlamı adresten gelir, veriyi kendi çeker.
+    ModalWindow.formBoot({
+        modal: 'stokGecmisiModal',
+        edit: (id, p) => stokGecmisiniAc(id, p.name || '')
+    });
+
+    ModalWindow.formBoot({
+        modal: 'depoModal',
+        edit: async (id) => {
+            try {
+                const depo = await apiRequest(`/warehouses/${id}`, 'GET');
+                tumDepolar = [depo];
+                depoDuzenle(parseInt(id));
+            } catch (e) {
+                hataGoster('Depo bilgisi alınamadı: ' + e.message);
+            }
+        },
+        create: () => {
+            const form = document.getElementById('depoFormu');
+            if (form) form.reset();
+            const idAlani = document.getElementById('depoId');
+            if (idAlani) idAlani.value = '';
+        }
+    });
+}
+
 document.addEventListener("DOMContentLoaded", async () => {
     await loadAuthContext();
+
+    // Form penceresinde depo listesi yüklenmez; bu pencerede tablo yok.
+    if (window.ModalWindow && ModalWindow.isFormWindow) return;
+
+    if (window.ModalWindow) ModalWindow.onChanged('warehouses', () => depolariYukle());
+
     depolariYukle();
 
     // URL'de raf kodu varsa otomatik okutulmuş gibi davran
@@ -840,7 +920,15 @@ document.addEventListener("DOMContentLoaded", () => {
         document.getElementById("urunTablosuGovdesi").addEventListener("click", (e) => {
             const btnGecmis = e.target.closest(".btn-stok-gecmisi");
             if (btnGecmis) {
-                stokGecmisiniAc(btnGecmis.getAttribute("data-id"), btnGecmis.getAttribute("data-name"));
+                {
+                    const gid = btnGecmis.getAttribute("data-id");
+                    const gad = btnGecmis.getAttribute("data-name");
+                    // Stok geçmişi ayrı PENCEREDE açılır; raf listesi açık kalır.
+                    if (!(window.ModalWindow &&
+                          ModalWindow.open("stokGecmisiModal", { id: gid, name: gad }, "Stok Geçmişi"))) {
+                        stokGecmisiniAc(gid, gad);
+                    }
+                }
             }
         });
     }

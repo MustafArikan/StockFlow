@@ -131,6 +131,14 @@ document.getElementById("btnTedarikciKaydet")?.addEventListener("click", async (
         }
         if (!cevap.ok) throw new Error(await cevap.text() || "İşlem başarısız.");
 
+        basariToast(id ? "Tedarikçi güncellendi" : "Tedarikçi eklendi");
+
+        // Form penceresinde: liste pencerelerine haber ver ve kapan.
+        if (window.ModalWindow && ModalWindow.isFormWindow) {
+            ModalWindow.done('suppliers');
+            return;
+        }
+
         bootstrap.Modal.getInstance(document.getElementById("tedarikciModal"))?.hide();
         document.getElementById("tedarikciFormu").reset();
         document.getElementById("tedarikciId").value = "";
@@ -139,7 +147,6 @@ document.getElementById("btnTedarikciKaydet")?.addEventListener("click", async (
         const aramaKutusu = document.getElementById("aramaKutusu");
         if (aramaKutusu) aramaKutusu.value = "";
 
-        basariToast(id ? "Tedarikçi güncellendi" : "Tedarikçi eklendi");
         tedarikcileriYukle();
     } catch (hata) {
         hataGoster("İşlem başarısız: " + hata.message);
@@ -203,7 +210,10 @@ async function tedarikciUrunleriniGoster(supplierId) {
         const liste = await cevap.json();
         tablo.innerHTML = "";
 
-        bootstrap.Modal.getOrCreateInstance(document.getElementById("tedarikciUrunModal")).show();
+        // Pencerede içerik zaten sayfaya monte edilmiş durumda.
+        if (!(window.ModalWindow && ModalWindow.isFormWindow)) {
+            bootstrap.Modal.getOrCreateInstance(document.getElementById("tedarikciUrunModal")).show();
+        }
 
         if (liste.length === 0) { 
             tablo.innerHTML = `<tr><td colspan="3" class="text-muted fst-italic">Bu tedarikçiye ait ürün yok.</td></tr>`; return;
@@ -212,7 +222,9 @@ async function tedarikciUrunleriniGoster(supplierId) {
         liste.forEach(sp => {
             tablo.innerHTML += `<tr>
                 <td class="fw-semibold">
-                    <a href="#" class="urun-detay-link" data-pid="${sp.productId}">${escapeHtml(sp.productName)}</a>
+                    <a href="products.html?modal=urunDetayModal&id=${sp.productId}"
+                       class="urun-detay-link" data-pid="${sp.productId}"
+                       title="Ürün detayını aç">${escapeHtml(sp.productName)}</a>
                 </td>
                 <td class="text-muted small">${escapeHtml(sp.productBarcode)}</td>
                 <td>${sp.purchasePrice != null ? sp.purchasePrice + ' ₺' : '-'}</td>
@@ -240,15 +252,24 @@ tabloGovdesi?.addEventListener("click", (e) => {
 
     if (btnDuzenle) tedarikciDuzenle(parseInt(btnDuzenle.getAttribute("data-id")));
     else if (btnSil) tedarikciSil(parseInt(btnSil.getAttribute("data-id")));
-    else if (btnGoruntule) tedarikciUrunleriniGoster(parseInt(btnGoruntule.getAttribute("data-id")));
+    else if (btnGoruntule) {
+        const sid = parseInt(btnGoruntule.getAttribute("data-id"));
+        // Tedarikçi ürünleri ayrı PENCEREDE açılır; liste açık kalır.
+        if (!(window.ModalWindow &&
+              ModalWindow.open("tedarikciUrunModal", { id: sid }, "Tedarikçi Ürünleri"))) {
+            tedarikciUrunleriniGoster(sid);
+        }
+    }
 
 });
 
 document.getElementById("tedarikciUrunListesi").addEventListener("click", (e) => {
     const link = e.target.closest(".urun-detay-link");
     if (!link) return;
+    // Ctrl/Cmd/orta tık yakalanmaz: tarayıcı alışkanlığı (yeni sekme) korunur.
+    if (e.ctrlKey || e.metaKey || e.shiftKey || e.altKey || e.button !== 0) return;
     e.preventDefault();
-    urunDetayAc(parseInt(link.getAttribute("data-pid")));
+    urunDetayGoster(parseInt(link.getAttribute("data-pid")));
 });
 
 // "Yeni Tedarikçi Ekle" modalı açılırken formu sıfırla
@@ -259,12 +280,66 @@ document.querySelector('[data-bs-target="#tedarikciModal"]')?.addEventListener("
     document.getElementById("btnTedarikciKaydet").innerText = "Ekle ve Kaydet";
 });
 
+// PENCEREYE TAŞINAN MODALLAR (kural: js/modal-window.js başındaki açıklama)
+//   tedarikciModal     → 7 alanlı ekle/düzenle formu        → pencere
+//   tedarikciUrunModal → tedarikçinin ürün listesi, kaydırmalı → pencere
+
+if (window.ModalWindow) {
+    ModalWindow.register({
+        tedarikciModal: 'Tedarikçi Formu',
+        tedarikciUrunModal: 'Tedarikçi Ürünleri'
+    });
+
+    // Ürün listesi penceresi: tedarikçi bağlamı adresten gelir.
+    // tedarikciUrunleriniGoster() başlık için bellekteki listeyi kullanıyor,
+    // bu yüzden önce liste tazelenir.
+    ModalWindow.formBoot({
+        modal: 'tedarikciUrunModal',
+        edit: async (id) => {
+            try {
+                const veri = await apiRequest('/suppliers?pageSize=1000', 'GET');
+                tumTedarikciler = veri.items || veri || [];
+            } catch (e) { /* başlık boş kalır, liste yine yüklenir */ }
+            tedarikciUrunleriniGoster(parseInt(id));
+        }
+    });
+
+    ModalWindow.formBoot({
+        modal: 'tedarikciModal',
+        edit: async (id) => {
+            try {
+                // Backend'de "GET /suppliers/{id}" yok; kayıt listeden süzülür.
+                const veri = await apiRequest('/suppliers?pageSize=1000', 'GET');
+                tumTedarikciler = veri.items || veri || [];
+                if (!tumTedarikciler.find(x => x.id === parseInt(id))) {
+                    hataGoster('Tedarikçi bulunamadı.'); return;
+                }
+                tedarikciDuzenle(parseInt(id));
+            } catch (e) {
+                hataGoster('Tedarikçi bilgisi alınamadı: ' + e.message);
+            }
+        },
+        create: () => {
+            const form = document.getElementById('tedarikciFormu');
+            if (form) form.reset();
+            const idAlani = document.getElementById('tedarikciId');
+            if (idAlani) idAlani.value = '';
+        }
+    });
+}
+
 document.addEventListener("DOMContentLoaded", async () => {
     await loadAuthContext();
+
+    // Form penceresinde liste yüklenmez; bu pencerede tablo yok.
+    if (window.ModalWindow && ModalWindow.isFormWindow) return;
+
     // Yetkiye göre buton/kolon gizleme
     if (!hasPermission("Supplier.Add")) {
         document.querySelector('[data-bs-target="#tedarikciModal"]')?.classList.add('d-none');
     }
+
+    if (window.ModalWindow) ModalWindow.onChanged('suppliers', () => tedarikcileriYukle());
 
     tedarikcileriYukle();
 });

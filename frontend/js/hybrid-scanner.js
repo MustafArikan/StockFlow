@@ -1,3 +1,15 @@
+
+// Okunan barkodun ürün detayını açar.
+// Masaüstü kabuğunda AYRI PENCEREDE açılır; tarayıcı ekranı yerinde kalır ve
+// arka arkaya okutmaya devam edilebilir. Kabuk yoksa (bağımsız sayfa) eski
+// davranışa düşer ve Ürünler sayfasına gidilir.
+function urunDetayiniAc(barkod) {
+    if (window.ModalWindow &&
+        ModalWindow.open('urunDetayModal', { barcode: barkod }, 'Ürün Detayı', { page: 'products.html' })) {
+        return;
+    }
+    window.location.href = `products.html?viewProductBarcode=${encodeURIComponent(barkod)}`;
+}
 // ==========================================
 // HİBRİT TARAYICI PANELİ SCRİPTİ
 // ==========================================
@@ -111,7 +123,7 @@ function onScanSuccess(decodedText, decodedResult) {
             
                 switch (resolveRes.kind) {
                     case 'product':
-                        window.location.href = `products.html?viewProductBarcode=${encodeURIComponent(okunanMetin)}`;
+                        urunDetayiniAc(okunanMetin);
                         return;
                     case 'product_packaging':
                         window.location.href = `movements.html?productId=${resolveRes.productId}&inputUnitId=${resolveRes.inputUnitId}&qty=1`;
@@ -154,7 +166,7 @@ function onScanSuccess(decodedText, decodedResult) {
             // EĞER RAF DEĞİLSE, ÜRÜN (PRODUCT) OLARAK KONTROL ET
             try {
                 await apiRequest(`/products/by-barcode/${encodeURIComponent(arananKod)}`, 'GET');
-                window.location.href = `products.html?viewProductBarcode=${encodeURIComponent(arananKod)}`;
+                urunDetayiniAc(arananKod);
                 return;
             } catch (urunHatasi) {}
 

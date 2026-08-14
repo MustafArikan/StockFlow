@@ -411,6 +411,15 @@ document.getElementById("btnKategoriKaydet").addEventListener("click", async () 
 
         await apiRequest(endpoint, metod, kategoriVerisi);
 
+        basariToast(id ? "Kategori güncellendi" : "Kategori eklendi");
+
+        // Form penceresinde: liste pencerelerine haber ver ve kapan.
+        // Bu pencerede tablo olmadığı için kategorileriYukle() çağrılmaz.
+        if (window.ModalWindow && ModalWindow.isFormWindow) {
+            ModalWindow.done('categories');
+            return;
+        }
+
         const modalElement = document.getElementById("kategoriModal");
         const modalInstance = bootstrap.Modal.getOrCreateInstance(modalElement);
         if (modalInstance) modalInstance.hide();
@@ -423,7 +432,6 @@ document.getElementById("btnKategoriKaydet").addEventListener("click", async () 
         if (aramaKutusu) aramaKutusu.value = "";
 
         kategorileriYukle();
-        basariToast(id ? "Kategori güncellendi" : "Kategori eklendi");
 
         btnKaydet.disabled = false;
         btnKaydet.innerText = "Ekle ve Kaydet";
@@ -504,15 +512,13 @@ tabloGovdesi.addEventListener("click", (e) => {
     else if (btnKurallar) {
         const id = btnKurallar.getAttribute("data-id");
         const name = btnKurallar.getAttribute("data-name");
-        
-        document.getElementById("aktifKuralKategoriId").value = id;
-        document.getElementById("kuralModalKategoriAdi").textContent = `${name} Kuralları`;
-        
-        kurallariYukle(id);
-        
-        const modalElement = document.getElementById("kurallarModal");
-        const modalInstance = bootstrap.Modal.getOrCreateInstance(modalElement);
-        modalInstance.show();
+
+        // Kurallar ayrı bir PENCEREDE açılır; liste açık kalır.
+        if (window.ModalWindow &&
+            ModalWindow.open("kurallarModal", { id, name }, "Kategori Kuralları")) {
+            return;
+        }
+        kurallariAc(id, name);
     }
 });
 
@@ -524,8 +530,72 @@ document.querySelector('[data-bs-target="#kategoriModal"]').addEventListener("cl
     document.getElementById("btnKategoriKaydet").innerText = "Ekle ve Kaydet";
 });
 
+// PENCEREYE TAŞINAN MODALLAR (kural: js/modal-window.js başındaki açıklama)
+//   kategoriModal → ad + üst kategori + kurallar, düzenleme ekranı → pencere
+//   kurallarModal → kural listesi ve ekleme formu, kaydırmalı        → pencere
+
+// Kategori kuralları ekranını hazırlar.
+// Hem liste sayfasındaki düğme hem de kurallar PENCERESİ bunu çağırır;
+// böylece iki yolda da aynı hazırlık çalışır.
+function kurallariAc(id, name) {
+    const gizliId = document.getElementById("aktifKuralKategoriId");
+    if (gizliId) gizliId.value = id;
+    const baslik = document.getElementById("kuralModalKategoriAdi");
+    if (baslik) baslik.textContent = `${name || ''} Kuralları`;
+
+    kurallariYukle(id);
+
+    // Pencerede modal zaten sayfaya monte edilmiş durumda; göstermeye gerek yok.
+    if (window.ModalWindow && ModalWindow.isFormWindow) return;
+    bootstrap.Modal.getOrCreateInstance(document.getElementById("kurallarModal")).show();
+}
+
+if (window.ModalWindow) {
+    ModalWindow.register({
+        kategoriModal: 'Kategori Formu',
+        kurallarModal: 'Kategori Kuralları'
+    });
+
+    // Düzenleme penceresi kaydı sunucudan çeker: kategoriDuzenle() kaydı
+    // bellekteki listeden arıyor, form penceresinde o liste boş olurdu.
+    // Kurallar penceresi: kategori bağlamı adresten gelir, veriyi kendi çeker.
+    ModalWindow.formBoot({
+        modal: 'kurallarModal',
+        edit: (id, p) => kurallariAc(id, p.name)
+    });
+
+    ModalWindow.formBoot({
+        modal: 'kategoriModal',
+        edit: async (id) => {
+            try {
+                // DİKKAT: Backend'de "GET /categories/{id}" YOK (yalnızca liste,
+                // POST, PUT var). Bu yüzden kayıt listeden çekilip süzülüyor.
+                // Kategori sayısı az olduğu için maliyeti önemsiz.
+                const veri = await apiRequest('/categories?pageSize=1000', 'GET');
+                tumKategoriler = veri.items || veri || [];
+                const hedef = tumKategoriler.find(k => k.id === parseInt(id));
+                if (!hedef) { hataGoster('Kategori bulunamadı.'); return; }
+                kategoriDuzenle(parseInt(id));
+            } catch (e) {
+                hataGoster('Kategori bilgisi alınamadı: ' + e.message);
+            }
+        },
+        create: () => {
+            const form = document.getElementById('kategoriFormu');
+            if (form) form.reset();
+            const idAlani = document.getElementById('kategoriId');
+            if (idAlani) idAlani.value = '';
+            ustKategoriDropdownDoldur(null);
+        }
+    });
+}
+
 document.addEventListener("DOMContentLoaded", async () => {
     await loadAuthContext();
+
+    // Form penceresinde liste yüklenmez; bu pencerede tablo yok.
+    if (window.ModalWindow && ModalWindow.isFormWindow) return;
+
     if (!hasPermission("Category.Add")) {
         const btnEkle = document.querySelector('[data-bs-target="#kategoriModal"]');
         if (btnEkle) btnEkle.classList.add('d-none');
@@ -535,6 +605,9 @@ document.addEventListener("DOMContentLoaded", async () => {
         const islemSutunuBasligi = document.getElementById("islemSutunuBasligi");
         if (islemSutunuBasligi) islemSutunuBasligi.classList.add('d-none');
     }
+
+    // Başka pencerede kategori değişince liste kendini tazeler
+    if (window.ModalWindow) ModalWindow.onChanged('categories', () => kategorileriYukle());
 
     kategorileriYukle();
 });

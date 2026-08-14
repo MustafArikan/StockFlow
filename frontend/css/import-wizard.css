@@ -1,7 +1,13 @@
+/* İÇE AKTARMA SİHİRBAZI
+   Renk ve ölçüler style.css içindeki tasarım jetonlarından okunur; böylece
+   sihirbaz da arayüzün geri kalanıyla aynı neo-brutalist dili konuşur.
+   NOT: Bu dosya style.css'ten SONRA yüklenir, bu yüzden burada tanımlananlar
+   ana sistemi ezer — yalnızca sihirbaza özgü kurallar burada tutulmalıdır. */
+
 .border-dashed {
     border-style: dashed !important;
-    border-width: 2px !important;
-    border-color: #dee2e6 !important;
+    border-width: var(--nb-bw, 2px) !important;
+    border-color: var(--nb-edge, #151515) !important;
 }
 
 .import-step-indicator {
@@ -10,31 +16,35 @@
     gap: 1.5rem;
 }
 
+/* Adım göstergesi: bekleyen / aktif / tamamlanmış */
 .import-step-badge {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 24px;
-    height: 24px;
+    width: 26px;
+    height: 26px;
     border-radius: 50%;
-    background-color: #e9ecef;
-    color: #6c757d;
+    background-color: var(--nb-surface-3, #e6e7dd);
+    color: var(--nb-text-muted, #5f6058);
+    border: var(--nb-bw, 2px) solid var(--nb-edge, #151515);
     font-size: 0.85rem;
-    font-weight: bold;
+    font-weight: 800;
     margin-right: 8px;
 }
 
 .import-step-badge.active {
-    background-color: #0d6efd;
-    color: white;
+    background-color: var(--nb-orange, #f54e00);
+    /* Turuncu zeminde koyu yazı — sistemdeki kontrast kuralıyla aynı */
+    color: #151515;
 }
 
 .import-step-badge.completed {
-    background-color: #198754;
-    color: white;
+    background-color: var(--nb-teal, #10a294);
+    color: #151515;
 }
 
-.import-mapping-row, .import-value-mapping-row {
+.import-mapping-row,
+.import-value-mapping-row {
     margin-bottom: 15px;
 }
 

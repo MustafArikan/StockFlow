@@ -1099,6 +1099,12 @@ async function submitCreateAsset() {
         const res = await apiRequest('/assets', 'POST', body);
         basariToast("Harika! Yeni Ekipman başarıyla sisteme kaydedildi.");
 
+        // Form penceresinde: liste pencerelerine haber ver ve kapan.
+        if (window.ModalWindow && ModalWindow.isFormWindow) {
+            ModalWindow.done('assets');
+            return;
+        }
+
         // Modalı kapatır
         const modalInstance = bootstrap.Modal.getInstance(document.getElementById('createAssetModal'));
         if (modalInstance) modalInstance.hide();
@@ -1485,4 +1491,18 @@ function buildCategoryCascader(containerId, hiddenInputId, selectedCategoryId = 
 
     renderMenu();
     updateButtonText();
+}
+
+// PENCEREYE TAŞINAN MODAL (kural: js/modal-window.js başındaki açıklama)
+//   createAssetModal → yeni ekipman kaydı, çok alanlı form → pencere
+//
+// Diğerleri MODAL kalır — hepsi tek amaçlı, birkaç alanlık işlemler:
+//   assignAssetModal (ata) · returnAssetModal (teslim al) · breakdownModal
+//   (arıza bildir) · resolveModal (arıza çöz) · maintenanceModal (bakım) ·
+//   deleteAssetModal (sil) · scannerModalAsset (kamera)
+if (window.ModalWindow) {
+    ModalWindow.register({ createAssetModal: 'Yeni Ekipman' });
+    ModalWindow.onChanged('assets', () => {
+        if (typeof loadGridCards === 'function') loadGridCards(1);
+    });
 }
