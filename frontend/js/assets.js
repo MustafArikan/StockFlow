@@ -1344,7 +1344,7 @@ function buildCategoryCascader(containerId, hiddenInputId, selectedCategoryId = 
     dropdownDiv.className = "dropdown w-100";
 
     const button = document.createElement("button");
-    let btnClasses = isFilter ? "btn form-control rounded-pill text-start bg-white border d-flex justify-content-between align-items-center" : "btn form-control text-start bg-white border d-flex justify-content-between align-items-center";
+    let btnClasses = isFilter ? "btn form-control form-select-sm rounded-pill text-start bg-light border-0 px-3 d-flex justify-content-between align-items-center" : "btn form-control text-start bg-white border d-flex justify-content-between align-items-center";
     button.className = btnClasses;
     button.type = "button";
     button.dataset.bsToggle = "dropdown";

@@ -364,6 +364,11 @@
                 resetWizard();
                 loadWarehouses();
             });
+            
+            if (window.ModalWindow && ModalWindow.isFormWindow && new URLSearchParams(window.location.search).get('modal') === 'importWizardModal') {
+                resetWizard();
+                loadWarehouses();
+            }
         }
         
         const warehouseSelect = document.getElementById('importWarehouseId');

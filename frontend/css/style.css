@@ -2874,6 +2874,10 @@ body.dt-desktop {
     align-items: center;
     gap: 8px;
     flex: 0 0 auto;
+    height: 100%;
+    padding: 0 8px 0 16px;
+    margin-right: -8px;
+    cursor: default;
 }
 
 .dt-wc {
@@ -4327,4 +4331,21 @@ body.dt-no-windows .dt-desktop-hint {
     .dt-wc:hover {
         transform: none !important;
     }
+}
+
+
+/* Hide scrollbar for scrollable nav-tabs */
+.nav-tabs.overflow-x-auto::-webkit-scrollbar {
+    display: none;
+}
+
+
+/* Taskbar Drag and Drop Styles */
+.dt-dragging-tab {
+    opacity: 0.5 !important;
+    cursor: grabbing !important;
+}
+.dt-drag-placeholder {
+    border: 2px dashed var(--bs-primary) !important;
+    background-color: rgba(var(--bs-primary-rgb), 0.1) !important;
 }

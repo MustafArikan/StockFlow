@@ -148,6 +148,52 @@
                 if (w.min) { w.min = false; applyGeometry(w); }
                 focusWindow(w.id);
             });
+
+            // Sekmeleri Sürükle-Bırak ile Sıralama Desteği
+            tab.draggable = true;
+            tab.dataset.windowId = w.id;
+            
+            tab.addEventListener('dragstart', (e) => {
+                e.dataTransfer.setData('text/plain', w.id);
+                e.dataTransfer.effectAllowed = 'move';
+                tab.classList.add('dt-dragging-tab');
+            });
+            
+            tab.addEventListener('dragend', () => {
+                tab.classList.remove('dt-dragging-tab');
+                const placeholders = bar.querySelectorAll('.dt-drag-placeholder');
+                placeholders.forEach(p => p.classList.remove('dt-drag-placeholder'));
+            });
+            
+            tab.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'move';
+                const draggingTab = document.querySelector('.dt-dragging-tab');
+                if(draggingTab && draggingTab.dataset.windowId !== w.id) {
+                    tab.classList.add('dt-drag-placeholder');
+                }
+            });
+            
+            tab.addEventListener('dragleave', () => {
+                tab.classList.remove('dt-drag-placeholder');
+            });
+            
+            tab.addEventListener('drop', (e) => {
+                e.preventDefault();
+                tab.classList.remove('dt-drag-placeholder');
+                const draggedId = e.dataTransfer.getData('text/plain');
+                if (draggedId && draggedId !== w.id) {
+                    const fromIndex = windows.findIndex(win => win.id === draggedId);
+                    const toIndex = windows.findIndex(win => win.id === w.id);
+                    if (fromIndex > -1 && toIndex > -1) {
+                        const [draggedWin] = windows.splice(fromIndex, 1);
+                        windows.splice(toIndex, 0, draggedWin);
+                        renderTaskbar();
+                        saveSession();
+                    }
+                }
+            });
+
             bar.appendChild(tab);
         });
 
@@ -426,7 +472,7 @@
         };
 
         bar.addEventListener('mousedown', (e) => {
-            if (e.button !== 0 || e.target.closest('.dt-wc')) return;
+            if (e.button !== 0 || e.target.closest('.dt-window-controls')) return;
             if (w.max || isMobile()) return;
             dragging = true;
             sx = e.clientX; sy = e.clientY; ox = w.x; oy = w.y;
