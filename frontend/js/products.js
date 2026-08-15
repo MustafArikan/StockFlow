@@ -388,7 +388,7 @@ async function urunleriYukle(page = 1) {
         productView.load(page);
     } catch (hata) {
         if (tabloGovdesi) {
-            tabloGovdesi.innerHTML = `<tr><td colspan="7" class="text-center text-danger py-4">Ürünler yüklenemedi. (${hata.message})</td></tr>`;
+            tabloGovdesi.innerHTML = `<tr><td colspan="7" class="text-center text-danger py-4">Ürünler yüklenemedi. (${escapeHtml(hata.message)})</td></tr>`;
         }
     }
 }
@@ -998,7 +998,7 @@ if (urunKategoriSelectForm) {
             });
 
         } catch (error) {
-            if (container) container.innerHTML = `<div class="col-12 text-center text-danger-small"><i class="bi bi-exclamation-triangle"></i> Hata: ${error.message}</div>`;
+            if (container) container.innerHTML = `<div class="col-12 text-center text-danger-small"><i class="bi bi-exclamation-triangle"></i> Hata: ${escapeHtml(error.message)}</div>`;
         }
     });
 }

@@ -12,50 +12,43 @@ public static class DbInitializer
     {
         context.Database.Migrate();
 
-        if (!context.AppRoles.Any())
+        var roles = new List<AppRole>
         {
-            var roles = new List<AppRole>
-            {
-                new AppRole { Name = "superadmin", Description = "Süper Yönetici - Tüm yetkilere sahip", IsSystemRole = true, Level = 100 },
-                new AppRole { Name = "admin", Description = "Yönetici - Sistem yöneticisi", IsSystemRole = true, Level = 90 },
-                new AppRole { Name = "muhasebe", Description = "Muhasebe - Finans ve raporlama", IsSystemRole = true, Level = 50 },
-                new AppRole { Name = "operator", Description = "Operatör - Stok hareketleri", IsSystemRole = true, Level = 40 },
-                new AppRole { Name = "depo_sorumlusu", Description = "Depo Sorumlusu - Depo ve raf yönetimi", IsSystemRole = true, Level = 30 },
-                new AppRole { Name = "viewer", Description = "Görüntüleyici - Sadece okuma", IsSystemRole = true, Level = 10 }
-            };
-            context.AppRoles.AddRange(roles);
+            new AppRole { Name = "superadmin", Description = "Süper Yönetici - Tüm yetkilere sahip", IsSystemRole = true, Level = 100 },
+            new AppRole { Name = "admin", Description = "Yönetici - Sistem yöneticisi", IsSystemRole = true, Level = 90 },
+            new AppRole { Name = "muhasebe", Description = "Muhasebe - Finans ve raporlama", IsSystemRole = true, Level = 50 },
+            new AppRole { Name = "operator", Description = "Operatör - Stok hareketleri", IsSystemRole = true, Level = 40 },
+            new AppRole { Name = "depo_sorumlusu", Description = "Depo Sorumlusu - Depo ve raf yönetimi", IsSystemRole = true, Level = 30 },
+            new AppRole { Name = "viewer", Description = "Görüntüleyici - Sadece okuma", IsSystemRole = true, Level = 10 },
+            new AppRole { Name = "Default", Description = "Varsayılan Kullanıcı - Onay Bekliyor", IsSystemRole = true, Level = 5 }
+        };
+
+        var existingRoles = context.AppRoles.ToList();
+        var existingRoleNames = existingRoles.Select(r => r.Name).ToList();
+
+        var missingRoles = roles.Where(r => !existingRoleNames.Contains(r.Name)).ToList();
+        if (missingRoles.Any())
+        {
+            context.AppRoles.AddRange(missingRoles);
             context.SaveChanges();
-            
+            existingRoles = context.AppRoles.ToList();
         }
-        else
+
+        var updatesNeeded = false;
+        var roleLevels = roles.ToDictionary(r => r.Name, r => r.Level);
+
+        foreach (var role in existingRoles)
         {
-            // Update existing roles that might have Level = 0 from before the migration
-            var existingRoles = context.AppRoles.ToList();
-            var updatesNeeded = false;
-            
-            var roleLevels = new Dictionary<string, int>
+            if (roleLevels.TryGetValue(role.Name, out int targetLevel) && role.Level != targetLevel)
             {
-                { "superadmin", 100 },
-                { "admin", 90 },
-                { "muhasebe", 50 },
-                { "operator", 40 },
-                { "depo_sorumlusu", 30 },
-                { "viewer", 10 }
-            };
-
-            foreach (var role in existingRoles)
-            {
-                if (roleLevels.TryGetValue(role.Name, out int targetLevel) && role.Level != targetLevel)
-                {
-                    role.Level = targetLevel;
-                    updatesNeeded = true;
-                }
+                role.Level = targetLevel;
+                updatesNeeded = true;
             }
+        }
 
-            if (updatesNeeded)
-            {
-                context.SaveChanges();
-            }
+        if (updatesNeeded)
+        {
+            context.SaveChanges();
         }
 
         var permissions = new List<(string Name, string Description, string Module)>
@@ -347,10 +340,10 @@ public static class DbInitializer
 
             var defaultProducts = new List<Product>
             {
-                new Product { Barcode = "VGA-4090", Name = "NVIDIA GeForce RTX 4090 24GB", MinStockLevel = 5, CategoryId = bilesenKategori },
-                new Product { Barcode = "CPU-7800", Name = "AMD Ryzen 7 7800X3D İşlemci", MinStockLevel = 10, CategoryId = bilesenKategori },
-                new Product { Barcode = "RAM-C32", Name = "Corsair Vengeance 32GB DDR5", MinStockLevel = 15, CategoryId = bilesenKategori },
-                new Product { Barcode = "SSD-1TB", Name = "Samsung 990 PRO 1TB M.2", MinStockLevel = 8, CategoryId = depolamaKategori }
+                new Product { Barcode = "VGA-4090", Name = "NVIDIA GeForce RTX 4090 24GB", MinStockLevel = 5, CategoryId = bilesenKategori, UnitId = 1 },
+                new Product { Barcode = "CPU-7800", Name = "AMD Ryzen 7 7800X3D İşlemci", MinStockLevel = 10, CategoryId = bilesenKategori, UnitId = 1 },
+                new Product { Barcode = "RAM-C32", Name = "Corsair Vengeance 32GB DDR5", MinStockLevel = 15, CategoryId = bilesenKategori, UnitId = 1 },
+                new Product { Barcode = "SSD-1TB", Name = "Samsung 990 PRO 1TB M.2", MinStockLevel = 8, CategoryId = depolamaKategori, UnitId = 1 }
             };
             context.Products.AddRange(defaultProducts);
             context.SaveChanges();

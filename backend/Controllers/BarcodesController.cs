@@ -4,6 +4,8 @@ using Microsoft.EntityFrameworkCore;
 using stok_takip.Data;
 using stok_takip.Models;
 using stok_takip.Services;
+using stok_takip.Attributes;
+using stok_takip.Constants;
 
 namespace stok_takip.Controllers;
 
@@ -18,6 +20,7 @@ public class BarcodesController : ControllerBase
     public class ResolveRequest { public string RawCode { get; set; } = string.Empty; public string? SymbologyFormat { get; set; } }
 
     [HttpPost("resolve")]
+    [RequirePermission(Policies.RequireProductRead)]
     public async Task<IActionResult> Resolve(ResolveRequest req)
     {
         var raw = req.RawCode?.Trim() ?? "";

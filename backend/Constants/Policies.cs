@@ -2,7 +2,9 @@ namespace stok_takip.Constants;
 
 public static class Policies
 {
-    public const string SuperAdminOnly = "SuperAdminOnly";
+    public const string RoleCreate = "RoleCreate";
+    public const string RoleEdit = "RoleEdit";
+    public const string RoleDelete = "RoleDelete";
     public const string RoleViewOnly = "RoleViewOnly";
     public const string PolicyManage = "PolicyManage";
     public const string AdminOnly = "AdminOnly";

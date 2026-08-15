@@ -89,7 +89,7 @@ public async Task<IActionResult> Register([FromBody] RegisterDto dto)
                     <p>Bu kod 1 dakika boyunca geçerlidir.</p>
                 </div>";
 
-        try { await _emailService.SendEmailAsync(newUser.Email, emailSubject, emailBody); } catch { /* SMTP error ignored */ }
+        try { await _emailService.SendEmailAsync(newUser.Email, emailSubject, emailBody); } catch (Exception ex) { Console.WriteLine($"E-posta gönderilemedi: {ex.Message}"); }
 
         return Ok(new { message = "If the information is valid, please check your email for further instructions." });
     }
@@ -166,7 +166,7 @@ public async Task<IActionResult> ResendVerificationCode([FromBody] ResendVerific
                     <p>Bu kod 1 dakika boyunca geçerlidir.</p>
                 </div>";
 
-        try { await _emailService.SendEmailAsync(user.Email, emailSubject, emailBody); } catch { /* SMTP error ignored */ }
+        try { await _emailService.SendEmailAsync(user.Email, emailSubject, emailBody); } catch (Exception ex) { Console.WriteLine($"E-posta gönderilemedi: {ex.Message}"); }
         return Ok(new { message = "Eğer e-posta adresi kayıtlı ve doğrulanmamışsa, doğrulama kodu gönderilecektir." });
     }
 
@@ -235,14 +235,7 @@ public async Task<IActionResult> Login([FromBody] LoginDto dto)
         var sessionToken = Guid.NewGuid().ToString(); // Yeni bir oturum token'ı oluştur
         var token = GenerateJwtToken(user, sessionToken);
 
-        var cookieOptions = new CookieOptions
-        {
-            HttpOnly = true,
-            Secure = true,
-            SameSite = SameSiteMode.Strict,
-            Expires = DateTime.UtcNow.AddHours(1)
-        };
-        Response.Cookies.Append("jwt", token, cookieOptions);
+
 
         var userAgent = Request.Headers["User-Agent"].ToString();
         var (os, browser) = ParseUserAgent(userAgent);
@@ -354,7 +347,7 @@ public async Task<IActionResult> GetMe()
                     <h1 style='color: #2563eb; letter-spacing: 5px;'>{verificationCode}</h1>
                     <p>Bu kod 1 dakika boyunca geçerlidir.</p>
                 </div>";
-            try { await _emailService.SendEmailAsync(user.Email, emailSubject, emailBody); } catch { /* SMTP error ignored */ }
+            try { await _emailService.SendEmailAsync(user.Email, emailSubject, emailBody); } catch (Exception ex) { Console.WriteLine($"E-posta gönderilemedi: {ex.Message}"); }
         }
 
         user.FirstName = dto.FirstName;
@@ -388,7 +381,7 @@ public async Task<IActionResult> Logout()
                 await _context.SaveChangesAsync();
             }
         }
-        Response.Cookies.Delete("jwt");
+
         return Ok(new { message = "Logout successful. Session deactivated." });
     }
 
@@ -475,7 +468,7 @@ public async Task<IActionResult> Logout()
                     <p>Bu kod 1 dakika boyunca geçerlidir.</p>
                 </div>";
 
-        try { await _emailService.SendEmailAsync(user.Email, subject, body); } catch { /* SMTP error ignored */ }
+        try { await _emailService.SendEmailAsync(user.Email, subject, body); } catch (Exception ex) { Console.WriteLine($"E-posta gönderilemedi: {ex.Message}"); }
 
         return Ok(new {message = "Eğer e-posta adresiniz sistemde kayıtlıysa, şifre sıfırlama talimatları gönderilecektir."});
     }
@@ -614,7 +607,7 @@ public async Task<IActionResult> Logout()
                     <p style='font-weight: bold;'>Eğer bu işlemi siz yapmadıysanız, hesabınız tehlikede olabilir. Lütfen derhal sistem yöneticiniz ile iletişime geçin!</p>
                 </div>";
 
-        try { await _emailService.SendEmailAsync(user.Email, subject, body); } catch { /* SMTP error ignored */ }
+        try { await _emailService.SendEmailAsync(user.Email, subject, body); } catch (Exception ex) { Console.WriteLine($"E-posta gönderilemedi: {ex.Message}"); }
 
         return Ok(new { message = "Şifreniz başarıyla güncellendi." });
     }

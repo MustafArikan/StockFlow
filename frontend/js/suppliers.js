@@ -234,7 +234,7 @@ async function tedarikciUrunleriniGoster(supplierId) {
         
 
     }catch(hata){
-        tablo.innerHTML = `<tr><td colspan="3" class="text-danger">${hata.message}</td></tr>`;
+        tablo.innerHTML = `<tr><td colspan="3" class="text-danger">${escapeHtml(hata.message)}</td></tr>`;
     }
     
 }
