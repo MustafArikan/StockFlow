@@ -136,7 +136,7 @@ async function depolariYukle() {
         }
     } catch (hata) {
         const container = document.getElementById("depoKartlariContainer");
-        if(container) container.innerHTML = `<div class="col-12 text-center text-danger py-4">Depolar yüklenemedi. (${hata.message})</div>`;
+        if(container) container.innerHTML = `<div class="col-12 text-center text-danger py-4">Depolar yüklenemedi. (${escapeHtml(hata.message)})</div>`;
     }
 }
 
@@ -439,7 +439,7 @@ async function raftakiUrunleriGoruntule(rafId, rafKodu, skipHistory = false) {
         
         urunView.setItems(seciliRafUrunleri); 
     } catch (hata) {
-        document.getElementById("urunTablosuGovdesi").innerHTML = `<tr><td colspan="5" class="text-center text-danger">Ürünler yüklenemedi! (${hata.message})</td></tr>`;
+        document.getElementById("urunTablosuGovdesi").innerHTML = `<tr><td colspan="5" class="text-center text-danger">Ürünler yüklenemedi! (${escapeHtml(hata.message)})</td></tr>`;
     }
 }
 

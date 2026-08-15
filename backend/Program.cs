@@ -143,14 +143,6 @@ builder.Services.AddAuthentication(options =>
 
     options.Events = new Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerEvents
     {
-        OnMessageReceived = context =>
-        {
-            if (context.Request.Cookies.ContainsKey("jwt"))
-            {
-                context.Token = context.Request.Cookies["jwt"];
-            }
-            return Task.CompletedTask;
-        },
         OnTokenValidated = async context =>
         {
             var dbContext = context.HttpContext.RequestServices.GetRequiredService<AppDbContext>();
@@ -239,11 +231,18 @@ builder.Services.AddAuthorization(options =>
         .RequireAuthenticatedUser()
         .Build();
 
-    // SADECE gerçek yönetim izinleri "yönetim" endpoint'lerini açsın
-    options.AddPolicy(Policies.SuperAdminOnly, policy => policy.RequireAssertion(context => 
+    options.AddPolicy(Policies.RoleCreate, policy => policy.RequireAssertion(context => 
         context.User.IsInRole("superadmin") || 
-        context.User.HasClaim("Permission", "Role.Add") ||
-        context.User.HasClaim("Permission", "Role.Edit") ||
+        context.User.HasClaim("Permission", "Role.Add")
+    ));
+
+    options.AddPolicy(Policies.RoleEdit, policy => policy.RequireAssertion(context => 
+        context.User.IsInRole("superadmin") || 
+        context.User.HasClaim("Permission", "Role.Edit")
+    ));
+
+    options.AddPolicy(Policies.RoleDelete, policy => policy.RequireAssertion(context => 
+        context.User.IsInRole("superadmin") || 
         context.User.HasClaim("Permission", "Role.Delete")
     ));
 
@@ -347,6 +346,9 @@ using (var scope = app.Services.CreateScope())
     catch (Exception ex)
     {
         Console.WriteLine($"Veritabanı başlatılırken bir hata oluştu: {ex.Message}");
+        if (ex.InnerException != null) {
+            Console.WriteLine($"Inner Exception: {ex.InnerException.Message}");
+        }
     }
 }
 app.Run();

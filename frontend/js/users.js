@@ -406,7 +406,7 @@ async function kullaniciGecmisiniGoster(id, adSoyad) {
             tbody.appendChild(tr);
         });
     } catch (error) {
-        document.getElementById("gecmisTabloGovdesi").innerHTML = `<tr><td colspan="6" class="text-center text-danger">Loglar yüklenirken hata oluştu: ${error.message}</td></tr>`;
+        document.getElementById("gecmisTabloGovdesi").innerHTML = `<tr><td colspan="6" class="text-center text-danger">Loglar yüklenirken hata oluştu: ${escapeHtml(error.message)}</td></tr>`;
     }
 }
 

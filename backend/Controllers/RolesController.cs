@@ -143,7 +143,7 @@ public class RolesController : ControllerBase
     }
 
     [HttpPost]
-    [Authorize(Policy = Policies.SuperAdminOnly)]
+    [Authorize(Policy = Policies.RoleCreate)]
     public async Task<IActionResult> CreateRole([FromBody] CreateAppRoleDto dto)
     {
         if (await _context.AppRoles.AnyAsync(r => r.Name == dto.Name))
@@ -207,7 +207,7 @@ public class RolesController : ControllerBase
     }
 
     [HttpPut("{id}")]
-    [Authorize(Policy = Policies.SuperAdminOnly)]
+    [Authorize(Policy = Policies.RoleEdit)]
     public async Task<IActionResult> UpdateRole(int id, [FromBody] UpdateAppRoleDto dto)
     {
         var role = await _context.AppRoles
@@ -294,7 +294,7 @@ public class RolesController : ControllerBase
     }
 
     [HttpDelete("{id}")]
-    [Authorize(Policy = Policies.SuperAdminOnly)]
+    [Authorize(Policy = Policies.RoleDelete)]
     public async Task<IActionResult> DeleteRole(int id)
     {
         var role = await _context.AppRoles

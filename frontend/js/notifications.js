@@ -34,7 +34,7 @@ async function loadNotifications() {
     } catch (error) {
         const listContainer = document.getElementById("notificationList");
         if (listContainer) {
-            listContainer.innerHTML = `<div class="alert alert-danger">Hata: ${error.message}</div>`;
+            listContainer.innerHTML = `<div class="alert alert-danger">Hata: ${escapeHtml(error.message)}</div>`;
         }
     }
 }

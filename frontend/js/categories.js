@@ -77,7 +77,7 @@ async function kategorileriYukle(page = 1) {
         veriyiGuncelle();
         ustKategoriDropdownDoldur();
     } catch (hata) {
-        tabloGovdesi.innerHTML = `<tr><td colspan="3" class="text-center text-danger py-4">Kategori Yüklenemedi. (${hata.message})</td></tr>`;
+        tabloGovdesi.innerHTML = `<tr><td colspan="3" class="text-center text-danger py-4">Kategori Yüklenemedi. (${escapeHtml(hata.message)})</td></tr>`;
         const paginationContainer = document.getElementById("paginationContainer");
         if (paginationContainer) paginationContainer.innerHTML = "";
     }
@@ -738,7 +738,7 @@ async function kurallariYukle(categoryId) {
             });
         }
     } catch (hata) {
-        kuralTabloGovdesi.innerHTML = `<tr><td colspan="6" class="text-center text-danger py-3">Hata: ${hata.message}</td></tr>`;
+        kuralTabloGovdesi.innerHTML = `<tr><td colspan="6" class="text-center text-danger py-3">Hata: ${escapeHtml(hata.message)}</td></tr>`;
     }
 }
 
