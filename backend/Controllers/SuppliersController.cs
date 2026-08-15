@@ -25,13 +25,30 @@ public class SuppliersController : ControllerBase
     // Tedarikçileri Listele
     [RequirePermission(Policies.RequireSupplierRead)]
     [HttpGet]
-    public async Task<IActionResult> GetAll()
+    public async Task<IActionResult> GetAll([FromQuery] string? search = null)
     {
-        var suppliers = await _context.Suppliers
+        if (search != null && search.Length > 100)
+        {
+            return BadRequest(new { message = "Arama metni 100 karakterden uzun olamaz." });
+        }
+
+        var query = _context.Suppliers
             .AsNoTracking()
-            .Where(s => !s.IsDeleted)
+            .Where(s => !s.IsDeleted);
+
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            var searchLower = search.Trim().ToLower();
+            query = query.Where(s => 
+                s.Name.ToLower().Contains(searchLower) || 
+                (s.ContactName != null && s.ContactName.ToLower().Contains(searchLower)) ||
+                (s.TaxNumber != null && s.TaxNumber.ToLower().Contains(searchLower)));
+        }
+
+        var suppliers = await query
             .Select(s => new stok_takip.DTOs.SupplierResponseDto(s.Id, s.Name, s.ContactName, s.ContactEmail, s.ContactPhone, s.Address, s.TaxNumber, s.CreatedAt))
             .ToListAsync();
+            
         return Ok(suppliers);
     }
 

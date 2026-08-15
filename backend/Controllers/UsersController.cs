@@ -40,13 +40,29 @@ public class UsersController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<IActionResult> GetAllUsers([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
+    public async Task<IActionResult> GetAllUsers([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10, [FromQuery] string? search = null)
     {
+        // Validation for search parameter
+        if (search != null && search.Length > 100)
+        {
+            return BadRequest(new { message = "Arama metni 100 karakterden uzun olamaz." });
+        }
+
         var currentUserLevel = await GetCurrentUserRoleLevelAsync();
 
         var query = _context.Users
             .AsNoTracking()
             .Where(u => !u.IsDeleted && (u.Role == null || u.Role.Level <= currentUserLevel));
+
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            var searchLower = search.Trim().ToLower();
+            query = query.Where(u => 
+                u.FirstName.ToLower().Contains(searchLower) || 
+                u.LastName.ToLower().Contains(searchLower) || 
+                u.Email.ToLower().Contains(searchLower) ||
+                (u.IdentityNumber != null && u.IdentityNumber.ToLower().Contains(searchLower)));
+        }
 
         var totalRecords = await query.CountAsync();
 

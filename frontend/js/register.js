@@ -63,6 +63,8 @@ document.addEventListener("DOMContentLoaded", () => {
             verifyForm.classList.remove("d-none");
             pageSubtitle.textContent = "E-posta Adresinizi Doğrulayın";
             
+            startTimer();
+            
             basariToast("Kayıt başarılı! Lütfen doğrulama kodunu girin.");
 
         } catch (error) {
@@ -71,6 +73,81 @@ document.addEventListener("DOMContentLoaded", () => {
             btnRegister.disabled = false;
             btnRegister.innerHTML = "Kayıt Ol";
         }
+    });
+
+    let timerInterval = null;
+
+    function startTimer() {
+        const timerDisplay = document.getElementById("registerTimer");
+        const btnResendCode = document.getElementById("btnResendCode");
+        const verificationCodeInput = document.getElementById("verificationCode");
+        const btnVerify = document.getElementById("btnVerify");
+
+        let timeRemaining = 60; // 60 seconds
+
+        timerDisplay.textContent = "01:00";
+        btnResendCode.disabled = true;
+        verificationCodeInput.disabled = false;
+        btnVerify.disabled = false;
+
+        clearInterval(timerInterval);
+        
+        timerInterval = setInterval(() => {
+            timeRemaining--;
+            
+            let minutes = Math.floor(timeRemaining / 60);
+            let seconds = timeRemaining % 60;
+            
+            timerDisplay.textContent = `${minutes < 10 ? '0' : ''}${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
+            
+            if (timeRemaining <= 0) {
+                clearInterval(timerInterval);
+                timerDisplay.textContent = "Süre doldu";
+                btnResendCode.disabled = false;
+                verificationCodeInput.disabled = true;
+                btnVerify.disabled = true;
+            }
+        }, 1000);
+    }
+
+    document.getElementById("btnResendCode").addEventListener("click", async () => {
+        const btnResendCode = document.getElementById("btnResendCode");
+        btnResendCode.disabled = true;
+        btnResendCode.innerHTML = `<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>`;
+
+        try {
+            const apiUrl = (typeof CONFIG !== 'undefined' && CONFIG.API_BASE_URL) 
+                ? `${CONFIG.API_BASE_URL}/auth/resend-verification-code` 
+                : 'http://localhost:5000/api/auth/resend-verification-code';
+
+            const response = await fetch(apiUrl, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ email: registeredEmail })
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.message || "Kod gönderimi başarısız.");
+            }
+
+            basariToast("Yeni doğrulama kodu gönderildi.");
+            document.getElementById("verificationCode").value = "";
+            startTimer();
+        } catch (error) {
+            hataGoster(error.message);
+            btnResendCode.disabled = false;
+        } finally {
+            btnResendCode.innerHTML = "Tekrar Gönder";
+        }
+    });
+
+    document.getElementById("btnEditEmail").addEventListener("click", () => {
+        clearInterval(timerInterval);
+        verifyForm.classList.add("d-none");
+        registerForm.classList.remove("d-none");
+        pageSubtitle.textContent = "Yeni bir hesap oluşturun";
     });
 
     // DOĞRULAMA (VERIFY) İŞLEMİ

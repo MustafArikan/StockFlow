@@ -9,7 +9,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
-    <link href="css/style.css?v=nb-40" rel="stylesheet"> 
+    <link href="css/style.css?v=nb-41" rel="stylesheet"> 
     <script src="js/theme.js?v=nb-40"></script>
 
 </head>
@@ -44,13 +44,13 @@
                 </div>
                 <div class="mb-3">
                     <label for="regEmail" class="form-label fw-bold small text-muted">E-posta Adresi</label>
-                    <input type="email" class="form-control" id="regEmail" required placeholder="ornek@sirket.com">
+                    <input type="email" class="form-control" id="regEmail" required placeholder="ornek@sirket.com" autocomplete="off">
                 </div>
                 <div class="mb-4">
                     <label for="regPassword" class="form-label fw-bold small text-muted">Şifre</label>
                     <div class="input-group">
                         <input type="password" class="form-control" id="regPassword" required minlength="8"
-                            placeholder="En az 8 karakter: büyük/küçük harf, rakam, özel karakter">
+                            placeholder="En az 8 karakter: büyük/küçük harf, rakam, özel karakter" autocomplete="new-password">
                         <button class="btn btn-outline-secondary toggle-password" type="button" data-target="regPassword">
                             <i class="bi bi-eye-slash"></i>
                         </button>
@@ -62,7 +62,7 @@
                 <div class="mb-4">
                     <label for="regPasswordConfirm" class="form-label fw-bold small text-muted">Şifre (Tekrar)</label>
                     <div class="input-group">
-                        <input type="password" class="form-control" id="regPasswordConfirm" required placeholder="Şifrenizi tekrar girin">
+                        <input type="password" class="form-control" id="regPasswordConfirm" required placeholder="Şifrenizi tekrar girin" autocomplete="new-password">
                         <button class="btn btn-outline-secondary toggle-password" type="button" data-target="regPasswordConfirm">
                             <i class="bi bi-eye-slash"></i>
                         </button>
@@ -79,12 +79,27 @@
                     E-posta adresinize 6 haneli bir doğrulama kodu gönderildi. Lütfen kodu aşağıya girin.
                 </p>
                 <div class="mb-4">
-                    <label for="verificationCode" class="form-label fw-bold small text-muted">Doğrulama Kodu</label>
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <label for="verificationCode" class="form-label fw-bold small text-muted mb-0">Doğrulama Kodu</label>
+                        <span id="registerTimer" class="btn btn-sm btn-light fw-bold" style="pointer-events: none;">01:00</span>
+                    </div>
                     <input type="text" class="form-control text-center fs-4 letter-spacing-lg" id="verificationCode" required placeholder="000000" maxlength="6">
                 </div>
-                <button type="submit" class="btn btn-success w-100 py-2 fw-bold" id="btnVerify">
+                <button type="submit" class="btn btn-success w-100 py-2 fw-bold mb-3" id="btnVerify">
                     <i class="bi bi-check-circle me-1"></i> Hesabı Onayla
                 </button>
+                <div class="row gx-2 mt-3">
+                    <div class="col-6">
+                        <button type="button" class="btn btn-outline-secondary w-100 py-2 fw-bold" id="btnEditEmail">
+                            <i class="bi bi-pencil-square me-1"></i>Düzenle
+                        </button>
+                    </div>
+                    <div class="col-6">
+                        <button type="button" class="btn btn-outline-secondary w-100 py-2 fw-bold" id="btnResendCode" disabled style="background-color: var(--nb-surface) !important; box-shadow: var(--nb-sh-sm) !important; opacity: 0.5 !important;">
+                            <i class="bi bi-arrow-clockwise me-1"></i>Tekrar Gönder
+                        </button>
+                    </div>
+                </div>
             </form>
 
             </div>

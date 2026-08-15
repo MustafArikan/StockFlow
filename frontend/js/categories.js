@@ -389,6 +389,14 @@ function tabloyuCiz(kategoriler) {
 
 
 
+const kategoriFormu = document.getElementById("kategoriFormu");
+if (kategoriFormu) {
+    kategoriFormu.addEventListener("submit", (e) => {
+        e.preventDefault();
+        document.getElementById("btnKategoriKaydet").click();
+    });
+}
+
 document.getElementById("btnKategoriKaydet").addEventListener("click", async () => {
     const id = document.getElementById("kategoriId").value;
     const name = document.getElementById("kategoriAdi").value;
@@ -873,7 +881,7 @@ document.getElementById("btnSecenekEkle").addEventListener("click", async () => 
                     showCancelButton: true,
                     confirmButtonText: 'Evet, Ekle',
                     cancelButtonText: 'Hayır, Yeni Ekle',
-                    target: document.getElementById('kurallarModal')
+                    target: (window.ModalWindow && ModalWindow.isFormWindow) ? document.body : document.getElementById('kurallarModal')
                 });
 
                 if (onay.isConfirmed) {
@@ -893,7 +901,7 @@ document.getElementById("btnSecenekEkle").addEventListener("click", async () => 
                 showCancelButton: true,
                 confirmButtonText: 'Ekle',
                 cancelButtonText: 'İptal',
-                target: document.getElementById('kurallarModal'),
+                target: (window.ModalWindow && ModalWindow.isFormWindow) ? document.body : document.getElementById('kurallarModal'),
                 inputValidator: (value) => {
                     if (!value || !gecerliHexMi(value)) {
                         return 'Geçerli bir hex kod giriniz (# ile başlayabilir)';

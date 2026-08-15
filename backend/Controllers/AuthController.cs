@@ -71,7 +71,7 @@ public async Task<IActionResult> Register([FromBody] RegisterDto dto)
             RoleId = defaultRole.Id,  // Varsayılan rol
             IsEmailConfirmed = false,
             EmailConfirmationCode = _passwordHasher.HashPassword(null, verificationCode),
-            ConfirmationCodeExpiry = DateTime.UtcNow.AddMinutes(10)  // Kodun geçerlilik süresi 10 dakika
+            ConfirmationCodeExpiry = DateTime.UtcNow.AddMinutes(1)  // Kodun geçerlilik süresi 1 dakika
         };
 
         newUser.PasswordHash = _passwordHasher.HashPassword(newUser, dto.Password);
@@ -86,7 +86,7 @@ public async Task<IActionResult> Register([FromBody] RegisterDto dto)
                     <h2>StockFlow'a Hoş Geldiniz!</h2>
                     <p>Hesabınızı aktifleştirmek için aşağıdaki 6 haneli doğrulama kodunu kullanın:</p>
                     <h1 style='color: #2563eb; letter-spacing: 5px;'>{verificationCode}</h1>
-                    <p>Bu kod 10 dakika boyunca geçerlidir.</p>
+                    <p>Bu kod 1 dakika boyunca geçerlidir.</p>
                 </div>";
 
         try { await _emailService.SendEmailAsync(newUser.Email, emailSubject, emailBody); } catch { /* SMTP error ignored */ }
@@ -139,6 +139,35 @@ public async Task<IActionResult> VerifyEmail([FromBody] VerifyEmailDto dto)
         await _context.SaveChangesAsync();
 
         return Ok(new { message = "Email verified successfully. You can now log in." });
+    }
+
+[AllowAnonymous]
+[HttpPost("resend-verification-code")]
+[EnableRateLimiting("AuthLimit")]
+public async Task<IActionResult> ResendVerificationCode([FromBody] ResendVerificationCodeDto dto)
+    {
+        var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == dto.Email);
+        if (user == null || user.IsEmailConfirmed)
+        {
+            return Ok(new { message = "Eğer e-posta adresi kayıtlı ve doğrulanmamışsa, doğrulama kodu gönderilecektir." });
+        }
+
+        var verificationCode = System.Security.Cryptography.RandomNumberGenerator.GetInt32(100000, 1000000).ToString();
+        user.EmailConfirmationCode = _passwordHasher.HashPassword(user, verificationCode);
+        user.ConfirmationCodeExpiry = DateTime.UtcNow.AddMinutes(1);
+        await _context.SaveChangesAsync();
+
+        var emailSubject = "StockFlow E-posta Doğrulama Kodu";
+        string emailBody = $@"
+                <div style='font-family: Arial; padding: 20px; background: #f4f4f4; text-align: center;'>
+                    <h2>StockFlow'a Hoş Geldiniz!</h2>
+                    <p>Hesabınızı aktifleştirmek için aşağıdaki 6 haneli doğrulama kodunu kullanın:</p>
+                    <h1 style='color: #2563eb; letter-spacing: 5px;'>{verificationCode}</h1>
+                    <p>Bu kod 1 dakika boyunca geçerlidir.</p>
+                </div>";
+
+        try { await _emailService.SendEmailAsync(user.Email, emailSubject, emailBody); } catch { /* SMTP error ignored */ }
+        return Ok(new { message = "Eğer e-posta adresi kayıtlı ve doğrulanmamışsa, doğrulama kodu gönderilecektir." });
     }
 
 [AllowAnonymous]
@@ -315,7 +344,7 @@ public async Task<IActionResult> GetMe()
             
             var verificationCode = System.Security.Cryptography.RandomNumberGenerator.GetInt32(100000, 1000000).ToString();
             user.EmailConfirmationCode = _passwordHasher.HashPassword(user, verificationCode);
-            user.ConfirmationCodeExpiry = DateTime.UtcNow.AddMinutes(10);
+            user.ConfirmationCodeExpiry = DateTime.UtcNow.AddMinutes(1);
             
             var emailSubject = "StockFlow E-posta Doğrulama Kodu";
             string emailBody = $@"
@@ -323,7 +352,7 @@ public async Task<IActionResult> GetMe()
                     <h2>E-posta Adresiniz Değişti!</h2>
                     <p>Yeni adresinizi doğrulamak için aşağıdaki kodu kullanın:</p>
                     <h1 style='color: #2563eb; letter-spacing: 5px;'>{verificationCode}</h1>
-                    <p>Bu kod 10 dakika boyunca geçerlidir.</p>
+                    <p>Bu kod 1 dakika boyunca geçerlidir.</p>
                 </div>";
             try { await _emailService.SendEmailAsync(user.Email, emailSubject, emailBody); } catch { /* SMTP error ignored */ }
         }
@@ -434,7 +463,7 @@ public async Task<IActionResult> Logout()
 
         var resetCode = System.Security.Cryptography.RandomNumberGenerator.GetInt32(100000, 1000000).ToString(); // 6 haneli şifre sıfırlama kodu
         user.PasswordResetCode = _passwordHasher.HashPassword(user, resetCode);
-        user.PasswordResetCodeExpiry = DateTime.UtcNow.AddMinutes(10); 
+        user.PasswordResetCodeExpiry = DateTime.UtcNow.AddMinutes(1); 
         await _context.SaveChangesAsync();
 
         string subject = "StockFlow Şifre Sıfırlama Kodu";
@@ -443,7 +472,7 @@ public async Task<IActionResult> Logout()
                     <h2>Şifre Sıfırlama Talebi</h2>
                     <p>Hesabınızın şifresini sıfırlamak için aşağıdaki 6 haneli kodu kullanın:</p>
                     <h1 style='color: #dc2626; letter-spacing: 5px;'>{resetCode}</h1>
-                    <p>Bu kod 10 dakika boyunca geçerlidir.</p>
+                    <p>Bu kod 1 dakika boyunca geçerlidir.</p>
                 </div>";
 
         try { await _emailService.SendEmailAsync(user.Email, subject, body); } catch { /* SMTP error ignored */ }

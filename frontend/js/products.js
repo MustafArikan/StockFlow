@@ -1671,7 +1671,9 @@ document.getElementById('filtreKategoriId')?.addEventListener('change', async fu
                     });
 
                     el.noUiSlider.on('change', function () {
-                        hidden.dispatchEvent(new Event('input'));
+                        hidden.dispatchEvent(new Event('input', { bubbles: true }));
+                        let card = el.closest('.card');
+                        if (card) card.dispatchEvent(new Event('filtreGuncellendi', { bubbles: true }));
                     });
 
                     if (minIn) minIn.addEventListener('change', function () {
@@ -1727,17 +1729,20 @@ if (priceSlider) {
     priceSlider.noUiSlider.on('update', function (values, handle) {
         let currentMin = Math.round(values[0]);
         let currentMax = Math.round(values[1]);
-        let rangeMax = parseFloat(priceSlider.dataset.dynamicMax) || 999999;
+        let sliderMin = priceSlider.noUiSlider.options.range.min;
+        let sliderMax = priceSlider.noUiSlider.options.range.max;
 
         if (handle === 0 && minPriceIn) {
-            minPriceIn.value = (currentMin <= 0) ? '' : currentMin;
+            minPriceIn.value = (currentMin <= sliderMin) ? '' : currentMin;
         }
         if (handle === 1 && maxPriceIn) {
-            maxPriceIn.value = (currentMax >= rangeMax) ? '' : currentMax;
+            maxPriceIn.value = (currentMax >= sliderMax) ? '' : currentMax;
         }
     });
 
     priceSlider.noUiSlider.on('change', function () {
+        let card = priceSlider.closest('.card');
+        if (card) card.dispatchEvent(new Event('filtreGuncellendi', { bubbles: true }));
         currentPage = 1; veriyiGuncelle();
     });
 
@@ -1754,7 +1759,7 @@ if (priceSlider) {
         maxPriceIn.addEventListener('change', function () {
             let currentValues = priceSlider.noUiSlider.get();
             let newVal = parseFloat(this.value);
-            if (isNaN(newVal)) newVal = parseFloat(priceSlider.dataset.dynamicMax) || 999999;
+            if (isNaN(newVal)) newVal = parseFloat(priceSlider.dataset.dynamicMax) || 100000;
             priceSlider.noUiSlider.set([currentValues[0], newVal]);
             currentPage = 1; veriyiGuncelle();
         });
@@ -1799,7 +1804,7 @@ document.getElementById('btnFiltreleriTemizle')?.addEventListener('click', () =>
     if (document.getElementById('filtreMaxFiyat')) document.getElementById('filtreMaxFiyat').value = '';
 
     if (priceSlider && priceSlider.noUiSlider) {
-        let maxVal = priceSlider.dataset.dynamicMax ? parseFloat(priceSlider.dataset.dynamicMax) : 999999;
+        let maxVal = priceSlider.dataset.dynamicMax ? parseFloat(priceSlider.dataset.dynamicMax) : 100000;
         priceSlider.noUiSlider.set([0, maxVal]);
     }
 

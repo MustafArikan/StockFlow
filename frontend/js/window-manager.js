@@ -206,7 +206,7 @@
     // Yalnızca düz sol tık yakalanıp pencereye çevrilir.
     function interceptIconClicks() {
         document.addEventListener('click', (e) => {
-            const link = e.target.closest('#sidebar a[href], #sidebar-right a[href]');
+            const link = e.target.closest('#sidebar a[href], #sidebar-right a[href], .topbar a[href]');
             if (!link) return;
             if (e.defaultPrevented || e.button !== 0) return;
             if (e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;
