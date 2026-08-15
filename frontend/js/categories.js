@@ -389,6 +389,14 @@ function tabloyuCiz(kategoriler) {
 
 
 
+const kategoriFormu = document.getElementById("kategoriFormu");
+if (kategoriFormu) {
+    kategoriFormu.addEventListener("submit", (e) => {
+        e.preventDefault();
+        document.getElementById("btnKategoriKaydet").click();
+    });
+}
+
 document.getElementById("btnKategoriKaydet").addEventListener("click", async () => {
     const id = document.getElementById("kategoriId").value;
     const name = document.getElementById("kategoriAdi").value;

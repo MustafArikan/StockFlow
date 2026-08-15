@@ -540,6 +540,7 @@ if (urunSecimiEl) {
                     // Taban birimi ekle
                     const baseOpt = document.createElement("option");
                     baseOpt.value = unitId;
+                    baseOpt.setAttribute("data-factor", "1");
                     baseOpt.textContent = `${unitShortCode || 'Taban Birim'} (Taban)`;
                     birimSelect.appendChild(baseOpt);
 
@@ -555,6 +556,7 @@ if (urunSecimiEl) {
 
                             const opt = document.createElement("option");
                             opt.value = altId;
+                            opt.setAttribute("data-factor", factor);
                             opt.textContent = `${altCode} (1 = ${factor} ${unitShortCode})`;
                             if (isDef) {
                                 opt.selected = true;
@@ -913,6 +915,22 @@ function formuDenetle() {
     const el = document.getElementById(id);
     if (el) el.addEventListener("change", formuDenetle);
 });
+const islemBirimiEl = document.getElementById("islemBirimi");
+if (islemBirimiEl) {
+    islemBirimiEl.addEventListener("change", () => {
+        let mFactor = parseFloat(islemBirimiEl.options[islemBirimiEl.selectedIndex]?.getAttribute('data-factor')) || 1;
+        document.querySelectorAll('.stock-location-item').forEach(item => {
+            const baseQty = parseFloat(item.getAttribute('data-qty')) || 0;
+            const newMax = Math.floor(baseQty / mFactor);
+            const input = item.querySelector('.source-loc-qty');
+            const badge = item.querySelector('.badge');
+            if (input) input.setAttribute("max", newMax);
+            if (badge) badge.innerText = `${newMax} Adet`;
+        });
+        if (typeof updateIslemAdediFromBoxes === 'function') updateIslemAdediFromBoxes();
+    });
+}
+
 const islemAdediInput = document.getElementById("islemAdedi");
 if (islemAdediInput) islemAdediInput.addEventListener("input", formuDenetle);
 
@@ -1096,21 +1114,31 @@ if (stokIslemFormu) {
                     }
                 }
             } else {
+                let mFactor = 1;
+                const iBirimElement = document.getElementById("islemBirimi");
+                if (iBirimElement && iBirimElement.selectedIndex >= 0) {
+                    mFactor = parseFloat(iBirimElement.options[iBirimElement.selectedIndex].getAttribute('data-factor')) || 1;
+                }
+                
                 for (const item of checkedSources) {
                     if (remainingQty <= 0) break;
-                    const availableQty = parseFloat(item.getAttribute('data-qty')) || 0;
-                    const takeQty = Math.min(availableQty, remainingQty);
-                    operations.push({
-                        ...payloadBase,
-                        quantity: takeQty,
-                        sourceLocationId: parseInt(item.getAttribute('data-loc-id')),
-                        lotNumber: item.getAttribute('data-lot') || null,
-                        expiryDate: item.getAttribute('data-exp') || null
-                    });
-                    remainingQty -= takeQty;
+                    const availableQtyBase = parseFloat(item.getAttribute('data-qty')) || 0;
+                    const availableInSelected = Math.floor(availableQtyBase / mFactor);
+                    
+                    if (availableInSelected > 0) {
+                        const takeQty = Math.min(availableInSelected, remainingQty);
+                        operations.push({
+                            ...payloadBase,
+                            quantity: takeQty,
+                            sourceLocationId: parseInt(item.getAttribute('data-loc-id')),
+                            lotNumber: item.getAttribute('data-lot') || null,
+                            expiryDate: item.getAttribute('data-exp') || null
+                        });
+                        remainingQty -= takeQty;
+                    }
                 }
                 if (remainingQty > 0) {
-                    hataGoster(`Seçilen raflardaki toplam stok, girmek istediğiniz miktarı (${totalRequestedQty}) karşılamıyor.`);
+                    hataGoster(`Seçilen raflardaki stok, seçili birim (${iBirimElement.options[iBirimElement.selectedIndex].text}) bazında toplam miktarı karşılamıyor!`);
                     return;
                 }
             }
@@ -1170,22 +1198,32 @@ if (stokIslemFormu) {
                     }
                 }
             } else {
+                let mFactor = 1;
+                const iBirimElement = document.getElementById("islemBirimi");
+                if (iBirimElement && iBirimElement.selectedIndex >= 0) {
+                    mFactor = parseFloat(iBirimElement.options[iBirimElement.selectedIndex].getAttribute('data-factor')) || 1;
+                }
+                
                 for (const item of checkedSources) {
                     if (remainingQty <= 0) break;
-                    const availableQty = parseFloat(item.getAttribute('data-qty')) || 0;
-                    const takeQty = Math.min(availableQty, remainingQty);
-                    operations.push({
-                        ...payloadBase,
-                        quantity: takeQty,
-                        sourceLocationId: parseInt(item.getAttribute('data-loc-id')),
-                        targetLocationId: targetLocId,
-                        lotNumber: item.getAttribute('data-lot') || null,
-                        expiryDate: item.getAttribute('data-exp') || null
-                    });
-                    remainingQty -= takeQty;
+                    const availableQtyBase = parseFloat(item.getAttribute('data-qty')) || 0;
+                    const availableInSelected = Math.floor(availableQtyBase / mFactor);
+                    
+                    if (availableInSelected > 0) {
+                        const takeQty = Math.min(availableInSelected, remainingQty);
+                        operations.push({
+                            ...payloadBase,
+                            quantity: takeQty,
+                            sourceLocationId: parseInt(item.getAttribute('data-loc-id')),
+                            targetLocationId: targetLocId,
+                            lotNumber: item.getAttribute('data-lot') || null,
+                            expiryDate: item.getAttribute('data-exp') || null
+                        });
+                        remainingQty -= takeQty;
+                    }
                 }
                 if (remainingQty > 0) {
-                    hataGoster(`Seçilen kaynak raflardaki toplam stok, transfer etmek istediğiniz miktarı (${totalRequestedQty}) karşılamıyor.`);
+                    hataGoster(`Seçilen kaynak raflardaki stok, seçili birim (${iBirimElement.options[iBirimElement.selectedIndex].text}) bazında toplam miktarı karşılamıyor!`);
                     return;
                 }
             }
