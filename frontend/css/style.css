@@ -680,20 +680,11 @@ a:hover {
 
 /* DEVRE DIŞI BUTON
    Önceden yalnızca "opacity: .5" veriliyordu. Saydamlık hem yazıyı hem
-   zemini birlikte söndürdüğü için okunurluk çöküyordu (ölçüm: turuncu
-   birincil buton koyu temada 2.36). Bunun yerine buton nötr bir yüzeye
-   çekilir: hem "pasif" olduğu net anlaşılır hem de yazı okunur kalır. */
+   zemini birlikte söndürdüğü için okunurluk çöküyordu. Bunun yerine buton 
+   nötr bir yüzeye çekilir: hem "pasif" olduğu net anlaşılır hem de 
+   yazı okunur kalır. */
 .btn:disabled,
 .btn.disabled {
-    --nb-btn-face: var(--nb-surface-3);
-    --nb-btn-text: var(--nb-text-muted);
-    --nb-btn-edge: var(--nb-edge);
-    /* DİKKAT: Yalnızca jetonu ezmek YETMEZ. Bootstrap'in
-       ".btn:disabled { color: var(--bs-btn-disabled-color) }" kuralı
-       (0,2,0) bizim ".btn" kuralımızdan (0,1,0) daha özgüldür ve rengi
-       geri alır — kontur butonlarda Bootstrap'in kendi koyu yeşil/mavi
-       tonu geri gelip koyu zeminde okunmaz hâle geliyordu (ölçüm 3.38).
-       Bu yüzden renkler doğrudan ve !important ile yazılır. */
     background-color: var(--nb-surface-3) !important;
     color: var(--nb-text-muted) !important;
     border-color: var(--nb-edge) !important;
