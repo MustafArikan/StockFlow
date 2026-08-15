@@ -15,12 +15,92 @@ document.addEventListener("DOMContentLoaded", () => {
     const btnResetPassword = document.getElementById("btnResetPassword");
     const pageSubtitle = document.getElementById("pageSubtitle");
 
+    let timerInterval = null;
+
+    function startTimer() {
+        const timerDisplay = document.getElementById("forgotPasswordTimer");
+        const btnResendCode = document.getElementById("btnResendCode");
+        const resetCodeInput = document.getElementById("resetCode");
+        const btnVerifyCode = document.getElementById("btnVerifyCode");
+
+        if(!timerDisplay) return;
+
+        let timeRemaining = 60; // 60 seconds
+
+        timerDisplay.textContent = "01:00";
+        if(btnResendCode) btnResendCode.disabled = true;
+        if(resetCodeInput) resetCodeInput.disabled = false;
+        if(btnVerifyCode) btnVerifyCode.disabled = false;
+
+        clearInterval(timerInterval);
+        
+        timerInterval = setInterval(() => {
+            timeRemaining--;
+            
+            let minutes = Math.floor(timeRemaining / 60);
+            let seconds = timeRemaining % 60;
+            
+            timerDisplay.textContent = `${minutes < 10 ? '0' : ''}${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
+            
+            if (timeRemaining <= 0) {
+                clearInterval(timerInterval);
+                timerDisplay.textContent = "Süre doldu";
+                if(btnResendCode) btnResendCode.disabled = false;
+                if(resetCodeInput) resetCodeInput.disabled = true;
+                if(btnVerifyCode) btnVerifyCode.disabled = true;
+            }
+        }, 1000);
+    }
+
+    if(document.getElementById("btnResendCode")) {
+        document.getElementById("btnResendCode").addEventListener("click", async () => {
+            const btnResendCode = document.getElementById("btnResendCode");
+            btnResendCode.disabled = true;
+            btnResendCode.innerHTML = `<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>`;
+
+            try {
+                const apiUrl = (typeof CONFIG !== 'undefined' && CONFIG.API_BASE_URL) 
+                    ? `${CONFIG.API_BASE_URL}/auth/forgot-password` 
+                    : 'http://localhost:5000/api/auth/forgot-password';
+
+                const response = await fetch(apiUrl, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ email: resetEmailAddress })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.message || "İşlem başarısız.");
+                }
+
+                basariToast("Yeni doğrulama kodu gönderildi.");
+                document.getElementById("resetCode").value = "";
+                startTimer();
+            } catch (error) {
+                hataGoster(error.message);
+                btnResendCode.disabled = false;
+            } finally {
+                btnResendCode.innerHTML = "Tekrar Gönder";
+            }
+        });
+    }
+
+    if(document.getElementById("btnEditEmail")) {
+        document.getElementById("btnEditEmail").addEventListener("click", () => {
+            clearInterval(timerInterval);
+            verifyCodeForm.classList.add("d-none");
+            requestForm.classList.remove("d-none");
+            pageSubtitle.textContent = "Şifrenizi sıfırlayın";
+        });
+    }
+
     // 1. KOD GÖNDERME
     if(requestForm) {
         requestForm.addEventListener("submit", async (e) => {
             e.preventDefault();
             const email = document.getElementById("resetEmail").value.trim();
-
 
             btnRequest.disabled = true;
             btnRequest.innerHTML = `<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Gönderiliyor...`;
@@ -49,6 +129,8 @@ document.addEventListener("DOMContentLoaded", () => {
                 verifyCodeForm.classList.remove("d-none");
                 pageSubtitle.textContent = "Kodu Doğrulayın";
                 
+                startTimer();
+
                 basariToast(data.message || "Eğer e-posta adresiniz kayıtlıysa, şifre sıfırlama talimatları gönderilecektir.");
 
             } catch (error) {
@@ -66,7 +148,6 @@ document.addEventListener("DOMContentLoaded", () => {
             e.preventDefault();
             const code = document.getElementById("resetCode").value.trim();
             
-
             btnVerifyCode.disabled = true;
             btnVerifyCode.innerHTML = `<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Doğrulanıyor...`;
 
@@ -88,6 +169,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 }
 
                 validResetCode = code;
+                clearInterval(timerInterval); // Stop timer on success
 
                 // Formları değiştir
                 verifyCodeForm.classList.add("d-none");
@@ -160,5 +242,3 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 });
-
-

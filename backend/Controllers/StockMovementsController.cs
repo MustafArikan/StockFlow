@@ -210,12 +210,18 @@ namespace stok_takip.Controllers
                 {
                     if (batchId == null && baseQuantity > 0)
                     {
-                        var fefoStock = await _context.StockLevels
-                            .Include(sl => sl.Batch)
-                            .Where(sl => sl.ProductId == product.Id && sl.LocationId == dto.SourceLocationId && sl.Quantity > 0)
-                            .OrderBy(sl => sl.Batch != null ? sl.Batch.ExpiryDate : DateOnly.MaxValue)
-                            .FirstOrDefaultAsync();
-                        if (fefoStock != null) batchId = fefoStock.BatchId;
+                        var exactNullStock = await _context.StockLevels
+                            .FirstOrDefaultAsync(s => s.ProductId == product.Id && s.LocationId == dto.SourceLocationId && s.BatchId == null);
+
+                        if (exactNullStock == null || exactNullStock.Quantity < baseQuantity)
+                        {
+                            var fefoStock = await _context.StockLevels
+                                .Include(sl => sl.Batch)
+                                .Where(sl => sl.ProductId == product.Id && sl.LocationId == dto.SourceLocationId && sl.Quantity > 0)
+                                .OrderBy(sl => sl.Batch != null ? sl.Batch.ExpiryDate : DateOnly.MaxValue)
+                                .FirstOrDefaultAsync();
+                            if (fefoStock != null) batchId = fefoStock.BatchId;
+                        }
                     }
 
                     // Deduct from source location
@@ -359,12 +365,18 @@ namespace stok_takip.Controllers
                 {
                     if (batchId == null && baseQuantity > 0)
                     {
-                        var fefoStock = await _context.StockLevels
-                            .Include(sl => sl.Batch)
-                            .Where(sl => sl.ProductId == product.Id && sl.LocationId == dto.SourceLocationId && sl.Quantity > 0)
-                            .OrderBy(sl => sl.Batch != null ? sl.Batch.ExpiryDate : DateOnly.MaxValue)
-                            .FirstOrDefaultAsync();
-                        if (fefoStock != null) batchId = fefoStock.BatchId;
+                        var exactNullStock = await _context.StockLevels
+                            .FirstOrDefaultAsync(s => s.ProductId == product.Id && s.LocationId == dto.SourceLocationId && s.BatchId == null);
+
+                        if (exactNullStock == null || exactNullStock.Quantity < baseQuantity)
+                        {
+                            var fefoStock = await _context.StockLevels
+                                .Include(sl => sl.Batch)
+                                .Where(sl => sl.ProductId == product.Id && sl.LocationId == dto.SourceLocationId && sl.Quantity > 0)
+                                .OrderBy(sl => sl.Batch != null ? sl.Batch.ExpiryDate : DateOnly.MaxValue)
+                                .FirstOrDefaultAsync();
+                            if (fefoStock != null) batchId = fefoStock.BatchId;
+                        }
                     }
 
                     var sourceStock = await _context.StockLevels

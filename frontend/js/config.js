@@ -562,3 +562,21 @@ document.addEventListener('hide.bs.modal', function () {
         document.activeElement.blur();
     }
 });
+
+// --- NEO BRUTALIST ARAMA SİSTEMİ (Ctrl+K) YÜKLEYİCİ ---
+(function() {
+    if (!document.getElementById('nb-search-css')) {
+        const link = document.createElement('link');
+        link.id = 'nb-search-css';
+        link.rel = 'stylesheet';
+        link.href = 'css/search.css?v=nb-40';
+        document.head.appendChild(link);
+    }
+    
+    if (!document.getElementById('nb-search-script')) {
+        const script = document.createElement('script');
+        script.id = 'nb-search-script';
+        script.src = 'js/search.js?v=nb-40';
+        document.body.appendChild(script);
+    }
+})();
