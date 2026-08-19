@@ -47,7 +47,7 @@ builder.Services.AddRateLimiter(options =>
     // --- YENİ: Veritabanından Authorization Policies okunarak rate limit policy'leri üretilir ---
     // Not: Rate limiter kuralları uygulama başlarken yüklenir. DB'den değiştirildiğinde uygulamanın yeniden başlatılması gerekir.
     var optionsBuilder = new DbContextOptionsBuilder<AppDbContext>();
-    optionsBuilder.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"));
+    optionsBuilder.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"), sqlOptions => sqlOptions.EnableRetryOnFailure());
     using var tempContext = new AppDbContext(optionsBuilder.Options, null!);
     
     try
@@ -99,7 +99,7 @@ builder.Services.AddSingleton<stok_takip.Metrics.StockFlowMetrics>();
 
 builder.Services.AddOpenApi();
 builder.Services.AddDbContextPool<AppDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"), sqlOptions => sqlOptions.EnableRetryOnFailure()));
 
 builder.Services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
 
